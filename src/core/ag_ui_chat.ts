@@ -1208,12 +1208,7 @@ export class AgUiChat extends HTMLElement {
         this.#sending = hold;
         this.#restoreHold = restored === null ? null : { hold, restored };
         return {
-          release: () => {
-            if (this.#sending === hold) {
-              this.#sending = null;
-              this.#flushQueued();
-            }
-          },
+          release: () => this.#releaseHold(hold),
         };
       },
       cancelRun: () => this.#cancelRun(),
@@ -1788,13 +1783,7 @@ export class AgUiChat extends HTMLElement {
     // Dispatched directly rather than through setCollapsed, which would write
     // storage and report the unread count for a state nobody changed.
     if (this.#surface().collapseTo === "none") {
-      this.dispatchEvent(
-        new CustomEvent<ToggleDetail>(TOGGLE_EVENT, {
-          detail: { collapsed: this.collapsed },
-          bubbles: true,
-          composed: true,
-        }),
-      );
+      this.#emit<ToggleDetail>(TOGGLE_EVENT, { collapsed: this.collapsed });
     }
     this.#skills.init();
     // A `user-key` that changed while the element was out of the document gets
@@ -2288,13 +2277,7 @@ export class AgUiChat extends HTMLElement {
     }
     this.#dockWidth = width;
     this.#dockSide = side;
-    this.dispatchEvent(
-      new CustomEvent<DockWidthDetail>(DOCK_WIDTH_EVENT, {
-        detail: { width, side },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+    this.#emit<DockWidthDetail>(DOCK_WIDTH_EVENT, { width, side });
   }
 
   /** Re-measure the bar or the anchor, and tell the host when the bar's height changed. */
@@ -2315,13 +2298,7 @@ export class AgUiChat extends HTMLElement {
       return;
     }
     this.#barHeight = height;
-    this.dispatchEvent(
-      new CustomEvent<BarHeightDetail>(BAR_HEIGHT_EVENT, {
-        detail: { height },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+    this.#emit<BarHeightDetail>(BAR_HEIGHT_EVENT, { height });
   }
 
   /**
@@ -2487,13 +2464,7 @@ export class AgUiChat extends HTMLElement {
       return;
     }
     this.#maximizedHeard = this.#maximized;
-    this.dispatchEvent(
-      new CustomEvent<MaximizeDetail>(MAXIMIZE_EVENT, {
-        detail: { maximized: this.#maximized },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+    this.#emit<MaximizeDetail>(MAXIMIZE_EVENT, { maximized: this.#maximized });
   }
 
   /** Offer the control where a placement has one and leave the state where it has not. */
@@ -2522,10 +2493,7 @@ export class AgUiChat extends HTMLElement {
     const label = this.#maximized ? this.#strings.restore : this.#strings.maximize;
     button.title = label;
     button.setAttribute("aria-label", label);
-    // The slot's fallback, so a host's own projected icon still wins.
-    for (const slot of button.querySelectorAll("slot")) {
-      slot.innerHTML = this.#maximized ? ICON_RESTORE : ICON_MAXIMIZE;
-    }
+    fillSlotFallback(button, this.#maximized ? ICON_RESTORE : ICON_MAXIMIZE);
   }
 
   /** Draw the collapse mark data-collapse-icon chooses, or the placement's default. */
@@ -2539,10 +2507,7 @@ export class AgUiChat extends HTMLElement {
       this.getAttribute("placement"),
       this.getAttribute("data-side"),
     );
-    // The slot's fallback, so a host's own projected icon still wins.
-    for (const slot of button.querySelectorAll("slot")) {
-      slot.innerHTML = glyph;
-    }
+    fillSlotFallback(button, glyph);
   }
 
   /** Flip the collapsed state. Bound to the built-in header toggle. */
@@ -3017,7 +2982,7 @@ export class AgUiChat extends HTMLElement {
     // not see yet, and a picked checkpoint, which runs on a client of its own
     // and leaves this one idle -- so a Retry beside it was a second run in the
     // one conversation, each saving over the other.
-    if (this.#running || this.#sending !== null || this.#history.continuation !== null) {
+    if (this.#busy()) {
       return false;
     }
     // Held from here as a send is, and for the same reason: the client starts
@@ -3064,10 +3029,7 @@ export class AgUiChat extends HTMLElement {
       // Only its own hold, as a send's end releases only its own. A turn the
       // composer queued behind it is sent from here when its run never started,
       // because no run settles to send it.
-      if (this.#sending === hold) {
-        this.#sending = null;
-        this.#flushQueued();
-      }
+      this.#releaseHold(hold);
     }
   }
 
@@ -3348,6 +3310,11 @@ export class AgUiChat extends HTMLElement {
     this.#launcher.title = label;
   }
 
+  /** Dispatch a bubbling, composed event for the host to hear. */
+  #emit<T>(type: string, detail: T): void {
+    this.dispatchEvent(new CustomEvent<T>(type, { detail, bubbles: true, composed: true }));
+  }
+
   /**
    * Repaint the badge and tell the host the total, naming `threadIds`, the
    * threads whose marks changed.
@@ -3358,13 +3325,7 @@ export class AgUiChat extends HTMLElement {
    */
   #unreadChanged(threadIds: readonly string[]): void {
     this.#syncLauncher();
-    this.dispatchEvent(
-      new CustomEvent<UnreadDetail>(UNREAD_EVENT, {
-        detail: { unread: this.unread, threadIds },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+    this.#emit<UnreadDetail>(UNREAD_EVENT, { unread: this.unread, threadIds });
   }
 
   /**
@@ -3587,9 +3548,7 @@ export class AgUiChat extends HTMLElement {
     // Settled before the thread event so its listeners read the new title,
     // and announced after it, as the change that follows from the switch.
     const retitled = this.#settleTitle();
-    this.dispatchEvent(
-      new CustomEvent<ThreadDetail>(THREAD_EVENT, { detail, bubbles: true, composed: true }),
-    );
+    this.#emit<ThreadDetail>(THREAD_EVENT, detail);
     if (retitled) {
       this.#announceTitle();
     }
@@ -3639,13 +3598,7 @@ export class AgUiChat extends HTMLElement {
   }
 
   #announceTitle(): void {
-    this.dispatchEvent(
-      new CustomEvent<ThreadTitleDetail>(THREAD_TITLE_EVENT, {
-        detail: { ...this.#titled },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+    this.#emit<ThreadTitleDetail>(THREAD_TITLE_EVENT, { ...this.#titled });
   }
 
   /** {@link #settleTitle}, announcing the change if there was one. */
@@ -3704,6 +3657,19 @@ export class AgUiChat extends HTMLElement {
     if (settled) {
       this.#flushQueued();
     }
+  }
+
+  /** Let go of `hold` if it is still the one held, and send what queued behind it. */
+  #releaseHold(hold: object): void {
+    if (this.#sending === hold) {
+      this.#sending = null;
+      this.#flushQueued();
+    }
+  }
+
+  /** Whether a run, a send or retry held short of its run, or a continuation is in flight. */
+  #busy(): boolean {
+    return this.#running || this.#sending !== null || this.#history.continuation !== null;
   }
 
   /**
@@ -3817,7 +3783,7 @@ export class AgUiChat extends HTMLElement {
     // through `sendMessage`, which records nothing, so this is the only point
     // that sees it as the composer's.
     this.#recordTurn(content);
-    if (this.#running || this.#sending !== null || this.#history.continuation !== null) {
+    if (this.#busy()) {
       if (content !== "") {
         this.#queued.push(content);
         this.#renderQueued();
@@ -3920,7 +3886,7 @@ export class AgUiChat extends HTMLElement {
       this.#sending = null;
       return this.sendMessage(content, attachments);
     }
-    if (this.#running || this.#sending !== null || this.#history.continuation !== null) {
+    if (this.#busy()) {
       return false;
     }
     const send = {};
@@ -3957,10 +3923,7 @@ export class AgUiChat extends HTMLElement {
       // then, so this is what sends a turn queued behind it. Not released if
       // it is no longer this send's: the run starting let go of it, or a Stop
       // did, and the field may hold the next send by now.
-      if (this.#sending === send) {
-        this.#sending = null;
-        this.#flushQueued();
-      }
+      this.#releaseHold(send);
     }
   }
 
@@ -3982,13 +3945,7 @@ export class AgUiChat extends HTMLElement {
     if (attachments.length > 0) {
       bubble.appendChild(renderAttachmentChips(attachments));
     }
-    this.dispatchEvent(
-      new CustomEvent<SubmitDetail>(SUBMIT_EVENT, {
-        detail: { content, attachments },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+    this.#emit<SubmitDetail>(SUBMIT_EVENT, { content, attachments });
   }
 
   /**
@@ -4144,13 +4101,7 @@ export class AgUiChat extends HTMLElement {
   /** Mirror the agent's applied state and tell the host it moved. */
   #onSharedStateChanged(state: Readonly<Record<string, unknown>>): void {
     this.#sharedState = { ...state };
-    this.dispatchEvent(
-      new CustomEvent<StateDetail>(STATE_EVENT, {
-        detail: { state: this.#sharedState },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+    this.#emit<StateDetail>(STATE_EVENT, { state: this.#sharedState });
   }
 
   /**
@@ -4261,6 +4212,13 @@ export class AgUiChat extends HTMLElement {
    */
   get unhandledActivityTypes(): readonly string[] {
     return this.#activities.unhandledTypes();
+  }
+}
+
+/** Draw `html` as the fallback of the button's slots, so a host's own projected icon still wins. */
+function fillSlotFallback(button: HTMLElement, html: string): void {
+  for (const slot of button.querySelectorAll("slot")) {
+    slot.innerHTML = html;
   }
 }
 
