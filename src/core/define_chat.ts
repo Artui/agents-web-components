@@ -4,12 +4,21 @@ import { AgUiChat } from "./ag_ui_chat.js";
 /**
  * Register the `<ag-ui-chat>` Custom Element.
  *
- * Idempotent: calling it more than once (or after another module already
- * registered the tag) is a no-op. Registration is an explicit step rather
- * than an import side effect so the package is SSR-safe and tree-shakeable.
+ * Idempotent: a second call, or one after this package's `AgUiChat` already
+ * holds the tag, is a no-op. If another class holds the tag it throws naming
+ * that class, because two copies of the element on one page (two bundles, or
+ * this package beside its predecessor) would otherwise run the other one.
+ * Registration is an explicit step rather than an import side effect, so
+ * importing the package defines nothing and stays tree-shakeable.
  */
 export function defineChat(): void {
-  if (customElements.get(ELEMENT_TAG) === undefined) {
+  const existing = customElements.get(ELEMENT_TAG);
+  if (existing === undefined) {
     customElements.define(ELEMENT_TAG, AgUiChat);
+  } else if (existing !== AgUiChat) {
+    throw new Error(
+      `<${ELEMENT_TAG}> is already defined by another class (${existing.name}): ` +
+        "a second copy of this package, or another package, is on the page",
+    );
   }
 }

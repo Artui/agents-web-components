@@ -1,6 +1,7 @@
 // esbuild bundle config. Run via `node esbuild.config.mjs` (invoked by
-// `make build` / `pnpm build`). Produces two ESM .js outputs:
-//   - dist/index.js          — ESM, externals (@ag-ui/*) NOT bundled (npm-consumer build)
+// `make build` / `pnpm build`). Produces two ESM builds:
+//   - dist/index.js, dist/chat.js and their shared chunks — externals (@ag-ui/*) NOT bundled
+//     (npm-consumer build)
 //   - dist/agents-web-components.bundle.js  — ESM, @ag-ui/* INLINED (vendored-bundle build)
 //
 // The vendored bundle is what django-admin-agent ships under its
@@ -90,14 +91,31 @@ export const zodNamespaceImport = {
 };
 
 /**
- * The vendored bundle: every dependency inlined. Suitable for direct
- * `<script type="module">` embedding.
+ * The library build: one file per package entry, with the modules they share
+ * split into chunks. Splitting is what keeps one module instance per page when
+ * a host imports two entries: without it each entry carries its own copy of
+ * the shared modules, and their module-level registries with them. Peer deps
+ * stay external so npm consumers dedupe `@ag-ui/*` themselves.
+ *
+ * @type {import("esbuild").BuildOptions}
+ */
+export const LIBRARY = {
+  ...SHARED,
+  entryPoints: ["src/index.ts", "src/chat.ts"],
+  outdir: "dist",
+  splitting: true,
+  external: ["@ag-ui/client", "@ag-ui/core"],
+};
+
+/**
+ * The vendored bundle: every entry's exports and every dependency inlined into
+ * one file, suitable for direct `<script type="module">` embedding.
  *
  * @type {import("esbuild").BuildOptions}
  */
 export const VENDORED_BUNDLE = {
   ...SHARED,
-  entryPoints: ["src/index.ts"],
+  entryPoints: ["src/bundle.ts"],
   outfile: "dist/agents-web-components.bundle.js",
   minify: true,
   plugins: [zodNamespaceImport],
@@ -128,13 +146,7 @@ export function zodJsonSchemaInputs(metafile) {
 // Build only when run as a script, so the test above can import the options.
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   const [, vendored] = await Promise.all([
-    // Library build — peer deps stay external so npm consumers dedupe @ag-ui/* themselves.
-    build({
-      ...SHARED,
-      entryPoints: ["src/index.ts"],
-      outfile: "dist/index.js",
-      external: ["@ag-ui/client", "@ag-ui/core"],
-    }),
+    build(LIBRARY),
     build({ ...VENDORED_BUNDLE, metafile: true }),
   ]);
   const jsonSchema = zodJsonSchemaInputs(vendored.metafile);

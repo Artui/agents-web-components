@@ -43,7 +43,7 @@ The AG-UI stack design doc (`django-ag-ui-plan.md`) lives in the private ecosyst
 | `make test` | Vitest with 100% line+branch+function+statement coverage gate |
 | `make lint` | `biome check .` + `tsc --noEmit` |
 | `make format` | `biome format --write .` |
-| `make build` | esbuild bundle + `tsc` declarations into `dist/` |
+| `make build` | esbuild library (split per entry) and vendored bundle + `tsc` declarations into `dist/` |
 
 `tsconfig.build.json` sets `rootDir: "./src"` explicitly: TypeScript 7 no longer
 infers it from the common source directory (TS5011). It is the value 5.x
@@ -68,8 +68,13 @@ inferred, so the published layout stays `dist/index.d.ts` rather than
    forbidden except at genuine external-boundary points, and even there prefer `unknown`.
    `tsconfig` runs in full `strict` mode plus `noUncheckedIndexedAccess`,
    `exactOptionalPropertyTypes`, `noPropertyAccessFromIndexSignature`.
-6. **`src/index.ts` is the only re-export point.** It lists the public surface. Internal
-   modules import from leaf paths (`./fill_field.ts`), never from `./index.ts`.
+6. **The entry files are the only re-export points.** `src/index.ts` is the package root,
+   `src/chat.ts` the `./chat` entry (the element and `defineChat`), and `src/bundle.ts` the
+   vendored bundle, which only re-exports the other two. Each entry is a thin file over the
+   tree, never a module moved under it. Internal modules import from leaf paths
+   (`./fill_field.ts`), never from an entry file. A new entry is a line in `LIBRARY` in
+   `esbuild.config.mjs`, an `exports` key in `package.json`, a re-export in `src/bundle.ts`,
+   and a row in `tests/entries.test.ts`.
 7. **Use `.js` extensions in import specifiers** (`import { x } from "./x.js"`) even though the
    source file is `x.ts` — NodeNext convention. tsc, esbuild, and Vitest all resolve `.js` →
    `.ts`/`.d.ts` correctly, and the emitted `.d.ts` keeps `./x.js`, so consumers resolve
@@ -192,6 +197,15 @@ releases it, both in the element's `ChatRegistration`, but it is *read* from out
 by the ring colour in `dom/ring_color.ts` through `ChatRegistration.latest()`. That read is the
 point of it, and it is the only one; a second reader, or another writer, needs its own
 decision rather than this precedent.
+
+### Both assume one module instance per page
+
+A host imports the element from `./chat` and the drivers from `.`, so the two registries are
+shared only if both entries reach the same module. The library build splits what the entries
+share into chunks (`splitting: true` in `LIBRARY`, `esbuild.config.mjs`); built without it,
+each entry carries its own registries and a ring drawn from `.` never sees a chat connected
+from `./chat`. `tests/browser/library_entries.browser.test.ts` loads the built entries and
+fails if that happens.
 
 ## Tests
 

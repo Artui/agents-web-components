@@ -29,8 +29,8 @@
  */
 
 import { afterEach, beforeAll, beforeEach, describe, expect, inject, it, vi } from "vitest";
+import type * as Bundle from "../../src/bundle.js";
 import type { AgUiChat } from "../../src/core/ag_ui_chat.js";
-import type * as Bundle from "../../src/index.js";
 import {
   corrupt,
   ENDPOINT,
@@ -41,7 +41,7 @@ import {
   text,
 } from "../helpers/recorded_wire.js";
 
-/** The bundle's exports; its types are `src/index.ts`'s, which it is built from. */
+/** The bundle's exports; its types are `src/bundle.ts`'s, which it is built from. */
 let bundle: typeof Bundle;
 
 beforeAll(async () => {

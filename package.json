@@ -11,10 +11,15 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./chat": {
+      "types": "./dist/chat.d.ts",
+      "import": "./dist/chat.js"
+    },
     "./bundle": {
       "import": "./dist/agents-web-components.bundle.js"
     }
   },
+  "sideEffects": false,
   "files": [
     "dist/",
     "src/",
