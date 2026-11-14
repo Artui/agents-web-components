@@ -161,11 +161,36 @@ describe("AgUiClient", () => {
     expect(handlers.calls).toContain("err:model exploded");
   });
 
-  it("catches a thrown run (network failure) and reports it", async () => {
-    const fake = makeFakeAgent({ throwOnRun: new Error("connection refused") });
+  const abortError = new Error("The user aborted a request.");
+  abortError.name = "AbortError";
+  it.each([
+    {
+      label: "a network failure is reported",
+      error: new Error("connection refused"),
+      calls: ["err:connection refused", "settled"],
+    },
+    {
+      // Chrome's name for a fetch body cancelled mid-read. Without the flag set
+      // (a caller aborting by another route) the name alone would call it a failure.
+      label: "Chrome's mid-read abort TypeError is a cancel",
+      error: new TypeError("BodyStreamBuffer was aborted"),
+      calls: ["cancelled", "settled"],
+    },
+    {
+      label: "an ordinary TypeError stays an error",
+      error: new TypeError("x is not a function"),
+      calls: ["err:x is not a function", "settled"],
+    },
+    {
+      label: "an AbortError from a re-throwing agent version is a cancel",
+      error: abortError,
+      calls: ["cancelled", "settled"],
+    },
+  ])("routes a rejected run by what rejected it: $label", async ({ error, calls }) => {
+    const fake = makeFakeAgent({ throwOnRun: error });
     const handlers = recordingHandlers();
     await new AgUiClient({ agent: fake.agent, handlers }).send("x");
-    expect(handlers.calls).toEqual(["err:connection refused", "settled"]);
+    expect(handlers.calls).toEqual(calls);
   });
 
   it("stringifies a non-Error thrown value", async () => {
@@ -548,23 +573,6 @@ describe("AgUiClient", () => {
       expect(handlers.calls).not.toContain("cancelled");
     });
 
-    it("routes Chrome's mid-read abort TypeError to onCancelled", async () => {
-      // `TypeError: BodyStreamBuffer was aborted` is Chrome's name for a fetch
-      // body cancelled mid-read. Without the flag set — a caller aborting the
-      // request by another route — the name alone would call it a failure.
-      const fake = makeFakeAgent({ throwOnRun: new TypeError("BodyStreamBuffer was aborted") });
-      const handlers = recordingHandlers();
-      await new AgUiClient({ agent: fake.agent, handlers }).send("x");
-      expect(handlers.calls).toEqual(["cancelled", "settled"]);
-    });
-
-    it("leaves an ordinary TypeError an error", async () => {
-      const fake = makeFakeAgent({ throwOnRun: new TypeError("x is not a function") });
-      const handlers = recordingHandlers();
-      await new AgUiClient({ agent: fake.agent, handlers }).send("x");
-      expect(handlers.calls).toEqual(["err:x is not a function", "settled"]);
-    });
-
     it("persists the partial history when cancelled", async () => {
       let client: AgUiClient | null = null;
       const lengths: number[] = [];
@@ -582,15 +590,6 @@ describe("AgUiClient", () => {
       await client.send("x");
       // After the user message, after the aborted round, and in the cancel path.
       expect(lengths).toEqual([1, 1, 1]);
-    });
-
-    it("routes an AbortError rejection to onCancelled (re-throwing agent versions)", async () => {
-      const abortError = new Error("The user aborted a request.");
-      abortError.name = "AbortError";
-      const fake = makeFakeAgent({ throwOnRun: abortError });
-      const handlers = recordingHandlers();
-      await new AgUiClient({ agent: fake.agent, handlers }).send("x");
-      expect(handlers.calls).toEqual(["cancelled", "settled"]);
     });
 
     it("cancel during frontend-tool execution lets the handler finish but stops the loop", async () => {
@@ -909,12 +908,20 @@ describe("a tool result's content", () => {
 });
 
 describe("a tool result's outcome", () => {
-  it("forwards the outcome in the result's metadata to the handler", async () => {
+  it.each([
+    {
+      stated: "the outcome in the result's metadata",
+      metadata: { outcome: "failed" },
+      seen: "failed",
+    },
+    // The shape every server that states no outcome produces.
+    { stated: "no outcome, as undefined", metadata: undefined, seen: undefined },
+  ])("forwards $stated to the handler", async ({ metadata, seen: expected }) => {
     const fake = makeFakeAgent({
       script: (emit) => {
         emit.runStart();
         emit.toolCall("tc1", "book_flight", {});
-        emit.toolResult("tc1", "no seats left", { outcome: "failed" });
+        emit.toolResult("tc1", "no seats left", metadata);
         emit.runEnd();
       },
     });
@@ -925,28 +932,7 @@ describe("a tool result's outcome", () => {
     };
     await new AgUiClient({ agent: fake.agent, handlers }).send("book it");
 
-    expect(seen).toEqual(["failed"]);
-  });
-
-  it("forwards undefined when the server states no outcome", async () => {
-    // The shape every server that states no outcome produces, and the one a
-    // two-parameter handler has always seen.
-    const fake = makeFakeAgent({
-      script: (emit) => {
-        emit.runStart();
-        emit.toolCall("tc1", "book_flight", {});
-        emit.toolResult("tc1", "seat 12A held");
-        emit.runEnd();
-      },
-    });
-    const seen: unknown[] = [];
-    const handlers = recordingHandlers();
-    handlers.onToolResult = (_id, _content, outcome) => {
-      seen.push(outcome);
-    };
-    await new AgUiClient({ agent: fake.agent, handlers }).send("book it");
-
-    expect(seen).toEqual([undefined]);
+    expect(seen).toEqual([expected]);
   });
 
   it("persists a frontend tool's own outcome in its result's metadata", async () => {
@@ -1012,7 +998,7 @@ describe("a tool result's outcome", () => {
   });
 
   it("hands the store the agent's own list, outcomes included", async () => {
-    // The same array, not an annotated copy of it: the outcome is on the
+    // The same array, not a copy of it: the outcome is on the
     // message, so what a save writes is exactly what the next request sends,
     // and a host store diffing what it is handed sees the agent's own list.
     let round = 0;
@@ -1036,8 +1022,6 @@ describe("a tool result's outcome", () => {
     await client.send("delete user 7");
 
     expect(seen.at(-1)).toBe(fake.messages);
-    // The getter that used to return the annotated copy is the same list now.
-    expect(client.annotatedMessages).toBe(client.messages);
   });
 });
 

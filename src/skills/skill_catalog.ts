@@ -111,9 +111,9 @@ export class SkillCatalog {
       // Hand the user something to work with rather than only a refusal. The
       // partially-filled template goes into the composer with its unresolved
       // `{placeholder}`s intact and the first one selected, so the next
-      // keystroke replaces it. Blocking with a hint alone left whatever the
-      // user had typed to open the palette — a lone "/" — sitting there, which
-      // says nothing about what the skill wanted or how to give it.
+      // keystroke replaces it. A hint alone would leave what the user typed to
+      // open the palette (a lone "/") sitting there, saying nothing about what
+      // the skill wanted or how to give it.
       hint.textContent = fillUiString(this.#host.strings().skillNeeds, {
         title: skill.title,
         fields: missing.join(", "),
