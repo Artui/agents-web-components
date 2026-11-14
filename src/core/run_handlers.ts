@@ -282,8 +282,7 @@ export class RunHandlers {
         const bubble = this.#host.stream.into(buffer);
         // Only reveal word-by-word when the message arrived at once. If it
         // streamed across multiple deltas it already revealed progressively, so
-        // wrapping it now would re-animate the whole message — the awkward
-        // "finished response replays one word at a time" bug.
+        // wrapping it now would replay the finished response one word at a time.
         if (this.#host.stream.deltas <= 1) {
           this.#host.transcript.revealWords(bubble);
         }
@@ -352,14 +351,11 @@ export class RunHandlers {
         // The store follows the server, because the server is authoritative
         // about what the conversation *is* -- and it would follow it anyway:
         // `@ag-ui/client` replaces `agent.messages` before any subscriber runs,
-        // and the run loop persists `agent.messages`. What was wrong was that
-        // it happened in silence, so the screen and the store disagreed and
-        // nobody found out until a reload served a transcript they had never
-        // seen. That is not reportable as a bug; it is reportable as "the chat
-        // lost my messages".
+        // and the run loop persists `agent.messages`. Done in silence, the
+        // screen and the store would disagree until a reload served a
+        // transcript the reader had never seen.
         //
-        // Re-rendering from the snapshot was the other candidate and is
-        // declined: a snapshot can land mid-run, and rebuilding the transcript
+        // Not re-rendered from the snapshot: a snapshot can land mid-run, and rebuilding the transcript
         // then would destroy the in-flight run's own UI state -- the streaming
         // bubble, the open answer group, and every tool card keyed by call id,
         // some of which are still waiting on results. Telling the reader costs
