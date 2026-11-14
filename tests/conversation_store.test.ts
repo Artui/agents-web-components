@@ -22,7 +22,7 @@ describe("SessionStorageStore", () => {
   });
 
   it("returns null for corrupt stored JSON", async () => {
-    sessionStorage.setItem("ag-ui-chat:messages:t1", "{not valid json");
+    sessionStorage.setItem("agents-web-components:messages:t1", "{not valid json");
     expect(await new SessionStorageStore().loadMessages("t1")).toBeNull();
   });
 
@@ -194,8 +194,8 @@ describe("SessionStorageStore", () => {
       expect(a.threadId()).toBe("ta");
       expect(b.threadId()).toBe("tb");
       // Neither writes the legacy global key.
-      expect(sessionStorage.getItem("ag-ui-chat:thread")).toBeNull();
-      expect(sessionStorage.getItem("ag-ui-chat@app-a:thread")).toBe("ta");
+      expect(sessionStorage.getItem("agents-web-components:thread")).toBeNull();
+      expect(sessionStorage.getItem("agents-web-components@app-a:thread")).toBe("ta");
     });
 
     it("keeps namespaced thread indexes separate", async () => {
@@ -206,41 +206,15 @@ describe("SessionStorageStore", () => {
       expect(await b.listThreads()).toEqual([]);
     });
 
-    it("migrates pre-namespacing keys into the namespace once", async () => {
-      // Seed legacy (global) state as if written before the upgrade.
-      const legacy = new SessionStorageStore();
-      legacy.setActiveThread("t1");
-      legacy.saveMessages("t1", [{ role: "user", content: "hello" }] as never);
-      legacy.saveCheckpoint("t1", { toolCallId: "tc1" });
-      // A key the store does NOT own must be left untouched by migration.
-      sessionStorage.setItem("ag-ui-chat:theme", "dark");
+    it("leaves un-namespaced keys alone when a namespaced store is built", async () => {
+      const global = new SessionStorageStore();
+      global.setActiveThread("t1");
+      global.saveMessages("t1", [{ role: "user", content: "hello" }] as never);
 
       const store = new SessionStorageStore("app-a");
-      expect(store.threadId()).toBe("t1");
-      expect(await store.loadMessages("t1")).toEqual([{ role: "user", content: "hello" }]);
-      expect(store.loadCheckpoint("t1")).toEqual({ toolCallId: "tc1" });
-      // Legacy owned keys are moved (removed); the element's theme key stays.
-      expect(sessionStorage.getItem("ag-ui-chat:thread")).toBeNull();
-      expect(sessionStorage.getItem("ag-ui-chat:messages:t1")).toBeNull();
-      expect(sessionStorage.getItem("ag-ui-chat:theme")).toBe("dark");
-    });
-
-    it("a second namespace finds the legacy data already adopted", async () => {
-      const legacy = new SessionStorageStore();
-      legacy.setActiveThread("t1");
-      new SessionStorageStore("app-a"); // adopts the legacy pointer
-      const b = new SessionStorageStore("app-b"); // nothing left to adopt
-      expect(b.threadId()).not.toBe("t1");
-    });
-
-    it("does not overwrite an existing namespaced value during migration", () => {
-      const store = new SessionStorageStore("app-a");
-      store.setActiveThread("kept");
-      // A stray legacy key present at a later construction must not clobber the
-      // already-namespaced value.
-      sessionStorage.setItem("ag-ui-chat:thread", "legacy");
-      const reopened = new SessionStorageStore("app-a");
-      expect(reopened.threadId()).toBe("kept");
+      expect(store.threadId()).not.toBe("t1");
+      expect(await store.loadMessages("t1")).toBeNull();
+      expect(sessionStorage.getItem("agents-web-components:thread")).toBe("t1");
     });
   });
   describe("purge and adopt", () => {
@@ -255,7 +229,7 @@ describe("SessionStorageStore", () => {
       expect(await store.loadMessages(id)).toBeNull();
       expect(store.loadCheckpoint(id)).toBeNull();
       expect(await store.listThreads()).toEqual([]);
-      expect(sessionStorage.getItem("ag-ui-chat@app-a:thread")).toBeNull();
+      expect(sessionStorage.getItem("agents-web-components@app-a:thread")).toBeNull();
     });
 
     it("purge cannot reach another namespace, or keys it does not own", () => {
@@ -263,15 +237,15 @@ describe("SessionStorageStore", () => {
       other.setActiveThread("kept");
       // The element's own chrome keys share the global root, and the host's keys
       // share the origin. Neither is the store's to delete.
-      sessionStorage.setItem("ag-ui-chat:theme", "dark");
-      sessionStorage.setItem("ag-ui-chat@app-a:something-else", "not mine");
+      sessionStorage.setItem("agents-web-components:theme", "dark");
+      sessionStorage.setItem("agents-web-components@app-a:something-else", "not mine");
       sessionStorage.setItem("shop:cart", "keep me");
 
       SessionStorageStore.purge("app-a");
 
       expect(other.threadId()).toBe("kept");
-      expect(sessionStorage.getItem("ag-ui-chat:theme")).toBe("dark");
-      expect(sessionStorage.getItem("ag-ui-chat@app-a:something-else")).toBe("not mine");
+      expect(sessionStorage.getItem("agents-web-components:theme")).toBe("dark");
+      expect(sessionStorage.getItem("agents-web-components@app-a:something-else")).toBe("not mine");
       expect(sessionStorage.getItem("shop:cart")).toBe("keep me");
     });
 
@@ -290,6 +264,16 @@ describe("SessionStorageStore", () => {
       // cannot exist.
       expect(destination.isUnsent(unsent)).toBe(true);
       expect(await source.loadMessages("t1")).toBeNull();
+    });
+
+    it("adopt keeps a value already at the destination and clears the source", () => {
+      new SessionStorageStore("app-b").setActiveThread("kept");
+      new SessionStorageStore("app-a").setActiveThread("stray");
+
+      SessionStorageStore.adopt("app-a", "app-b");
+
+      expect(new SessionStorageStore("app-b").threadId()).toBe("kept");
+      expect(sessionStorage.getItem("agents-web-components@app-a:thread")).toBeNull();
     });
   });
 

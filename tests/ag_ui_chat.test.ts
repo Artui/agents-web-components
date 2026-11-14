@@ -148,16 +148,16 @@ describe("AgUiChat", () => {
     shadow(el).querySelector<HTMLButtonElement>(".header-btn--collapse")?.click();
     expect(el.collapsed).toBe(true);
     expect(el.hasAttribute("collapsed")).toBe(true);
-    expect(sessionStorage.getItem("ag-ui-chat:collapsed")).toBe("1");
+    expect(sessionStorage.getItem("agents-web-components:collapsed")).toBe("1");
 
     el.toggleCollapsed();
     expect(el.collapsed).toBe(false);
-    expect(sessionStorage.getItem("ag-ui-chat:collapsed")).toBe("0");
+    expect(sessionStorage.getItem("agents-web-components:collapsed")).toBe("0");
     expect(events).toEqual([true, false]);
   });
 
   it("restores the collapsed state from session storage on mount", () => {
-    sessionStorage.setItem("ag-ui-chat:collapsed", "1");
+    sessionStorage.setItem("agents-web-components:collapsed", "1");
     expect(mount().collapsed).toBe(true);
   });
 
@@ -1669,7 +1669,7 @@ describe("AgUiChat", () => {
   it("names a restored message by its stored id, and states no run for it", async () => {
     // A stored AG-UI message carries no run id, so a restored rating has none
     // to give -- absent, rather than a value that only looks like one.
-    const store = new SessionStorageStore();
+    const store = new SessionStorageStore("/agent/");
     const tid = store.threadId();
     store.saveMessages(tid, [
       { id: "u-1", role: "user", content: "hi" },
@@ -1696,7 +1696,7 @@ describe("AgUiChat", () => {
     // assistant message without one. A rating then names nothing a host can
     // file it under -- `ratings/undefined/` in the README's own example -- which
     // is the pair of buttons that lead nowhere. Copy still works: it needs none.
-    const store = new SessionStorageStore();
+    const store = new SessionStorageStore("/agent/");
     const tid = store.threadId();
     store.saveMessages(tid, [
       { id: "u-1", role: "user", content: "hi" },
@@ -1809,7 +1809,7 @@ describe("AgUiChat", () => {
     // Retry clears the transcript and replays every turn it keeps, so the
     // replay is the path that draws them -- and a kept answer rated after a
     // Retry is the same message it was before one.
-    const store = new SessionStorageStore();
+    const store = new SessionStorageStore("/agent/");
     const tid = store.threadId();
     store.saveMessages(tid, [
       { id: "u-1", role: "user", content: "one" },
@@ -1887,7 +1887,7 @@ describe("AgUiChat", () => {
     // are, rather than by sending one and reloading: the fake agent does not
     // add an activity message to its own list, so a send-then-reload test would
     // be asserting against a wire the fake writes and no server does.
-    const store = new SessionStorageStore();
+    const store = new SessionStorageStore("/agent/");
     store.saveMessages(store.threadId(), [
       { id: "m1", role: "user", content: "refund it" },
       {
@@ -2199,7 +2199,7 @@ describe("AgUiChat", () => {
   });
 
   it("rehydrates persisted text messages into bubbles on mount", async () => {
-    const store = new SessionStorageStore();
+    const store = new SessionStorageStore("/agent/");
     const tid = store.threadId();
     store.saveMessages(tid, [
       { id: "0", role: "user", content: "" }, // empty user → skipped
@@ -2225,7 +2225,7 @@ describe("AgUiChat", () => {
   });
 
   it("restores history statically — no entrance animation on reload (word mode)", async () => {
-    const store = new SessionStorageStore();
+    const store = new SessionStorageStore("/agent/");
     const tid = store.threadId();
     store.saveMessages(tid, [
       { id: "1", role: "user", content: "hi" },
@@ -2248,7 +2248,7 @@ describe("AgUiChat", () => {
   });
 
   it("replays tool-call cards and their results from history on mount", async () => {
-    const store = new SessionStorageStore();
+    const store = new SessionStorageStore("/agent/");
     const tid = store.threadId();
     store.saveMessages(tid, [
       { id: "1", role: "user", content: "fill the city" },
@@ -2287,7 +2287,7 @@ describe("AgUiChat", () => {
   });
 
   it("replays tool cards with malformed or non-object arguments safely", async () => {
-    const store = new SessionStorageStore();
+    const store = new SessionStorageStore("/agent/");
     const tid = store.threadId();
     store.saveMessages(tid, [
       {
@@ -2323,7 +2323,7 @@ describe("AgUiChat", () => {
     // while `@ag-ui/core` types the field optional-not-nullable. Iterating that
     // `null` used to throw mid-replay and truncate the transcript from there on,
     // which is invisible: the turns simply do not appear.
-    const store = new SessionStorageStore();
+    const store = new SessionStorageStore("/agent/");
     const tid = store.threadId();
     store.saveMessages(tid, [
       { id: "1", role: "user", content: "what is on the board?" },
@@ -2366,7 +2366,7 @@ describe("AgUiChat", () => {
   });
 
   it("skips a shapeless stored tool call rather than losing the turns after it", async () => {
-    const store = new SessionStorageStore();
+    const store = new SessionStorageStore("/agent/");
     const tid = store.threadId();
     store.saveMessages(tid, [
       {
@@ -2401,7 +2401,7 @@ describe("AgUiChat", () => {
   });
 
   it("resumes a checkpointed navigating tool call on mount", async () => {
-    const store = new SessionStorageStore();
+    const store = new SessionStorageStore("/agent/");
     const tid = store.threadId();
     store.saveMessages(tid, [{ id: "1", role: "user", content: "go to books" }] as never);
     store.saveCheckpoint(tid, { toolCallId: "nav-1" });
@@ -2846,7 +2846,7 @@ describe("AgUiChat", () => {
       // An empty thread was never listed, so keeping it would only leave a
       // record per press of a button made to be pressed again.
       expect(el.conversationStore.threadId()).not.toBe(first);
-      expect(sessionStorage.getItem(`ag-ui-chat:minted:${first}`)).toBeNull();
+      expect(sessionStorage.getItem(`agents-web-components:minted:${first}`)).toBeNull();
       expect(await el.conversationStore.listThreads()).toEqual([]);
     });
 
@@ -3224,7 +3224,7 @@ describe("AgUiChat — answer group", () => {
   it("draws no thoughts region for a restored reasoning message, empty or not", async () => {
     const el = document.createElement(ELEMENT_TAG) as AgUiChat;
     el.setAttribute("endpoint", "/agent/");
-    const store = new SessionStorageStore();
+    const store = new SessionStorageStore("/agent/");
     store.saveMessages(store.threadId(), [
       { id: "u1", role: "user", content: "think" },
       { id: "r1", role: "reasoning", content: "" } as never,
@@ -3241,7 +3241,7 @@ describe("AgUiChat — answer group", () => {
   it("reconstructs one group per assistant turn when replaying history", async () => {
     const el = document.createElement(ELEMENT_TAG) as AgUiChat;
     el.setAttribute("endpoint", "/agent/");
-    const store = new SessionStorageStore();
+    const store = new SessionStorageStore("/agent/");
     store.saveMessages(store.threadId(), [
       { id: "u1", role: "user", content: "first" },
       { id: "a1", role: "assistant", content: "first reply" },
@@ -3396,29 +3396,28 @@ describe("AgUiChat — answer group", () => {
     it("namespaces origin-scoped storage keys by endpoint", () => {
       const el = mount({ endpoint: "/agent/" });
       el.setCollapsed(true);
-      expect(sessionStorage.getItem("ag-ui-chat:collapsed:/agent/")).toBe("1");
-      expect(sessionStorage.getItem("ag-ui-chat:collapsed")).toBeNull();
+      expect(sessionStorage.getItem("agents-web-components:collapsed:/agent/")).toBe("1");
+      expect(sessionStorage.getItem("agents-web-components:collapsed")).toBeNull();
     });
 
     it("prefers the element id over the endpoint for the namespace", () => {
       const el = mount({ id: "chat-a", endpoint: "/agent/" });
       el.setCollapsed(true);
-      expect(sessionStorage.getItem("ag-ui-chat:collapsed:chat-a")).toBe("1");
+      expect(sessionStorage.getItem("agents-web-components:collapsed:chat-a")).toBe("1");
     });
 
     it("restores a namespaced collapsed state, ignoring another instance's key", () => {
-      sessionStorage.setItem("ag-ui-chat:collapsed:/agent/", "1");
-      sessionStorage.setItem("ag-ui-chat:collapsed:/other/", "0");
+      sessionStorage.setItem("agents-web-components:collapsed:/agent/", "1");
+      sessionStorage.setItem("agents-web-components:collapsed:/other/", "0");
       expect(mount({ endpoint: "/agent/" }).collapsed).toBe(true);
     });
 
-    it("seeds theme from the legacy global key on a first namespaced mount", () => {
-      sessionStorage.setItem("ag-ui-chat:theme", "dark");
+    it("does not seed theme from an un-namespaced key on a namespaced mount", () => {
+      sessionStorage.setItem("agents-web-components:theme", "dark");
       const el = mount({ endpoint: "/agent/", "data-theme-toggle": "" });
-      expect(el.getAttribute("theme")).toBe("dark");
-      // A later toggle persists under the namespaced key, not the legacy one.
+      expect(el.getAttribute("theme")).not.toBe("dark");
       el.toggleTheme();
-      expect(sessionStorage.getItem("ag-ui-chat:theme:/agent/")).toBe("light");
+      expect(sessionStorage.getItem("agents-web-components:theme:/agent/")).not.toBeNull();
     });
   });
 });

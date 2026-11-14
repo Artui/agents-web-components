@@ -483,7 +483,7 @@ describe("AgUiChat — UX & customization", () => {
 
       toggle?.click();
       expect(el.getAttribute("theme")).toBe("dark");
-      expect(sessionStorage.getItem("ag-ui-chat:theme")).toBe("dark");
+      expect(sessionStorage.getItem("agents-web-components:theme")).toBe("dark");
       expect(toggle?.querySelector("svg")).not.toBeNull(); // dark -> offer light
 
       toggle?.click();
@@ -494,7 +494,7 @@ describe("AgUiChat — UX & customization", () => {
       const el = mount({ "data-theme-toggle": "", theme: "ledger  acme" });
       el.toggleTheme();
       expect(el.getAttribute("theme")).toBe("ledger acme dark");
-      expect(sessionStorage.getItem("ag-ui-chat:theme")).toBe("dark");
+      expect(sessionStorage.getItem("agents-web-components:theme")).toBe("dark");
       el.toggleTheme();
       expect(el.getAttribute("theme")).toBe("ledger acme light");
       el.setAttribute("theme", "auto soft");
@@ -503,7 +503,7 @@ describe("AgUiChat — UX & customization", () => {
     });
 
     it("restores a persisted theme on connect (opt-in only)", () => {
-      sessionStorage.setItem("ag-ui-chat:theme", "dark");
+      sessionStorage.setItem("agents-web-components:theme", "dark");
       // Without the opt-in the persisted value is ignored…
       expect(mount().getAttribute("theme")).toBeNull();
       // …with it, the theme is restored.
@@ -521,14 +521,14 @@ describe("AgUiChat — UX & customization", () => {
       ["dark", "auto soft", "soft dark"],
       ["light", "ledger dark acme", "ledger acme light"],
     ])("restores saved %j onto markup %j as %j", (saved, markup, restored) => {
-      sessionStorage.setItem("ag-ui-chat:theme", saved);
+      sessionStorage.setItem("agents-web-components:theme", saved);
       expect(mount({ "data-theme-toggle": "", theme: markup }).getAttribute("theme")).toBe(
         restored,
       );
     });
 
     it("leaves the markup alone when the saved value names no scheme", () => {
-      sessionStorage.setItem("ag-ui-chat:theme", "code");
+      sessionStorage.setItem("agents-web-components:theme", "code");
       expect(mount({ "data-theme-toggle": "", theme: "ledger" }).getAttribute("theme")).toBe(
         "ledger",
       );
@@ -571,7 +571,7 @@ describe("AgUiChat — UX & customization", () => {
     });
 
     it("draws the mark for the restored scheme on connect", () => {
-      sessionStorage.setItem("ag-ui-chat:theme", "dark");
+      sessionStorage.setItem("agents-web-components:theme", "dark");
       const el = mount({ "data-theme-toggle": "", theme: "ledger" });
       expect(el.getAttribute("theme")).toBe("ledger dark");
       expect(offers(el)).toBe("light");
@@ -605,19 +605,19 @@ describe("AgUiChat — UX & customization", () => {
     });
 
     it("takes the last scheme word of a saved value, and ignores the names in it", () => {
-      sessionStorage.setItem("ag-ui-chat:theme", "light dark");
+      sessionStorage.setItem("agents-web-components:theme", "light dark");
       expect(mount({ "data-theme-toggle": "", theme: "soft" }).getAttribute("theme")).toBe(
         "soft dark",
       );
-      sessionStorage.setItem("ag-ui-chat:theme", "dark light");
+      sessionStorage.setItem("agents-web-components:theme", "dark light");
       expect(mount({ "data-theme-toggle": "", theme: "soft" }).getAttribute("theme")).toBe(
         "soft light",
       );
-      sessionStorage.setItem("ag-ui-chat:theme", "light\tdark");
+      sessionStorage.setItem("agents-web-components:theme", "light\tdark");
       expect(mount({ "data-theme-toggle": "", theme: "soft" }).getAttribute("theme")).toBe(
         "soft dark",
       );
-      sessionStorage.setItem("ag-ui-chat:theme", " ledger   auto ");
+      sessionStorage.setItem("agents-web-components:theme", " ledger   auto ");
       expect(mount({ "data-theme-toggle": "", theme: "soft" }).getAttribute("theme")).toBe(
         "soft auto",
       );
@@ -627,9 +627,9 @@ describe("AgUiChat — UX & customization", () => {
       const el = mount({ "data-theme-toggle": "", theme: "soft" });
       el.toggleTheme();
       expect(el.getAttribute("theme")).toBe("soft dark");
-      expect(sessionStorage.getItem("ag-ui-chat:theme")).toBe("dark");
+      expect(sessionStorage.getItem("agents-web-components:theme")).toBe("dark");
       el.toggleTheme();
-      expect(sessionStorage.getItem("ag-ui-chat:theme")).toBe("light");
+      expect(sessionStorage.getItem("agents-web-components:theme")).toBe("light");
     });
   });
 });
@@ -651,7 +651,7 @@ describe("header control icons", () => {
   });
 });
 
-const SIZE_KEY = "ag-ui-chat:size";
+const SIZE_KEY = "agents-web-components:size";
 
 describe("panel resize", () => {
   beforeEach(() => {

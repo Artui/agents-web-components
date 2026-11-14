@@ -258,12 +258,12 @@ describe("dragging the panel by its header", () => {
 
     window.dispatchEvent(pointer("pointerup", 660, 230));
 
-    expect(sessionStorage.getItem("ag-ui-chat:launcher:swapped")).toBeNull();
+    expect(sessionStorage.getItem("agents-web-components:launcher:swapped")).toBeNull();
   });
 
   it("ignores a stored panel position where the placement owns the position", async () => {
     sessionStorage.setItem(
-      "ag-ui-chat:launcher:docked",
+      "agents-web-components:launcher:docked",
       JSON.stringify({ left: 100, top: 100, panel: { left: 40, top: 40 } }),
     );
 
@@ -284,7 +284,7 @@ describe("dragging the panel by its header", () => {
       ["null-panel", null],
     ] as const) {
       sessionStorage.setItem(
-        `ag-ui-chat:launcher:${id}`,
+        `agents-web-components:launcher:${id}`,
         JSON.stringify({ left: 200, top: 150, panel }),
       );
       const { el } = mount({ id });
@@ -328,7 +328,9 @@ describe("dragging the panel by its header", () => {
 
     // Without this the next mount would put the panel back where the header
     // drag left it, undoing the resize that moved the same corner.
-    const stored = JSON.parse(sessionStorage.getItem("ag-ui-chat:launcher:resized") ?? "{}");
+    const stored = JSON.parse(
+      sessionStorage.getItem("agents-web-components:launcher:resized") ?? "{}",
+    );
     expect(stored.panel).toEqual({ left: 500, top: 180 });
   });
 

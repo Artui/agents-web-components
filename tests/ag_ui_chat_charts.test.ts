@@ -269,7 +269,7 @@ describe("the agent-called route", () => {
     // `render` is consumer code running inside the history replay, where a throw
     // abandons the loop and takes every later turn with it -- silently, and
     // again on every reload.
-    const store = new SessionStorageStore();
+    const store = new SessionStorageStore("/agent/");
     store.saveMessages(store.threadId(), [
       { id: "m1", role: "user", content: "first" },
       {
@@ -325,7 +325,7 @@ describe("what a reload is allowed to run", () => {
     routes: readonly ("tool" | "activity")[],
     tool?: ClientTool,
   ): Promise<AgUiChat> {
-    const store = new SessionStorageStore();
+    const store = new SessionStorageStore("/agent/");
     store.saveMessages(store.threadId(), messages as never);
     const el = document.createElement(ELEMENT_TAG) as AgUiChat;
     el.setAttribute("endpoint", "/agent/");
@@ -502,7 +502,7 @@ describe("fixes from the second review pass", () => {
     // The ordinary way to call this: you have to query the element to call
     // anything on it, by which point history has already replayed with charts
     // off. Documenting an ordering rule would make the obvious usage wrong.
-    const store = new SessionStorageStore();
+    const store = new SessionStorageStore("/agent/");
     store.saveMessages(store.threadId(), [
       { id: "m1", role: "user", content: "chart" },
       { id: "a1", role: "activity", activityType: CHART_ACTIVITY_TYPE, content: CHART },

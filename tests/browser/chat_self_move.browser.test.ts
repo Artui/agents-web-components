@@ -345,11 +345,11 @@ describe("the agent's move and the edges a host reserved (real browser)", () => 
     await settle();
     // Nothing dragged, so there is nothing stored -- which is the state whose
     // restore has no value to write and therefore has to remove one.
-    expect(localStorage.getItem("ag-ui-chat:launcher")).toBeNull();
+    expect(localStorage.getItem("agents-web-components:launcher")).toBeNull();
 
     el.moveTo("top-left", { announce: true });
     await settle();
-    expect(localStorage.getItem("ag-ui-chat:launcher")).not.toBeNull();
+    expect(localStorage.getItem("agents-web-components:launcher")).not.toBeNull();
 
     undoButton(el).click();
     await settle();
@@ -357,6 +357,6 @@ describe("the agent's move and the edges a host reserved (real browser)", () => 
     // The panel goes back either way; what this holds is that the move does
     // not survive the undo in storage, where it would be re-applied by the
     // next resize or reload and outlive the tab it was undone in.
-    expect(localStorage.getItem("ag-ui-chat:launcher")).toBeNull();
+    expect(localStorage.getItem("agents-web-components:launcher")).toBeNull();
   });
 });

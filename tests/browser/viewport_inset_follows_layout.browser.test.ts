@@ -22,7 +22,11 @@ const SHORT_BAR = 56;
 const TALL_BAR = 216;
 const SPOT = { left: 376, top: 189 };
 const ID = "inset-follows";
-const KEYS = [`ag-ui-chat:launcher:${ID}`, `ag-ui-chat:dock:${ID}`, `ag-ui-chat:size:${ID}`];
+const KEYS = [
+  `agents-web-components:launcher:${ID}`,
+  `agents-web-components:dock:${ID}`,
+  `agents-web-components:size:${ID}`,
+];
 
 const settle = (): Promise<null> =>
   new Promise((resolve) => requestAnimationFrame(() => resolve(null)));

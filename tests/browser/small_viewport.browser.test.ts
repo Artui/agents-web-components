@@ -158,7 +158,7 @@ describe("small-viewport layout (real browser)", () => {
 describe("a corner panel placed on a wide window (real browser)", () => {
   const PHONE = { width: 390, height: 844 };
   const ID = "placed";
-  const LAUNCHER_KEY = `ag-ui-chat:launcher:${ID}`;
+  const LAUNCHER_KEY = `agents-web-components:launcher:${ID}`;
 
   function chat(attrs: Record<string, string> = {}): AgUiChat {
     const el = document.createElement(ELEMENT_TAG) as AgUiChat;
@@ -1074,7 +1074,7 @@ describe("a corner panel placed on a wide window (real browser)", () => {
 
   describe("a docked panel a host fills", () => {
     const WIDE = { width: 1200, height: 760 };
-    const DOCK_KEY = `ag-ui-chat:dock:${ID}`;
+    const DOCK_KEY = `agents-web-components:dock:${ID}`;
     const TOKENS = ["--ag-ui-width", "--ag-ui-height", "--ag-ui-max-width", "--ag-ui-max-height"];
 
     function fill(el: AgUiChat): void {
@@ -1429,7 +1429,7 @@ describe("a corner panel placed on a wide window (real browser)", () => {
   });
 
   describe("a docked panel's spot, kept by the element and by the store", () => {
-    const DOCK_KEY = `ag-ui-chat:dock:${ID}`;
+    const DOCK_KEY = `agents-web-components:dock:${ID}`;
     const SPOT = { left: 376, top: 96 };
 
     function dockedChat(attrs: Record<string, string> = {}): AgUiChat {
@@ -1619,8 +1619,8 @@ describe("a corner panel placed on a wide window (real browser)", () => {
       first.remove();
 
       // The size the pull stored is the first panel's; this one starts from its own.
-      localStorage.removeItem(`ag-ui-chat:size:${ID}`);
-      sessionStorage.removeItem(`ag-ui-chat:size:${ID}`);
+      localStorage.removeItem(`agents-web-components:size:${ID}`);
+      sessionStorage.removeItem(`agents-web-components:size:${ID}`);
       localStorage.setItem(DOCK_KEY, stored);
       const el = dockedChat();
       await frames();
@@ -1647,7 +1647,7 @@ describe("a corner panel placed on a wide window (real browser)", () => {
   }
 
   describe("a grip pulled on a docked panel", () => {
-    const DOCK_KEY = `ag-ui-chat:dock:${ID}`;
+    const DOCK_KEY = `agents-web-components:dock:${ID}`;
     const SPOT = { left: 376, top: 96 };
 
     /** Open on the bar, and dragged off it to the spot when asked to be. */

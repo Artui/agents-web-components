@@ -51,7 +51,7 @@ async function mountWithHistory(
   messages: readonly unknown[],
   seed?: (store: SessionStorageStore, threadId: string) => void,
 ): Promise<AgUiChat> {
-  const store = new SessionStorageStore();
+  const store = new SessionStorageStore("/agent/");
   const threadId = store.threadId();
   store.saveMessages(threadId, messages as never);
   seed?.(store, threadId);

@@ -20,7 +20,11 @@ import { defineChat } from "../../src/core/define_chat.js";
 const DESKTOP = { width: 1280, height: 800 };
 const BAR = 41;
 const ID = "feedback";
-const KEYS = [`ag-ui-chat:launcher:${ID}`, `ag-ui-chat:dock:${ID}`, `ag-ui-chat:size:${ID}`];
+const KEYS = [
+  `agents-web-components:launcher:${ID}`,
+  `agents-web-components:dock:${ID}`,
+  `agents-web-components:size:${ID}`,
+];
 const FRAMES_TO_SETTLE = 10;
 const FRAMES_WATCHED = 60;
 
@@ -309,7 +313,7 @@ describe("a host that writes the bar's height into its own inset", () => {
       new PointerEvent("pointerup", { clientX: from.clientX - 200, clientY: from.clientY - 50 }),
     );
     await frames(4);
-    expect(localStorage.getItem(`ag-ui-chat:dock:${ID}`)).not.toBeNull();
+    expect(localStorage.getItem(`agents-web-components:dock:${ID}`)).not.toBeNull();
 
     size(host.el, `calc(100vh - ${BAR}px)`);
     await frames(FRAMES_TO_SETTLE);

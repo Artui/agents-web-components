@@ -1,4 +1,4 @@
-import { EDGE_MARGIN, SCREEN_EDGE_MARGIN } from "../../constants.js";
+import { EDGE_MARGIN, SCREEN_EDGE_MARGIN, STORAGE_ROOT } from "../../constants.js";
 import type { ChatCorner, ChatSurfaceReport } from "../../tools/chat_surface_tools.js";
 import type { UiStrings } from "../ui_strings.js";
 import { clampLauncher } from "./clamp_launcher.js";
@@ -25,7 +25,7 @@ import {
 import { type Surface, surfaceFor } from "./surface_for.js";
 
 /** Persistence key for the dragged panel sizes, one per placement in one record. */
-const SIZE_KEY = "ag-ui-chat:size";
+const SIZE_KEY = `${STORAGE_ROOT}:size`;
 
 /** The stored record: a dragged size per placement attribute value. */
 interface StoredSizes {
@@ -58,7 +58,7 @@ const DOCK_TOP = "--_dock-top";
 type AnchorSide = "above" | "below";
 
 /** Per-tab persistence key for a dragged launcher position. */
-const LAUNCHER_KEY = "ag-ui-chat:launcher";
+const LAUNCHER_KEY = `${STORAGE_ROOT}:launcher`;
 
 /**
  * Persistence key for where the user dragged a docked panel. Its own key, not
@@ -67,7 +67,7 @@ const LAUNCHER_KEY = "ag-ui-chat:launcher";
  * host that switched to the bar after its users had dragged their corner
  * panels.
  */
-const DOCK_KEY = "ag-ui-chat:dock";
+const DOCK_KEY = `${STORAGE_ROOT}:dock`;
 
 /**
  * Where the user last put a corner panel's launcher, and the panel itself when

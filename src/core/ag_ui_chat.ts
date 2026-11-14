@@ -14,6 +14,7 @@ import {
   MESSAGE_ROLE,
   PAGE_MAP_CONTEXT,
   STATE_EVENT,
+  STORAGE_ROOT,
   SUBMIT_EVENT,
   SUGGESTIONS_ACTIVITY_TYPE,
   THREAD_EVENT,
@@ -190,14 +191,14 @@ const THREADS_POPOVER_WIDTH = 320;
 const THREADS_POPOVER_GAP = 8;
 
 /** Per-tab persistence key for the collapsed state (survives MPA reloads). */
-const COLLAPSED_KEY = "ag-ui-chat:collapsed";
+const COLLAPSED_KEY = `${STORAGE_ROOT}:collapsed`;
 
 /**
  * Persistence key for the built-in theme toggle. It holds the user's scheme
  * word only: the theme name belongs to the host's markup, and one saved value
  * is restored on every page that shares the key.
  */
-const THEME_KEY = "ag-ui-chat:theme";
+const THEME_KEY = `${STORAGE_ROOT}:theme`;
 
 /** The scheme words of the `theme` attribute; every other word names a theme. */
 const SCHEME_WORDS: readonly string[] = ["light", "dark", "auto"];

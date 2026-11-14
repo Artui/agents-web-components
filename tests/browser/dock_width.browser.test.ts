@@ -7,7 +7,11 @@ import type { DockWidthDetail } from "../../src/core/events/dock_width_detail.js
 
 const DESKTOP = { width: 1280, height: 800 };
 const ID = "dock-width";
-const KEYS = [`ag-ui-chat:launcher:${ID}`, `ag-ui-chat:dock:${ID}`, `ag-ui-chat:size:${ID}`];
+const KEYS = [
+  `agents-web-components:launcher:${ID}`,
+  `agents-web-components:dock:${ID}`,
+  `agents-web-components:size:${ID}`,
+];
 
 const nextFrame = (): Promise<null> =>
   new Promise((resolve) => requestAnimationFrame(() => resolve(null)));

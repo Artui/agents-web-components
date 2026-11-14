@@ -72,7 +72,7 @@ function mount(script: Script): AgUiChat {
  * `HttpAgent` seeds itself from `initialMessages`.
  */
 function mountStored(messages: readonly unknown[], script: Script): AgUiChat {
-  const store = new SessionStorageStore();
+  const store = new SessionStorageStore("/agent/");
   store.saveMessages(store.threadId(), messages as never);
   const handle = makeFakeAgent({
     script: (emit, params) => script(emit, params, () => handle.messages),

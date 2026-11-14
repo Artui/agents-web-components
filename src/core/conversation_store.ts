@@ -1,5 +1,6 @@
 import { randomUUID } from "@ag-ui/client";
 import type { Message } from "@ag-ui/core";
+import { STORAGE_ROOT } from "../constants.js";
 import { prettifyToolName } from "../ui/progress/prettify_tool_name.js";
 
 /**
@@ -111,7 +112,6 @@ export interface ClientConversationStore {
   markRead?(threadId: string): void;
 }
 
-const KEY_ROOT = "ag-ui-chat";
 const THREAD_SUFFIX = "thread";
 const THREADS_SUFFIX = "threads";
 const MESSAGES_SUFFIX = "messages:";
@@ -166,7 +166,7 @@ export function writeStoredItem(key: string, value: string): void {
 
 /** The storage-key root for a namespace; `""` is the pre-namespacing global root. */
 function rootFor(namespace: string): string {
-  return namespace === "" ? KEY_ROOT : `${KEY_ROOT}@${namespace}`;
+  return namespace === "" ? STORAGE_ROOT : `${STORAGE_ROOT}@${namespace}`;
 }
 
 /** The drawer-index entry; `titleCustom` (private) freezes a renamed title. */
@@ -189,28 +189,21 @@ interface StoredThread {
  * An optional `namespace` scopes every key to one element, so two
  * `<ag-ui-chat>` instances on the same origin keep separate active-thread
  * pointers and drawer indexes instead of clobbering each other. The default
- * empty namespace keeps the origin-global keys, which a namespaced store adopts
- * on construction; see {@link SessionStorageStore.adopt}.
+ * empty namespace keeps the origin-global keys.
  */
 export class SessionStorageStore implements ClientConversationStore {
   readonly #root: string;
 
   constructor(namespace = "") {
     this.#root = rootFor(namespace);
-    if (namespace !== "") {
-      // One-time move of the pre-namespacing global keys, so an existing
-      // conversation isn't orphaned by the upgrade. See {@link adopt}.
-      SessionStorageStore.adopt("", namespace);
-    }
   }
 
   /**
    * Move every key a store owns out of `from`'s namespace and into `to`'s.
    *
-   * Two callers, one move. The constructor adopts the pre-namespacing global
-   * keys (`from` = `""`); `<ag-ui-chat>` adopts an element-scoped conversation
-   * into a principal-scoped one the first time a `user-key` arrives, which is a
-   * host naming the user who was already there rather than a handover.
+   * `<ag-ui-chat>` adopts an element-scoped conversation into a
+   * principal-scoped one the first time a `user-key` arrives, which is a host
+   * naming the user who was already there rather than a handover.
    *
    * Only this store's own suffixes move — the element's `collapsed` / `size` /
    * `theme` keys share the global root and are deliberately left where they

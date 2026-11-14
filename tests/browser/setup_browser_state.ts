@@ -14,7 +14,7 @@ import { page } from "vitest/browser";
  * small-viewport layout resizes it under everyone else.
  *
  * **Storage**, because the widget persists its own layout preferences there on
- * purpose. A file that collapses a panel leaves `ag-ui-chat:collapsed` behind,
+ * purpose. A file that collapses a panel leaves `agents-web-components:collapsed` behind,
  * and the next file's very first mount reads it and comes up as a 52px rail --
  * which reads as a placement that ignored the inset it was given, rather than
  * as a widget faithfully restoring somebody else's choice.

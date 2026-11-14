@@ -143,7 +143,7 @@ describe("dragging the collapsed launcher", () => {
   });
 
   it("ignores a corrupt stored position rather than failing the mount", async () => {
-    sessionStorage.setItem("ag-ui-chat:launcher:corrupt", "{not json");
+    sessionStorage.setItem("agents-web-components:launcher:corrupt", "{not json");
     const { el } = mount({ id: "corrupt" });
     await frame();
 
@@ -152,7 +152,10 @@ describe("dragging the collapsed launcher", () => {
   });
 
   it("ignores a stored position that is not a pair of numbers", async () => {
-    sessionStorage.setItem("ag-ui-chat:launcher:shapeless", JSON.stringify({ left: "12" }));
+    sessionStorage.setItem(
+      "agents-web-components:launcher:shapeless",
+      JSON.stringify({ left: "12" }),
+    );
     const { el } = mount({ id: "shapeless" });
     await frame();
 
@@ -175,7 +178,7 @@ describe("dragging the collapsed launcher", () => {
 
   it("pulls a launcher stranded off-screen back into reach", async () => {
     sessionStorage.setItem(
-      "ag-ui-chat:launcher:stranded",
+      "agents-web-components:launcher:stranded",
       JSON.stringify({ left: 5000, top: 5000 }),
     );
     const { el } = mount({ id: "stranded" });
@@ -211,7 +214,7 @@ describe("dragging the collapsed launcher", () => {
     // A host that moved the widget to a sidebar between visits: the position is
     // still in storage, and must stay there rather than pinning the rail.
     sessionStorage.setItem(
-      "ag-ui-chat:launcher:docked-memory",
+      "agents-web-components:launcher:docked-memory",
       JSON.stringify({ left: 40, top: 40 }),
     );
     const { el } = mount({ id: "docked-memory", placement: "sidebar" });
@@ -222,7 +225,7 @@ describe("dragging the collapsed launcher", () => {
   });
 
   it("ignores a stored value that is not an object at all", async () => {
-    sessionStorage.setItem("ag-ui-chat:launcher:scalar", "42");
+    sessionStorage.setItem("agents-web-components:launcher:scalar", "42");
     const { el } = mount({ id: "scalar" });
     await frame();
 
@@ -306,7 +309,7 @@ describe("dragging the collapsed launcher", () => {
     // Without this the next expand would re-derive the panel's position from a
     // launcher still standing where the panel used to be, undoing the resize.
     expect(el.style.getPropertyValue("--ag-ui-inset")).toBe("100px auto auto 100px");
-    expect(sessionStorage.getItem("ag-ui-chat:launcher:resized-panel")).toBe(
+    expect(sessionStorage.getItem("agents-web-components:launcher:resized-panel")).toBe(
       JSON.stringify({ left: 100, top: 100 }),
     );
   });
@@ -329,7 +332,7 @@ describe("dragging the collapsed launcher", () => {
     expect(el.style.getPropertyValue("--ag-ui-inset")).toBe("auto 8px 8px auto");
     // 1000 - 56 - 8 and 800 - 56 - 8: the launcher travelled with the pinned
     // corner and stopped where the corner did, on the same bound.
-    expect(sessionStorage.getItem("ag-ui-chat:launcher:resized-br")).toBe(
+    expect(sessionStorage.getItem("agents-web-components:launcher:resized-br")).toBe(
       JSON.stringify({ left: 936, top: 736 }),
     );
   });

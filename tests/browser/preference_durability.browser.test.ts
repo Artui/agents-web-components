@@ -20,8 +20,8 @@ import { defineChat } from "../../src/core/define_chat.js";
  * last test here pins down deliberately rather than by accident.
  */
 
-const THEME_KEY = "ag-ui-chat:theme";
-const LAUNCHER_KEY = "ag-ui-chat:launcher";
+const THEME_KEY = "agents-web-components:theme";
+const LAUNCHER_KEY = "agents-web-components:launcher";
 
 function mount(): AgUiChat {
   const el = document.createElement(ELEMENT_TAG) as AgUiChat;

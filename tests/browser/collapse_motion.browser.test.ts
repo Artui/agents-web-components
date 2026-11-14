@@ -228,9 +228,9 @@ describe("collapse and slide-over motion (real browser)", () => {
 
     // Either direction: a user who opened the panel finds it open, and one who
     // closed it finds it closed even where the host asked for open.
-    sessionStorage.setItem("ag-ui-chat:collapsed", "1");
+    sessionStorage.setItem("agents-web-components:collapsed", "1");
     expect(mount({ "data-start-open": "" }).collapsed).toBe(true);
-    sessionStorage.setItem("ag-ui-chat:collapsed", "0");
+    sessionStorage.setItem("agents-web-components:collapsed", "0");
     expect(mount({}).collapsed).toBe(false);
   });
 

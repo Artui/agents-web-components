@@ -145,17 +145,9 @@ export class StorageScope {
     return this.#storageNs === "" ? base : `${base}:${this.#storageNs}`;
   }
 
-  /**
-   * Read a namespaced origin-scoped value, falling back once to the legacy
-   * pre-namespacing global key (left in place) so an existing collapsed/theme
-   * preference survives the upgrade.
-   */
+  /** Read a namespaced origin-scoped value. */
   readScopedItem(base: string): string | null {
-    const scoped = sessionStorage.getItem(this.key(base));
-    if (scoped !== null || this.#storageNs === "") {
-      return scoped;
-    }
-    return sessionStorage.getItem(base);
+    return sessionStorage.getItem(this.key(base));
   }
 
   /**
