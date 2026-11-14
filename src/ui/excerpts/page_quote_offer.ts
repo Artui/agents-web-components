@@ -1,3 +1,4 @@
+import { placeOffer } from "./place_offer.js";
 import { quotableSelection } from "./quote_selection.js";
 
 /**
@@ -17,9 +18,6 @@ import { quotableSelection } from "./quote_selection.js";
  * is three non-obvious guards. Three guards is a component feature, not a
  * documentation snippet.
  */
-
-/** Pixels between a selection and the offer to quote it. */
-const GAP = 6;
 
 /**
  * The offer's own appearance.
@@ -137,7 +135,11 @@ export function attachQuoteOffer(options: PageQuoteOfferOptions): PageQuoteOffer
       return;
     }
     quoting = selected.text;
-    place(button, selected.rect);
+    placeOffer(button, selected.rect, {
+      top: 0,
+      left: 0,
+      width: document.documentElement.clientWidth,
+    });
   };
 
   const onMouseDown = (event: MouseEvent): void => {
@@ -198,18 +200,4 @@ function fieldHasFocus(): boolean {
     active.tagName === "TEXTAREA" ||
     (active as HTMLElement).isContentEditable === true
   );
-}
-
-/** Float the offer beside `rect`, kept inside the viewport. */
-function place(button: HTMLButtonElement, rect: DOMRect): void {
-  // Unhidden first: a hidden element measures zero, and its own size decides
-  // both whether it fits above the selection and how far to pull it left.
-  button.hidden = false;
-  const below = rect.top < GAP + button.offsetHeight;
-  button.dataset["below"] = String(below);
-  button.style.top = `${below ? rect.bottom + GAP : rect.top - GAP}px`;
-  const half = button.offsetWidth / 2;
-  const centre = rect.left + rect.width / 2;
-  const width = document.documentElement.clientWidth;
-  button.style.left = `${Math.min(Math.max(centre, half), width - half)}px`;
 }

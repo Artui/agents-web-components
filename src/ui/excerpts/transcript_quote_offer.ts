@@ -1,9 +1,7 @@
 import type { UiStrings } from "../ui_strings.js";
 import { attachQuoteOffer, type PageQuoteOffer } from "./page_quote_offer.js";
+import { placeOffer } from "./place_offer.js";
 import { asQuote, quotableSelection } from "./quote_selection.js";
-
-/** Pixels between a selection and the offer to quote it. */
-const QUOTE_GAP = 6;
 
 /** What the quote offer needs from the element that owns it. */
 export interface TranscriptQuoteHost {
@@ -166,28 +164,7 @@ export class TranscriptQuoteOffer {
       return;
     }
     this.#quoting = selected.text;
-    this.#place(selected.rect);
-  }
-
-  /** Float the offer beside `rect`, kept inside the transcript's own box. */
-  #place(rect: DOMRect): void {
-    const button = this.button;
-    // Unhidden first: a hidden element measures zero, and its own size is what
-    // decides whether it fits above the selection and how far to pull it left.
-    button.hidden = false;
-    const wrap = this.#host.messagesWrap.getBoundingClientRect();
-    const top = rect.top - wrap.top;
-    // Above the selection by default, below it when there is no room --
-    // selecting the first line of the transcript is the ordinary case, not an
-    // edge one, and an offer clipped by the header is an offer nobody takes.
-    const below = top < QUOTE_GAP + button.offsetHeight;
-    button.dataset["below"] = String(below);
-    button.style.top = `${below ? rect.bottom - wrap.top + QUOTE_GAP : top - QUOTE_GAP}px`;
-    // Centred on the selection, then pulled back by its own half-width so a
-    // selection at either margin does not push the offer out of the panel.
-    const half = button.offsetWidth / 2;
-    const centre = rect.left + rect.width / 2 - wrap.left;
-    button.style.left = `${Math.min(Math.max(centre, half), wrap.width - half)}px`;
+    placeOffer(this.button, selected.rect, this.#host.messagesWrap.getBoundingClientRect());
   }
 
   /** Retire the offer, and forget what it was pointing at. */
