@@ -254,9 +254,9 @@ export class StorageScope {
   #claimNamespace(): string {
     const id = this.#host.id();
     const preferred = id !== "" ? id : this.#host.endpoint();
-    // Nothing to key on. The root keys: an element
-    // with neither an id nor an endpoint cannot send anything, so what it would
-    // be claiming is an empty conversation.
+    // Nothing to key on, so the root keys: an element with neither an id nor
+    // an endpoint cannot send anything, so what it would claim is an empty
+    // conversation.
     if (preferred === "") {
       return "";
     }
