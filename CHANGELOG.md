@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] — 2026-11-14
+
+### Changed
+
+- **A last pass of internal simplification: the toggle event goes through the element's one emit
+  helper, the longest internal comment blocks in the panel placement are condensed, and two groups
+  of tests are parametrised.** No behaviour changes. A host opts in to nothing.
+
 ### Fixed
 
 - **The header theme toggle's glyph follows the system scheme under `theme="auto"`.** When the
@@ -14,10 +22,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   glyph until the next click; it now redraws as the `prefers-color-scheme` query changes, and stops
   listening when the element is removed. A host rule that changes the element's `color-scheme` at
   runtime is still not seen, and the README says so. A host opts in to nothing.
-
-### Changed
-
-- **A last pass of internal simplification: the toggle event goes through the element's one emit helper, the longest internal comment blocks in the panel placement are condensed, and two groups of tests are parametrised.** No behaviour changes. A host opts in to nothing.
 
 ## [0.1.1] — 2026-11-14
 
@@ -84,6 +88,7 @@ move page walks a host over. Each entry below says whether a host opts in.
   kept offering the moon under `theme="dark"`. Only the toggle's own click redrew it before. A host
   opts in to nothing.
 
-[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/Artui/agents-web-components/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/Artui/agents-web-components/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Artui/agents-web-components/compare/v0.0.0...v0.1.0
