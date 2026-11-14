@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Releases are published from CI by npm trusted publishing, with provenance.** 0.1.0 was
+  published from a workstation and carries none; this release has no code changes and exists to
+  put a signed build on the registry. A host opts in to nothing.
+
 ## [0.1.0] — 2026-11-14
 
 First release of `@artooi/agents-web-components`, the successor of `@artooi/ag-ui-web-component`.
