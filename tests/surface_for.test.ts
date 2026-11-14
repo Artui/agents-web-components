@@ -1,13 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { surfaceFor } from "../src/ui/placement/surface_for.js";
 
-/**
- * The record replaced three separate answers -- a set of draggable placements,
- * a "not page" collapsible check, and a switch over resize axes -- plus the
- * element reading "draggable" to mean "starts collapsed". Each row below is
- * what those answered for the same value, so the table is the proof that the
- * move changed no placement's behaviour.
- */
 describe("surfaceFor", () => {
   type Axis = "none" | "width" | "both";
   const rows: ReadonlyArray<
@@ -23,6 +16,9 @@ describe("surfaceFor", () => {
     ["full", "launcher", false, "none", false, null],
     ["page", null, false, "none", false, null],
     ["embedded", "header", false, "both", false, null],
+    // An unknown value is laid out as the default corner by the stylesheet, but
+    // a typo must not start dragging or collapsing a panel the host meant to show.
+    ["bottom-right", "launcher", false, "both", false, null],
   ];
 
   it.each(rows)("describes placement=%j", (placement, collapseTo, draggable, axis, starts, max) => {
@@ -35,19 +31,6 @@ describe("surfaceFor", () => {
       resizeAxis: axis,
       startsCollapsed: starts,
       maximizes: max,
-    });
-  });
-
-  it("keeps an unknown value in place and open, as the script always has", () => {
-    // The stylesheet lays an unknown value out as the default corner, but a
-    // typo must not start dragging or collapsing a panel the host meant to show.
-    expect(surfaceFor("bottom-right")).toEqual({
-      collapseTo: "launcher",
-      launcherDraggable: false,
-      panelMovable: false,
-      resizeAxis: "both",
-      startsCollapsed: false,
-      maximizes: null,
     });
   });
 
