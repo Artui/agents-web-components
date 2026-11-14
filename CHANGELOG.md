@@ -25,8 +25,8 @@ move page walks a host over. Each entry below says whether a host opts in.
   `AgUiChat` and `defineChat` from `./chat`; bundle hosts rename the file and the call.
 - **Storage keys start with `agents-web-components`** (was `ag-ui-chat`): collapsed state, theme,
   panel size, launcher and dock position, and the built-in conversation store all move to the new
-  root. A host opts in to nothing; the first deploy forgets the open thread and the saved preferences once. A host that
-  reads these keys itself must read the new root.
+  root. A host opts in to nothing; the first deploy forgets the open thread and the saved
+  preferences once. A host that reads these keys itself must read the new root.
 - **A refused `sessionStorage` write warns once per owner rather than once per page.** One element
   can now warn once for its conversation store, once for its preferences (layout, theme and the
   collapsed state), and once more after a `user-key` change rebuilds its store; each
