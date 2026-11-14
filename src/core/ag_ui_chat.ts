@@ -1348,7 +1348,9 @@ export class AgUiChat extends HTMLElement {
    * The client holding the conversation's live shared state: a checkpoint
    * continuation while one runs, otherwise the conversation's own client, and
    * `null` before either exists. The continuation first, because the state it
-   * streams is applied to its own agent.
+   * streams is applied to its own agent. No test can tell this from the fallback
+   * to the conversation's client; the setter's is held by "reads the shared state
+   * it changed while it runs, not the conversation's" (checkpoints tests).
    */
   #liveClient(): AgUiClient | null {
     return this.#history.continuation ?? this.#client;
@@ -3648,7 +3650,8 @@ export class AgUiChat extends HTMLElement {
       // Anything that stopped the restore let go of this too, by the Stop
       // that New chat, a thread switch, a principal handover, a reload and the
       // element leaving all reach. Otherwise let go of here and the guards
-      // asked again from the top, as for a call made now.
+      // asked again from the top, as for a call made now. Held by "drops the
+      // waiting send and the queued turn when New chat is pressed".
       if (this.#sending !== waiting) {
         return false;
       }
