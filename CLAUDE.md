@@ -170,7 +170,7 @@ cite this one:
 
 1. **Its subject is the relation between live instances**, not a convenience. A cache, a
    memoised value or a once-per-page warning is state one instance could hold for itself,
-   and still is not allowed here.
+   and still is not allowed here (the one exception is the immutable memo below).
 2. **It holds only what live instances hold.** Every entry is added by the element that
    owns it and removed in that element's `disconnectedCallback`, so nothing outlives the
    elements it describes and a remounted element competes on the same terms as a new one.
@@ -197,6 +197,15 @@ releases it, both in the element's `ChatRegistration`, but it is *read* from out
 by the ring colour in `dom/ring_color.ts` through `ChatRegistration.latest()`. That read is the
 point of it, and it is the only one; a second reader, or another writer, needs its own
 decision rather than this precedent.
+
+### The third: the markdown purifier, an immutable memo
+
+`memo` in `ui/transcript/render_markdown.ts` is a configured DOMPurify instance. It is not
+the relation between instances and so is not a registry: it holds no per-element data, it is
+built on first render (an instance made without a DOM has no `addHook`, so an eager one
+would make a server-side `import` throw), its hook is added before it is published, and
+nothing writes it afterwards. No element can observe another through it, and
+`tests/render_markdown_no_dom.test.ts` pins that importing the module needs no DOM.
 
 ### Both assume one module instance per page
 

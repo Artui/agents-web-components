@@ -38,10 +38,8 @@ export class AnswerActions {
    * The one action row currently carrying Retry, if any.
    *
    * Retry belongs to the **last** turn only: re-running an older one is
-   * branching, and for a page-driving agent editing a past turn is not neutral
-   * -- those turns clicked buttons, and re-running turn 3 does not un-save what
-   * turn 5 saved. Holding a single owner is what keeps exactly one offer on
-   * screen without per-bubble bookkeeping.
+   * branching, and a page-driving agent's past turns clicked buttons that a
+   * re-run does not undo. One owner keeps exactly one offer on screen.
    */
   #retryOwner: HTMLElement | null = null;
 
@@ -78,12 +76,8 @@ export class AnswerActions {
     // feedback data say less than it did before.
     const answer = "messageId" in message ? message : null;
     const rateable = answer !== null && enabled.has(MESSAGE_ACTIONS.FEEDBACK);
-    // Read now rather than at click time. Every path that moves the element to
-    // another thread -- New chat, a switch, a change of principal -- clears
-    // the transcript, so today the two agree; the bubble can only be rated
-    // while the thread it was drawn in is current. Were a later path to change
-    // the thread and keep the bubbles, the thread the message was drawn from is
-    // still the one it is stored in, and that is what a host files it under.
+    // Read now, not at click time: the thread the message was drawn in is the
+    // one it is stored under, even if a later path kept bubbles across threads.
     const threadId = this.#host.threadId();
     if (copyable || rateable) {
       attachMessageActions(bubble, {
@@ -126,9 +120,7 @@ export class AnswerActions {
     if (enabled.has(MESSAGE_ACTIONS.RETRY)) {
       this.#moveRetryTo(messageActionBar(bubble, this.#host.strings()));
     }
-    // The row is insertion too. Every caller followed the bubble before the
-    // row went under it, so a pinned transcript came to rest one row short of
-    // its foot, with the last answer's Retry and Copy under the composer.
+    // The row is insertion too: without this a pinned transcript rests one row short of its foot.
     this.#host.follow();
   }
 

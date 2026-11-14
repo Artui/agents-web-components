@@ -12,22 +12,16 @@ export interface MessageActionsOptions {
    * The text Copy puts on the clipboard. Absent means no copy button.
    *
    * A function rather than a string because a bubble's content is rewritten
-   * while it streams, and the bar is attached to the element rather than to a
-   * snapshot of it. Optional for the same reason `onFeedback` is: what a button
-   * needs to do its job is also the statement that the button belongs here, so
-   * there is no second flag saying the same thing and no way for the two to
-   * disagree.
+   * while it streams. Each button's option is also the statement that the
+   * button belongs, so no second flag can disagree with it.
    */
   text?: () => string;
   /**
    * The rich flavour to copy alongside `text`, as an HTML fragment. Absent
-   * means the clipboard gets plain text only, which is what this did before
-   * the option existed.
+   * means plain text only.
    *
    * It is what makes a copied table paste as a table: a spreadsheet or a chat
-   * client reads `text/html` when it is offered and falls back to the plain
-   * flavour when it is not, so the two are the same content at two fidelities
-   * rather than a choice the caller has to make.
+   * client reads `text/html` when offered and falls back to the plain flavour.
    */
   html?: () => string;
   /**
@@ -53,10 +47,8 @@ export interface MessageActionsOptions {
  * Idempotent -- a bubble already given a bar is skipped, so a re-render or a
  * second call cannot stack rows.
  *
- * Each button is present because the option it needs was passed: `text` for
- * Copy, `onFeedback` for the rating pair. Passing neither builds an empty row,
- * which is a caller's mistake rather than a state to guard against -- the
- * element skips the call entirely when a host has turned both off.
+ * Passing neither `text` nor `onFeedback` builds an empty row; the element
+ * skips the call when a host has turned both off.
  */
 export function attachMessageActions(bubble: HTMLElement, options: MessageActionsOptions): void {
   if (existingBar(bubble) !== null) {
@@ -113,10 +105,8 @@ function existingBar(bubble: HTMLElement): HTMLElement | null {
 /**
  * Build one action button, labelled for screen readers rather than by glyph.
  *
- * `icon` is icon markup rather than a text glyph, because the text glyphs these
- * carried are the obscure end of the character set -- the copy mark in
- * particular has no font behind it on most systems, so it rendered as a mark
- * nobody could name on a control small enough that nobody could hit it either.
+ * `icon` is icon markup rather than a text glyph: the copy mark in particular
+ * has no font behind it on most systems.
  *
  * The label is carried three ways, and each has a reader the others miss:
  * `aria-label` for assistive technology, `title` for the browser's own
@@ -212,7 +202,7 @@ function feedbackButton(
   report: (rating: "up" | "down") => void,
 ): HTMLButtonElement {
   const button = messageActionButton(
-    rating === "up" ? "up" : "down",
+    rating,
     label,
     rating === "up" ? ICON_THUMB_UP : ICON_THUMB_DOWN,
   );
