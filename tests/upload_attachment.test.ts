@@ -92,40 +92,47 @@ describe("uploadAttachment", () => {
     await promise;
   });
 
-  it("rejects with the server error message on a 4xx", async () => {
+  it.each([
+    {
+      case: "with the server error message on a 4xx",
+      status: 415,
+      body: JSON.stringify({ error: "content type not allowed" }),
+      message: "content type not allowed",
+    },
+    {
+      case: "with a status message when the error body is not JSON",
+      status: 500,
+      body: "<html>boom</html>",
+      message: "upload failed (500)",
+    },
+    {
+      case: "with a status message when the error JSON lacks an 'error'",
+      status: 413,
+      body: JSON.stringify({ detail: "too big" }),
+      message: "upload failed (413)",
+    },
+    {
+      case: "when the success body is unreadable",
+      status: 201,
+      body: "not json",
+      message: "unreadable response",
+    },
+    {
+      case: "when the success body is missing fields",
+      status: 201,
+      body: JSON.stringify({ id: "a1" }),
+      message: "unreadable response",
+    },
+    {
+      case: "when the success body is not an object",
+      status: 201,
+      body: "42",
+      message: "unreadable response",
+    },
+  ])("rejects $case", async ({ status, body, message }) => {
     const promise = uploadAttachment(file(), { url: "/u/" });
-    xhr.last().succeed(415, JSON.stringify({ error: "content type not allowed" }));
-    await expect(promise).rejects.toThrow("content type not allowed");
-  });
-
-  it("falls back to a status message when the error body is not JSON", async () => {
-    const promise = uploadAttachment(file(), { url: "/u/" });
-    xhr.last().succeed(500, "<html>boom</html>");
-    await expect(promise).rejects.toThrow("upload failed (500)");
-  });
-
-  it("falls back to a status message when the error JSON lacks an 'error'", async () => {
-    const promise = uploadAttachment(file(), { url: "/u/" });
-    xhr.last().succeed(413, JSON.stringify({ detail: "too big" }));
-    await expect(promise).rejects.toThrow("upload failed (413)");
-  });
-
-  it("rejects when the success body is unreadable", async () => {
-    const promise = uploadAttachment(file(), { url: "/u/" });
-    xhr.last().succeed(201, "not json");
-    await expect(promise).rejects.toThrow("unreadable response");
-  });
-
-  it("rejects when the success body is missing fields", async () => {
-    const promise = uploadAttachment(file(), { url: "/u/" });
-    xhr.last().succeed(201, JSON.stringify({ id: "a1" }));
-    await expect(promise).rejects.toThrow("unreadable response");
-  });
-
-  it("rejects when the success body is not an object", async () => {
-    const promise = uploadAttachment(file(), { url: "/u/" });
-    xhr.last().succeed(201, "42");
-    await expect(promise).rejects.toThrow("unreadable response");
+    xhr.last().succeed(status, body);
+    await expect(promise).rejects.toThrow(message);
   });
 
   it("rejects on a network error", async () => {

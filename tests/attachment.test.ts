@@ -44,21 +44,20 @@ describe("messageAttachments", () => {
     expect(messageAttachments(message)).toEqual([REF]);
   });
 
-  it("returns an empty array when the message has none", () => {
-    const message = { id: "u1", role: "user", content: "hi" } as Message;
-    expect(messageAttachments(message)).toEqual([]);
-  });
-
-  it("ignores a non-array attachments field", () => {
-    expect(messageAttachments(carrying("nope"))).toEqual([]);
-    const message = { id: "u1", role: "user", content: "hi", attachments: "nope" } as Message;
-    expect(messageAttachments(message)).toEqual([]);
-  });
-
-  it("reads no metadata out of a metadata that is not an object", () => {
+  it.each([
+    { carries: "none", message: { id: "u1", role: "user", content: "hi" } },
+    { carries: "a non-array in its metadata", message: carrying("nope") },
+    {
+      carries: "a non-array at the top level",
+      message: { id: "u1", role: "user", content: "hi", attachments: "nope" },
+    },
     // A store is not trusted to hold the shape anything here wrote.
-    const message = { id: "u1", role: "user", content: "hi", metadata: "nope" } as never;
-    expect(messageAttachments(message)).toEqual([]);
+    {
+      carries: "a metadata that is not an object",
+      message: { id: "u1", role: "user", content: "hi", metadata: "nope" },
+    },
+  ])("reads no refs from a message carrying $carries", ({ message }) => {
+    expect(messageAttachments(message as never)).toEqual([]);
   });
 
   it("drops malformed entries, keeping the valid ones", () => {

@@ -1,8 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { SessionStorageStore } from "../src/core/conversation_store.js";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { SessionStorageStore, writeStoredItem } from "../src/core/conversation_store.js";
 
 describe("SessionStorageStore", () => {
   beforeEach(() => sessionStorage.clear());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
 
   it("generates a thread id once and reuses it", () => {
     const store = new SessionStorageStore();
@@ -193,7 +197,7 @@ describe("SessionStorageStore", () => {
       b.setActiveThread("tb");
       expect(a.threadId()).toBe("ta");
       expect(b.threadId()).toBe("tb");
-      // Neither writes the legacy global key.
+      // Neither writes the un-namespaced key.
       expect(sessionStorage.getItem("agents-web-components:thread")).toBeNull();
       expect(sessionStorage.getItem("agents-web-components@app-a:thread")).toBe("ta");
     });
@@ -281,23 +285,7 @@ describe("SessionStorageStore", () => {
     it("keeps going, and says so once", () => {
       const store = new SessionStorageStore();
       const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-      const real = sessionStorage;
-      // happy-dom hands out `Storage`'s methods through a proxy, so neither an
-      // instance nor a prototype spy is ever consulted; replace the global.
-      vi.stubGlobal(
-        "sessionStorage",
-        new Proxy(real, {
-          get(target, property) {
-            if (property === "setItem") {
-              return () => {
-                throw new DOMException("exceeded the quota", "QuotaExceededError");
-              };
-            }
-            const value = Reflect.get(target, property, target) as unknown;
-            return typeof value === "function" ? value.bind(target) : value;
-          },
-        }),
-      );
+      failEveryWrite();
 
       expect(() =>
         store.saveMessages("t1", [{ role: "user", content: "x" }] as never),
@@ -308,8 +296,69 @@ describe("SessionStorageStore", () => {
 
       // A full quota stays full: one warning, not one per persisted turn.
       expect(warn).toHaveBeenCalledTimes(1);
-      vi.unstubAllGlobals();
-      warn.mockRestore();
+    });
+
+    it("says so once per store, not once per page", () => {
+      const first = new SessionStorageStore("app-a");
+      const second = new SessionStorageStore("app-b");
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      failEveryWrite();
+
+      for (const store of [first, second, first, second]) {
+        store.setActiveThread("t1");
+      }
+
+      expect(warn).toHaveBeenCalledTimes(2);
+    });
+
+    it("says so once per adopt, however many keys it moves", () => {
+      // Two keys under one namespace, one under the other: once per call is two
+      // warnings, where once per key would be three and once per page one.
+      new SessionStorageStore("app-a").saveMessages("t1", [
+        { role: "user", content: "x" },
+      ] as never);
+      new SessionStorageStore("app-x").setActiveThread("t1");
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      failEveryWrite();
+
+      SessionStorageStore.adopt("app-a", "app-b");
+      SessionStorageStore.adopt("app-x", "app-y");
+
+      expect(warn).toHaveBeenCalledTimes(2);
+    });
+
+    it("says so on every refusal when the caller keeps no report", () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      failEveryWrite();
+
+      writeStoredItem("k", "1");
+      writeStoredItem("k", "2");
+
+      expect(warn).toHaveBeenCalledTimes(2);
     });
   });
 });
+
+/**
+ * Make every `sessionStorage` write throw, as an exhausted quota does.
+ *
+ * happy-dom hands out `Storage`'s methods through a proxy, so neither an
+ * instance nor a prototype spy is ever consulted; replace the global.
+ */
+function failEveryWrite(): void {
+  const real = sessionStorage;
+  vi.stubGlobal(
+    "sessionStorage",
+    new Proxy(real, {
+      get(target, property) {
+        if (property === "setItem") {
+          return () => {
+            throw new DOMException("exceeded the quota", "QuotaExceededError");
+          };
+        }
+        const value = Reflect.get(target, property, target) as unknown;
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    }),
+  );
+}

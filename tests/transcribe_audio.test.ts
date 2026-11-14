@@ -48,46 +48,37 @@ describe("transcribeAudio", () => {
     expect(fetchMock.mock.calls[1]?.[1]).not.toHaveProperty("credentials");
   });
 
-  it("rejects with the server error message on a non-2xx response", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(jsonResponse({ error: "audio exceeds the limit" }, false, 413)),
-    );
-    await expect(transcribeAudio(new Blob(["x"]), { url: "/agent/transcribe/" })).rejects.toThrow(
-      "audio exceeds the limit",
-    );
-  });
-
-  it("falls back to the status code when the error body has no message", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
+  it.each([
+    {
+      case: "with the server error message on a non-2xx response",
+      response: jsonResponse({ error: "audio exceeds the limit" }, false, 413),
+      message: "audio exceeds the limit",
+    },
+    {
+      case: "with the status code when the error body has no message",
+      response: {
         ok: false,
         status: 500,
         json: () => Promise.reject(new Error("not json")),
-      } as unknown as Response),
-    );
+      } as unknown as Response,
+      message: "transcription failed (500)",
+    },
+    {
+      // A well-formed JSON error body whose `error` is a nested object — DRF's
+      // own validation-error shape. Only a string is safe to surface verbatim.
+      case: "with the status code when the error field is not a string",
+      response: jsonResponse({ error: { audio: ["too large"] } }, false, 400),
+      message: "transcription failed (400)",
+    },
+    {
+      case: "when the success body has no text field",
+      response: jsonResponse({ nope: 1 }),
+      message: "unreadable response",
+    },
+  ])("rejects $case", async ({ response, message }) => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response));
     await expect(transcribeAudio(new Blob(["x"]), { url: "/agent/transcribe/" })).rejects.toThrow(
-      "transcription failed (500)",
-    );
-  });
-
-  it("falls back to the status code when the error field is not a string", async () => {
-    // A well-formed JSON error body whose `error` is a nested object — DRF's
-    // own validation-error shape. Only a string is safe to surface verbatim.
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(jsonResponse({ error: { audio: ["too large"] } }, false, 400)),
-    );
-    await expect(transcribeAudio(new Blob(["x"]), { url: "/agent/transcribe/" })).rejects.toThrow(
-      "transcription failed (400)",
-    );
-  });
-
-  it("rejects when the success body has no text field", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ nope: 1 })));
-    await expect(transcribeAudio(new Blob(["x"]), { url: "/agent/transcribe/" })).rejects.toThrow(
-      "unreadable response",
+      message,
     );
   });
 

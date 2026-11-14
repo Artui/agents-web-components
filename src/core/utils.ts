@@ -22,7 +22,7 @@ export function withCredentials(
 /**
  * Start a new conversation in `store` and return its id.
  *
- * `newThread` is optional on the interface, so a store that predates it is
+ * `newThread` is optional on the interface, so a store without it is
  * driven the only other way the interface allows: mint an id here and make it
  * active. That path loses the store's own note that the thread is new, so a
  * remote store would go on to ask the server for a conversation that cannot

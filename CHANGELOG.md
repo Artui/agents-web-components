@@ -18,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `sideEffects: false`, `./bundle` gains its `types`, and the vendored bundle still carries every
   export and defines nothing at import. Opt-in: a host imports `AgUiChat` and `defineChat` from
   `./chat`; bundle hosts change nothing.
+- **`AgUiClient.annotatedMessages` is gone, and a refused `sessionStorage` write warns once per
+  owner rather than once per page.** The getter returned `messages` itself. One element can now warn
+  once for its conversation store, once for its preferences (layout, theme and the collapsed
+  state), and once more after a `user-key` change rebuilds its store; each
+  `SessionStorageStore.adopt` call warns at most once. Opt-in: none; a host that read
+  `annotatedMessages` reads `messages`.
 
 ### Fixed
 
