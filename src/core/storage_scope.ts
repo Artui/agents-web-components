@@ -207,6 +207,11 @@ export class StorageScope {
     writeStoredItem(key, value, this.#writeFailure);
   }
 
+  /** Write a per-tab value under this scope's key, sharing its one refused-write warning. */
+  writeSession(base: string, value: string): void {
+    writeStoredItem(this.key(base), value, this.#writeFailure);
+  }
+
   /**
    * Drop a layout preference from both stores.
    *

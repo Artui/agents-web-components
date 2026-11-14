@@ -1,8 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SessionStorageStore, writeStoredItem } from "../src/core/conversation_store.js";
 
 describe("SessionStorageStore", () => {
   beforeEach(() => sessionStorage.clear());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
 
   it("generates a thread id once and reuses it", () => {
     const store = new SessionStorageStore();
@@ -292,8 +296,6 @@ describe("SessionStorageStore", () => {
 
       // A full quota stays full: one warning, not one per persisted turn.
       expect(warn).toHaveBeenCalledTimes(1);
-      vi.unstubAllGlobals();
-      warn.mockRestore();
     });
 
     it("says so once per store, not once per page", () => {
@@ -307,8 +309,6 @@ describe("SessionStorageStore", () => {
       }
 
       expect(warn).toHaveBeenCalledTimes(2);
-      vi.unstubAllGlobals();
-      warn.mockRestore();
     });
 
     it("says so once per adopt, however many keys it moves", () => {
@@ -325,8 +325,6 @@ describe("SessionStorageStore", () => {
       SessionStorageStore.adopt("app-x", "app-y");
 
       expect(warn).toHaveBeenCalledTimes(2);
-      vi.unstubAllGlobals();
-      warn.mockRestore();
     });
 
     it("says so on every refusal when the caller keeps no report", () => {
@@ -337,8 +335,6 @@ describe("SessionStorageStore", () => {
       writeStoredItem("k", "2");
 
       expect(warn).toHaveBeenCalledTimes(2);
-      vi.unstubAllGlobals();
-      warn.mockRestore();
     });
   });
 });

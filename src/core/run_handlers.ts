@@ -355,8 +355,8 @@ export class RunHandlers {
         // screen and the store would disagree until a reload served a
         // transcript the reader had never seen.
         //
-        // Not re-rendered from the snapshot: a snapshot can land mid-run, and rebuilding the transcript
-        // then would destroy the in-flight run's own UI state -- the streaming
+        // Not re-rendered from the snapshot: a snapshot can land mid-run, and rebuilding the
+        // transcript then would destroy the in-flight run's own UI state -- the streaming
         // bubble, the open answer group, and every tool card keyed by call id,
         // some of which are still waiting on results. Telling the reader costs
         // none of that, and this is the same answer the same question already

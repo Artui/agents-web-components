@@ -26,6 +26,8 @@ let claimed: StorageScope | null = null;
 afterEach(() => {
   claimed?.release();
   claimed = null;
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("StorageScope.rescopeStore", () => {
@@ -64,21 +66,7 @@ describe("StorageScope.writePreference", () => {
     const first = new StorageScope({ id: () => "a", endpoint: () => "" });
     const second = new StorageScope({ id: () => "b", endpoint: () => "" });
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const real = sessionStorage;
-    vi.stubGlobal(
-      "sessionStorage",
-      new Proxy(real, {
-        get(target, property) {
-          if (property === "setItem") {
-            return () => {
-              throw new DOMException("exceeded the quota", "QuotaExceededError");
-            };
-          }
-          const value = Reflect.get(target, property, target) as unknown;
-          return typeof value === "function" ? value.bind(target) : value;
-        },
-      }),
-    );
+    failEveryWrite();
 
     for (const owner of [first, second, first, second]) {
       owner.writePreference("size", "1");
@@ -86,7 +74,48 @@ describe("StorageScope.writePreference", () => {
 
     // A resize writes on every step: one warning per element, not one per step.
     expect(warn).toHaveBeenCalledTimes(2);
-    vi.unstubAllGlobals();
-    warn.mockRestore();
   });
 });
+
+describe("StorageScope.writeSession", () => {
+  it("writes the scoped key to sessionStorage and never to localStorage", () => {
+    claimed = scope();
+
+    claimed.writeSession("collapsed", "1");
+
+    expect(sessionStorage.getItem(claimed.key("collapsed"))).toBe("1");
+    expect(localStorage.getItem(claimed.key("collapsed"))).toBeNull();
+    sessionStorage.removeItem(claimed.key("collapsed"));
+  });
+
+  it("warns once per scope however many writes the browser refuses", () => {
+    const owner = new StorageScope({ id: () => "a", endpoint: () => "" });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    failEveryWrite();
+
+    for (let write = 0; write < 4; write += 1) {
+      owner.writeSession("collapsed", "1");
+    }
+
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+});
+
+/** Make every `sessionStorage` write throw, as an exhausted quota does. */
+function failEveryWrite(): void {
+  const real = sessionStorage;
+  vi.stubGlobal(
+    "sessionStorage",
+    new Proxy(real, {
+      get(target, property) {
+        if (property === "setItem") {
+          return () => {
+            throw new DOMException("exceeded the quota", "QuotaExceededError");
+          };
+        }
+        const value = Reflect.get(target, property, target) as unknown;
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    }),
+  );
+}

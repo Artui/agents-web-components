@@ -419,8 +419,8 @@ export class AgUiClient {
     // In `metadata` because it is the one field on a message `@ag-ui/client`
     // declares open by key. 1.0 strips every undeclared key from the input it
     // sends, so refs at the top level of the message are removed with a
-    // console warning and the server is never told a file was attached. No metadata at all without refs: an
-    // empty object would put a field on every plain message that says nothing.
+    // console warning and the server is never told a file was attached. No metadata at all
+    // without refs: an empty object would put a field on every plain message that says nothing.
     const message: Message = {
       id: randomUUID(),
       role: "user",

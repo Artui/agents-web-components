@@ -44,10 +44,15 @@ describe("toolStatusFromOutcome", () => {
 
   // Every shape an undeclared field or a JSON blob out of a store can actually
   // hand over. None of them is grounds for claiming a failure.
-  it.each([null, "", "FAILED", 1, true, {}, ["failed"]])(
-    "reads unrecognised %j as a success",
-    (value) => {
-      expect(toolStatusFromOutcome(value)).toBe(TOOL_CALL_STATUS.DONE);
-    },
-  );
+  it.each([
+    { value: null },
+    { value: "" },
+    { value: "FAILED" },
+    { value: 1 },
+    { value: true },
+    { value: {} },
+    { value: ["failed"] },
+  ])("reads unrecognised $value as a success", ({ value }) => {
+    expect(toolStatusFromOutcome(value)).toBe(TOOL_CALL_STATUS.DONE);
+  });
 });
