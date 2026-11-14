@@ -1448,15 +1448,6 @@ export class AgUiChat extends HTMLElement {
     this.#tools.registerPageState(binding);
   }
 
-  /**
-   * @deprecated Renamed to {@link registerPageState} — the old name read as
-   * AG-UI shared-state sync. Behaviour is unchanged; the alias will be removed
-   * in a future major.
-   */
-  registerStateHook(binding: PageState): void {
-    this.registerPageState(binding);
-  }
-
   /** The AG-UI endpoint URL, read from the `endpoint` attribute. */
   get endpoint(): string {
     return this.getAttribute("endpoint") ?? "";

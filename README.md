@@ -328,8 +328,7 @@ the `copyCode` / `copied` / `copyFailed` strings.
 `sendMessage`, `attachFile`, `appendMessage`, `retryLastTurn`, `quote`, `offerQuoteInPage`,
 `enableCharts`, `newChat`, `setCollapsed`, `toggleCollapsed`, `setMaximized`, `toggleMaximized`,
 `describeSurface`, `moveTo`, `resetSize`, `toggleTheme`, `openThreads`, `closeThreads`, `switchThread`, `deleteThread`,
-`openCheckpoints`, `closeCheckpoints`, `toggleCheckpoints`, `refreshPlace`, `reload`, and the deprecated
-`registerStateHook` (renamed to `registerPageState`).
+`openCheckpoints`, `closeCheckpoints`, `toggleCheckpoints`, `refreshPlace` and `reload`.
 
 ### Sending from your own UI
 
@@ -2861,9 +2860,7 @@ chat.registerPageState({
 ```
 
 **This is not AG-UI shared state** — that is `sharedState`, below. `registerPageState` generates two
-ordinary client tools; the agent reads or writes your store by *calling a tool*. The method was
-called `registerStateHook` through 0.12, a name that read as protocol state sync; the old spelling
-still works and is deprecated.
+ordinary client tools; the agent reads or writes your store by *calling a tool*.
 
 **`sharedState`** *(property)* — AG-UI **shared state**: the protocol's own state channel, sent as
 `RunAgentInput.state` on every run and replaced in place when the server streams `STATE_SNAPSHOT` /
