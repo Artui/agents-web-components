@@ -98,10 +98,8 @@ export const HISTORY_STYLES: string = `
 }
 
 /* A row is a label and two buttons, and nothing about the row itself is
-   pressable. It used to light up on hover, which is the affordance of something
-   clickable and made the buttons look like decoration on a clickable strip. The
-   resting surface groups the row instead, so hover can mean what it says: only
-   the buttons respond to it.
+   pressable. Hover is the affordance of something clickable, so the row does not
+   light up: the resting surface groups it, and only the buttons respond to hover.
 
    It wraps for the same reason the tool-call head does. Every child but the label
    is fixed-width, so in a narrow panel the label is the only thing that can give
