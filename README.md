@@ -4347,12 +4347,12 @@ when another class holds it, which is how a second copy of the element shows its
 
 **The first deploy forgets what the browser stored.** Every storage key now starts with
 `agents-web-components` instead of `ag-ui-chat`, and nothing migrates the old keys. The first page
-load after the move starts from the defaults: the open thread, the collapsed state,
-the panel size, the launcher and dock position and the theme are gone once. With
-`data-threads-url` set the drawer still lists the user's threads, since those live on the server.
+load after the move starts from the defaults: the open thread, the collapsed state, the panel
+size, the launcher and dock position and the theme are gone once, and so is the drawer's list of
+threads, unless `data-threads-url` is set, in which case the server still supplies it.
 A host that reads the old keys itself must read the new root.
 
-**Removed names.** Each had a replacement that behaves the same:
+**Removed names.** Each is gone; most have a replacement that behaves the same:
 
 | Removed | Use instead |
 | --- | --- |

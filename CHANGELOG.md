@@ -17,16 +17,15 @@ move page walks a host over. Each entry below says whether a host opts in.
   `dist/agents-web-components.bundle.js`. Opt-in: install the new package, remove the old one, and
   never load both on a page.
 - **The element moves to its own entry, `@artooi/agents-web-components/chat`**, which exports
-  `AgUiChat` and `defineChat` (was `defineAgUiChat`); the package root keeps everything else, and the
+  `AgUiChat` and `defineChat`; the package root keeps everything else, and the
   library build splits the modules the two share so a page holds one instance of each.
   `defineChat()` now throws, naming the tag, when another class already holds the `<ag-ui-chat>`
   tag. The package declares `sideEffects: false`, `./bundle` gains its `types`, and the vendored
   bundle still carries every export and defines nothing at import. Opt-in: a host imports
-  `AgUiChat` and `defineChat` from `./chat`; bundle hosts change nothing.
+  `AgUiChat` and `defineChat` from `./chat`; bundle hosts rename the file and the call.
 - **Storage keys start with `agents-web-components`** (was `ag-ui-chat`): collapsed state, theme,
   panel size, launcher and dock position, and the built-in conversation store all move to the new
-  root, and an element no longer adopts keys written without a namespace. A host opts in to
-  nothing; the first deploy forgets the open thread and the saved preferences once. A host that
+  root. A host opts in to nothing; the first deploy forgets the open thread and the saved preferences once. A host that
   reads these keys itself must read the new root.
 - **A refused `sessionStorage` write warns once per owner rather than once per page.** One element
   can now warn once for its conversation store, once for its preferences (layout, theme and the
@@ -50,9 +49,11 @@ move page walks a host over. Each entry below says whether a host opts in.
 - **The `noResult` string** in `UiStrings`: nothing drew it since a call that never returned is
   answered with `callNotFinished`. A string table that sets it no longer type-checks; delete the
   entry.
-- **The adoption of storage keys written without a namespace.** An element used to migrate
-  un-namespaced keys into its own on first read; under the new storage root there is nothing to
-  migrate. Opt-in: none, bar the one-time reset under Storage keys above.
+- **The adoption of storage keys written without a namespace.** The conversation store moved
+  them into its own namespace on construction, and the collapsed and theme preferences fell back
+  to the global key on read. Under the new storage root there is nothing to move, and an element
+  that gains an `id` or endpoint after it first wrote keys starts fresh. Opt-in: none, bar the
+  one-time reset under Storage keys above.
 
 ### Fixed
 
