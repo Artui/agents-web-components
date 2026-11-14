@@ -1012,7 +1012,7 @@ describe("a tool result's outcome", () => {
   });
 
   it("hands the store the agent's own list, outcomes included", async () => {
-    // The same array, not an annotated copy of it: the outcome is on the
+    // The same array, not a copy of it: the outcome is on the
     // message, so what a save writes is exactly what the next request sends,
     // and a host store diffing what it is handed sees the agent's own list.
     let round = 0;
@@ -1036,8 +1036,6 @@ describe("a tool result's outcome", () => {
     await client.send("delete user 7");
 
     expect(seen.at(-1)).toBe(fake.messages);
-    // The getter that used to return the annotated copy is the same list now.
-    expect(client.annotatedMessages).toBe(client.messages);
   });
 });
 

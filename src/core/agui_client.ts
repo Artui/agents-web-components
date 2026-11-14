@@ -668,23 +668,6 @@ export class AgUiClient {
     this.#onPersist(this.#agent.messages);
   }
 
-  /**
-   * The history in the form a save writes it, which is now {@link messages}
-   * itself.
-   *
-   * It differed while this client kept how each tool call ended in a side table
-   * and annotated a copy for the store, because `@ag-ui/client` 0.x kept nothing
-   * but five named fields of a result. 1.0 folds a result's `metadata` onto the
-   * message it appends, so the outcome is on the message and there is no copy
-   * left to make.
-   *
-   * @deprecated Read {@link messages}. Kept so a caller written against the
-   * getter keeps compiling and gets the same list.
-   */
-  get annotatedMessages(): readonly Message[] {
-    return this.messages;
-  }
-
   async #runLoop(): Promise<void> {
     // Carries resolved approval answers into the next run when a round finished
     // on a server-side-tool interrupt. Distinct from the public resume(), which

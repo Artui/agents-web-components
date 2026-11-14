@@ -8,7 +8,7 @@
  * out, which is the case connecting cannot see.
  */
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type ClientConversationStore,
   SessionStorageStore,
@@ -56,5 +56,37 @@ describe("StorageScope.rescopeStore", () => {
     expect(claimed.scopeStore(injected, "alice")).toBe(injected);
 
     expect(claimed.rescopeStore(injected, "chat#bob")).toBeNull();
+  });
+});
+
+describe("StorageScope.writePreference", () => {
+  it("warns once per scope when the browser refuses every write", () => {
+    const first = new StorageScope({ id: () => "a", endpoint: () => "" });
+    const second = new StorageScope({ id: () => "b", endpoint: () => "" });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const real = sessionStorage;
+    vi.stubGlobal(
+      "sessionStorage",
+      new Proxy(real, {
+        get(target, property) {
+          if (property === "setItem") {
+            return () => {
+              throw new DOMException("exceeded the quota", "QuotaExceededError");
+            };
+          }
+          const value = Reflect.get(target, property, target) as unknown;
+          return typeof value === "function" ? value.bind(target) : value;
+        },
+      }),
+    );
+
+    for (const owner of [first, second, first, second]) {
+      owner.writePreference("size", "1");
+    }
+
+    // A resize writes on every step: one warning per element, not one per step.
+    expect(warn).toHaveBeenCalledTimes(2);
+    vi.unstubAllGlobals();
+    warn.mockRestore();
   });
 });

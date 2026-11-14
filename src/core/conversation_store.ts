@@ -126,10 +126,15 @@ const DEFAULT_TITLE = "New conversation";
 // A message that is one skill's name and nothing else, as a server-resolved skill sends.
 const SKILL_TOKEN = /^\/([A-Za-z0-9][\w.-]*)$/;
 
-// One warning per page, not one per write. The condition is origin-wide and
-// persistent — a full quota stays full — so a message per persisted turn (or,
-// on the resize path, per keystroke) would bury the one that matters.
-let writeFailureReported = false;
+/**
+ * Whether its owner has warned about a refused write yet. Each store and each
+ * storage scope holds one, so an origin-wide, persistent refusal (a full quota
+ * stays full) warns once per owner, not once per persisted turn or, on the
+ * resize path, per keystroke.
+ */
+export interface WriteFailureReport {
+  reported: boolean;
+}
 
 /**
  * `sessionStorage.setItem` that survives a store which refuses to write.
@@ -144,17 +149,22 @@ let writeFailureReported = false;
  * an unhandled rejection instead.
  *
  * So a failed write loses the reload, never the conversation on screen, and
- * says so once. Recovery is in the user's hands already: deleting the oversized
- * thread from the history drawer is a `removeItem`, which frees the quota.
+ * says so once per `report`; without one, it says so on every refusal.
+ * Recovery is in the user's hands already: deleting the oversized thread from
+ * the history drawer is a `removeItem`, which frees the quota.
  */
-export function writeStoredItem(key: string, value: string): void {
+export function writeStoredItem(
+  key: string,
+  value: string,
+  report: WriteFailureReport = { reported: false },
+): void {
   try {
     sessionStorage.setItem(key, value);
   } catch {
-    if (writeFailureReported) {
+    if (report.reported) {
       return;
     }
-    writeFailureReported = true;
+    report.reported = true;
     console.warn(
       "<ag-ui-chat>: the browser refused a sessionStorage write — the quota is " +
         "full, or storage is disabled for this context. The conversation " +
@@ -193,6 +203,7 @@ interface StoredThread {
  */
 export class SessionStorageStore implements ClientConversationStore {
   readonly #root: string;
+  readonly #writeFailure: WriteFailureReport = { reported: false };
 
   constructor(namespace = "") {
     this.#root = rootFor(namespace);
@@ -209,15 +220,17 @@ export class SessionStorageStore implements ClientConversationStore {
    * `theme` keys share the global root and are deliberately left where they
    * are. A value already present at the destination wins: the destination is
    * the durable record and the source is the stray this move exists to clear.
+   * A refused write warns once per call.
    */
   static adopt(from: string, to: string): void {
     const fromRoot = `${rootFor(from)}:`;
     const toRoot = `${rootFor(to)}:`;
+    const writeFailure: WriteFailureReport = { reported: false };
     for (const [key, suffix] of ownedKeys(fromRoot)) {
       const value = sessionStorage.getItem(key);
       const destination = toRoot + suffix;
       if (value !== null && sessionStorage.getItem(destination) === null) {
-        writeStoredItem(destination, value);
+        writeStoredItem(destination, value, writeFailure);
       }
       sessionStorage.removeItem(key);
     }
@@ -244,8 +257,8 @@ export class SessionStorageStore implements ClientConversationStore {
 
   newThread(): string {
     const id = randomUUID();
-    writeStoredItem(this.#key(THREAD_SUFFIX), id);
-    writeStoredItem(this.#key(MINTED_SUFFIX + id), "1");
+    this.#write(this.#key(THREAD_SUFFIX), id);
+    this.#write(this.#key(MINTED_SUFFIX + id), "1");
     return id;
   }
 
@@ -261,7 +274,7 @@ export class SessionStorageStore implements ClientConversationStore {
   }
 
   saveMessages(threadId: string, messages: readonly Message[]): void {
-    writeStoredItem(this.#key(MESSAGES_SUFFIX + threadId), JSON.stringify(messages));
+    this.#write(this.#key(MESSAGES_SUFFIX + threadId), JSON.stringify(messages));
     sessionStorage.removeItem(this.#key(MINTED_SUFFIX + threadId));
     this.#touchThread(threadId, messages);
   }
@@ -276,7 +289,7 @@ export class SessionStorageStore implements ClientConversationStore {
       sessionStorage.removeItem(key);
       return;
     }
-    writeStoredItem(key, JSON.stringify(checkpoint));
+    this.#write(key, JSON.stringify(checkpoint));
   }
 
   clear(threadId: string): void {
@@ -300,7 +313,7 @@ export class SessionStorageStore implements ClientConversationStore {
   }
 
   setActiveThread(threadId: string): void {
-    writeStoredItem(this.#key(THREAD_SUFFIX), threadId);
+    this.#write(this.#key(THREAD_SUFFIX), threadId);
   }
 
   renameThread(threadId: string, title: string): void {
@@ -348,7 +361,11 @@ export class SessionStorageStore implements ClientConversationStore {
       sessionStorage.removeItem(key);
       return;
     }
-    writeStoredItem(key, JSON.stringify(threads));
+    this.#write(key, JSON.stringify(threads));
+  }
+
+  #write(key: string, value: string): void {
+    writeStoredItem(key, value, this.#writeFailure);
   }
 
   /** This store's fully-qualified key for a suffix (namespaced when set). */

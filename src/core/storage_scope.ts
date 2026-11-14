@@ -2,6 +2,7 @@ import { randomUUID } from "@ag-ui/client";
 import {
   type ClientConversationStore,
   SessionStorageStore,
+  type WriteFailureReport,
   writeStoredItem,
 } from "./conversation_store.js";
 
@@ -60,6 +61,7 @@ export class StorageScope {
   // the host's own kind is never held here: the element does not know its
   // keying and must not guess at it.
   #builtinStore: SessionStorageStore | null = null;
+  readonly #writeFailure: WriteFailureReport = { reported: false };
 
   constructor(host: StorageScopeHost) {
     this.#host = host;
@@ -202,7 +204,7 @@ export class StorageScope {
     } catch {
       // Quota, or a store that denies writes.
     }
-    writeStoredItem(key, value);
+    writeStoredItem(key, value, this.#writeFailure);
   }
 
   /**
