@@ -2008,13 +2008,7 @@ export class AgUiChat extends HTMLElement {
     // Expanding reads the thread on screen; other threads keep their marks.
     // Reported on every toggle, as before, with the threads it cleared.
     this.#unreadChanged(this.#markSeen());
-    this.dispatchEvent(
-      new CustomEvent<ToggleDetail>(TOGGLE_EVENT, {
-        detail: { collapsed },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+    this.#emit<ToggleDetail>(TOGGLE_EVENT, { collapsed });
   }
 
   /**

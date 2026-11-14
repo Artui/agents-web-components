@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   listening when the element is removed. A host rule that changes the element's `color-scheme` at
   runtime is still not seen, and the README says so. A host opts in to nothing.
 
+### Changed
+
+- **A last pass of internal simplification: the toggle event goes through the element's one emit helper, the longest internal comment blocks in the panel placement are condensed, and two groups of tests are parametrised.** No behaviour changes. A host opts in to nothing.
+
 ## [0.1.1] — 2026-11-14
 
 ### Changed
