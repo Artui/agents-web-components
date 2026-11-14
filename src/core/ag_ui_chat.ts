@@ -1348,9 +1348,11 @@ export class AgUiChat extends HTMLElement {
    * The client holding the conversation's live shared state: a checkpoint
    * continuation while one runs, otherwise the conversation's own client, and
    * `null` before either exists. The continuation first, because the state it
-   * streams is applied to its own agent. No test can tell this from the fallback
-   * to the conversation's client; the setter's is held by "reads the shared state
-   * it changed while it runs, not the conversation's" (checkpoints tests).
+   * streams is applied to its own agent. The fallback agrees only because the
+   * conversation's client is released at the continuation's first save, so no
+   * test can tell them apart; reading the continuation stays right however long
+   * that client is kept. The setter's is held by "reads the shared state it
+   * changed while it runs, not the conversation's" (checkpoints tests).
    */
   #liveClient(): AgUiClient | null {
     return this.#history.continuation ?? this.#client;
