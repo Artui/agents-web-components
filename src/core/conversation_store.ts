@@ -57,9 +57,8 @@ export interface ClientConversationStore {
    * {@link clear} is the only method that takes one away.
    *
    * Optional: for a store without it, the caller mints the id itself and
-   * hands it to {@link setActiveThread},
-   * which loses only the store's own record that the thread is new (see
-   * {@link isUnsent}).
+   * hands it to {@link setActiveThread}, which loses only the store's own
+   * record that the thread is new (see {@link isUnsent}).
    */
   newThread?(): string;
   /** Load the persisted message history, or `null` when none exists. */
