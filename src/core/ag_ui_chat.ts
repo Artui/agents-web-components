@@ -2911,6 +2911,11 @@ export class AgUiChat extends HTMLElement {
     });
     if (themed) {
       this.#syncThemeGlyph();
+      // Under auto (or a host color-scheme naming both) the drawn scheme is the
+      // system's, which changes with no attribute write to hear it by.
+      window
+        .matchMedia("(prefers-color-scheme: dark)")
+        .addEventListener("change", () => this.#syncThemeGlyph(), { signal });
     }
 
     // A panel is a window and a header is its title bar.

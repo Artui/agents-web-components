@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The header theme toggle's glyph follows the system scheme under `theme="auto"`.** When the
+  operating system switched between light and dark, the panel redrew but the toggle kept the old
+  glyph until the next click; it now redraws as the `prefers-color-scheme` query changes, and stops
+  listening when the element is removed. A host rule that changes the element's `color-scheme` at
+  runtime is still not seen, and the README says so. A host opts in to nothing.
+
 ## [0.1.1] — 2026-11-14
 
 ### Changed
