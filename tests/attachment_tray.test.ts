@@ -1,0 +1,252 @@
+import { describe, expect, it, vi } from "vitest";
+import type { AttachmentRef } from "../src/core/attachment.js";
+import { AttachmentTray, type AttachmentTrayConfig } from "../src/ui/composer/attachment_tray.js";
+import { DEFAULT_UI_STRINGS } from "../src/ui/ui_strings.js";
+
+interface Deferred<T> {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (error: unknown) => void;
+}
+
+function deferred<T>(): Deferred<T> {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+interface UploadCall {
+  file: File;
+  onProgress: (fraction: number) => void;
+  deferred: Deferred<AttachmentRef>;
+  signal?: AbortSignal | undefined;
+}
+
+function makeUploader(): { upload: AttachmentTrayConfig["upload"]; calls: UploadCall[] } {
+  const calls: UploadCall[] = [];
+  const upload: AttachmentTrayConfig["upload"] = (file, onProgress, signal) => {
+    const d = deferred<AttachmentRef>();
+    calls.push({ file, onProgress, deferred: d, signal });
+    return d.promise;
+  };
+  return { upload, calls };
+}
+
+function makeTray(over: Partial<AttachmentTrayConfig> = {}): {
+  tray: AttachmentTray;
+  calls: UploadCall[];
+  onChange: ReturnType<typeof vi.fn>;
+} {
+  const { upload, calls } = makeUploader();
+  const onChange = vi.fn();
+  const tray = new AttachmentTray({ upload, maxBytes: 0, accept: "", onChange, ...over });
+  return { tray, calls, onChange };
+}
+
+function file(name = "notes.txt", type = "text/plain", size = 10): File {
+  const blob = new File(["x".repeat(size)], name, { type });
+  return blob;
+}
+
+async function flush(): Promise<void> {
+  for (let i = 0; i < 5; i += 1) {
+    await Promise.resolve();
+  }
+}
+
+const REF: AttachmentRef = { id: "a1", name: "notes.txt", mime: "text/plain", size: 10 };
+
+describe("AttachmentTray", () => {
+  it("starts hidden and empty", () => {
+    const { tray } = makeTray();
+    expect(tray.element.hidden).toBe(true);
+    expect(tray.isEmpty()).toBe(true);
+    expect(tray.readyRefs()).toEqual([]);
+  });
+
+  it("shows an uploading chip, then a ready chip with the ref", async () => {
+    const { tray, calls, onChange } = makeTray();
+    tray.add(file());
+    expect(tray.element.hidden).toBe(false);
+    expect(tray.element.querySelector(".attachment-chip--uploading")).not.toBeNull();
+    expect(tray.hasPending()).toBe(true);
+    expect(onChange).toHaveBeenCalledTimes(1); // on add
+
+    calls[0]?.deferred.resolve(REF);
+    await flush();
+
+    expect(tray.element.querySelector(".attachment-chip--ready")).not.toBeNull();
+    expect(tray.readyRefs()).toEqual([REF]);
+    expect(tray.hasPending()).toBe(false);
+    expect(onChange).toHaveBeenCalledTimes(2); // + on settle
+  });
+
+  it("renders the progress bar from the upload fraction", () => {
+    const { tray, calls } = makeTray();
+    tray.add(file());
+    calls[0]?.onProgress(0.42);
+    const fill = tray.element.querySelector<HTMLDivElement>(".attachment-chip-bar-fill");
+    expect(fill?.style.width).toBe("42%");
+  });
+
+  it("rejects an oversize file into an error chip without uploading", () => {
+    const { tray, calls } = makeTray({ maxBytes: 5 });
+    tray.add(file("big.txt", "text/plain", 10));
+    expect(calls).toHaveLength(0);
+    const chip = tray.element.querySelector(".attachment-chip--error");
+    expect(chip?.querySelector(".attachment-chip-size")?.textContent).toContain("Too large");
+  });
+
+  it("fills the size limit everywhere a translation uses it", () => {
+    // A string pattern fills only its first occurrence.
+    const { tray } = makeTray({
+      maxBytes: 5,
+      strings: { ...DEFAULT_UI_STRINGS, tooLarge: "Over {size} (limit {size})" },
+    });
+    tray.add(file("big.txt", "text/plain", 10));
+    const chip = tray.element.querySelector(".attachment-chip--error");
+    expect(chip?.querySelector(".attachment-chip-size")?.textContent).toBe("Over 5 B (limit 5 B)");
+  });
+
+  it("rejects a disallowed type into an error chip", () => {
+    const { tray, calls } = makeTray({ accept: "image/*" });
+    tray.add(file("notes.txt", "text/plain"));
+    expect(calls).toHaveLength(0);
+    expect(tray.element.querySelector(".attachment-chip--error")?.textContent).toContain(
+      "not allowed",
+    );
+  });
+
+  it("accepts by extension, wildcard, and exact type", () => {
+    const ext = makeTray({ accept: ".txt" });
+    ext.tray.add(file("a.txt", ""));
+    expect(ext.calls).toHaveLength(1);
+
+    const wild = makeTray({ accept: "image/*" });
+    wild.tray.add(file("a.png", "image/png"));
+    expect(wild.calls).toHaveLength(1);
+
+    const exact = makeTray({ accept: "text/plain , image/png" });
+    exact.tray.add(file("a.txt", "text/plain"));
+    expect(exact.calls).toHaveLength(1);
+  });
+
+  it("shows an error chip with the failure message and retries", async () => {
+    const { tray, calls } = makeTray();
+    tray.add(file());
+    calls[0]?.deferred.reject(new Error("server exploded"));
+    await flush();
+    expect(tray.element.querySelector(".attachment-chip--error")?.textContent).toContain(
+      "server exploded",
+    );
+
+    tray.element.querySelector<HTMLButtonElement>(".attachment-chip-retry")?.click();
+    expect(calls).toHaveLength(2); // retried
+    calls[1]?.deferred.resolve(REF);
+    await flush();
+    expect(tray.readyRefs()).toEqual([REF]);
+  });
+
+  it("uses a generic message for a non-Error rejection", async () => {
+    const { tray, calls } = makeTray();
+    tray.add(file());
+    calls[0]?.deferred.reject("nope");
+    await flush();
+    expect(tray.element.querySelector(".attachment-chip--error")?.textContent).toContain(
+      "upload failed",
+    );
+  });
+
+  it("removes a chip via its ✕ control", async () => {
+    const { tray, calls, onChange } = makeTray();
+    tray.add(file());
+    calls[0]?.deferred.resolve(REF);
+    await flush();
+    onChange.mockClear();
+
+    tray.element.querySelector<HTMLButtonElement>(".attachment-chip-remove")?.click();
+    expect(tray.isEmpty()).toBe(true);
+    expect(tray.element.hidden).toBe(true);
+    expect(onChange).toHaveBeenCalledTimes(1);
+  });
+
+  it("clearReady drops settled chips but keeps in-flight uploads", async () => {
+    const { tray, calls } = makeTray();
+    tray.add(file("ready.txt"));
+    tray.add(file("slow.txt"));
+    calls[0]?.deferred.resolve(REF);
+    await flush();
+
+    tray.clearReady();
+    expect(tray.readyRefs()).toEqual([]);
+    expect(tray.hasPending()).toBe(true); // the slow one survives
+    expect(tray.element.querySelectorAll(".attachment-chip")).toHaveLength(1);
+  });
+
+  it("clear drops every chip", async () => {
+    const { tray, calls } = makeTray();
+    tray.add(file());
+    calls[0]?.deferred.resolve(REF);
+    await flush();
+    tray.clear();
+    expect(tray.isEmpty()).toBe(true);
+    expect(tray.element.hidden).toBe(true);
+  });
+
+  it("works without an onChange callback", () => {
+    const { upload } = makeUploader();
+    const tray = new AttachmentTray({ upload, maxBytes: 0, accept: "" });
+    tray.add(file());
+    expect(tray.isEmpty()).toBe(false);
+  });
+
+  it("passes an abort signal to the upload handler", () => {
+    const { tray, calls } = makeTray();
+    tray.add(file());
+    expect(calls[0]?.signal).toBeInstanceOf(AbortSignal);
+    expect(calls[0]?.signal?.aborted).toBe(false);
+  });
+
+  it("aborts the in-flight upload when its chip is removed", () => {
+    const { tray, calls } = makeTray();
+    tray.add(file());
+    tray.element.querySelector<HTMLButtonElement>(".attachment-chip-remove")?.click();
+    expect(calls[0]?.signal?.aborted).toBe(true);
+    expect(tray.isEmpty()).toBe(true);
+  });
+
+  it("clear aborts every in-flight upload", () => {
+    const { tray, calls } = makeTray();
+    tray.add(file("a.txt"));
+    tray.add(file("b.txt"));
+    tray.clear();
+    expect(calls[0]?.signal?.aborted).toBe(true);
+    expect(calls[1]?.signal?.aborted).toBe(true);
+  });
+
+  it("dispose aborts in-flight uploads without touching the chips", () => {
+    const { tray, calls } = makeTray();
+    tray.add(file());
+    tray.dispose();
+    expect(calls[0]?.signal?.aborted).toBe(true);
+    // Chips are left in place (the element is being torn down anyway).
+    expect(tray.isEmpty()).toBe(false);
+  });
+
+  it("re-applies the size guard on retry instead of uploading a rejected file", async () => {
+    const { tray, calls } = makeTray({ maxBytes: 5 });
+    tray.add(file("big.txt", "text/plain", 10));
+    expect(calls).toHaveLength(0);
+    // The ERROR chip always renders retry; ↻ must re-reject, not upload the 10-byte file.
+    tray.element.querySelector<HTMLButtonElement>(".attachment-chip-retry")?.click();
+    await flush();
+    expect(calls).toHaveLength(0);
+    expect(tray.element.querySelector(".attachment-chip--error")?.textContent).toContain(
+      "Too large",
+    );
+  });
+});

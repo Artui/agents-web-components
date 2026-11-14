@@ -1,0 +1,373 @@
+# Repo conventions for `@artooi/agents-web-components`
+
+This file is the single source of truth for how to write code in this package.
+Rules are non-negotiable unless flagged as a heuristic.
+
+This is the **TypeScript sibling** of the `django-*` Python packages and follows the same
+shared standard, with the toolchain swapped for the JS/TS ecosystem:
+
+| Concern | Python packages | This package |
+| --- | --- | --- |
+| Package manager / build | uv + hatchling | pnpm + esbuild |
+| Lint + format | ruff | Biome |
+| Type check | ty | `tsc --noEmit` |
+| Test + coverage | pytest + pytest-cov | Vitest + `@vitest/coverage-v8` |
+| Version bump | bump-my-version | `scripts/release-bump.mjs` |
+| Publish | PyPI OIDC | npm OIDC (provenance) |
+
+The Makefile target names are identical across all packages (`init`/`test`/`lint`/`lint-fix`/
+`format`/`format-check`/`type-check`/`build`/`release-bump`/`release-publish`).
+
+## What this package is
+
+A framework-free `<ag-ui-chat>` Web Component over the [AG-UI](https://docs.ag-ui.com)
+protocol. Wraps `@ag-ui/client`'s `HttpAgent`. Ships:
+- The Custom Element with a Shadow DOM chat UI.
+- A pluggable client-side tool registry (`registerTool({ name, description, parameters,
+  handler })`); registered tools are added to every `RunAgentInput.tools`.
+- Generic DOM driver primitives (`fillField`, `clickElement`, `typeInto`, …) and animations.
+- An inline confirmation card that intercepts tool calls needing confirmation — driven by the
+  `x-destructive: true` JSON-Schema flag (or per-call `confirmPredicate`), with prompt text from
+  `x-confirm`.
+
+Downstream consumers (e.g. `django-admin-agent`) register their own admin-aware tool handlers
+on top via the pluggable registry. **No Django/admin specifics live here.**
+
+The AG-UI stack design doc (`django-ag-ui-plan.md`) lives in the private ecosystem planning workspace, outside this repo.
+
+## Commands
+
+| Target | What it does |
+| --- | --- |
+| `make init` | `pnpm install` + install pre-commit hooks |
+| `make test` | Vitest with 100% line+branch+function+statement coverage gate |
+| `make lint` | `biome check .` + `tsc --noEmit` |
+| `make format` | `biome format --write .` |
+| `make build` | esbuild bundle + `tsc` declarations into `dist/` |
+
+`tsconfig.build.json` sets `rootDir: "./src"` explicitly: TypeScript 7 no longer
+infers it from the common source directory (TS5011). It is the value 5.x
+inferred, so the published layout stays `dist/index.d.ts` rather than
+`dist/src/index.d.ts`. The tsconfigs carry no comments — pre-commit's
+`check-json` parses them as strict JSON, not JSONC.
+| `make release-bump VERSION=X.Y.Z` | rewrite `src/version.ts` + `package.json` + CHANGELOG |
+| `make release-publish` | end-to-end workstation release |
+
+## Structural rules
+
+1. **One exported class or function per file.** File name = `snake_case` or `kebab-case` of
+   the symbol's concept. `AgUiChat` Custom Element → `ag_ui_chat.ts`; `fillField` →
+   `fill_field.ts`. Keep the file-per-symbol discipline from the Python packages.
+   **Exception:** `src/constants.ts` is the single home for enums and constant-like values,
+   and is the only file allowed to export multiple symbols.
+2. **Private helpers used in only one file** stay there, not exported.
+3. **Non-exported helpers shared across files** go into a sibling `utils.ts`.
+4. **Top-level imports only.** No dynamic `import()` unless genuinely needed for code-splitting
+   a heavy optional dependency, documented inline.
+5. **Full type annotations on every exported function and method signature.** `any` is
+   forbidden except at genuine external-boundary points, and even there prefer `unknown`.
+   `tsconfig` runs in full `strict` mode plus `noUncheckedIndexedAccess`,
+   `exactOptionalPropertyTypes`, `noPropertyAccessFromIndexSignature`.
+6. **`src/index.ts` is the only re-export point.** It lists the public surface. Internal
+   modules import from leaf paths (`./fill_field.ts`), never from `./index.ts`.
+7. **Use `.js` extensions in import specifiers** (`import { x } from "./x.js"`) even though the
+   source file is `x.ts` — NodeNext convention. tsc, esbuild, and Vitest all resolve `.js` →
+   `.ts`/`.d.ts` correctly, and the emitted `.d.ts` keeps `./x.js`, so consumers resolve
+   types without needing `allowImportingTsExtensions`. Never use bare extensionless imports or
+   `.ts` extensions (the latter forces the flag onto every downstream consumer).
+8. **`import type` for type-only imports** (Biome enforces `useImportType`).
+9. **`src/` is grouped by concern, two levels at most.** The top level is `core/` (the
+   element, AG-UI client, conversation store), `ui/` (everything rendered), `dom/`
+   (host-page driving: animations, dom driver, native setter), `tools/` (client tool
+   registry, route/page maps, state hook, schema predicates), and `skills/` (skill type,
+   templating, parsing). `index.ts`, `constants.ts`, and `version.ts` stay at the `src/`
+   root.
+
+   Every rule above this one governs a *file*, so a package can obey all eight and still
+   put everything it owns in one flat directory — which is what `src/ui/` was at 37
+   modules. The rules for a directory are:
+
+   - **Name it for a concern, never for a kind of thing.** `placement/`, `interrupts/`,
+     `excerpts/`, `composer/` say what the code does. `helpers/`, `common/`, `misc/`,
+     `types/`, `cards/`, `widgets/` say only what shape the exports have, and a directory
+     named for a shape is the flat root again one level down. The test: `ui/interrupts/`
+     holds the approval, confirmation and question cards because all three pause a run to
+     ask the user something, and `ui/progress/tool_call_card.ts` is a card that is
+     deliberately not among them, because it reports work rather than asking for a
+     decision. A `cards/` directory would have held all four and said nothing about any
+     of them.
+   - **Three modules on one concern earn a directory.** Below three they stay at the group
+     root; at three they move, and moving them is a chore rather than a refactor.
+   - **A group root holds only what everything under it uses.** `ui/ui_strings.ts` and
+     `ui/styles.ts` are there because they span all eight concern directories, the way
+     `constants.ts` sits at the `src/` root. It is not the drawer for whatever has not
+     found a home yet.
+   - **Two levels is the limit.** Wanting a third means the second was named for a kind.
+
+   Cross-group imports use relative `../<group>/x.js` paths, `../../<group>/x.js` from
+   inside a concern directory; same-directory imports use `./x.js`.
+
+   **Tests stay flat under `tests/`**, named after the source symbol —
+   `src/ui/placement/clamp_panel.ts` is `tests/clamp_panel.test.ts`, and the browser-only
+   assertions live under `tests/browser/`. This deliberately does *not* mirror the source
+   tree: a test is found by the symbol it names, and mirroring would make moving a module
+   between concerns move its test too, turning a rename into a two-sided change.
+
+## API style rules
+
+10. **Frozen, explicitly-typed data shapes.** Wire payloads and config records are `readonly`
+    interfaces or `as const` objects with explicit field types — never untyped object
+    literals passed across module boundaries.
+11. **Tool schemas are JSON Schema.** The `x-destructive` flag lives at the schema root. The
+    inline confirmation card reads it; the registry forwards it verbatim to `RunAgentInput.tools`.
+    Don't invent a parallel metadata channel.
+
+## The stylesheet is template literals, not CSS files
+
+The shadow styles are one string constant per concern, each a plain JS template
+literal in that concern's directory (`ui/composer/composer_styles.ts`,
+`ui/placement/sidebar_styles.ts`, ...), joined by `ui/styles.ts`. So **backticks
+and `${` inside CSS comments terminate the module's string**. The failure is badly
+misattributed: `tsc` reports `TS2349: This expression is not callable` at the
+*top* of the file and a dozen unrelated test files fail, none of them near the
+edit. Write CSS comments in plain prose — no backtick-quoted identifiers.
+
+**The list in `ui/styles.ts` is in cascade order.** Two rules of equal
+specificity resolve by which comes later, and several modules restate a state
+another set at rest, so reordering that list, or moving a rule between modules,
+is a behaviour change: it needs a Chromium test pinning the computed value it
+could change. The split into modules moved no rule, which is why a few small
+rules still sit in a neighbouring concern's module; each module's header names
+its guests.
+
+The public tokens are read into private `--_*` aliases in
+`ui/shell/token_styles.ts`; its block comment holds the two invariants.
+
+## No module-level mutable state
+
+State lives on Custom Element instances (private class fields) — never at module scope. No
+module-level mutable singletons, caches, or "warned-once" flags. Each `<ag-ui-chat>` element
+owns its own tool registry, AG-UI client, and Shadow DOM. Multiple instances on one page must
+not interfere.
+
+### The one registry that is shared, and the test it passes
+
+`CLAIMED_NAMESPACES` -- the set of storage namespaces the elements in a document have
+claimed, added to when an element connects and released when it disconnects -- is a
+module-level `Set`, deliberately. It is not a loophole in the rule above; it is how the
+rule's last sentence is kept. Its question is whether *another* live element in this
+document already stores its conversation under the same namespace, and no per-instance
+field can answer a question about the other instances. Without it, two elements with no
+`id` against one endpoint share a thread pointer, a history drawer and every message.
+
+It qualifies on three conditions, and a future candidate has to meet all three rather than
+cite this one:
+
+1. **Its subject is the relation between live instances**, not a convenience. A cache, a
+   memoised value or a once-per-page warning is state one instance could hold for itself,
+   and still is not allowed here.
+2. **It holds only what live instances hold.** Every entry is added by the element that
+   owns it and removed in that element's `disconnectedCallback`, so nothing outlives the
+   elements it describes and a remounted element competes on the same terms as a new one.
+3. **One path writes it and one path releases it**, both in the storage scope each element
+   owns, and nothing else reads it.
+
+Other homes were considered and rejected as the same state spelled differently. A `static`
+class field is shared exactly as widely and only looks per-instance. A property on
+`document` is shared with the host page as well, which can read and overwrite it. And
+querying the document for other `<ag-ui-chat>` elements cannot see one rendered inside
+another shadow root, which is where a framework usually puts it -- so it would miss exactly
+the collision the registry exists to catch.
+
+### The second: the connected chats
+
+`CONNECTED_CHATS` in `core/chat_registry.ts` is the list of `<ag-ui-chat>` elements in the
+document, in connection order. The highlight rings are drawn in the host's page, outside every
+chat, and a free `flash()` has to know which widget's colour to draw in (the owner decided it:
+the most recently connected chat, unless the caller names one). That is again a
+question about the other live instances. It meets the first two conditions as they stand: its
+subject is which chats are live, and each element adds itself on connect and removes itself on
+disconnect, nothing else. It meets the third only in part: one path writes it and one path
+releases it, both in the element's `ChatRegistration`, but it is *read* from outside the element,
+by the ring colour in `dom/ring_color.ts` through `ChatRegistration.latest()`. That read is the
+point of it, and it is the only one; a second reader, or another writer, needs its own
+decision rather than this precedent.
+
+## Tests
+
+- `make test` runs Vitest with 100% line + branch + function + statement coverage (thresholds
+  in `vitest.config.ts`). Restructure rather than carve out coverage exclusions.
+- Test layout mirrors `src/` under `tests/`. `src/fill_field.ts` → `tests/fill_field.test.ts`.
+- DOM tests run under `happy-dom` (configured as the Vitest environment). Custom Element
+  registration, Shadow DOM queries, and event dispatch all work there.
+- For AG-UI protocol behaviour, never hit a real server. The fake agent
+  (`tests/helpers/fake_agent.ts`) covers how the client handles subscriber events; anything about
+  the shape that crosses the wire -- the `RunAgentInput` sent, or which event keys arrive -- runs a
+  real `HttpAgent` with `fetch` stubbed, because only the real client applies 1.0's enforcement
+  (see Compatibility floor).
+
+## Lint and types
+
+- `make lint` runs `biome check .` + `tsc --noEmit`. CI fails on either.
+- Biome is the source of truth for both lint and format.
+- Pre-commit runs `make lint-fix`, `make format`, `make type-check`. Commits must be clean
+  before push — never `--no-verify`.
+
+## Compatibility floor
+
+| Component | Floor | Tested |
+| --- | --- | --- |
+| Node (tooling/tests) | 22 | 22, 24 |
+| Browsers (runtime target) | Chrome 123, Firefox 120, Safari 17.5 (ES2022, `light-dark()`) | Chromium |
+| `@ag-ui/client`, `@ag-ui/core` | 1.0 | 1.0 |
+| django-ag-ui (server) | 0.63.0 | — |
+
+The shipped artefact targets evergreen browsers (Shadow DOM, Custom Elements v1, ES2022). The
+browser floor is `light-dark()`'s, which every theme declares its colours with and which is used
+without a fallback. Node is only the build/test runtime, not a runtime target.
+
+The server row is a wire contract, not a dependency. `@ag-ui/client` 1.0 strips every key its
+schemas do not declare, off an inbound event and off the outgoing `RunAgentInput`, so a tool
+call's `outcome` and a user message's `attachments` both ride in `metadata`, the one field it
+declares open by key. An older django-ag-ui writes and reads them at the top level: the chat still
+runs, but the agent never sees an attachment and a failed or declined tool card settles as done.
+Stored history from before the move still has the top-level keys, so every reader takes
+`metadata` first and falls back to the top level, and a seeded client moves them into `metadata`
+before its first request.
+
+**A fake agent cannot see this stage.** `tests/helpers/fake_agent.ts` dispatches straight to the
+subscriber, past enforcement, so an undeclared key reaches a test exactly as it never reaches a
+real run. Anything about what crosses the wire goes through the real `HttpAgent` with `fetch`
+stubbed to an SSE body, as the `over the real HttpAgent` block in `tests/agui_client.test.ts`
+does.
+
+## Branching
+
+When working on a new feature or version bump, **ALWAYS** branch first (`git checkout -b
+feat/...` or `release/vX.Y.Z`) and push there. Never commit feature work or version bumps
+directly to `main`; `main` only advances via merged PRs (or, for releases, the tagged commit
+on the release branch).
+
+## Releases
+
+Merge-to-main triggered. `.github/workflows/release.yml` runs on every push to `main` and
+calls `make release-publish-prepare`. The script in `scripts/release-publish.sh` is the single
+source of truth (a near-byte-identical port of the Python packages' script):
+
+1. Extract version from `src/version.ts`; assert `package.json` agrees.
+2. Short-circuit if `vX.Y.Z` already exists locally or on origin.
+3. `pnpm test` as a final gate.
+4. `pnpm build` into `dist/`.
+5. Extract the `## [X.Y.Z]` CHANGELOG section into release notes.
+6. Emit `released=true`.
+
+If released:
+- Publish to npm via OIDC trusted publishing with provenance (`pnpm publish`).
+- Tag, push, create GitHub Release.
+
+### Cutting a release
+
+```bash
+make release-bump VERSION=0.2.0   # rewrites src/version.ts + package.json + CHANGELOG
+git diff
+git commit -am "Release 0.2.0"
+git push -u origin release/0.2.0
+gh pr create
+# Merge to main; release.yml fires on the merge commit.
+```
+
+`release-bump.mjs` refuses to run on a dirty tree.
+
+### One-time setup (manual)
+
+1. **npm Trusted Publisher** — configure OIDC trusted publishing for
+   `@artooi/agents-web-components` pointing at `Artui/agents-web-components`, workflow
+   `release.yml`, environment `npm`.
+2. **`@artooi` npm org** — must exist and the publishing identity must be a member.
+3. **GitHub Environment** — create an `npm` environment under `Settings → Environments` (no
+   secrets needed; OIDC handles auth).
+
+## happy-dom implements no `localStorage` at all
+
+`sessionStorage` under happy-dom is complete. `localStorage` beside it is an
+object whose `getItem`, `setItem`, `removeItem` and `clear` are every one
+`undefined` -- not a partial implementation, and not an exception you can catch
+by feature-detecting the object itself. Verified 2026-09-04 by probing both in
+the happy-dom project.
+
+Two consequences, and the second is the one that bites:
+
+- **Any code that writes a durable preference must tolerate the store being
+  absent**, because the whole API is missing rather than throwing on quota.
+  Guard the call, not the object.
+- **No happy-dom test can assert durable persistence.** A test that seeds
+  `localStorage` and expects it back gets `undefined is not a function` at best
+  and a vacuous pass at worst, and the write it was checking went nowhere. Those
+  assertions belong in the `chromium` project, for the same reason the
+  sanitisation ones do.
+
+The flip side is useful: happy-dom is an accurate stand-in for a browser in a
+privacy mode that denies the durable store, so the degraded path gets exercised
+by the bulk of the suite for free.
+
+**But CI is not this machine.** Node's own web storage is a global on the
+versions CI runs, so under happy-dom there `localStorage` *works* -- and anything
+the widget persists outlives the test that wrote it, because a teardown clearing
+`sessionStorage` alone does not reach it. That is a suite green locally and red
+on CI, which is the worst shape a leak can take. Both projects therefore clear
+both stores in a setup file (`tests/setup_storage.ts`,
+`tests/browser/setup_browser_state.ts`), guarded, since under happy-dom the
+methods are missing rather than throwing.
+
+**To reproduce a CI-only storage failure here, install an in-memory
+`localStorage` in a setup file that runs first.** Doing that reproduced the exact
+assertions CI reported, which is how the fix was confirmed rather than assumed.
+
+Note also that the Chromium project shares one page context across a file, so a
+durable write outlives the test that made it. Anything clearing `sessionStorage`
+between tests has to clear `localStorage` too, or a stored position leaks into
+the next test and reads as a drag that travelled the wrong distance.
+
+## Sanitisation is tested in a real browser, not happy-dom
+
+`vitest.config.ts` defines two projects. **happy-dom** runs the bulk of the
+suite; **chromium** (Playwright) runs the sanitisation tests, and that split is
+a correctness requirement rather than an optimisation.
+
+DOMPurify 3.4.8+ **silently stops sanitising under happy-dom** — `<script>` and
+`<img>` pass straight through, and ordinary markdown loses its `<p>` wrapper. A
+green happy-dom run is therefore compatible with the sanitiser doing nothing.
+Verified 2026-08-07: 3.4.13 sanitises correctly in Chromium, so the defect is
+happy-dom's DOM emulation, not DOMPurify.
+
+**Root cause, confirmed upstream.** DOMPurify 3.4.8 began reading the tag name
+via `lookupGetter(Node.prototype, "nodeName")`. happy-dom defines an *own*
+`nodeName` getter on **both** `Node.prototype` (returning `""`) and
+`Element.prototype`, so the base getter wins and every element resolves to
+`tagName === ""` — stripped, with children re-inserted as clones the
+NodeIterator never revisits. Tracked as
+[happy-dom#2182](https://github.com/capricorn86/happy-dom/issues/2182) (open);
+a working fix, [#2183](https://github.com/capricorn86/happy-dom/pull/2183), was
+closed unmerged. DOMPurify closed the mirror reports
+([#1457](https://github.com/cure53/DOMPurify/issues/1457),
+[#1496](https://github.com/cure53/DOMPurify/issues/1496)) as wontfix — its
+README names happy-dom as **not safe** and supports jsdom only.
+
+So the old exact pin at 3.4.7 was never the safety it appeared to be; cure53
+notes it "doesn't really work, it just appears so". Neither side has a fix in
+flight, which is why the browser project is the durable answer rather than a
+version constraint.
+
+**Do not move `tests/browser/**` back under happy-dom to save the ~2s of
+browser startup.** Those are the only assertions that this component sanitises
+at all. CI installs Chromium explicitly for the same reason — without it the
+tests cannot start, and the suite would pass having skipped what matters most.
+
+**Both `tests.yml` and `release.yml` need the `playwright install` step.**
+The release gate runs the suite a second time, so it needs its own browsers;
+the 0.15.0 release failed at 0% coverage because only `tests.yml` had the step.
+Any future workflow that runs `pnpm test` needs it too.
+
+`dompurify` is consequently a normal caret range. It was pinned to an exact
+version until the browser project existed, which is what kept five advisories
+open.

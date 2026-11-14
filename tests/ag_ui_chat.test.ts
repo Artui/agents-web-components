@@ -1,0 +1,3725 @@
+import type { Context, Message, Tool } from "@ag-ui/core";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  ELEMENT_TAG,
+  FEEDBACK_EVENT,
+  MESSAGE_ROLE,
+  SUBMIT_EVENT,
+  UNREAD_EVENT,
+} from "../src/constants.js";
+import type { AgUiChat } from "../src/core/ag_ui_chat.js";
+import type {
+  ClientConversationStore,
+  NavigationCheckpoint,
+  ThreadMeta,
+} from "../src/core/conversation_store.js";
+import { SessionStorageStore } from "../src/core/conversation_store.js";
+import { defineChat } from "../src/core/define_chat.js";
+import type { FeedbackDetail } from "../src/core/events/feedback_detail.js";
+import type { SubmitDetail } from "../src/core/events/submit_detail.js";
+import type { UnreadDetail } from "../src/core/events/unread_detail.js";
+import { RemoteConversationStore } from "../src/core/remote_conversation_store.js";
+import type { ApprovalRequest } from "../src/ui/interrupts/approval_card.js";
+import type { QuestionRequest } from "../src/ui/interrupts/question_card.js";
+import { type Emit, type FakeRunParams, makeFakeAgent } from "./helpers/fake_agent.js";
+
+/** Mount the element with a fake agent factory and an optional run script. */
+function mountWithAgent(
+  script: (emit: Emit, params: FakeRunParams) => void | Promise<void>,
+  extra: { tools?: Tool[]; context?: Context[] } = {},
+): { el: AgUiChat; handle: ReturnType<typeof makeFakeAgent> } {
+  const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+  el.setAttribute("endpoint", "/agent/");
+  // The corner placements rest collapsed on a first visit now. These run a
+  // conversation and read the transcript, so they need the panel up -- and the
+  // unread badge only counts what arrives while it is down.
+  el.setAttribute("data-start-open", "");
+  const handle = makeFakeAgent({ script });
+  el.agentFactory = () => handle.agent;
+  if (extra.tools !== undefined) {
+    el.getTools = () => extra.tools as Tool[];
+  }
+  if (extra.context !== undefined) {
+    el.getContext = () => extra.context as Context[];
+  }
+  document.body.appendChild(el);
+  return { el, handle };
+}
+
+/** Drain pending microtasks a few times so async submit + fake run settle. */
+async function flush(): Promise<void> {
+  for (let i = 0; i < 5; i += 1) {
+    await Promise.resolve();
+  }
+}
+
+async function send(el: AgUiChat, text: string): Promise<void> {
+  sendNoWait(el, text);
+  await flush();
+}
+
+/**
+ * Click Send without awaiting the run. Used by confirmation tests that must
+ * interact mid-run (the run blocks on the inline confirmation card until a
+ * button is clicked): call this, ``await flush()`` to reach the card, click,
+ * then ``await flush()`` again to let the tool execute and the run settle.
+ */
+function sendNoWait(el: AgUiChat, text: string): void {
+  const input = shadow(el).querySelector<HTMLTextAreaElement>(".input");
+  if (input === null) {
+    throw new Error("expected an input");
+  }
+  input.value = text;
+  shadow(el).querySelector<HTMLButtonElement>(".send")?.click();
+}
+
+function mount(attrs: Record<string, string> = {}): AgUiChat {
+  // The corner placements now rest collapsed on a first visit, which is what
+  // every corner chat in the field does. These tests are about what the open
+  // panel contains, so they ask for it up; the ones about the resting state
+  // pass their own value.
+  const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+  for (const [key, value] of Object.entries({ "data-start-open": "", ...attrs })) {
+    el.setAttribute(key, value);
+  }
+  document.body.appendChild(el);
+  return el;
+}
+
+function shadow(el: AgUiChat): ShadowRoot {
+  const root = el.shadowRoot;
+  if (root === null) {
+    throw new Error("expected a shadow root");
+  }
+  return root;
+}
+
+function inputOf(el: AgUiChat): HTMLTextAreaElement {
+  const input = shadow(el).querySelector<HTMLTextAreaElement>(".input");
+  if (input === null) {
+    throw new Error("expected an input");
+  }
+  return input;
+}
+
+describe("AgUiChat", () => {
+  beforeAll(() => {
+    defineChat();
+  });
+
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    sessionStorage.clear();
+  });
+
+  it("renders the shell into an open shadow root", () => {
+    const el = mount();
+    const root = shadow(el);
+    expect(root.querySelector(".chat")).not.toBeNull();
+    expect(root.querySelector(".messages")).not.toBeNull();
+    expect(root.querySelector(".input")).not.toBeNull();
+    expect(root.querySelector(".send")).not.toBeNull();
+  });
+
+  it("defaults the header to 'Assistant' and honours title-text", () => {
+    expect(shadow(mount()).querySelector(".header-title")?.textContent).toBe("Assistant");
+    expect(
+      shadow(mount({ "title-text": "Admin Copilot" })).querySelector(".header-title")?.textContent,
+    ).toBe("Admin Copilot");
+  });
+
+  it("new-chat clears the transcript", () => {
+    const el = mount();
+    el.appendMessage(MESSAGE_ROLE.USER, "hi");
+    el.appendMessage(MESSAGE_ROLE.ASSISTANT, "hello");
+    expect(shadow(el).querySelectorAll(".message")).toHaveLength(2);
+    shadow(el).querySelector<HTMLButtonElement>(".header-btn--new")?.click();
+    expect(shadow(el).querySelectorAll(".message")).toHaveLength(0);
+  });
+
+  it("toggles collapsed: reflects the attribute, persists, and emits a toggle event", () => {
+    const el = mount();
+    const events: boolean[] = [];
+    el.addEventListener("ag-ui-toggle", (e) => {
+      events.push((e as CustomEvent<{ collapsed: boolean }>).detail.collapsed);
+    });
+    expect(el.collapsed).toBe(false);
+
+    shadow(el).querySelector<HTMLButtonElement>(".header-btn--collapse")?.click();
+    expect(el.collapsed).toBe(true);
+    expect(el.hasAttribute("collapsed")).toBe(true);
+    expect(sessionStorage.getItem("ag-ui-chat:collapsed")).toBe("1");
+
+    el.toggleCollapsed();
+    expect(el.collapsed).toBe(false);
+    expect(sessionStorage.getItem("ag-ui-chat:collapsed")).toBe("0");
+    expect(events).toEqual([true, false]);
+  });
+
+  it("restores the collapsed state from session storage on mount", () => {
+    sessionStorage.setItem("ag-ui-chat:collapsed", "1");
+    expect(mount().collapsed).toBe(true);
+  });
+
+  it("exposes the endpoint attribute, defaulting to empty string", () => {
+    expect(mount().endpoint).toBe("");
+    expect(mount({ endpoint: "/agent/" }).endpoint).toBe("/agent/");
+  });
+
+  it("reflects property setters to attributes (framework interop)", () => {
+    const el = mount();
+    el.endpoint = "/api/agent/";
+    expect(el.getAttribute("endpoint")).toBe("/api/agent/");
+    expect(el.endpoint).toBe("/api/agent/");
+
+    el.toolDisplay = "minimal";
+    expect(el.getAttribute("data-tool-display")).toBe("minimal");
+    expect(el.toolDisplay).toBe("minimal");
+
+    el.collapsed = true;
+    expect(el.hasAttribute("collapsed")).toBe(true);
+    expect(el.collapsed).toBe(true);
+  });
+
+  it("appendMessage renders a role-tagged bubble", () => {
+    const el = mount();
+    const bubble = el.appendMessage(MESSAGE_ROLE.ASSISTANT, "hello");
+    expect(bubble.className).toBe("message message--assistant");
+    expect(bubble.textContent).toBe("hello");
+    expect(shadow(el).querySelectorAll(".message")).toHaveLength(1);
+  });
+
+  it("reads the tool-display mode from the data-tool-display attribute", () => {
+    expect(mount().toolDisplay).toBe("grouped");
+    expect(mount({ "data-tool-display": "inline" }).toolDisplay).toBe("inline");
+    expect(mount({ "data-tool-display": "minimal" }).toolDisplay).toBe("minimal");
+    expect(mount({ "data-tool-display": "compact" }).toolDisplay).toBe("compact");
+    expect(mount({ "data-tool-display": "full" }).toolDisplay).toBe("full");
+    expect(mount({ "data-tool-display": "bogus" }).toolDisplay).toBe("grouped");
+  });
+
+  it("reads the group's inner mode from data-tool-group-display, full unless it knows the value", () => {
+    expect(mount().toolGroupDisplay).toBe("full");
+    expect(mount({ "data-tool-group-display": "inline" }).toolGroupDisplay).toBe("inline");
+    expect(mount({ "data-tool-group-display": "minimal" }).toolGroupDisplay).toBe("minimal");
+    expect(mount({ "data-tool-group-display": "compact" }).toolGroupDisplay).toBe("compact");
+    expect(mount({ "data-tool-group-display": "full" }).toolGroupDisplay).toBe("full");
+    expect(mount({ "data-tool-group-display": "grouped" }).toolGroupDisplay).toBe("full");
+    expect(mount({ "data-tool-group-display": "bogus" }).toolGroupDisplay).toBe("full");
+  });
+
+  it("reflects toolGroupDisplay to its attribute", () => {
+    const el = mount();
+    el.toolGroupDisplay = "compact";
+    expect(el.getAttribute("data-tool-group-display")).toBe("compact");
+    expect(el.toolGroupDisplay).toBe("compact");
+  });
+
+  it("renders assistant content as markdown but keeps user content literal", () => {
+    const el = mount();
+    const assistant = el.appendMessage(MESSAGE_ROLE.ASSISTANT, "**bold**");
+    expect(assistant.querySelector("strong")?.textContent).toBe("bold");
+    const user = el.appendMessage(MESSAGE_ROLE.USER, "**bold**");
+    expect(user.querySelector("strong")).toBeNull();
+    expect(user.textContent).toBe("**bold**");
+  });
+
+  // Image stripping moved to tests/browser/ag_ui_chat_sanitisation.browser.test.ts
+  // — happy-dom cannot evaluate it, because DOMPurify 3.4.8+ does not sanitise
+  // under it at all. Asserting it here would pass or fail for reasons unrelated
+  // to this component.
+
+  it("hands the agent factory a live header getter (rotated tokens reach the agent)", async () => {
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("endpoint", "/agent/");
+    el.headers = { Authorization: "Bearer token-1" };
+    const handle = makeFakeAgent({
+      script: (emit) => {
+        emit.runStart();
+        emit.runEnd();
+      },
+    });
+    let captured: (() => Record<string, string>) | undefined;
+    el.agentFactory = (options) => {
+      captured = options.getHeaders;
+      return handle.agent;
+    };
+    document.body.appendChild(el);
+    await send(el, "hi");
+    expect(captured?.()).toEqual({ Authorization: "Bearer token-1" });
+    // Rotate after the client (and agent) were built and cached.
+    el.headers = { Authorization: "Bearer token-2" };
+    expect(captured?.()).toEqual({ Authorization: "Bearer token-2" });
+  });
+
+  it("submits on send-button click: appends a user bubble and emits the event", async () => {
+    // No endpoint here: this asserts the submit-event + user-bubble seam in
+    // isolation, without engaging the AG-UI client / network path.
+    const el = mount();
+    // Past the restore connecting starts, which holds the composer until it
+    // has drawn the stored conversation, so the send below is not parked.
+    await flush();
+    const onSubmit = vi.fn();
+    el.addEventListener(SUBMIT_EVENT, (e) => onSubmit((e as CustomEvent<SubmitDetail>).detail));
+
+    const input = inputOf(el);
+    input.value = "  count users  ";
+    shadow(el).querySelector<HTMLButtonElement>(".send")?.click();
+
+    expect(onSubmit).toHaveBeenCalledWith({ content: "count users", attachments: [] });
+    expect(input.value).toBe("");
+    const bubbles = shadow(el).querySelectorAll(".message--user");
+    expect(bubbles).toHaveLength(1);
+    expect(bubbles[0]?.textContent).toBe("count users");
+  });
+
+  it("does not submit when the input is blank", () => {
+    const el = mount();
+    const onSubmit = vi.fn();
+    el.addEventListener(SUBMIT_EVENT, onSubmit);
+
+    inputOf(el).value = "   ";
+    shadow(el).querySelector<HTMLButtonElement>(".send")?.click();
+
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(shadow(el).querySelectorAll(".message")).toHaveLength(0);
+  });
+
+  it("submits on Enter without Shift", async () => {
+    const el = mount();
+    // Past the restore connecting starts, which holds the composer until it
+    // has drawn the stored conversation, so the send below is not parked.
+    await flush();
+    const onSubmit = vi.fn();
+    el.addEventListener(SUBMIT_EVENT, onSubmit);
+
+    const input = inputOf(el);
+    input.value = "go";
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", shiftKey: false, cancelable: true }),
+    );
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not submit on Shift+Enter or other keys", () => {
+    const el = mount();
+    const onSubmit = vi.fn();
+    el.addEventListener(SUBMIT_EVENT, onSubmit);
+
+    const input = inputOf(el);
+    input.value = "multi\nline";
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", shiftKey: true }));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "a", shiftKey: false }));
+
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("submits via Enter and drives the client (covers keydown path)", async () => {
+    const { el } = mountWithAgent((emit) => {
+      emit.text("hi");
+      emit.textEnd("hi");
+    });
+    const input = inputOf(el);
+    input.value = "hello";
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", shiftKey: false, cancelable: true }),
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(shadow(el).querySelector(".message--assistant")?.textContent).toBe("hi");
+  });
+
+  it("reveals an at-once assistant message word-by-word when data-text-animation=word", async () => {
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("endpoint", "/agent/");
+    el.setAttribute("data-text-animation", "word");
+    const handle = makeFakeAgent({
+      script: (emit) => {
+        emit.runStart();
+        emit.text("hello world"); // single delta → message arrived at once
+        emit.textEnd("hello world");
+        emit.runEnd();
+      },
+    });
+    el.agentFactory = () => handle.agent;
+    document.body.appendChild(el);
+    await send(el, "hi");
+
+    const words = shadow(el).querySelectorAll(".message--assistant .word");
+    expect([...words].map((w) => w.textContent)).toEqual(["hello", "world"]);
+  });
+
+  it("does NOT re-animate a multi-delta streamed message in word mode", async () => {
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("endpoint", "/agent/");
+    el.setAttribute("data-text-animation", "word");
+    const handle = makeFakeAgent({
+      script: (emit) => {
+        emit.runStart();
+        emit.text("hello"); // streamed progressively across several deltas…
+        emit.text("hello world");
+        emit.text("hello world foo");
+        emit.textEnd("hello world foo");
+        emit.runEnd();
+      },
+    });
+    el.agentFactory = () => handle.agent;
+    document.body.appendChild(el);
+    await send(el, "hi");
+
+    // It already revealed as it streamed, so the finished message must not be
+    // re-wrapped into staggered .word spans (the jarring replay bug).
+    expect(shadow(el).querySelectorAll(".message--assistant .word")).toHaveLength(0);
+    expect(shadow(el).querySelector(".message--assistant")?.textContent).toBe("hello world foo");
+  });
+
+  it("streams assistant text into a single growing bubble", async () => {
+    const { el } = mountWithAgent((emit) => {
+      emit.runStart();
+      emit.text("Pa");
+      emit.text("Paris");
+      emit.textEnd("Paris");
+      emit.runEnd();
+    });
+    await send(el, "capital of France?");
+
+    const assistantBubbles = shadow(el).querySelectorAll(".message--assistant");
+    expect(assistantBubbles).toHaveLength(1);
+    expect(assistantBubbles[0]?.textContent).toBe("Paris");
+  });
+
+  it("swaps the composer button to Stop while running and back to Send after settle", async () => {
+    let midRun: { label: string | null; aria: string | null; state: string | undefined } | null =
+      null;
+    const { el } = mountWithAgent((emit) => {
+      emit.runStart();
+      const button = shadow(el).querySelector<HTMLButtonElement>(".send");
+      midRun = {
+        label: button?.title ?? null,
+        aria: button?.getAttribute("aria-label") ?? null,
+        state: button?.dataset["state"],
+      };
+      emit.runEnd();
+    });
+    await send(el, "go");
+    // The button is icon-only: the state swaps its glyph (via data-state) and
+    // its accessible name, never any text.
+    expect(midRun).toEqual({ label: "Stop", aria: "Stop", state: "running" });
+    const button = shadow(el).querySelector<HTMLButtonElement>(".send");
+    expect(button?.title).toBe("Send");
+    expect(button?.getAttribute("aria-label")).toBe("Send");
+    expect(button?.dataset["state"]).toBe("idle");
+  });
+
+  describe("unread badge", () => {
+    /** Stream one finished answer through a mounted element. */
+    async function answer(el: AgUiChat): Promise<void> {
+      await send(el, "hi");
+    }
+
+    function badge(el: AgUiChat): HTMLElement {
+      const found = shadow(el).querySelector<HTMLElement>(".launcher-badge");
+      if (found === null) {
+        throw new Error("expected a .launcher-badge");
+      }
+      return found;
+    }
+
+    function mountAnswering(): AgUiChat {
+      const { el } = mountWithAgent((emit) => {
+        emit.runStart();
+        emit.textEnd("an answer");
+        emit.runEnd();
+      });
+      return el;
+    }
+
+    it("counts answers that land while collapsed and shows them on the launcher", async () => {
+      const el = mountAnswering();
+      el.setCollapsed(true);
+
+      await answer(el);
+      await answer(el);
+
+      expect(el.unread).toBe(2);
+      expect(badge(el).hidden).toBe(false);
+      expect(badge(el).textContent).toBe("2");
+    });
+
+    it("stays silent while the widget is open — nothing there is unread", async () => {
+      const el = mountAnswering();
+
+      await answer(el);
+
+      expect(el.unread).toBe(0);
+      expect(badge(el).hidden).toBe(true);
+    });
+
+    it("caps the badge at 9+, where the exact number stops being information", async () => {
+      const el = mountAnswering();
+      el.setCollapsed(true);
+      for (let i = 0; i < 10; i += 1) {
+        await answer(el);
+      }
+
+      expect(el.unread).toBe(10);
+      expect(badge(el).textContent).toBe("9+");
+    });
+
+    it("marks them read on expand, and announces the count on the launcher", async () => {
+      const el = mountAnswering();
+      el.setCollapsed(true);
+      await answer(el);
+      const launcher = shadow(el).querySelector(".launcher");
+      expect(launcher?.getAttribute("aria-label")).toBe("Expand — 1 unread");
+
+      el.setCollapsed(false);
+
+      expect(el.unread).toBe(0);
+      expect(badge(el).hidden).toBe(true);
+      expect(launcher?.getAttribute("aria-label")).toBe("Expand");
+    });
+
+    it("fills the unread count everywhere a translation uses it", async () => {
+      // A string pattern fills only its first occurrence.
+      const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+      el.setAttribute("endpoint", "/agent/");
+      el.setAttribute("data-start-open", "");
+      el.strings = { expandUnread: "Expand ({count}) - {count} unread" };
+      const handle = makeFakeAgent({
+        script: (emit) => {
+          emit.runStart();
+          emit.textEnd("an answer");
+          emit.runEnd();
+        },
+      });
+      el.agentFactory = () => handle.agent;
+      document.body.appendChild(el);
+      el.setCollapsed(true);
+
+      await answer(el);
+
+      expect(shadow(el).querySelector(".launcher")?.getAttribute("aria-label")).toBe(
+        "Expand (1) - 1 unread",
+      );
+    });
+
+    it("emits ag-ui-unread on every change, so a host can render its own", async () => {
+      const el = mountAnswering();
+      const seen: number[] = [];
+      const named: (readonly string[])[] = [];
+      el.addEventListener(UNREAD_EVENT, (event) => {
+        seen.push((event as CustomEvent<UnreadDetail>).detail.unread);
+        named.push((event as CustomEvent<UnreadDetail>).detail.threadIds);
+      });
+      el.setCollapsed(true);
+      await answer(el);
+      el.setCollapsed(false);
+
+      expect(seen).toEqual([0, 1, 0]);
+      // A toggle that cleared nothing names no thread; the others name theirs.
+      expect(named).toEqual([[], [el.threadId], [el.threadId]]);
+    });
+
+    it("keeps counting with the badge off, so a host chrome stays truthful", async () => {
+      const el = mountAnswering();
+      el.setAttribute("data-unread-badge", "false");
+      el.setCollapsed(true);
+
+      await answer(el);
+
+      expect(el.unread).toBe(1);
+      expect(badge(el).hidden).toBe(true);
+      // The label follows the badge: a launcher that shows no count must not
+      // announce one either.
+      expect(shadow(el).querySelector(".launcher")?.getAttribute("aria-label")).toBe("Expand");
+    });
+
+    it("keeps the count of the thread a collapsed new chat leaves", async () => {
+      const el = mountAnswering();
+      el.setCollapsed(true);
+      await answer(el);
+
+      el.newChat();
+
+      expect(el.unread).toBe(1);
+      expect(badge(el).hidden).toBe(false);
+    });
+  });
+
+  it("mounts both composer glyphs, so a slotted mark survives the state swap", () => {
+    const { el } = mountWithAgent(() => {});
+    const button = shadow(el).querySelector<HTMLButtonElement>(".send");
+    expect(button?.querySelector('slot[name="icon-send"]')).not.toBeNull();
+    expect(button?.querySelector('slot[name="icon-stop"]')).not.toBeNull();
+  });
+
+  it("renders a tool-call card with name, args, and a status", async () => {
+    const { el } = mountWithAgent((emit) => {
+      emit.toolCall("tc1", "fill_field", { name: "city" });
+    });
+    await send(el, "fill the city");
+    const card = shadow(el).querySelector<HTMLElement>(".tool-call");
+    expect(card?.getAttribute("data-tool-name")).toBe("fill_field");
+    // No label found anywhere -> auto-prettified snake_case fallback.
+    expect(card?.querySelector(".tool-call-name")?.textContent).toBe("Fill field");
+    expect(card?.querySelector(".tool-call-args")?.textContent).toContain('"name": "city"');
+    // fill_field isn't registered here and no server result arrived, so the
+    // card says the call did not finish rather than claiming it ran.
+    expect(card?.getAttribute("data-status")).toBe("interrupted");
+  });
+
+  it("settles the tool-call card to done with the result body", async () => {
+    let round = 0;
+    const { el } = mountWithAgent((emit) => {
+      if (round === 0) {
+        emit.toolCall("tc1", "count_users", { active: true });
+      }
+      round += 1;
+    });
+    el.registerTool({
+      name: "count_users",
+      description: "count",
+      parameters: { type: "object" },
+      handler: () => 42,
+    });
+    await send(el, "count active users");
+    const card = shadow(el).querySelector<HTMLElement>(".tool-call");
+    expect(card?.getAttribute("data-status")).toBe("done");
+    expect(card?.querySelector(".tool-call-result")?.textContent).toBe("42");
+  });
+
+  it("settles the tool-call card to error when the handler throws", async () => {
+    let round = 0;
+    const { el } = mountWithAgent((emit) => {
+      if (round === 0) {
+        emit.toolCall("tc1", "boom", {});
+      }
+      round += 1;
+    });
+    el.registerTool({
+      name: "boom",
+      description: "explodes",
+      parameters: { type: "object" },
+      handler: () => {
+        throw new Error("kaboom");
+      },
+    });
+    await send(el, "trigger boom");
+    const card = shadow(el).querySelector<HTMLElement>(".tool-call");
+    expect(card?.getAttribute("data-status")).toBe("error");
+    expect(card?.querySelector(".tool-call-result")?.textContent).toBe("kaboom");
+  });
+
+  it("settles the tool-call card to declined on cancel", async () => {
+    let round = 0;
+    const { el } = mountWithAgent((emit) => {
+      if (round === 0) {
+        emit.toolCall("tc1", "delete_user", { id: 7 });
+      }
+      round += 1;
+    });
+    el.registerTool({
+      name: "delete_user",
+      description: "delete",
+      parameters: { type: "object", "x-destructive": true },
+      handler: () => "deleted",
+    });
+
+    sendNoWait(el, "delete user 7");
+    await flush();
+    shadow(el).querySelector<HTMLButtonElement>(".confirm-btn--cancel")?.click();
+    await flush();
+
+    const card = shadow(el).querySelector<HTMLElement>(".tool-call");
+    expect(card?.getAttribute("data-status")).toBe("declined");
+    expect(card?.querySelector(".tool-call-result")?.textContent).toBe("User declined the action.");
+  });
+
+  it("gates a server-side tool behind an approval card and resumes on approve", async () => {
+    const { el, handle } = mountWithAgent((emit, params) => {
+      if (params.resume === undefined) {
+        emit.toolCall("call-1", "delete_thing", { target: "widget-1" });
+        emit.interrupt([
+          {
+            id: "int-call-1",
+            reason: "tool_call",
+            toolCallId: "call-1",
+            message: "Approve delete_thing?",
+          } as never,
+        ]);
+      } else {
+        emit.toolResult("call-1", "deleted widget-1");
+        emit.runEnd();
+      }
+    });
+
+    sendNoWait(el, "delete widget-1");
+    await flush();
+    const approval = shadow(el).querySelector<HTMLElement>(".approval");
+    expect(approval?.querySelector(".approval-body")?.textContent).toBe("Approve delete_thing?");
+
+    shadow(el).querySelector<HTMLButtonElement>(".approval-btn--approve")?.click();
+    await flush();
+
+    expect(approval?.getAttribute("data-resolved")).toBe("approved");
+    // The follow-up run carried the resume answers, and the tool result settled
+    // the pending tool-call card.
+    expect(handle.runParams).toHaveLength(2);
+    expect(handle.runParams[1]?.resume).toEqual([
+      { interruptId: "int-call-1", status: "resolved", payload: { approved: true } },
+    ]);
+    const card = shadow(el).querySelector<HTMLElement>(".tool-call");
+    expect(card?.querySelector(".tool-call-result")?.textContent).toBe("deleted widget-1");
+    // The server-side gate annotates the card exactly as the client-side
+    // confirmation does. Without it, the gate guarding the tools that run on
+    // the backend was the one leaving no trace.
+    expect(card?.getAttribute("data-decision")).toBe("approved");
+  });
+
+  it("denies a gated server-side tool, settles its card, and tells the server", async () => {
+    const { el, handle } = mountWithAgent((emit, params) => {
+      if (params.resume === undefined) {
+        emit.toolCall("call-1", "delete_thing", {});
+        emit.interrupt([{ id: "int-call-1", reason: "tool_call", toolCallId: "call-1" } as never]);
+      } else {
+        // The server is told of the denial and the model responds accordingly.
+        emit.text("Okay, I won't.");
+        emit.textEnd("Okay, I won't.");
+        emit.runEnd();
+      }
+    });
+
+    sendNoWait(el, "delete it");
+    await flush();
+    shadow(el).querySelector<HTMLButtonElement>(".approval-btn--deny")?.click();
+    await flush();
+
+    expect(shadow(el).querySelector(".approval")?.getAttribute("data-resolved")).toBe("denied");
+    // Deny is not "stop": the run resumes carrying a `cancelled` answer so the
+    // model learns the tool was denied — but the pending tool card is settled as
+    // declined here, since no TOOL_CALL_RESULT will arrive for it.
+    expect(handle.runParams).toHaveLength(2);
+    expect(handle.runParams[1]?.resume).toEqual([
+      { interruptId: "int-call-1", status: "cancelled" },
+    ]);
+    const card = shadow(el).querySelector<HTMLElement>(".tool-call");
+    expect(card?.getAttribute("data-status")).toBe("declined");
+  });
+
+  it("sends edited arguments in the resume payload when the host opted in", async () => {
+    const { el, handle } = mountWithAgent((emit, params) => {
+      if (params.resume === undefined) {
+        emit.toolCall("call-1", "update_row", { id: 7, note: "before" });
+        emit.interrupt([{ id: "int-call-1", reason: "tool_call", toolCallId: "call-1" } as never]);
+      } else {
+        emit.textEnd("Done.");
+        emit.runEnd();
+      }
+    });
+    // An assertion about the server, not a negotiation: AG-UI gates this on the
+    // agent's `approveWithEdits` capability, which this component never sees.
+    el.approveWithEdits = true;
+
+    sendNoWait(el, "update it");
+    await flush();
+    const field = shadow(el).querySelector<HTMLTextAreaElement>(".approval-args");
+    expect(JSON.parse(field?.value ?? "{}")).toEqual({ id: 7, note: "before" });
+    (field as HTMLTextAreaElement).value = JSON.stringify({ id: 7, note: "after" });
+    shadow(el).querySelector<HTMLButtonElement>(".approval-btn--approve")?.click();
+    await flush();
+
+    expect(handle.runParams[1]?.resume).toEqual([
+      {
+        interruptId: "int-call-1",
+        status: "resolved",
+        payload: { approved: true, editedArgs: { id: 7, note: "after" } },
+      },
+    ]);
+  });
+
+  it("sends a plain approval when the arguments were left alone", async () => {
+    // So a server can tell "approved as proposed" from "approved, but like
+    // this" rather than having to diff what it already sent.
+    const { el, handle } = mountWithAgent((emit, params) => {
+      if (params.resume === undefined) {
+        emit.toolCall("call-1", "update_row", { id: 7 });
+        emit.interrupt([{ id: "int-call-1", reason: "tool_call", toolCallId: "call-1" } as never]);
+      } else {
+        emit.textEnd("Done.");
+        emit.runEnd();
+      }
+    });
+    el.approveWithEdits = true;
+
+    sendNoWait(el, "update it");
+    await flush();
+    shadow(el).querySelector<HTMLButtonElement>(".approval-btn--approve")?.click();
+    await flush();
+
+    expect(handle.runParams[1]?.resume).toEqual([
+      { interruptId: "int-call-1", status: "resolved", payload: { approved: true } },
+    ]);
+  });
+
+  it("offers no editor while the host has not said its server accepts one", async () => {
+    const { el } = mountWithAgent((emit, params) => {
+      if (params.resume === undefined) {
+        emit.toolCall("call-1", "update_row", { id: 7 });
+        emit.interrupt([{ id: "int-call-1", reason: "tool_call", toolCallId: "call-1" } as never]);
+      }
+    });
+
+    sendNoWait(el, "update it");
+    await flush();
+
+    expect(shadow(el).querySelector(".approval")).not.toBeNull();
+    expect(shadow(el).querySelector(".approval-args")).toBeNull();
+    shadow(el).querySelector<HTMLButtonElement>(".approval-btn--deny")?.click();
+    await flush();
+  });
+
+  it("offers no editor for an interrupt naming no call we hold", async () => {
+    // The arguments live on the tool card, so an interrupt without one has
+    // nothing to show and falls back to plain approve/deny.
+    const { el } = mountWithAgent((emit, params) => {
+      if (params.resume === undefined) {
+        emit.interrupt([{ id: "int-loose", reason: "ask" } as never]);
+      }
+    });
+    el.approveWithEdits = true;
+
+    sendNoWait(el, "go");
+    await flush();
+
+    expect(shadow(el).querySelector(".approval")).not.toBeNull();
+    expect(shadow(el).querySelector(".approval-args")).toBeNull();
+    shadow(el).querySelector<HTMLButtonElement>(".approval-btn--deny")?.click();
+    await flush();
+  });
+
+  it("lets approvalRenderer fully replace the approval UI", async () => {
+    let seen: ApprovalRequest | null = null;
+    let sawSignal = false;
+    const { el, handle } = mountWithAgent((emit, params) => {
+      if (params.resume === undefined) {
+        emit.toolCall("call-1", "delete_thing", { target: "x" });
+        emit.interrupt([
+          {
+            id: "int-call-1",
+            reason: "tool_call",
+            toolCallId: "call-1",
+            message: "Approve delete_thing?",
+          } as never,
+        ]);
+      } else {
+        emit.toolResult("call-1", "deleted x");
+        emit.runEnd();
+      }
+    });
+    el.approvalRenderer = async (request, { signal }) => {
+      seen = request;
+      sawSignal = signal instanceof AbortSignal;
+      return true; // approve
+    };
+    // Past the restore connecting starts, which holds the composer until it
+    // has drawn the stored conversation, so the send below is not parked.
+    await flush();
+
+    sendNoWait(el, "delete x");
+    await flush();
+
+    // The built-in approval card is not rendered; the host renderer owns the UI.
+    expect(shadow(el).querySelector(".approval")).toBeNull();
+    expect(sawSignal).toBe(true);
+    // The tool name is derived from the pending tool-call card and handed over.
+    expect(seen).toMatchObject({ message: "Approve delete_thing?", toolName: "delete_thing" });
+    // Approving resumed the run with the answer.
+    expect(handle.runParams).toHaveLength(2);
+    expect(handle.runParams[1]?.resume).toEqual([
+      { interruptId: "int-call-1", status: "resolved", payload: { approved: true } },
+    ]);
+  });
+
+  it("offers the built-in ask_user tool when enabled and returns the chosen answer", async () => {
+    let round = 0;
+    const { el, handle } = mountWithAgent((emit) => {
+      if (round === 0) {
+        emit.toolCall("q1", "ask_user", {
+          question: "Pick one",
+          options: ["a", "b"],
+          allow_custom: true,
+        });
+      }
+      round += 1;
+    });
+    el.askUser = true; // opt in
+    expect(el.getTools().some((t) => t.name === "ask_user")).toBe(true);
+
+    sendNoWait(el, "ask me");
+    await flush();
+    const question = shadow(el).querySelector<HTMLElement>(".question");
+    expect(question?.querySelector(".question-body")?.textContent).toBe("Pick one");
+    const radio = question?.querySelectorAll<HTMLInputElement>(".question-choice input")[1];
+    radio?.click();
+    radio?.dispatchEvent(new Event("change"));
+    shadow(el).querySelector<HTMLButtonElement>(".question-btn")?.click();
+    await flush();
+
+    // The answer rode back as the tool result, and the loop re-ran.
+    expect(handle.messages.find((m) => m.role === "tool")).toMatchObject({ content: '"b"' });
+    expect(handle.runParams.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("withholds ask_user by default (opt-in)", () => {
+    const { el } = mountWithAgent(() => {});
+    expect(el.getTools().some((t) => t.name === "ask_user")).toBe(false);
+    el.askUser = true;
+    expect(el.getTools().some((t) => t.name === "ask_user")).toBe(true);
+  });
+
+  it("lets askUserRenderer fully replace the question UI", async () => {
+    let round = 0;
+    let seen: QuestionRequest | null = null;
+    let sawSignal = false;
+    const { el, handle } = mountWithAgent((emit) => {
+      if (round === 0) {
+        emit.toolCall("q1", "ask_user", {
+          question: "Pick",
+          options: ["a", "b"],
+          allow_custom: true,
+        });
+      }
+      round += 1;
+    });
+    el.askUser = true;
+    el.askUserRenderer = async (request, { signal }) => {
+      seen = request;
+      sawSignal = signal instanceof AbortSignal;
+      return "from-custom-ui";
+    };
+    // Past the restore connecting starts, which holds the composer until it
+    // has drawn the stored conversation, so the send below is not parked.
+    await flush();
+
+    sendNoWait(el, "ask");
+    await flush();
+
+    // The built-in card is not rendered; the host renderer owns the UI.
+    expect(shadow(el).querySelector(".question")).toBeNull();
+    expect(sawSignal).toBe(true);
+    expect(seen).toMatchObject({ question: "Pick", options: ["a", "b"], allowCustom: true });
+    // The renderer's answer rides back as the tool result.
+    expect(handle.messages.find((m) => m.role === "tool")).toMatchObject({
+      content: '"from-custom-ui"',
+    });
+  });
+
+  it("asks the server's question when the interrupt carries one", async () => {
+    // The generated question is the call spelled out -- accurate, and not
+    // something to put in front of a person. A server that supplies `x-confirm`
+    // in the interrupt's metadata gets its own wording, exactly as a client-side
+    // confirmation reads `x-confirm` off the tool's schema.
+    const { el } = mountWithAgent((emit, params) => {
+      if (params.resume === undefined) {
+        emit.interrupt([
+          {
+            id: "int-x",
+            reason: "tool_call",
+            message: 'Approve create_event({"title": "Design sync"})?',
+            metadata: { "x-confirm": "Book Design sync on Friday at 14:00?" },
+          } as never,
+        ]);
+      } else {
+        emit.runEnd();
+      }
+    });
+
+    sendNoWait(el, "book it");
+    await flush();
+
+    expect(shadow(el).querySelector(".approval-body")?.textContent).toBe(
+      "Book Design sync on Friday at 14:00?",
+    );
+  });
+
+  it("keeps the generated question when the metadata phrase is unusable", async () => {
+    // `metadata` is `Record<string, any>` on the wire, so a number, an object or
+    // a blank string can arrive under that key. Rendering one would put
+    // "[object Object]" in the one place a person is asked to allow a write.
+    const { el } = mountWithAgent((emit, params) => {
+      if (params.resume === undefined) {
+        emit.interrupt([
+          {
+            id: "int-x",
+            reason: "tool_call",
+            message: "Approve delete_thing?",
+            metadata: { "x-confirm": "   " },
+          } as never,
+        ]);
+      } else {
+        emit.runEnd();
+      }
+    });
+
+    sendNoWait(el, "delete it");
+    await flush();
+
+    expect(shadow(el).querySelector(".approval-body")?.textContent).toBe("Approve delete_thing?");
+  });
+
+  it("falls back to its own prompt when neither the metadata nor the message says anything", async () => {
+    const { el } = mountWithAgent((emit, params) => {
+      if (params.resume === undefined) {
+        emit.interrupt([
+          { id: "int-x", reason: "tool_call", metadata: { "x-confirm": 7 } } as never,
+        ]);
+      } else {
+        emit.runEnd();
+      }
+    });
+
+    sendNoWait(el, "go");
+    await flush();
+
+    expect(shadow(el).querySelector(".approval-body")?.textContent).toBe("Approve this action?");
+  });
+
+  it("resolves an interrupt that carries no tool call id", async () => {
+    const { el, handle } = mountWithAgent((emit, params) => {
+      if (params.resume === undefined) {
+        emit.interrupt([{ id: "int-x", reason: "tool_call", message: "Proceed?" } as never]);
+      } else {
+        emit.runEnd();
+      }
+    });
+
+    sendNoWait(el, "go");
+    await flush();
+    shadow(el).querySelector<HTMLButtonElement>(".approval-btn--approve")?.click();
+    await flush();
+
+    expect(handle.runParams).toHaveLength(2);
+    expect(handle.runParams[1]?.resume).toEqual([
+      { interruptId: "int-x", status: "resolved", payload: { approved: true } },
+    ]);
+  });
+
+  it("handles an ask_user call with no question as a free-text prompt", async () => {
+    let round = 0;
+    const { el, handle } = mountWithAgent((emit) => {
+      if (round === 0) {
+        emit.toolCall("q1", "ask_user", {}); // model omitted the question
+      }
+      round += 1;
+    });
+    el.askUser = true;
+
+    sendNoWait(el, "ask");
+    await flush();
+    const input = shadow(el).querySelector<HTMLInputElement>(".question-input");
+    expect(input).not.toBeNull(); // no options → free text
+    if (input) {
+      input.value = "hi";
+      input.dispatchEvent(new Event("input"));
+    }
+    shadow(el).querySelector<HTMLButtonElement>(".question-btn")?.click();
+    await flush();
+
+    expect(handle.messages.find((m) => m.role === "tool")).toMatchObject({ content: '"hi"' });
+  });
+
+  it("renders an error bubble and re-enables send", async () => {
+    const { el } = mountWithAgent((emit) => {
+      emit.runStart();
+      emit.error("model exploded");
+    });
+    await send(el, "boom");
+    const bubble = shadow(el).querySelector(".message--assistant");
+    expect(bubble?.textContent).toContain("model exploded");
+    expect(shadow(el).querySelector<HTMLButtonElement>(".send")?.disabled).toBe(false);
+  });
+
+  it("shows a pending indicator after run start and hides it once text streams", async () => {
+    let pendingWhileThinking = 0;
+    const { el } = mountWithAgent((emit) => {
+      emit.runStart();
+      pendingWhileThinking = shadow(el).querySelectorAll(".pending").length;
+      emit.text("hi");
+      emit.textEnd("hi");
+      emit.runEnd();
+    });
+    await send(el, "q");
+    expect(pendingWhileThinking).toBe(1);
+    expect(shadow(el).querySelectorAll(".pending")).toHaveLength(0);
+  });
+
+  it("keeps a single pending indicator if run start fires twice", async () => {
+    let count = 0;
+    const { el } = mountWithAgent((emit) => {
+      emit.runStart();
+      emit.runStart();
+      count = shadow(el).querySelectorAll(".pending").length;
+      emit.runEnd();
+    });
+    await send(el, "q");
+    expect(count).toBe(1);
+    expect(shadow(el).querySelectorAll(".pending")).toHaveLength(0);
+  });
+
+  it("clears the pending indicator on error", async () => {
+    const { el } = mountWithAgent((emit) => {
+      emit.runStart();
+      emit.error("boom");
+    });
+    await send(el, "q");
+    expect(shadow(el).querySelectorAll(".pending")).toHaveLength(0);
+  });
+
+  it("clears the pending indicator after a server-only tool round (no client re-run)", async () => {
+    const { el } = mountWithAgent((emit) => {
+      emit.runStart();
+      emit.toolCall("tc1", "server_only", {});
+      emit.runEnd();
+    });
+    await send(el, "do server thing");
+    // server_only isn't registered and no TOOL_CALL_RESULT arrived → settled
+    // as not finished (not a false "executed on the server"). The indicator
+    // must NOT linger: a server tool never triggers another client round, so
+    // re-showing it would leave it stuck.
+    const card = shadow(el).querySelector(".tool-call");
+    expect(card?.getAttribute("data-status")).toBe("interrupted");
+    expect(card?.querySelector(".tool-call-result")?.textContent).toContain("Not finished");
+    expect(shadow(el).querySelectorAll(".pending")).toHaveLength(0);
+  });
+
+  it("renders a server-side tool's streamed result in its card", async () => {
+    const { el } = mountWithAgent((emit) => {
+      emit.runStart();
+      emit.toolCall("tc1", "server_only", {});
+      emit.toolResult("tc1", '{"projects":3}');
+      emit.runEnd();
+    });
+    await send(el, "list projects");
+    const card = shadow(el).querySelector(".tool-call");
+    expect(card?.getAttribute("data-status")).toBe("done");
+    const result = card?.querySelector(".tool-call-result")?.textContent;
+    // Pretty-printed: the card formats a JSON payload rather than echoing the
+    // wire string.
+    expect(result).toContain('"projects": 3');
+    // The streamed result already settled it, so the executeTool sweep must
+    // not overwrite with the fallback.
+    expect(result).not.toContain("No result returned.");
+    expect(shadow(el).querySelectorAll(".pending")).toHaveLength(0);
+  });
+
+  it("shows the indicator again while the server works after a tool result", async () => {
+    // The card settles and stops being the live thing, and the server goes
+    // straight back to the model with the result. That wait is real -- the
+    // longest in a run when a large attachment rides in the result and is
+    // re-sent with every request -- and it used to have nothing on screen.
+    let pendingAfterResult = -1;
+    const { el } = mountWithAgent((emit) => {
+      emit.runStart();
+      emit.toolCall("tc1", "read_attachment", {});
+      emit.toolResult("tc1", "the file contents");
+      pendingAfterResult = shadow(el).querySelectorAll(".pending").length;
+      emit.text("here is what it says");
+      emit.textEnd("here is what it says");
+      emit.runEnd();
+    });
+    await send(el, "read it");
+    expect(pendingAfterResult).toBe(1);
+    // Cleared by the first text delta, like any other thinking pause.
+    expect(shadow(el).querySelectorAll(".pending")).toHaveLength(0);
+  });
+
+  it("does not strand the indicator when a run ends on a server tool result", async () => {
+    // The failure the indicator was removed from this path to avoid: a
+    // server-only round that produces no text, so nothing after the result
+    // clears the dots. They must not outlive the run.
+    const { el } = mountWithAgent((emit) => {
+      emit.runStart();
+      emit.toolCall("tc1", "server_only", {});
+      emit.toolResult("tc1", "done");
+      emit.runEnd();
+    });
+    await send(el, "go");
+    expect(shadow(el).querySelectorAll(".pending")).toHaveLength(0);
+  });
+
+  it("clears the indicator when the model reasons after a tool result", async () => {
+    // Reasoning swaps the dots for the thoughts region rather than sitting
+    // beside them.
+    const { el } = mountWithAgent((emit) => {
+      emit.runStart();
+      emit.toolCall("tc1", "read_attachment", {});
+      emit.toolResult("tc1", "contents");
+      emit.reasoningStart();
+      emit.reasoning("thinking about it");
+      emit.reasoningEnd();
+      emit.text("answer");
+      emit.textEnd("answer");
+      emit.runEnd();
+    });
+    await send(el, "read it");
+    expect(shadow(el).querySelectorAll(".pending")).toHaveLength(0);
+  });
+
+  it("ignores a tool result for an unknown call id", async () => {
+    const { el } = mountWithAgent((emit) => {
+      emit.runStart();
+      emit.toolResult("ghost", "orphan");
+      emit.runEnd();
+    });
+    await send(el, "x");
+    expect(shadow(el).querySelectorAll(".tool-call")).toHaveLength(0);
+  });
+
+  it("labels a server tool's card from the toolSummaries map", async () => {
+    const { el } = mountWithAgent((emit) => {
+      emit.runStart();
+      emit.toolCall("tc1", "list_projects", {});
+      emit.runEnd();
+    });
+    // Server tool: no schema reaches the browser, so the friendly label comes
+    // from the host-supplied map.
+    el.toolSummaries = { list_projects: "Search projects" };
+    await send(el, "find projects");
+    const label = shadow(el).querySelector(".tool-call .tool-call-name")?.textContent;
+    expect(label).toContain("Search projects");
+    expect(label).not.toContain("list_projects");
+  });
+
+  it("labels a server tool's card from the fetched data-tools-url catalog", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        json: () => Promise.resolve([{ name: "list_projects", summary: "Search projects" }]),
+      }),
+    );
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("endpoint", "/agent/");
+    el.setAttribute("data-tools-url", "/agent/tools/");
+    const handle = makeFakeAgent({
+      script: (emit) => {
+        emit.runStart();
+        emit.toolCall("tc1", "list_projects", {});
+        emit.runEnd();
+      },
+    });
+    el.agentFactory = () => handle.agent;
+    document.body.appendChild(el);
+    await flush(); // let the catalog fetch resolve
+    await send(el, "find projects");
+    const label = shadow(el).querySelector(".tool-call .tool-call-name")?.textContent;
+    expect(label).toContain("Search projects");
+  });
+
+  it("ignores a failed data-tools-url fetch (card falls back to the prettified name)", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("endpoint", "/agent/");
+    el.setAttribute("data-tools-url", "/agent/tools/");
+    const handle = makeFakeAgent({
+      script: (emit) => {
+        emit.runStart();
+        emit.toolCall("tc1", "list_projects", {});
+        emit.runEnd();
+      },
+    });
+    el.agentFactory = () => handle.agent;
+    document.body.appendChild(el);
+    await flush();
+    await send(el, "find projects");
+    expect(shadow(el).querySelector(".tool-call .tool-call-name")?.textContent).toContain(
+      "List projects",
+    );
+  });
+
+  it("chains a server tool and a client tool in one round: both cards, then continues", async () => {
+    let round = 0;
+    const { el } = mountWithAgent((emit) => {
+      if (round === 0) {
+        // One turn that mixes a server-executed tool (result streamed) with a
+        // frontend tool the client must run — the agent's server→UI chain.
+        emit.runStart();
+        emit.toolCall("srv1", "server_tool", {});
+        emit.toolResult("srv1", '{"found":1}');
+        emit.toolCall("ui1", "fill_field", { value: "Paris" });
+        emit.runEnd();
+      } else {
+        emit.runStart();
+        emit.text("all set");
+        emit.textEnd("all set");
+        emit.runEnd();
+      }
+      round += 1;
+    });
+    el.registerTool({
+      name: "fill_field",
+      description: "fill a field",
+      parameters: { type: "object" },
+      handler: () => "filled-ok",
+    });
+    el.setAttribute("data-tool-display", "full");
+    await send(el, "do both");
+
+    // Both cards render; the server card shows its streamed result, not the fallback.
+    expect(shadow(el).querySelectorAll(".tool-call")).toHaveLength(2);
+    const srv = shadow(el).querySelector<HTMLElement>('.tool-call[data-tool-name="server_tool"]');
+    const srvResult = srv?.querySelector(".tool-call-result")?.textContent;
+    expect(srvResult).toContain('"found": 1');
+    expect(srvResult).not.toContain("No result returned.");
+    const ui = shadow(el).querySelector<HTMLElement>('.tool-call[data-tool-name="fill_field"]');
+    expect(ui?.querySelector(".tool-call-result")?.textContent).toContain("filled-ok");
+    // The frontend tool drove a second round, which finished cleanly.
+    expect(round).toBe(2);
+    expect(shadow(el).querySelector(".message--assistant")?.textContent).toContain("all set");
+    expect(shadow(el).querySelectorAll(".pending")).toHaveLength(0);
+  });
+
+  it("updates the header title when the title-text attribute changes", () => {
+    const el = mount({ "title-text": "First" });
+    expect(shadow(el).querySelector(".header-title")?.textContent).toBe("First");
+    el.setAttribute("title-text", "Second");
+    expect(shadow(el).querySelector(".header-title")?.textContent).toBe("Second");
+    el.removeAttribute("title-text");
+    expect(shadow(el).querySelector(".header-title")?.textContent).toBe("Assistant");
+  });
+
+  it("exposes a read_page tool only when a page-map provider is set", () => {
+    const el = mount();
+    expect(el.getTools().some((t) => t.name === "read_page")).toBe(false);
+    el.getPageMap = () => ({ path: "/x" });
+    expect(el.getTools().some((t) => t.name === "read_page")).toBe(true);
+  });
+
+  it("executes the built-in read_page tool, returning the page map", async () => {
+    let round = 0;
+    const { el, handle } = mountWithAgent((emit) => {
+      if (round === 0) {
+        emit.toolCall("tc1", "read_page", {});
+      }
+      round += 1;
+    });
+    el.getPageMap = () => ({ path: "/here" });
+    await send(el, "where am i");
+    expect(handle.messages.find((m) => m.role === "tool")?.content).toContain("/here");
+  });
+
+  it("confirmPredicate forces confirmation for a non-destructive tool", async () => {
+    let round = 0;
+    let ran = false;
+    const { el } = mountWithAgent((emit) => {
+      if (round === 0) {
+        emit.toolCall("tc1", "noop", {});
+      }
+      round += 1;
+    });
+    el.confirmPredicate = () => true;
+    el.registerTool({
+      name: "noop",
+      description: "d",
+      parameters: { type: "object" },
+      handler: () => {
+        ran = true;
+        return "ok";
+      },
+    });
+    sendNoWait(el, "go");
+    await flush();
+    expect(shadow(el).querySelector(".confirm-btn--confirm")).not.toBeNull();
+    shadow(el).querySelector<HTMLButtonElement>(".confirm-btn--cancel")?.click();
+    await flush();
+    expect(ran).toBe(false);
+  });
+
+  it("confirmPredicate skips confirmation for a destructive tool when it returns false", async () => {
+    let round = 0;
+    let ran = false;
+    const { el } = mountWithAgent((emit) => {
+      if (round === 0) {
+        emit.toolCall("tc1", "del", {});
+      }
+      round += 1;
+    });
+    el.confirmPredicate = () => false;
+    el.registerTool({
+      name: "del",
+      description: "d",
+      parameters: { type: "object", "x-destructive": true },
+      handler: () => {
+        ran = true;
+        return "ok";
+      },
+    });
+    await send(el, "go");
+    expect(ran).toBe(true);
+    expect(shadow(el).querySelector(".confirm")).toBeNull();
+  });
+
+  it("waives confirmation for the rest of the session once the user says so", async () => {
+    // A prompt approved nine times out of ten is not a decision, it is a speed
+    // bump -- and the reflex it trains is what makes the tenth one dangerous.
+    let round = 0;
+    const ran: string[] = [];
+    const { el } = mountWithAgent((emit) => {
+      if (round === 0) {
+        emit.toolCall("tc1", "del", {});
+      }
+      round += 1;
+    });
+    el.registerTool({
+      name: "del",
+      description: "d",
+      parameters: { type: "object", "x-destructive": true },
+      handler: () => {
+        ran.push("del");
+        return "ok";
+      },
+    });
+
+    sendNoWait(el, "go");
+    await flush();
+    shadow(el).querySelector<HTMLButtonElement>(".confirm-btn--always")?.click();
+    await flush();
+    expect(ran).toEqual(["del"]);
+
+    // The same destructive tool, a second turn later: no card this time.
+    round = 0;
+    await send(el, "again");
+
+    expect(ran).toEqual(["del", "del"]);
+    expect(shadow(el).querySelector(".confirm")).toBeNull();
+  });
+
+  it("waives only the tool that was waived", async () => {
+    let round = 0;
+    let next = "del";
+    const { el } = mountWithAgent((emit) => {
+      if (round === 0) {
+        emit.toolCall("tc1", next, {});
+      }
+      round += 1;
+    });
+    for (const name of ["del", "purge"]) {
+      el.registerTool({
+        name,
+        description: "d",
+        parameters: { type: "object", "x-destructive": true },
+        handler: () => "ok",
+      });
+    }
+
+    sendNoWait(el, "go");
+    await flush();
+    shadow(el).querySelector<HTMLButtonElement>(".confirm-btn--always")?.click();
+    await flush();
+
+    round = 0;
+    next = "purge";
+    sendNoWait(el, "now purge");
+    await flush();
+
+    // A waiver is per tool name, not a blanket -- a blanket is what
+    // `autoConfirm` is for, and it is a deliberate configuration rather than
+    // one click on a card.
+    const card = shadow(el).querySelector(".confirm");
+    expect(card?.getAttribute("data-tool-name")).toBe("purge");
+    shadow(el).querySelector<HTMLButtonElement>(".confirm-btn--cancel")?.click();
+    await flush();
+  });
+
+  it("offers no waiver where confirmPredicate is the one gating", async () => {
+    // The predicate is documented as authoritative, so letting one click retire
+    // it would silently defeat a host policy. No dead button either: the offer
+    // and the allowlist are on the same path.
+    let round = 0;
+    const { el } = mountWithAgent((emit) => {
+      if (round === 0) {
+        emit.toolCall("tc1", "noop", {});
+      }
+      round += 1;
+    });
+    el.confirmPredicate = () => true;
+    el.registerTool({
+      name: "noop",
+      description: "d",
+      parameters: { type: "object" },
+      handler: () => "ok",
+    });
+
+    sendNoWait(el, "go");
+    await flush();
+
+    expect(shadow(el).querySelector(".confirm")).not.toBeNull();
+    expect(shadow(el).querySelector(".confirm-btn--always")).toBeNull();
+    shadow(el).querySelector<HTMLButtonElement>(".confirm-btn--cancel")?.click();
+    await flush();
+  });
+
+  it("moves Retry to the newest answer rather than offering one per turn", async () => {
+    // Retry belongs to the last turn only. Re-running an older one is
+    // branching, and for a page-driving agent editing a past turn is not
+    // neutral -- those turns clicked buttons.
+    const { el } = mountWithAgent((emit) => {
+      emit.textEnd("an answer");
+    });
+
+    await send(el, "one");
+    expect(shadow(el).querySelectorAll(".message-action--retry")).toHaveLength(1);
+    await send(el, "two");
+
+    const retries = shadow(el).querySelectorAll(".message-action--retry");
+    expect(retries).toHaveLength(1);
+    const bars = [...shadow(el).querySelectorAll(".message-actions")];
+    expect(bars.at(-1)?.contains(retries[0] as Node)).toBe(true);
+  });
+
+  it("asks the same question again and replaces the answer", async () => {
+    let answer = "first";
+    const { el, handle } = mountWithAgent((emit) => {
+      emit.textEnd(answer);
+    });
+    await send(el, "what is it");
+    answer = "second";
+
+    expect(await el.retryLastTurn()).toBe(true);
+
+    // The question is asked again, not commented on: history ends at the user
+    // message, so the agent answers rather than being told it was wrong.
+    expect(handle.messages.filter((m) => m.role === "user")).toHaveLength(1);
+    const bubbles = [...shadow(el).querySelectorAll(".message--assistant")];
+    expect(bubbles.map((b) => b.textContent)).toEqual(["second"]);
+  });
+
+  it("retries from the button, and copies the answer from its neighbour", async () => {
+    // The wiring, not the plumbing: the closures behind these two buttons are
+    // what a user actually reaches, and calling the methods directly leaves
+    // them unexercised.
+    let answer = "first";
+    const written: string[] = [];
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: (text: string) => {
+          written.push(text);
+          return Promise.resolve();
+        },
+      },
+    });
+    const { el } = mountWithAgent((emit) => {
+      emit.textEnd(answer);
+    });
+    await send(el, "go");
+
+    shadow(el).querySelector<HTMLButtonElement>(".message-action--copy")?.click();
+    await flush();
+    expect(written).toEqual(["first"]);
+
+    answer = "second";
+    shadow(el).querySelector<HTMLButtonElement>(".message-action--retry")?.click();
+    await flush();
+
+    expect(shadow(el).querySelector(".message--assistant")?.textContent).toBe("second");
+  });
+
+  it("refuses to retry a run that is still going", async () => {
+    // Retry truncates history; doing that under a live run would pull the
+    // conversation out from under the answer being streamed into it.
+    let release = (): void => {};
+    const inFlight = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const { el } = mountWithAgent(async (emit) => {
+      emit.runStart();
+      await inFlight;
+    });
+    sendNoWait(el, "go");
+    await flush();
+
+    // Started, not awaited: releasing first would let the run settle and the
+    // guard would never be the reason for the answer.
+    const retried = el.retryLastTurn();
+    release();
+    await flush();
+
+    expect(await retried).toBe(false);
+  });
+
+  it("refuses to retry when there is nothing to ask again", async () => {
+    const el = mount();
+    // Past the restore connecting starts, which refuses a Retry at the guard
+    // until it has drawn the stored conversation, so this reaches the truncation.
+    await flush();
+
+    expect(await el.retryLastTurn()).toBe(false);
+  });
+
+  it("gives a failed run a way back, as an error rather than a notice", async () => {
+    const { el } = mountWithAgent((emit) => {
+      emit.error("Connection lost");
+    });
+
+    await send(el, "go");
+
+    // `renderRunNotice`'s contract is that a notice "never settles, takes no
+    // action, and carries no controls", and is "distinct from an error, which
+    // is a failure". This is a failure, so it stays an error and gains the
+    // control instead of being demoted to a notice that may not carry one.
+    const failed = shadow(el).querySelector(".message--failed");
+    expect(failed).not.toBeNull();
+    expect(shadow(el).querySelectorAll(".run-notice")).toHaveLength(0);
+    expect(failed?.nextElementSibling?.querySelector(".message-action--retry")).not.toBeNull();
+    // Copyable -- error text is what people paste into a bug report -- but not
+    // rateable: a rating is a statement about an answer, and "the connection
+    // dropped" mixed into that signal makes the host's data say less.
+    const actions = [...(failed?.nextElementSibling?.querySelectorAll(".message-action") ?? [])];
+    expect(actions.map((b) => b.className.split("--")[1])).toEqual(["retry", "copy"]);
+  });
+
+  it("emits a feedback event and stores nothing", async () => {
+    // The rating pair is off unless asked for, so a test about what the rating
+    // *does* has to ask for it -- which is the same thing a host with a listener
+    // does, and is the point of the default.
+    const { el } = mountWithAgent((emit) => {
+      emit.textEnd("an answer");
+    });
+    el.setAttribute("data-message-actions", "copy,retry,feedback");
+    const seen: unknown[] = [];
+    el.addEventListener(FEEDBACK_EVENT, (e) => seen.push((e as CustomEvent).detail));
+
+    await send(el, "go");
+    shadow(el).querySelector<HTMLButtonElement>(".message-action--up")?.click();
+
+    // `msg` is the fake's default `TEXT_MESSAGE_END` id. No `runId`: this
+    // script streams no `RUN_STARTED`, so no run was named, and the detail
+    // does not make one up.
+    expect(seen).toEqual([
+      {
+        content: "an answer",
+        rating: "up",
+        messageId: "msg",
+        threadId: el.conversationStore.threadId(),
+      },
+    ]);
+  });
+
+  /** The detail of every rating `el` dispatches, in order. */
+  function ratings(el: AgUiChat): FeedbackDetail[] {
+    const seen: FeedbackDetail[] = [];
+    el.addEventListener(FEEDBACK_EVENT, (e) =>
+      seen.push((e as CustomEvent<FeedbackDetail>).detail),
+    );
+    return seen;
+  }
+
+  it("names the rated message by the id it streamed under, and the run that streamed it", async () => {
+    // `content` cannot say which answer was rated: two answers can read the
+    // same, and nothing about the text survives a reload. The id the message
+    // streamed under is what the server stored it as.
+    const { el } = mountWithAgent((emit) => {
+      emit.runStarted("run-7");
+      emit.textStart("m-live");
+      emit.textEnd("an answer", "m-live");
+    });
+    el.setAttribute("data-message-actions", "feedback");
+    const seen = ratings(el);
+
+    await send(el, "go");
+    shadow(el).querySelector<HTMLButtonElement>(".message-action--down")?.click();
+
+    expect(seen).toEqual([
+      {
+        content: "an answer",
+        rating: "down",
+        messageId: "m-live",
+        threadId: el.conversationStore.threadId(),
+        runId: "run-7",
+      },
+    ]);
+  });
+
+  it("tells two answers with the same text apart", async () => {
+    // The report this field exists for: "Sure." twice in one conversation, and
+    // a host holding two ratings it cannot attach to either.
+    let turn = 0;
+    const { el } = mountWithAgent((emit) => {
+      turn += 1;
+      emit.runStarted(`run-${turn}`);
+      emit.textEnd("Sure.", `m-${turn}`);
+    });
+    el.setAttribute("data-message-actions", "feedback");
+    const seen = ratings(el);
+
+    await send(el, "one");
+    await send(el, "two");
+    for (const up of shadow(el).querySelectorAll<HTMLButtonElement>(".message-action--up")) {
+      up.click();
+    }
+
+    expect(seen.map((d) => [d.content, d.messageId, d.runId])).toEqual([
+      ["Sure.", "m-1", "run-1"],
+      ["Sure.", "m-2", "run-2"],
+    ]);
+  });
+
+  it("names a restored message by its stored id, and states no run for it", async () => {
+    // A stored AG-UI message carries no run id, so a restored rating has none
+    // to give -- absent, rather than a value that only looks like one.
+    const store = new SessionStorageStore();
+    const tid = store.threadId();
+    store.saveMessages(tid, [
+      { id: "u-1", role: "user", content: "hi" },
+      { id: "stored-a1", role: "assistant", content: "hello" },
+    ] as never);
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("endpoint", "/agent/");
+    el.setAttribute("data-message-actions", "feedback");
+    el.conversationStore = store;
+    document.body.appendChild(el);
+    await flush();
+    const seen = ratings(el);
+
+    shadow(el).querySelector<HTMLButtonElement>(".message-action--up")?.click();
+
+    expect(seen).toEqual([
+      { content: "hello", rating: "up", messageId: "stored-a1", threadId: tid },
+    ]);
+    expect(seen[0]).not.toHaveProperty("runId");
+  });
+
+  it("offers no rating on a restored answer its store gave no id", async () => {
+    // A host store, or a server behind `data-threads-url`, can hand back an
+    // assistant message without one. A rating then names nothing a host can
+    // file it under -- `ratings/undefined/` in the README's own example -- which
+    // is the pair of buttons that lead nowhere. Copy still works: it needs none.
+    const store = new SessionStorageStore();
+    const tid = store.threadId();
+    store.saveMessages(tid, [
+      { id: "u-1", role: "user", content: "hi" },
+      { role: "assistant", content: "no id at all" },
+      { id: "", role: "assistant", content: "an empty id" },
+      { id: 7, role: "assistant", content: "a number for an id" },
+    ] as never);
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("endpoint", "/agent/");
+    el.setAttribute("data-message-actions", "copy,feedback");
+    el.conversationStore = store;
+    document.body.appendChild(el);
+    await flush();
+
+    expect(shadow(el).querySelectorAll(".message--assistant")).toHaveLength(3);
+    expect(shadow(el).querySelectorAll(".message-action--copy")).toHaveLength(3);
+    expect(shadow(el).querySelectorAll(".message-action--up")).toHaveLength(0);
+    expect(shadow(el).querySelectorAll(".message-action--down")).toHaveLength(0);
+  });
+
+  it("offers no rating on a failed run, with feedback asked for", async () => {
+    // The guard the failed bubble's `{ rateable: false }` stands on: with the
+    // pair off by default, the test above it cannot tell the two apart.
+    const { el } = mountWithAgent((emit) => {
+      emit.error("Connection lost");
+    });
+    el.setAttribute("data-message-actions", "copy,retry,feedback");
+
+    await send(el, "go");
+
+    const failed = shadow(el).querySelector(".message--failed");
+    const actions = [...(failed?.nextElementSibling?.querySelectorAll(".message-action") ?? [])];
+    expect(actions.map((b) => b.className.split("--")[1])).toEqual(["retry", "copy"]);
+  });
+
+  it("rates each round's answer under its own run, over the real HttpAgent", async () => {
+    // A turn that calls a host tool is two requests, so two runs, each with
+    // its own `RUN_STARTED`. The answer before the call and the one after it
+    // belong to different runs, and a rating names the one that streamed it.
+    const sse = (events: readonly Record<string, unknown>[]): Response =>
+      new Response(events.map((e) => `data: ${JSON.stringify(e)}\n\n`).join(""), {
+        status: 200,
+        headers: { "Content-Type": "text/event-stream" },
+      });
+    const runs = [
+      [
+        { type: "RUN_STARTED", threadId: "t", runId: "srv-r1" },
+        { type: "TEXT_MESSAGE_START", messageId: "m1", role: "assistant" },
+        { type: "TEXT_MESSAGE_CONTENT", messageId: "m1", delta: "Checking." },
+        { type: "TEXT_MESSAGE_END", messageId: "m1" },
+        {
+          type: "TOOL_CALL_START",
+          toolCallId: "fc1",
+          toolCallName: "fill_field",
+          parentMessageId: "m1",
+        },
+        { type: "TOOL_CALL_ARGS", toolCallId: "fc1", delta: "{}" },
+        { type: "TOOL_CALL_END", toolCallId: "fc1" },
+        { type: "RUN_FINISHED", threadId: "t", runId: "srv-r1" },
+      ],
+      [
+        { type: "RUN_STARTED", threadId: "t", runId: "srv-r2" },
+        { type: "TEXT_MESSAGE_START", messageId: "m2", role: "assistant" },
+        { type: "TEXT_MESSAGE_CONTENT", messageId: "m2", delta: "Done." },
+        { type: "TEXT_MESSAGE_END", messageId: "m2" },
+        { type: "RUN_FINISHED", threadId: "t", runId: "srv-r2" },
+      ],
+    ];
+    let requests = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(sse(runs[requests++] ?? []))),
+    );
+    try {
+      const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+      el.setAttribute("endpoint", "/agent/");
+      el.setAttribute("data-start-open", "");
+      el.setAttribute("data-message-actions", "feedback");
+      document.body.appendChild(el);
+      el.registerTool({
+        name: "fill_field",
+        description: "fill",
+        parameters: { type: "object" },
+        handler: () => "ok",
+      });
+      const seen = ratings(el);
+
+      await send(el, "go");
+      // Real streams settle on timers rather than microtasks, so wait for the
+      // second answer's row rather than counting ticks.
+      await vi.waitFor(() => {
+        expect(shadow(el).querySelectorAll(".message-action--up")).toHaveLength(2);
+      });
+      for (const up of shadow(el).querySelectorAll<HTMLButtonElement>(".message-action--up")) {
+        up.click();
+      }
+
+      expect(requests).toBe(2);
+      const thread = el.conversationStore.threadId();
+      expect(seen.map((d) => [d.content, d.messageId, d.runId, d.threadId])).toEqual([
+        ["Checking.", "m1", "srv-r1", thread],
+        ["Done.", "m2", "srv-r2", thread],
+      ]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("keeps the kept turns' ids through a Retry's re-render", async () => {
+    // Retry clears the transcript and replays every turn it keeps, so the
+    // replay is the path that draws them -- and a kept answer rated after a
+    // Retry is the same message it was before one.
+    const store = new SessionStorageStore();
+    const tid = store.threadId();
+    store.saveMessages(tid, [
+      { id: "u-1", role: "user", content: "one" },
+      { id: "kept-a1", role: "assistant", content: "first" },
+      { id: "u-2", role: "user", content: "two" },
+      { id: "dropped-a2", role: "assistant", content: "second" },
+    ] as never);
+    const handle = makeFakeAgent({
+      script: (emit) => {
+        emit.runStarted("run-retry");
+        emit.textEnd("second, again", "m-retry");
+      },
+    });
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("endpoint", "/agent/");
+    el.setAttribute("data-start-open", "");
+    el.setAttribute("data-message-actions", "retry,feedback");
+    el.conversationStore = store;
+    // Seeded the way the real factory seeds an `HttpAgent`; the fake starts
+    // empty, and a Retry truncates the agent's own list.
+    el.agentFactory = (config) => {
+      handle.agent.setMessages([...(config.initialMessages ?? [])]);
+      return handle.agent;
+    };
+    document.body.appendChild(el);
+    await flush();
+    const seen = ratings(el);
+
+    expect(await el.retryLastTurn()).toBe(true);
+    for (const up of shadow(el).querySelectorAll<HTMLButtonElement>(".message-action--up")) {
+      up.click();
+    }
+
+    expect(seen.map((d) => [d.content, d.messageId, d.runId])).toEqual([
+      ["first", "kept-a1", undefined],
+      ["second, again", "m-retry", "run-retry"],
+    ]);
+  });
+
+  it("draws server-pushed follow-up chips and sends the one that is clicked", async () => {
+    // The content shape is django-ag-ui's `suggestions_activity()` output,
+    // copied from a run of the real producer rather than invented here: a
+    // helper describing a wire no server writes makes every test agree with it.
+    const sent: string[] = [];
+    const { el } = mountWithAgent((emit) => {
+      emit.activity(
+        "suggestions",
+        { prompts: ["Update the shipping address too", "Show me the order history"] },
+        "suggestions-1",
+      );
+      emit.textEnd("Done.");
+    });
+    el.addEventListener(SUBMIT_EVENT, (e) => {
+      sent.push((e as CustomEvent<SubmitDetail>).detail.content);
+    });
+
+    await send(el, "refund it");
+    const chips = [...shadow(el).querySelectorAll<HTMLButtonElement>(".suggestion-chip")];
+    expect(chips.map((c) => c.textContent)).toEqual([
+      "Update the shipping address too",
+      "Show me the order history",
+    ]);
+
+    chips[1]?.click();
+    await flush();
+
+    expect(sent).toEqual(["refund it", "Show me the order history"]);
+  });
+
+  it("puts the chips back on reload, because they are content", async () => {
+    // The reason for riding the activity envelope rather than a CUSTOM event:
+    // a restored thread gets its offers back with no persistence of our own.
+    //
+    // Driven from a *stored* activity message, the way the chart replay cases
+    // are, rather than by sending one and reloading: the fake agent does not
+    // add an activity message to its own list, so a send-then-reload test would
+    // be asserting against a wire the fake writes and no server does.
+    const store = new SessionStorageStore();
+    store.saveMessages(store.threadId(), [
+      { id: "m1", role: "user", content: "refund it" },
+      {
+        id: "s1",
+        role: "activity",
+        activityType: "suggestions",
+        content: { prompts: ["Update the shipping address too"] },
+      },
+    ] as never);
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("endpoint", "/agent/");
+    el.conversationStore = store;
+    el.agentFactory = () => makeFakeAgent({ script: (emit: Emit) => emit.runEnd() }).agent;
+    document.body.appendChild(el);
+    for (let i = 0; i < 8; i += 1) {
+      await Promise.resolve();
+    }
+
+    const chips = [...shadow(el).querySelectorAll<HTMLButtonElement>(".suggestion-chip")];
+    expect(chips.map((c) => c.textContent)).toEqual(["Update the shipping address too"]);
+  });
+
+  it("draws nothing for a suggestions activity with nothing usable in it", async () => {
+    const { el } = mountWithAgent((emit) => {
+      emit.activity("suggestions", { prompts: [] }, "suggestions-1");
+      emit.textEnd("Done.");
+    });
+
+    await send(el, "go");
+
+    expect(shadow(el).querySelectorAll(".suggestions")).toHaveLength(0);
+  });
+
+  it("renders a tool-call card with the frontend tool's x-summary label", async () => {
+    let round = 0;
+    const { el } = mountWithAgent((emit) => {
+      if (round === 0) {
+        emit.toolCall("tc1", "query", {});
+      }
+      round += 1;
+    });
+    el.registerTool({
+      name: "query",
+      description: "d",
+      parameters: { type: "object", "x-summary": "Query orders" },
+      handler: () => "ok",
+    });
+    await send(el, "go");
+    expect(shadow(el).querySelector(".tool-call-name")?.textContent).toBe("Query orders");
+  });
+
+  it("forwards the current tools and context to the run", async () => {
+    const tools: Tool[] = [
+      { name: "fill_field", description: "d", parameters: { type: "object" } },
+    ];
+    const context: Context[] = [{ description: "route", value: "changeform" }];
+    const { el, handle } = mountWithAgent(() => {}, { tools, context });
+    await send(el, "x");
+    expect(handle.lastRunParams).toEqual({ tools, context });
+  });
+
+  it("does not build a client when no endpoint is set", async () => {
+    const el = mount(); // no endpoint attribute
+    let factoryCalled = false;
+    el.agentFactory = () => {
+      factoryCalled = true;
+      return makeFakeAgent().agent;
+    };
+    inputOf(el).value = "hello";
+    shadow(el).querySelector<HTMLButtonElement>(".send")?.click();
+    await Promise.resolve();
+    expect(factoryCalled).toBe(false);
+    // The user bubble still renders; only the network path is skipped.
+    expect(shadow(el).querySelectorAll(".message--user")).toHaveLength(1);
+  });
+
+  it("reuses a single client across multiple sends", async () => {
+    let factoryCalls = 0;
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("endpoint", "/agent/");
+    const handle = makeFakeAgent({
+      script: (emit) => {
+        emit.text("ok");
+        emit.textEnd("ok");
+      },
+    });
+    el.agentFactory = () => {
+      factoryCalls += 1;
+      return handle.agent;
+    };
+    document.body.appendChild(el);
+
+    await send(el, "first");
+    await send(el, "second");
+
+    expect(factoryCalls).toBe(1);
+    expect(handle.messages.map((m) => m.content)).toEqual(["first", "second"]);
+  });
+
+  it("exposes registered tools to the run via getTools", async () => {
+    let round = 0;
+    const { el, handle } = mountWithAgent((emit) => {
+      if (round === 0) {
+        emit.text("listing");
+        emit.textEnd("listing");
+      }
+      round += 1;
+    });
+    el.registerTool({
+      name: "count_users",
+      description: "count users",
+      parameters: { type: "object" },
+      handler: () => 42,
+    });
+    await send(el, "how many?");
+    expect(handle.lastRunParams?.tools).toEqual([
+      { name: "count_users", description: "count users", parameters: { type: "object" } },
+    ]);
+  });
+
+  it("executes a non-destructive tool without confirmation and posts the result", async () => {
+    let round = 0;
+    let received: Record<string, unknown> | null = null;
+    const { el, handle } = mountWithAgent((emit) => {
+      if (round === 0) {
+        emit.toolCall("tc1", "count_users", { active: true });
+      }
+      round += 1;
+    });
+    el.registerTool({
+      name: "count_users",
+      description: "count",
+      parameters: { type: "object" },
+      handler: (args) => {
+        received = args;
+        return 42;
+      },
+    });
+    await send(el, "count active users");
+
+    expect(received).toEqual({ active: true });
+    expect(shadow(el).querySelector(".confirm")).toBeNull();
+    const toolMsg = handle.messages.find((m) => m.role === "tool");
+    expect(toolMsg?.content).toBe("42");
+  });
+
+  it("shows an inline confirmation card for a destructive tool and runs it on confirm", async () => {
+    let round = 0;
+    let ran = false;
+    const { el, handle } = mountWithAgent((emit) => {
+      if (round === 0) {
+        emit.toolCall("tc1", "delete_user", { id: 7 });
+      }
+      round += 1;
+    });
+    el.registerTool({
+      name: "delete_user",
+      description: "delete",
+      parameters: { type: "object", "x-destructive": true },
+      handler: () => {
+        ran = true;
+        return "deleted";
+      },
+    });
+
+    sendNoWait(el, "delete user 7");
+    await flush();
+    const confirmBtn = shadow(el).querySelector<HTMLButtonElement>(".confirm-btn--confirm");
+    expect(confirmBtn).not.toBeNull();
+    confirmBtn?.click();
+    await flush();
+
+    expect(ran).toBe(true);
+    expect(handle.messages.find((m) => m.role === "tool")?.content).toBe('"deleted"');
+  });
+
+  it("declines a destructive tool on cancel and posts a decline message", async () => {
+    let round = 0;
+    let ran = false;
+    const { el, handle } = mountWithAgent((emit) => {
+      if (round === 0) {
+        emit.toolCall("tc1", "delete_user", { id: 7 });
+      }
+      round += 1;
+    });
+    el.registerTool({
+      name: "delete_user",
+      description: "delete",
+      parameters: { type: "object", "x-destructive": true },
+      handler: () => {
+        ran = true;
+        return "deleted";
+      },
+    });
+
+    sendNoWait(el, "delete user 7");
+    await flush();
+    shadow(el).querySelector<HTMLButtonElement>(".confirm-btn--cancel")?.click();
+    await flush();
+
+    expect(ran).toBe(false);
+    expect(handle.messages.find((m) => m.role === "tool")?.content).toBe(
+      "User declined the action.",
+    );
+  });
+
+  it("skips confirmation for a destructive tool when autoConfirm is set", async () => {
+    let round = 0;
+    let ran = false;
+    const { el } = mountWithAgent((emit) => {
+      if (round === 0) {
+        emit.toolCall("tc1", "delete_user", { id: 7 });
+      }
+      round += 1;
+    });
+    el.autoConfirm = true;
+    el.registerTool({
+      name: "delete_user",
+      description: "delete",
+      parameters: { type: "object", "x-destructive": true },
+      handler: () => {
+        ran = true;
+        return "deleted";
+      },
+    });
+    await send(el, "delete user 7");
+    expect(ran).toBe(true);
+    expect(shadow(el).querySelector(".confirm")).toBeNull();
+  });
+
+  it("shows the x-confirm message inline for a destructive tool", async () => {
+    let round = 0;
+    const { el } = mountWithAgent((emit) => {
+      if (round === 0) {
+        emit.toolCall("tc1", "set_status", { active: true });
+      }
+      round += 1;
+    });
+    el.registerTool({
+      name: "set_status",
+      description: "set status",
+      parameters: { type: "object", "x-destructive": true, "x-confirm": "Activate this project?" },
+      handler: () => "ok",
+    });
+
+    sendNoWait(el, "activate it");
+    await flush();
+    expect(shadow(el).querySelector(".confirm-body")?.textContent).toBe("Activate this project?");
+    shadow(el).querySelector<HTMLButtonElement>(".confirm-btn--cancel")?.click();
+    await flush();
+  });
+
+  it("captures a tool handler error into the result message", async () => {
+    let round = 0;
+    const { el, handle } = mountWithAgent((emit) => {
+      if (round === 0) {
+        emit.toolCall("tc1", "boom", {});
+      }
+      round += 1;
+    });
+    el.registerTool({
+      name: "boom",
+      description: "explodes",
+      parameters: { type: "object" },
+      handler: () => {
+        throw new Error("kaboom");
+      },
+    });
+    await send(el, "trigger boom");
+    expect(handle.messages.find((m) => m.role === "tool")?.content).toContain("kaboom");
+  });
+
+  it("stringifies a non-Error throw from a tool handler", async () => {
+    let round = 0;
+    const { el, handle } = mountWithAgent((emit) => {
+      if (round === 0) {
+        emit.toolCall("tc1", "boom", {});
+      }
+      round += 1;
+    });
+    el.registerTool({
+      name: "boom",
+      description: "explodes",
+      parameters: { type: "object" },
+      handler: () => {
+        throw "string failure";
+      },
+    });
+    await send(el, "trigger boom");
+    expect(handle.messages.find((m) => m.role === "tool")?.content).toContain("string failure");
+  });
+
+  it("serialises a nullish tool result as null", async () => {
+    let round = 0;
+    const { el, handle } = mountWithAgent((emit) => {
+      if (round === 0) {
+        emit.toolCall("tc1", "noop", {});
+      }
+      round += 1;
+    });
+    el.registerTool({
+      name: "noop",
+      description: "returns nothing",
+      parameters: { type: "object" },
+      handler: () => undefined,
+    });
+    await send(el, "do nothing");
+    expect(handle.messages.find((m) => m.role === "tool")?.content).toBe("null");
+  });
+
+  it("rehydrates persisted text messages into bubbles on mount", async () => {
+    const store = new SessionStorageStore();
+    const tid = store.threadId();
+    store.saveMessages(tid, [
+      { id: "0", role: "user", content: "" }, // empty user → skipped
+      { id: "1", role: "user", content: "hi" },
+      { id: "2", role: "assistant", content: "hello" },
+      { id: "3", role: "assistant", content: "" }, // empty → skipped
+      { id: "4", role: "tool", content: "tool out", toolCallId: "x" }, // no matching card → skipped
+      { id: "5", role: "assistant" }, // no content → skipped
+      // A role the transcript renders nothing for. A stored history can carry
+      // one (a system prompt, a future protocol role); it must fall off the end
+      // of the dispatch quietly rather than throw or render a stray bubble.
+      { id: "6", role: "system", content: "you are helpful" },
+    ] as never);
+
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("endpoint", "/agent/");
+    el.conversationStore = store;
+    document.body.appendChild(el);
+    await flush();
+
+    const bubbles = shadow(el).querySelectorAll(".message");
+    expect([...bubbles].map((b) => b.textContent)).toEqual(["hi", "hello"]);
+  });
+
+  it("restores history statically — no entrance animation on reload (word mode)", async () => {
+    const store = new SessionStorageStore();
+    const tid = store.threadId();
+    store.saveMessages(tid, [
+      { id: "1", role: "user", content: "hi" },
+      { id: "2", role: "assistant", content: "hello there world" },
+    ] as never);
+
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("endpoint", "/agent/");
+    el.setAttribute("data-text-animation", "word");
+    el.conversationStore = store;
+    document.body.appendChild(el);
+    await flush();
+
+    const assistant = shadow(el).querySelector(".message--assistant");
+    // Marked so the fade CSS skips it, and never wrapped into staggered .word
+    // spans — so the whole transcript doesn't animate in parallel on reload.
+    expect(assistant?.classList.contains("message--restored")).toBe(true);
+    expect(shadow(el).querySelectorAll(".message--assistant .word")).toHaveLength(0);
+    expect(assistant?.textContent).toBe("hello there world");
+  });
+
+  it("replays tool-call cards and their results from history on mount", async () => {
+    const store = new SessionStorageStore();
+    const tid = store.threadId();
+    store.saveMessages(tid, [
+      { id: "1", role: "user", content: "fill the city" },
+      {
+        id: "2",
+        role: "assistant",
+        toolCalls: [
+          {
+            id: "tc1",
+            type: "function",
+            function: { name: "fill_field", arguments: '{"name":"city","value":"Paris"}' },
+          },
+        ],
+      },
+      { id: "3", role: "tool", toolCallId: "tc1", content: '"filled"' },
+      { id: "4", role: "assistant", content: "Done." },
+    ] as never);
+
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("endpoint", "/agent/");
+    el.setAttribute("data-tool-display", "full");
+    el.conversationStore = store;
+    document.body.appendChild(el);
+    await flush();
+
+    const card = shadow(el).querySelector(".tool-call");
+    expect(card?.getAttribute("data-tool-name")).toBe("fill_field");
+    expect(card?.getAttribute("data-status")).toBe("done");
+    expect(card?.querySelector(".tool-call-args")?.textContent).toContain('"city"');
+    expect(card?.querySelector(".tool-call-result")?.textContent).toContain('"filled"');
+    // Text turns still render, in order, around the card.
+    expect([...shadow(el).querySelectorAll(".message")].map((b) => b.textContent)).toEqual([
+      "fill the city",
+      "Done.",
+    ]);
+  });
+
+  it("replays tool cards with malformed or non-object arguments safely", async () => {
+    const store = new SessionStorageStore();
+    const tid = store.threadId();
+    store.saveMessages(tid, [
+      {
+        id: "1",
+        role: "assistant",
+        toolCalls: [
+          { id: "a", type: "function", function: { name: "t1", arguments: "{bad json" } }, // throws → {}
+          { id: "b", type: "function", function: { name: "t2", arguments: "null" } }, // null → {}
+          { id: "c", type: "function", function: { name: "t3", arguments: "42" } }, // non-object → {}
+        ],
+      },
+    ] as never);
+
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("endpoint", "/agent/");
+    el.setAttribute("data-tool-display", "full");
+    el.conversationStore = store;
+    document.body.appendChild(el);
+    await flush();
+
+    const cards = shadow(el).querySelectorAll(".tool-call");
+    expect(cards).toHaveLength(3);
+    // FULL mode pretty-prints args; all three fell back to an empty object.
+    for (const card of cards) {
+      expect(card.querySelector(".tool-call-args")?.textContent).toBe("{}");
+    }
+  });
+
+  it("replays the whole transcript when a stored turn carries a null toolCalls", async () => {
+    // The shape a server sends, not one a client writes: the protocol's Python
+    // models declare `tool_calls: list[ToolCall] | None`, so a plain
+    // `model_dump()` emits `null` on every assistant turn that called no tool —
+    // while `@ag-ui/core` types the field optional-not-nullable. Iterating that
+    // `null` used to throw mid-replay and truncate the transcript from there on,
+    // which is invisible: the turns simply do not appear.
+    const store = new SessionStorageStore();
+    const tid = store.threadId();
+    store.saveMessages(tid, [
+      { id: "1", role: "user", content: "what is on the board?" },
+      {
+        id: "2",
+        role: "assistant",
+        toolCalls: [
+          { id: "tc1", type: "function", function: { name: "list_events", arguments: "{}" } },
+        ],
+      },
+      { id: "3", role: "tool", toolCallId: "tc1", content: '"[]"' },
+      // The turn that used to end the replay.
+      { id: "4", role: "assistant", content: "Nothing scheduled.", toolCalls: null },
+      { id: "5", role: "user", content: "move standup to Friday" },
+      {
+        id: "6",
+        role: "assistant",
+        toolCalls: [
+          { id: "tc2", type: "function", function: { name: "drag_and_drop", arguments: "{}" } },
+        ],
+      },
+      { id: "7", role: "assistant", content: "Moved it.", toolCalls: null },
+    ] as never);
+
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("endpoint", "/agent/");
+    el.conversationStore = store;
+    document.body.appendChild(el);
+    await flush();
+
+    expect([...shadow(el).querySelectorAll(".message")].map((b) => b.textContent)).toEqual([
+      "what is on the board?",
+      "Nothing scheduled.",
+      "move standup to Friday",
+      "Moved it.",
+    ]);
+    expect(
+      [...shadow(el).querySelectorAll(".tool-call")].map((c) => c.getAttribute("data-tool-name")),
+    ).toEqual(["list_events", "drag_and_drop"]);
+  });
+
+  it("skips a shapeless stored tool call rather than losing the turns after it", async () => {
+    const store = new SessionStorageStore();
+    const tid = store.threadId();
+    store.saveMessages(tid, [
+      {
+        id: "1",
+        role: "assistant",
+        toolCalls: [
+          null,
+          "not an object",
+          { id: "no-function" },
+          { function: { name: "no-id" } },
+          { id: "ok", type: "function", function: { name: "real_tool" } },
+        ],
+      },
+      { id: "2", role: "assistant", content: "Still here." },
+    ] as never);
+
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("endpoint", "/agent/");
+    el.setAttribute("data-tool-display", "full");
+    el.conversationStore = store;
+    document.body.appendChild(el);
+    await flush();
+
+    const cards = shadow(el).querySelectorAll(".tool-call");
+    expect([...cards].map((c) => c.getAttribute("data-tool-name"))).toEqual(["real_tool"]);
+    // Its `arguments` were absent, so the card renders with empty args instead of
+    // being dropped: the name is the part worth showing.
+    expect(cards[0]?.querySelector(".tool-call-args")?.textContent).toBe("{}");
+    expect([...shadow(el).querySelectorAll(".message")].map((b) => b.textContent)).toEqual([
+      "Still here.",
+    ]);
+  });
+
+  it("resumes a checkpointed navigating tool call on mount", async () => {
+    const store = new SessionStorageStore();
+    const tid = store.threadId();
+    store.saveMessages(tid, [{ id: "1", role: "user", content: "go to books" }] as never);
+    store.saveCheckpoint(tid, { toolCallId: "nav-1" });
+
+    const handle = makeFakeAgent({
+      script: (emit) => {
+        emit.text("here are the books");
+        emit.textEnd("here are the books");
+      },
+    });
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("endpoint", "/agent/");
+    el.conversationStore = store;
+    el.agentFactory = () => handle.agent;
+    document.body.appendChild(el);
+    await flush();
+
+    expect(store.loadCheckpoint(tid)).toBeNull();
+    const toolMsg = handle.messages.find((m) => m.role === "tool");
+    expect(toolMsg?.toolCallId).toBe("nav-1");
+    // A frontend tool's result is always the string this component built.
+    const content = toolMsg?.content;
+    expect(typeof content).toBe("string");
+    expect(JSON.parse(content as string).navigated).toBe(true);
+    expect(shadow(el).querySelector(".message--assistant")?.textContent).toBe("here are the books");
+  });
+
+  it("checkpoints and halts on a navigating tool, then marks the card", async () => {
+    let round = 0;
+    let ran = false;
+    const { el, handle } = mountWithAgent((emit) => {
+      if (round === 0) {
+        emit.toolCall("nav-1", "open_changelist", { model: "Book" });
+      }
+      round += 1;
+    });
+    el.registerTool({
+      name: "open_changelist",
+      description: "navigate",
+      parameters: { type: "object", "x-navigates": true },
+      handler: () => {
+        ran = true;
+        return { ok: true };
+      },
+    });
+
+    await send(el, "open the books");
+
+    expect(ran).toBe(true);
+    const tid = el.conversationStore.threadId();
+    expect(el.conversationStore.loadCheckpoint(tid)).toEqual({ toolCallId: "nav-1" });
+    expect(handle.messages.find((m) => m.role === "tool")).toBeUndefined();
+    expect(shadow(el).querySelector<HTMLElement>(".tool-call")?.getAttribute("data-status")).toBe(
+      "done",
+    );
+  });
+
+  it("clears the checkpoint when a navigating tool handler throws", async () => {
+    let round = 0;
+    const { el } = mountWithAgent((emit) => {
+      if (round === 0) {
+        emit.toolCall("nav-1", "open_changelist", {});
+      }
+      round += 1;
+    });
+    el.registerTool({
+      name: "open_changelist",
+      description: "navigate",
+      parameters: { type: "object", "x-navigates": true },
+      handler: () => {
+        throw new Error("nav failed");
+      },
+    });
+
+    await send(el, "open");
+
+    const tid = el.conversationStore.threadId();
+    expect(el.conversationStore.loadCheckpoint(tid)).toBeNull();
+    expect(shadow(el).querySelector<HTMLElement>(".tool-call")?.getAttribute("data-status")).toBe(
+      "error",
+    );
+  });
+
+  it("exposes route.* tools in the catalog when a routeMap is set", () => {
+    const el = mount({ endpoint: "/agent/" });
+    expect(el.getTools().map((t) => t.name)).not.toContain("navigate_to_route");
+    el.routeMap = [{ id: "users", path: "/admin/auth/user/" }];
+    const names = el.getTools().map((t) => t.name);
+    expect(names).toContain("list_routes");
+    expect(names).toContain("navigate_to_route");
+  });
+
+  it("navigate_to_route routes in-page (SPA) without checkpointing", async () => {
+    let round = 0;
+    const navPaths: string[] = [];
+    const { el, handle } = mountWithAgent((emit) => {
+      if (round === 0) {
+        emit.toolCall("r1", "navigate_to_route", { route_id: "users" });
+      }
+      round += 1;
+    });
+    el.routeMap = [{ id: "users", path: "/admin/auth/user/" }];
+    el.navigate = (p) => navPaths.push(p);
+
+    await send(el, "go to users");
+
+    expect(navPaths).toEqual(["/admin/auth/user/"]);
+    const tid = el.conversationStore.threadId();
+    expect(el.conversationStore.loadCheckpoint(tid)).toBeNull();
+    // In-page: the loop continued and posted the tool result.
+    expect(handle.messages.find((m) => m.role === "tool")?.content).toContain("/admin/auth/user/");
+  });
+
+  it("navigate_to_route checkpoints + halts without a navigate callback (MPA)", async () => {
+    const spy = vi.spyOn(window.location, "assign").mockImplementation(() => {});
+    let round = 0;
+    const { el } = mountWithAgent((emit) => {
+      if (round === 0) {
+        emit.toolCall("r1", "navigate_to_route", { route_id: "users" });
+      }
+      round += 1;
+    });
+    el.routeMap = [{ id: "users", path: "/admin/auth/user/" }];
+
+    await send(el, "go");
+
+    const tid = el.conversationStore.threadId();
+    expect(el.conversationStore.loadCheckpoint(tid)).toEqual({ toolCallId: "r1" });
+    expect(spy).toHaveBeenCalledWith("/admin/auth/user/");
+    spy.mockRestore();
+  });
+
+  it("registerPageState exposes read/write tools the agent can call", async () => {
+    let round = 0;
+    const { el, handle } = mountWithAgent((emit) => {
+      if (round === 0) {
+        emit.toolCall("s1", "read_cart", {});
+      }
+      round += 1;
+    });
+    el.registerPageState({ name: "cart", read: () => ({ items: 3 }) });
+    expect(el.getTools().map((t) => t.name)).toContain("read_cart");
+
+    await send(el, "read the cart");
+
+    expect(handle.messages.find((m) => m.role === "tool")?.content).toBe(
+      JSON.stringify({ items: 3 }),
+    );
+  });
+
+  it("registerStateHook still works, so the rename is not a hard break", async () => {
+    // The old name read as AG-UI shared-state sync, which this component does
+    // not implement — but a consumer on the old spelling must keep working.
+    const { el } = mountWithAgent(() => {});
+    el.registerStateHook({ name: "cart", read: () => ({ items: 3 }) });
+
+    expect(el.getTools().map((t) => t.name)).toContain("read_cart");
+  });
+
+  it("injects the compact page map into the run context", async () => {
+    const { el, handle } = mountWithAgent(() => {});
+    el.getPageMap = () => ({ fields: ["title"] });
+
+    await send(el, "x");
+
+    expect(handle.lastRunParams?.context).toEqual([
+      { description: "page_map", value: JSON.stringify({ fields: ["title"] }) },
+    ]);
+  });
+
+  describe("cancel / stop a run", () => {
+    /** Mount with a run held open by a gate the test releases. */
+    function mountGated(streamText?: string): {
+      el: AgUiChat;
+      handle: ReturnType<typeof makeFakeAgent>;
+      release: () => void;
+    } {
+      let release: () => void = () => {};
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const { el, handle } = mountWithAgent(async (emit) => {
+        emit.runStart();
+        if (streamText !== undefined) {
+          emit.text(streamText);
+        }
+        await gate; // held open until the test cancels and releases
+      });
+      return { el, handle, release };
+    }
+
+    it("clicking Stop mid-run aborts, keeps the partial text, and shows a stopped note", async () => {
+      const { el, handle, release } = mountGated("partial ans");
+      sendNoWait(el, "x");
+      await flush();
+
+      shadow(el).querySelector<HTMLButtonElement>(".send")?.click(); // reads "Stop"
+      release();
+      await flush();
+
+      expect(handle.abortRuns).toBe(1);
+      // The partial bubble survives; the affordance is a muted note, not an error.
+      expect(shadow(el).querySelector(".message--assistant")?.textContent).toContain("partial ans");
+      expect(shadow(el).querySelector(".stopped-note")?.textContent).toBe("⏹ Stopped");
+      expect(shadow(el).textContent).not.toContain("⚠️");
+      // Back to rest: the button returned to Send.
+      expect(shadow(el).querySelector<HTMLButtonElement>(".send")?.title).toBe("Send");
+    });
+
+    it("shows the stopped note alone when the abort arrives as a run error", async () => {
+      // The reported symptom: a warning bubble carrying Chrome's internal
+      // "BodyStreamBuffer was aborted" sat directly above the muted stopped
+      // note, telling the user their own Stop had failed.
+      let release: () => void = () => {};
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const { el } = mountWithAgent(async (emit) => {
+        emit.runStart();
+        emit.text("partial ans");
+        await gate;
+        emit.error("BodyStreamBuffer was aborted");
+      });
+      sendNoWait(el, "x");
+      await flush();
+
+      shadow(el).querySelector<HTMLButtonElement>(".send")?.click(); // reads "Stop"
+      release();
+      await flush();
+
+      expect(shadow(el).querySelector(".stopped-note")?.textContent).toBe("⏹ Stopped");
+      expect(shadow(el).textContent).not.toContain("⚠️");
+      expect(shadow(el).textContent).not.toContain("BodyStreamBuffer");
+    });
+
+    it("Escape in the composer cancels a running run", async () => {
+      const { el, handle, release } = mountGated();
+      sendNoWait(el, "x");
+      await flush();
+
+      inputOf(el).dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }),
+      );
+      release();
+      await flush();
+
+      expect(handle.abortRuns).toBe(1);
+      expect(shadow(el).querySelector(".stopped-note")).not.toBeNull();
+    });
+
+    it("Escape while idle does nothing", () => {
+      const { el, handle } = mountWithAgent(() => {});
+      inputOf(el).dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }),
+      );
+      expect(handle.abortRuns).toBe(0);
+      expect(shadow(el).querySelector(".stopped-note")).toBeNull();
+    });
+
+    it("Stop while a confirmation card is open declines it and stops the run", async () => {
+      let round = 0;
+      const { el, handle } = mountWithAgent((emit) => {
+        emit.runStart();
+        if (round === 0) {
+          emit.toolCall("tc1", "delete_user", { id: 7 });
+        }
+        round += 1;
+      });
+      el.registerTool({
+        name: "delete_user",
+        description: "delete",
+        parameters: { type: "object", "x-destructive": true },
+        handler: () => "deleted",
+      });
+
+      sendNoWait(el, "delete user 7");
+      await flush(); // the run is now suspended on the confirmation card
+
+      shadow(el).querySelector<HTMLButtonElement>(".send")?.click(); // Stop
+      await flush();
+
+      // Stop answers the prompt on the user's behalf, so the prompt leaves;
+      // the tool card it gated carries the outcome.
+      expect(shadow(el).querySelector(".confirm")).toBeNull();
+      expect(shadow(el).querySelector(".tool-call")?.getAttribute("data-decision")).toBe(
+        "declined",
+      );
+      expect(handle.abortRuns).toBe(1);
+      expect(round).toBe(1); // the declined result did not start another round
+      expect(shadow(el).querySelector(".stopped-note")).not.toBeNull();
+    });
+
+    it("newChat stops an in-flight run before discarding the client", async () => {
+      const { el, handle, release } = mountGated("partial");
+      sendNoWait(el, "x");
+      await flush();
+
+      el.newChat();
+      release();
+      await flush();
+
+      expect(handle.abortRuns).toBe(1);
+      expect(shadow(el).querySelector<HTMLButtonElement>(".send")?.title).toBe("Send");
+    });
+
+    it("a run New chat stopped says nothing in the conversation that replaced it", async () => {
+      // An abort is not instant: the stopped run reports how it ended once its
+      // request has closed, and by then New chat has already cleared the
+      // transcript. The note belongs to the conversation that was left.
+      const { el, release } = mountGated("partial");
+      sendNoWait(el, "x");
+      await flush();
+
+      el.newChat();
+      release();
+      await flush();
+
+      expect(shadow(el).querySelector(".stopped-note")).toBeNull();
+      expect(shadow(el).querySelectorAll(".message")).toHaveLength(0);
+    });
+
+    it("a run New chat stopped saves what it had under its own conversation", async () => {
+      // The stopped run persists its truncated exchange once its request
+      // closes. Saving under whichever thread is active by then filed the old
+      // conversation under the new one, which the drawer then listed twice.
+      const { el, release } = mountGated("partial");
+      sendNoWait(el, "the question that was left");
+      await flush();
+      const left = el.conversationStore.threadId();
+
+      el.newChat();
+      const started = el.conversationStore.threadId();
+      release();
+      await flush();
+
+      expect(await el.conversationStore.loadMessages(started)).toBeNull();
+      expect(await el.conversationStore.loadMessages(left)).toEqual([
+        expect.objectContaining({ content: "the question that was left" }),
+      ]);
+    });
+  });
+
+  describe("thread drawer", () => {
+    function titles(el: AgUiChat): (string | null)[] {
+      return [...shadow(el).querySelectorAll(".drawer-row-title")].map((node) => node.textContent);
+    }
+
+    async function openDrawer(el: AgUiChat): Promise<void> {
+      shadow(el).querySelector<HTMLButtonElement>(".header-btn--history")?.click();
+      await flush();
+    }
+
+    it("opens the history drawer listing saved threads", async () => {
+      const el = mount();
+      el.conversationStore.saveMessages("t1", [
+        { id: "u1", role: "user", content: "alpha" },
+      ] as never);
+      el.conversationStore.saveMessages("t2", [
+        { id: "u2", role: "user", content: "beta" },
+      ] as never);
+      await openDrawer(el);
+      expect(shadow(el).querySelector<HTMLDivElement>(".drawer")?.hidden).toBe(false);
+      expect(titles(el).sort()).toEqual(["alpha", "beta"]);
+    });
+
+    it("selecting a row switches the active thread and replays it", async () => {
+      const el = mount();
+      el.conversationStore.saveMessages("t1", [
+        { id: "u1", role: "user", content: "hello t1" },
+      ] as never);
+      await openDrawer(el);
+      shadow(el).querySelector<HTMLButtonElement>(".drawer-row-select")?.click();
+      await flush();
+      expect(el.conversationStore.threadId()).toBe("t1");
+      expect(shadow(el).querySelector(".message--user")?.textContent).toBe("hello t1");
+      expect(shadow(el).querySelector<HTMLDivElement>(".drawer")?.hidden).toBe(true);
+    });
+
+    it("selecting the already-active thread is a no-op", async () => {
+      const el = mount();
+      const active = el.conversationStore.threadId();
+      el.conversationStore.saveMessages(active, [
+        { id: "u1", role: "user", content: "x" },
+      ] as never);
+      await openDrawer(el);
+      shadow(el).querySelector<HTMLButtonElement>(".drawer-row-select")?.click();
+      await flush();
+      expect(el.conversationStore.threadId()).toBe(active);
+    });
+
+    it("the drawer's New chat starts a fresh thread and keeps the old one", async () => {
+      const el = mount();
+      const first = el.conversationStore.threadId();
+      el.conversationStore.saveMessages(first, [{ id: "u1", role: "user", content: "x" }] as never);
+      await openDrawer(el);
+      shadow(el).querySelector<HTMLButtonElement>(".drawer-new")?.click();
+      await flush();
+      expect(el.conversationStore.threadId()).not.toBe(first);
+      // Starting a conversation is not deleting one: the drawer still offers
+      // the previous thread, with its history intact behind the row.
+      expect(titles(el)).toEqual(["x"]);
+      expect(await el.conversationStore.loadMessages(first)).toHaveLength(1);
+    });
+
+    it("the header's new-chat button keeps the conversation it left", async () => {
+      const el = mount();
+      const first = el.conversationStore.threadId();
+      el.conversationStore.saveMessages(first, [
+        { id: "u1", role: "user", content: "keep me" },
+      ] as never);
+
+      shadow(el).querySelector<HTMLButtonElement>(".header-btn--new")?.click();
+      await openDrawer(el);
+
+      expect(el.conversationStore.threadId()).not.toBe(first);
+      expect(titles(el)).toEqual(["keep me"]);
+    });
+
+    it("switching back to the thread a new chat left replays it", async () => {
+      const el = mount();
+      const first = el.conversationStore.threadId();
+      el.conversationStore.saveMessages(first, [
+        { id: "u1", role: "user", content: "hello again" },
+      ] as never);
+
+      shadow(el).querySelector<HTMLButtonElement>(".header-btn--new")?.click();
+      expect(shadow(el).querySelectorAll(".message")).toHaveLength(0);
+      await openDrawer(el);
+      shadow(el).querySelector<HTMLButtonElement>(".drawer-row-select")?.click();
+      await flush();
+
+      expect(el.conversationStore.threadId()).toBe(first);
+      expect(shadow(el).querySelector(".message--user")?.textContent).toBe("hello again");
+    });
+
+    it("reaps the thread it leaves when nothing was ever sent in it", async () => {
+      const el = mount();
+      const first = el.conversationStore.threadId();
+
+      shadow(el).querySelector<HTMLButtonElement>(".header-btn--new")?.click();
+
+      // An empty thread was never listed, so keeping it would only leave a
+      // record per press of a button made to be pressed again.
+      expect(el.conversationStore.threadId()).not.toBe(first);
+      expect(sessionStorage.getItem(`ag-ui-chat:minted:${first}`)).toBeNull();
+      expect(await el.conversationStore.listThreads()).toEqual([]);
+    });
+
+    it("renaming a row persists the new title", async () => {
+      const el = mount();
+      el.conversationStore.saveMessages("t1", [
+        { id: "u1", role: "user", content: "alpha" },
+      ] as never);
+      await openDrawer(el);
+      shadow(el).querySelector<HTMLButtonElement>(".drawer-row-rename")?.click();
+      const input = shadow(el).querySelector<HTMLInputElement>(".drawer-rename-input");
+      if (input === null) {
+        throw new Error("expected a rename input");
+      }
+      input.value = "Renamed";
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+      await flush();
+      expect(titles(el)).toContain("Renamed");
+    });
+
+    it("deleting the active thread falls back to a fresh chat", async () => {
+      const el = mount();
+      const active = el.conversationStore.threadId();
+      el.conversationStore.saveMessages(active, [
+        { id: "u1", role: "user", content: "x" },
+      ] as never);
+      await openDrawer(el);
+      shadow(el).querySelector<HTMLButtonElement>(".drawer-row-delete")?.click();
+      shadow(el).querySelector<HTMLButtonElement>(".drawer-confirm-yes")?.click();
+      await flush();
+      expect(el.conversationStore.threadId()).not.toBe(active);
+      expect(shadow(el).querySelector(".drawer-empty")).not.toBeNull();
+    });
+
+    it("deleting a non-active thread keeps the current conversation", async () => {
+      const el = mount();
+      const active = el.conversationStore.threadId();
+      el.conversationStore.saveMessages(active, [
+        { id: "u1", role: "user", content: "current" },
+      ] as never);
+      el.conversationStore.saveMessages("other", [
+        { id: "u2", role: "user", content: "other thread" },
+      ] as never);
+      await openDrawer(el);
+      const otherRow = [...shadow(el).querySelectorAll<HTMLDivElement>(".drawer-row")].find(
+        (row) => row.querySelector(".drawer-row-title")?.textContent === "other thread",
+      );
+      if (otherRow === undefined) {
+        throw new Error("expected the 'other' row");
+      }
+      otherRow.querySelector<HTMLButtonElement>(".drawer-row-delete")?.click();
+      otherRow.querySelector<HTMLButtonElement>(".drawer-confirm-yes")?.click();
+      await flush();
+      expect(el.conversationStore.threadId()).toBe(active);
+      expect(titles(el)).toEqual(["current"]);
+    });
+
+    it("does not delete server-side when a new chat starts", async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ threads: [] }),
+      });
+      vi.stubGlobal("fetch", fetchMock);
+      try {
+        const el = mount({ "data-threads-url": "/agent/threads/" });
+        await flush();
+        const first = el.conversationStore.threadId();
+        el.conversationStore.saveMessages(first, [
+          { id: "u1", role: "user", content: "x" },
+        ] as never);
+        fetchMock.mockClear();
+
+        shadow(el).querySelector<HTMLButtonElement>(".header-btn--new")?.click();
+        await flush();
+
+        // The thread lives on the server; a button that starts a new one has no
+        // business unmaking it there.
+        const methods = fetchMock.mock.calls.map(([, init]) => init?.method);
+        expect(methods).not.toContain("DELETE");
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+
+    it("routes the drawer through data-threads-url when set", async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          threads: [
+            { thread_id: "s1", title: "Server thread", updated_at: null, preview: "from server" },
+          ],
+        }),
+      });
+      vi.stubGlobal("fetch", fetchMock);
+      try {
+        const el = mount({ "data-threads-url": "/agent/threads/" });
+        await flush();
+        expect(el.conversationStore).toBeInstanceOf(RemoteConversationStore);
+        shadow(el).querySelector<HTMLButtonElement>(".header-btn--history")?.click();
+        await flush();
+        expect(titles(el)).toEqual(["Server thread"]);
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+  });
+});
+
+describe("AgUiChat — answer group", () => {
+  beforeAll(() => {
+    defineChat();
+  });
+
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    sessionStorage.clear();
+  });
+
+  it("wraps a whole multi-round turn (text → tool → text) in one .answer group", async () => {
+    let round = 0;
+    const { el } = mountWithAgent((emit) => {
+      if (round === 0) {
+        emit.runStart();
+        emit.text("looking…");
+        emit.textEnd("looking…");
+        emit.toolCall("ui1", "fill_field", { value: "Paris" });
+        emit.runEnd();
+      } else {
+        emit.runStart();
+        emit.text("all set");
+        emit.textEnd("all set");
+        emit.runEnd();
+      }
+      round += 1;
+    });
+    el.registerTool({
+      name: "fill_field",
+      description: "fill",
+      parameters: { type: "object" },
+      handler: () => "ok",
+    });
+    await send(el, "fill it");
+
+    // The whole turn — both assistant bubbles and the tool card — lives in a
+    // single group, even though it spanned two AG-UI runs.
+    const groups = shadow(el).querySelectorAll(".answer");
+    expect(groups).toHaveLength(1);
+    const group = groups[0];
+    expect(group?.querySelectorAll(".message--assistant")).toHaveLength(2);
+    expect(group?.querySelectorAll(".tool-call")).toHaveLength(1);
+    // The user bubble is excluded — it precedes the group in the list.
+    expect(group?.querySelector(".message--user")).toBeNull();
+    expect(shadow(el).querySelector(".messages > .message--user")).not.toBeNull();
+  });
+
+  it("opens a fresh group per turn and never nests user bubbles", async () => {
+    const { el } = mountWithAgent((emit) => {
+      emit.runStart();
+      emit.text("hi");
+      emit.textEnd("hi");
+      emit.runEnd();
+    });
+    await send(el, "one");
+    await send(el, "two");
+    expect(shadow(el).querySelectorAll(".answer")).toHaveLength(2);
+    // Each group holds exactly its assistant reply; both user bubbles are
+    // top-level children of the list.
+    for (const group of shadow(el).querySelectorAll(".answer")) {
+      expect(group.querySelector(".message--user")).toBeNull();
+    }
+    expect(shadow(el).querySelectorAll(".messages > .message--user")).toHaveLength(2);
+  });
+
+  it("toggles the opt-in well via the data-answer-well attribute", async () => {
+    const { el } = mountWithAgent((emit) => {
+      emit.runStart();
+      emit.text("hi");
+      emit.textEnd("hi");
+      emit.runEnd();
+    });
+    el.setAttribute("data-answer-well", "");
+    await send(el, "go");
+    // The attribute is the styling seam (pure CSS); the group is present and the
+    // host carries the opt-in flag the stylesheet selects on.
+    expect(shadow(el).querySelector(".answer")).not.toBeNull();
+    expect(el.hasAttribute("data-answer-well")).toBe(true);
+  });
+
+  it("drops an empty group at settle (server-only round with no text/card)", async () => {
+    const { el } = mountWithAgent((emit) => {
+      emit.runStart();
+      emit.runEnd();
+    });
+    await send(el, "nothing happens");
+    // The group opened on run start but nothing rendered into it, so it's
+    // removed rather than leaving a phantom (potentially welled) empty box.
+    expect(shadow(el).querySelector(".answer")).toBeNull();
+  });
+
+  it("streams reasoning into a thoughts region at the top of the group, folding it on the answer", async () => {
+    const { el } = mountWithAgent((emit) => {
+      emit.runStart();
+      emit.reasoningStart();
+      emit.reasoning("Let me think");
+      emit.reasoningEnd();
+      emit.text("The answer is 42");
+      emit.textEnd("The answer is 42");
+      emit.runEnd();
+    });
+    await send(el, "ponder this");
+
+    const group = shadow(el).querySelector(".answer");
+    const thoughts = group?.querySelector(".thoughts");
+    expect(thoughts).not.toBeNull();
+    // The thoughts region is the group's first child (above the answer text).
+    expect(group?.firstElementChild).toBe(thoughts);
+    expect(thoughts?.querySelector(".thoughts-body")?.textContent).toBe("Let me think");
+    // The answer's first text token folds the thoughts away.
+    expect(thoughts?.querySelector(".thoughts-toggle")?.getAttribute("aria-expanded")).toBe(
+      "false",
+    );
+    expect(group?.querySelector(".message--assistant")?.textContent).toContain("The answer is 42");
+  });
+
+  it("shows a thoughts region without an answer-well opt-in (independent of the well)", async () => {
+    const { el } = mountWithAgent((emit) => {
+      emit.runStart();
+      emit.reasoningStart();
+      emit.reasoning("hmm");
+      emit.reasoningEnd();
+      emit.runEnd();
+    });
+    await send(el, "think");
+    // Reasoning with no answer text: the region stays (expanded) inside the group.
+    const thoughts = shadow(el).querySelector(".answer .thoughts");
+    expect(thoughts).not.toBeNull();
+    expect(thoughts?.querySelector(".thoughts-body")?.textContent).toBe("hmm");
+  });
+
+  it("settles an empty reasoning block on the tool call that follows it, with no end", async () => {
+    let release = (): void => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const { el } = mountWithAgent(async (emit) => {
+      emit.runStart();
+      emit.reasoningStart();
+      emit.toolCall("c1", "ping", {});
+      await held;
+      emit.toolResult("c1", "pong");
+      emit.runEnd();
+    });
+    sendNoWait(el, "ping");
+    await flush();
+    // The run is still open: only the tool call can have ended the reasoning.
+    const thoughts = shadow(el).querySelector(".answer .thoughts");
+    expect(thoughts?.hasAttribute("data-streaming")).toBe(false);
+    expect(thoughts?.querySelector(".thoughts-label")?.textContent).toBe("Thoughts");
+    expect(thoughts?.querySelector("button")).toBeNull();
+    release();
+    await flush();
+  });
+
+  it("settles a reasoning block the turn ended without ending", async () => {
+    const { el } = mountWithAgent((emit) => {
+      emit.runStart();
+      emit.reasoningStart();
+      emit.reasoning("half a thought");
+      emit.runEnd();
+    });
+    await send(el, "think");
+    const thoughts = shadow(el).querySelector(".answer .thoughts");
+    expect(thoughts?.hasAttribute("data-streaming")).toBe(false);
+    expect(thoughts?.querySelector(".thoughts-label")?.textContent).toBe("Thoughts");
+  });
+
+  it("turns an empty first round into a toggle when a later round has text", async () => {
+    const { el } = mountWithAgent((emit) => {
+      emit.runStart();
+      emit.reasoningStart();
+      emit.reasoningEnd();
+      emit.toolCall("c1", "ping", {});
+      emit.toolResult("c1", "");
+      emit.reasoningStart();
+      emit.reasoning("x");
+      emit.reasoningEnd();
+      emit.text("Done.");
+      emit.textEnd("Done.");
+      emit.runEnd();
+    });
+    await send(el, "ping then think");
+    const thoughts = shadow(el).querySelectorAll(".answer .thoughts");
+    expect(thoughts).toHaveLength(1);
+    const toggle = thoughts[0]?.querySelector<HTMLButtonElement>(".thoughts-toggle");
+    expect(toggle?.getAttribute("aria-expanded")).toBe("false");
+    toggle?.click();
+    expect(thoughts[0]?.querySelector<HTMLElement>(".thoughts-body")?.hidden).toBe(false);
+    expect(thoughts[0]?.querySelector(".thoughts-body")?.textContent).toBe("x");
+  });
+
+  it("restarts the clock and the live label for a second reasoning round after a tool call", async () => {
+    let time = 0;
+    const clock = vi.spyOn(performance, "now").mockImplementation(() => time);
+    const releases: Array<() => void> = [];
+    const hold = (): Promise<void> =>
+      new Promise<void>((resolve) => {
+        releases.push(resolve);
+      });
+    try {
+      const { el } = mountWithAgent(async (emit) => {
+        emit.runStart();
+        emit.reasoningStart();
+        time = 2000;
+        emit.reasoningEnd();
+        emit.toolCall("c1", "ping", {});
+        emit.toolResult("c1", "pong");
+        await hold();
+        time = 10_000;
+        emit.reasoningStart();
+        await hold();
+        time = 13_000;
+        emit.reasoningEnd();
+        emit.runEnd();
+      });
+      sendNoWait(el, "think twice");
+      await flush();
+      const thoughts = shadow(el).querySelector(".answer .thoughts");
+      const label = (): string | null | undefined =>
+        thoughts?.querySelector(".thoughts-label")?.textContent;
+      expect(label()).toBe("Thought for 2s");
+      releases[0]?.();
+      await flush();
+      expect(thoughts?.hasAttribute("data-streaming")).toBe(true);
+      expect(label()).toBe("Assistant is thinking…");
+      releases[1]?.();
+      await flush();
+      expect(thoughts?.hasAttribute("data-streaming")).toBe(false);
+      expect(label()).toBe("Thought for 5s");
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it("names how long the reasoning took, in a string a host can override", async () => {
+    let time = 0;
+    const clock = vi.spyOn(performance, "now").mockImplementation(() => time);
+    try {
+      const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+      el.setAttribute("endpoint", "/agent/");
+      el.setAttribute("data-start-open", "");
+      // Strings resolve on mount, so the override goes in before connecting.
+      el.strings = { thoughtFor: "Pensó {seconds} s" };
+      el.agentFactory = () =>
+        makeFakeAgent({
+          script: (emit) => {
+            emit.runStart();
+            emit.reasoningStart();
+            time = 6200;
+            emit.reasoningEnd();
+            time = 20_000;
+            emit.text("Done.");
+            emit.textEnd("Done.");
+            emit.runEnd();
+          },
+        }).agent;
+      document.body.appendChild(el);
+      await send(el, "think");
+      const thoughts = shadow(el).querySelector(".answer .thoughts");
+      expect(thoughts?.querySelector(".thoughts-label")?.textContent).toBe("Pensó 6 s");
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it("draws no thoughts region for a restored reasoning message, empty or not", async () => {
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("endpoint", "/agent/");
+    const store = new SessionStorageStore();
+    store.saveMessages(store.threadId(), [
+      { id: "u1", role: "user", content: "think" },
+      { id: "r1", role: "reasoning", content: "" } as never,
+      { id: "a1", role: "assistant", content: "answer" },
+    ]);
+    el.conversationStore = store;
+    el.agentFactory = () => makeFakeAgent().agent;
+    document.body.appendChild(el);
+    await flush();
+    expect(shadow(el).querySelector(".answer")?.textContent).toContain("answer");
+    expect(shadow(el).querySelector(".thoughts")).toBeNull();
+  });
+
+  it("reconstructs one group per assistant turn when replaying history", async () => {
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("endpoint", "/agent/");
+    const store = new SessionStorageStore();
+    store.saveMessages(store.threadId(), [
+      { id: "u1", role: "user", content: "first" },
+      { id: "a1", role: "assistant", content: "first reply" },
+      { id: "u2", role: "user", content: "second" },
+      {
+        id: "a2",
+        role: "assistant",
+        content: "",
+        toolCalls: [{ id: "t1", type: "function", function: { name: "do_it", arguments: "{}" } }],
+      } as never,
+      { id: "tr1", role: "tool", content: "done", toolCallId: "t1" } as never,
+    ]);
+    el.conversationStore = store;
+    el.agentFactory = () => makeFakeAgent().agent;
+    document.body.appendChild(el);
+    await flush();
+
+    // One group per assistant turn: the text reply, and the tool-only turn.
+    const groups = shadow(el).querySelectorAll(".answer");
+    expect(groups).toHaveLength(2);
+    expect(groups[0]?.textContent).toContain("first reply");
+    expect(groups[1]?.querySelector(".tool-call")).not.toBeNull();
+    // User bubbles stay out of the groups.
+    expect(shadow(el).querySelectorAll(".messages > .message--user")).toHaveLength(2);
+    // The empty-state region is hidden once the transcript renders.
+    expect(shadow(el).querySelector<HTMLElement>(".empty")?.hidden).toBe(true);
+  });
+
+  describe("client hardening", () => {
+    it("starts no second run while one is in flight", async () => {
+      let runs = 0;
+      let release: () => void = () => {};
+      const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+      el.setAttribute("endpoint", "/agent/");
+      el.agentFactory = () =>
+        makeFakeAgent({
+          script: async (emit) => {
+            runs += 1;
+            emit.runStart();
+            await new Promise<void>((r) => {
+              release = r;
+            });
+            emit.textEnd("done");
+            emit.runEnd();
+          },
+        }).agent;
+      document.body.appendChild(el);
+
+      sendNoWait(el, "first");
+      await flush();
+      expect(runs).toBe(1); // first run is in flight
+
+      // A second Enter while running hits the same guard: still one run. What
+      // the key does *instead* changed -- it used to leave the text in the box
+      // and do nothing at all, and now the message is queued and sent when the
+      // run settles -- but the guard this test is named for is the part that
+      // must not move, because a second concurrent run orphans the first.
+      const input = inputOf(el);
+      input.value = "second";
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", cancelable: true }));
+      await flush();
+      expect(runs).toBe(1);
+
+      release();
+      await flush();
+    });
+
+    it("cancels the in-flight run when the element is disconnected", async () => {
+      let release: () => void = () => {};
+      const handle = makeFakeAgent({
+        script: async (emit) => {
+          emit.runStart();
+          await new Promise<void>((r) => {
+            release = r;
+          });
+        },
+      });
+      const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+      el.setAttribute("endpoint", "/agent/");
+      el.agentFactory = () => handle.agent;
+      // Wire voice so disconnect also tears the mic control down.
+      el.transcribeHandler = async () => "";
+      document.body.appendChild(el);
+      sendNoWait(el, "go");
+      await flush();
+
+      expect(handle.abortRuns).toBe(0);
+      el.remove(); // disconnectedCallback → cancelRun + voice.dispose
+      expect(handle.abortRuns).toBe(1);
+      release();
+      await flush();
+    });
+
+    it("drops a stale thread replay when a newer switch started", async () => {
+      // A controllable store whose loadMessages resolves on demand, so we can
+      // interleave two thread switches and land the slower (older) one last.
+      const loaders = new Map<string, (m: readonly Message[] | null) => void>();
+      let active = "t0";
+      const store: ClientConversationStore = {
+        threadId: () => active,
+        setActiveThread: (id) => {
+          active = id;
+        },
+        loadMessages: (id) =>
+          new Promise<readonly Message[] | null>((resolve) => loaders.set(id, resolve)),
+        saveMessages: () => {},
+        loadCheckpoint: (): NavigationCheckpoint | null => null,
+        saveCheckpoint: () => {},
+        clear: () => {},
+        listThreads: (): Promise<readonly ThreadMeta[]> =>
+          Promise.resolve([
+            { threadId: "t1", title: "One", updatedAt: 2, preview: "" },
+            { threadId: "t2", title: "Two", updatedAt: 1, preview: "" },
+          ]),
+        renameThread: () => {},
+      };
+      const el = mount();
+      el.conversationStore = store;
+      // Re-run connect wiring so the injected store is used (mount already ran
+      // connectedCallback; switch threads through the drawer instead).
+      loaders.get("t0")?.(null); // let the initial rehydrate settle
+      await flush();
+
+      const openDrawer = async (): Promise<void> => {
+        shadow(el).querySelector<HTMLButtonElement>(".header-btn--history")?.click();
+        await flush();
+      };
+      const selectRow = (title: string): void => {
+        const row = [...shadow(el).querySelectorAll<HTMLDivElement>(".drawer-row")].find(
+          (r) => r.querySelector(".drawer-row-title")?.textContent === title,
+        );
+        row?.querySelector<HTMLButtonElement>(".drawer-row-select")?.click();
+      };
+
+      await openDrawer();
+      selectRow("One"); // switch → rehydrate(t1), awaiting loadMessages
+      await flush();
+      await openDrawer();
+      selectRow("Two"); // switch → rehydrate(t2), awaiting loadMessages
+      await flush();
+
+      // Resolve the OLDER switch (t1) last: it must be dropped as stale.
+      loaders.get("t1")?.([{ id: "m1", role: "user", content: "STALE t1" }] as never);
+      await flush();
+      loaders.get("t2")?.([{ id: "m2", role: "user", content: "FRESH t2" }] as never);
+      await flush();
+
+      const users = [...shadow(el).querySelectorAll(".message--user")].map((n) => n.textContent);
+      expect(users).toEqual(["FRESH t2"]);
+    });
+
+    it("namespaces origin-scoped storage keys by endpoint", () => {
+      const el = mount({ endpoint: "/agent/" });
+      el.setCollapsed(true);
+      expect(sessionStorage.getItem("ag-ui-chat:collapsed:/agent/")).toBe("1");
+      expect(sessionStorage.getItem("ag-ui-chat:collapsed")).toBeNull();
+    });
+
+    it("prefers the element id over the endpoint for the namespace", () => {
+      const el = mount({ id: "chat-a", endpoint: "/agent/" });
+      el.setCollapsed(true);
+      expect(sessionStorage.getItem("ag-ui-chat:collapsed:chat-a")).toBe("1");
+    });
+
+    it("restores a namespaced collapsed state, ignoring another instance's key", () => {
+      sessionStorage.setItem("ag-ui-chat:collapsed:/agent/", "1");
+      sessionStorage.setItem("ag-ui-chat:collapsed:/other/", "0");
+      expect(mount({ endpoint: "/agent/" }).collapsed).toBe(true);
+    });
+
+    it("seeds theme from the legacy global key on a first namespaced mount", () => {
+      sessionStorage.setItem("ag-ui-chat:theme", "dark");
+      const el = mount({ endpoint: "/agent/", "data-theme-toggle": "" });
+      expect(el.getAttribute("theme")).toBe("dark");
+      // A later toggle persists under the namespaced key, not the legacy one.
+      el.toggleTheme();
+      expect(sessionStorage.getItem("ag-ui-chat:theme:/agent/")).toBe("light");
+    });
+  });
+});
+
+/**
+ * collapse-to: what the element does about the bar and the host's own bar
+ * that happy-dom can see. What either looks like, and anything measured, is
+ * in the Chromium files dock_bar and dock_anchor.
+ */
+describe("AgUiChat collapse-to", () => {
+  beforeAll(() => {
+    defineChat();
+  });
+
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    sessionStorage.clear();
+  });
+
+  function create(attrs: Record<string, string>): AgUiChat {
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    for (const [key, value] of Object.entries(attrs)) {
+      el.setAttribute(key, value);
+    }
+    return el;
+  }
+
+  function togglesAtConnect(el: AgUiChat): boolean[] {
+    const seen: boolean[] = [];
+    el.addEventListener("ag-ui-toggle", (event) => {
+      seen.push((event as CustomEvent<{ collapsed: boolean }>).detail.collapsed);
+    });
+    document.body.appendChild(el);
+    return seen;
+  }
+
+  function collapsedKeys(): Record<string, string | null> {
+    const keys: Record<string, string | null> = {};
+    for (let index = 0; index < sessionStorage.length; index += 1) {
+      const key = sessionStorage.key(index) ?? "";
+      if (key.includes("collapsed")) {
+        keys[key] = sessionStorage.getItem(key);
+      }
+    }
+    return keys;
+  }
+
+  describe("the connect-time toggle", () => {
+    it("tells a none host the state it mounted in, collapsed by the corner default", () => {
+      const unread = vi.fn();
+      const el = create({ "collapse-to": "none" });
+      el.addEventListener("ag-ui-unread", unread);
+      expect(togglesAtConnect(el)).toEqual([true]);
+      expect(el.collapsed).toBe(true);
+      // Dispatched, not set: nothing is written for a state nobody changed,
+      // and the unread count is not reset on the way.
+      expect(collapsedKeys()).toEqual({});
+      expect(unread).not.toHaveBeenCalled();
+    });
+
+    it("tells it the open state too", () => {
+      expect(togglesAtConnect(create({ "collapse-to": "none", "data-start-open": "" }))).toEqual([
+        false,
+      ]);
+    });
+
+    it("reports a stored state, and leaves the store as it was", () => {
+      for (const stored of [true, false]) {
+        document.body.innerHTML = "";
+        sessionStorage.clear();
+        const first = create({ "collapse-to": "none" });
+        document.body.appendChild(first);
+        first.setCollapsed(stored);
+        first.remove();
+        const before = collapsedKeys();
+        expect(togglesAtConnect(create({ "collapse-to": "none" }))).toEqual([stored]);
+        expect(collapsedKeys()).toEqual(before);
+      }
+    });
+
+    it("stays silent under auto and bar, as before", () => {
+      expect(togglesAtConnect(create({}))).toEqual([]);
+      expect(togglesAtConnect(create({ "collapse-to": "bar" }))).toEqual([]);
+    });
+  });
+
+  describe("the bar", () => {
+    it("toggles from its strip, and labels the strip for what it will do", () => {
+      const el = create({ "collapse-to": "bar" });
+      document.body.appendChild(el);
+      const strip = shadow(el).querySelector<HTMLButtonElement>(".dock-bar > .launcher");
+      expect(strip?.getAttribute("aria-label")).toBe("Expand");
+      strip?.click();
+      expect(el.collapsed).toBe(false);
+      expect(strip?.getAttribute("aria-label")).toBe("Collapse");
+      strip?.click();
+      expect(el.collapsed).toBe(true);
+    });
+
+    it("only opens from the round launcher, as before", () => {
+      const el = create({});
+      document.body.appendChild(el);
+      const launcher = shadow(el).querySelector<HTMLButtonElement>(".launcher");
+      el.setCollapsed(false);
+      launcher?.click();
+      expect(el.collapsed).toBe(false);
+      expect(launcher?.getAttribute("aria-label")).toBe("Expand");
+    });
+
+    it("opens the history as a popover beside the bar while collapsed, and closes it home on expand", () => {
+      const el = create({ "collapse-to": "bar" });
+      document.body.appendChild(el);
+      const root = shadow(el);
+      const drawer = root.querySelector<HTMLElement>(".drawer");
+      root.querySelector<HTMLButtonElement>(".bar-history")?.click();
+      expect(el.collapsed).toBe(true);
+      expect(drawer?.parentElement?.className).toBe("dock-bar");
+      expect(drawer?.hidden).toBe(false);
+      // Opening the panel closes the list and takes it home, so the panel
+      // lands on the conversation rather than on the list.
+      el.setCollapsed(false);
+      expect(drawer?.parentElement?.className).toBe("chat");
+      expect(drawer?.hidden).toBe(true);
+      // And an open panel's history opens in the panel, as it always has.
+      el.openThreads();
+      expect(drawer?.parentElement?.className).toBe("chat");
+      expect(drawer?.hidden).toBe(false);
+    });
+
+    it("closes the popover from the bar's history button, and opens it again", () => {
+      const el = create({ "collapse-to": "bar" });
+      document.body.appendChild(el);
+      const root = shadow(el);
+      const drawer = root.querySelector<HTMLElement>(".drawer");
+      const button = root.querySelector<HTMLButtonElement>(".bar-history");
+      button?.click();
+      expect(drawer?.hidden).toBe(false);
+      button?.click();
+      expect(drawer?.hidden).toBe(true);
+      expect(el.collapsed).toBe(true);
+      button?.click();
+      expect(drawer?.hidden).toBe(false);
+    });
+
+    it("takes a popover opened earlier back into the panel when the list opens there", () => {
+      const el = create({ "collapse-to": "bar" });
+      document.body.appendChild(el);
+      el.openThreads();
+      expect(shadow(el).querySelector(".drawer")?.parentElement?.className).toBe("dock-bar");
+      el.closeThreads();
+      el.setAttribute("collapse-to", "auto");
+      el.openThreads();
+      expect(shadow(el).querySelector(".drawer")?.parentElement?.className).toBe("chat");
+    });
+
+    it("closes the popover on a press away from the bar, and not on one inside it", () => {
+      const el = create({ "collapse-to": "bar" });
+      document.body.appendChild(el);
+      const drawer = shadow(el).querySelector<HTMLElement>(".drawer");
+      // Ignored while the drawer sits in the panel.
+      document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+      el.openThreads();
+      drawer?.dispatchEvent(new Event("pointerdown", { bubbles: true, composed: true }));
+      expect(drawer?.hidden).toBe(false);
+      document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+      expect(drawer?.hidden).toBe(true);
+      // Closed, it ignores the next press too.
+      document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+      expect(drawer?.hidden).toBe(true);
+    });
+
+    it("relabels the strip when collapse-to changes on an open chat", () => {
+      const el = create({});
+      el.setAttribute("data-start-open", "");
+      document.body.appendChild(el);
+      const launcher = shadow(el).querySelector<HTMLButtonElement>(".launcher");
+      expect(launcher?.getAttribute("aria-label")).toBe("Expand");
+      el.setAttribute("collapse-to", "bar");
+      expect(launcher?.getAttribute("aria-label")).toBe("Collapse");
+      expect(launcher?.title).toBe("Collapse");
+      el.setAttribute("collapse-to", "auto");
+      expect(launcher?.getAttribute("aria-label")).toBe("Expand");
+    });
+
+    it("takes an open popover back into the panel when collapse-to leaves bar", () => {
+      const el = create({ "collapse-to": "bar" });
+      document.body.appendChild(el);
+      const drawer = shadow(el).querySelector<HTMLElement>(".drawer");
+      el.openThreads();
+      expect(drawer?.parentElement?.className).toBe("dock-bar");
+      el.setAttribute("collapse-to", "auto");
+      expect(drawer?.parentElement?.className).toBe("chat");
+      // Closed on the way, so it does not resurface over the panel.
+      expect(drawer?.hidden).toBe(true);
+    });
+
+    it("keeps the popover in the bar when collapse-to is set to bar again", () => {
+      const el = create({ "collapse-to": "bar" });
+      document.body.appendChild(el);
+      const drawer = shadow(el).querySelector<HTMLElement>(".drawer");
+      el.openThreads();
+      el.setAttribute("collapse-to", "bar");
+      expect(drawer?.parentElement?.className).toBe("dock-bar");
+    });
+
+    it("does not close an in-panel drawer on a press inside it, whatever the target", () => {
+      const el = create({});
+      el.setAttribute("data-start-open", "");
+      document.body.appendChild(el);
+      const drawer = shadow(el).querySelector<HTMLElement>(".drawer");
+      el.openThreads();
+      expect(drawer?.parentElement?.className).toBe("chat");
+      drawer?.dispatchEvent(new Event("pointerdown", { bubbles: true, composed: true }));
+      expect(drawer?.hidden).toBe(false);
+    });
+
+    it("reports no height where no bar is drawn, and writes the dock only under the bar", () => {
+      const heights: number[] = [];
+      const el = create({});
+      el.addEventListener("ag-ui-bar-height", (event) => {
+        heights.push((event as CustomEvent<{ height: number }>).detail.height);
+      });
+      document.body.appendChild(el);
+      expect(el.barHeight).toBe(0);
+      expect(el.style.getPropertyValue("--_dock-bottom")).toBe("");
+      el.setAttribute("collapse-to", "bar");
+      // happy-dom lays nothing out, so the strip measures 0; the height itself
+      // is measured in the Chromium project.
+      expect(el.style.getPropertyValue("--_dock-bottom")).toBe("0px");
+      el.setAttribute("collapse-to", "auto");
+      expect(el.style.getPropertyValue("--_dock-bottom")).toBe("");
+      expect(heights).toEqual([]);
+    });
+  });
+
+  describe("the anchor", () => {
+    it("is resolved from the selector under none, and only under none", () => {
+      const button = document.createElement("button");
+      button.id = "host-agent";
+      document.body.appendChild(button);
+      const el = create({ "collapse-to": "bar", anchor: "#host-agent" });
+      document.body.appendChild(el);
+      expect(el.hasAttribute("data-dock-anchored")).toBe(false);
+      el.setAttribute("collapse-to", "none");
+      expect(el.hasAttribute("data-dock-anchored")).toBe(true);
+      expect(el.style.getPropertyValue("--_dock-right")).not.toBe("");
+      el.removeAttribute("anchor");
+      expect(el.hasAttribute("data-dock-anchored")).toBe(false);
+      expect(el.style.getPropertyValue("--_dock-right")).toBe("");
+      expect(el.style.getPropertyValue("--_dock-bottom")).toBe("");
+    });
+
+    it("prefers the property, and finds a selector in the chat's own shadow root", () => {
+      const outer = document.createElement("div");
+      document.body.appendChild(outer);
+      const scope = outer.attachShadow({ mode: "open" });
+      const button = document.createElement("button");
+      button.className = "agent";
+      const el = create({ "collapse-to": "none", anchor: ".agent" });
+      scope.append(button, el);
+      expect(el.hasAttribute("data-dock-anchored")).toBe(true);
+      const other = document.createElement("button");
+      document.body.appendChild(other);
+      el.anchor = other;
+      expect(el.anchor).toBe(other);
+      expect(el.hasAttribute("data-dock-anchored")).toBe(true);
+    });
+
+    it("opens from the corner when the anchor is not there, and says so once per anchor", () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const el = create({ "collapse-to": "none", anchor: "#missing" });
+      document.body.appendChild(el);
+      el.setCollapsed(false);
+      el.setCollapsed(true);
+      expect(el.hasAttribute("data-dock-anchored")).toBe(false);
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(String(warn.mock.calls[0]?.[0])).toContain('"#missing"');
+      // A selector that does not parse is the same mistake.
+      el.setAttribute("anchor", "[[");
+      expect(warn).toHaveBeenCalledTimes(2);
+      // As is an element taken out of the page.
+      el.anchor = document.createElement("button");
+      expect(warn).toHaveBeenCalledTimes(3);
+      expect(String(warn.mock.calls[2]?.[0])).toContain("anchor element");
+      expect(el.hasAttribute("data-dock-anchored")).toBe(false);
+      // No anchor given at all is not a mistake: the corner is the answer.
+      warn.mockClear();
+      const bare = create({ "collapse-to": "none" });
+      document.body.appendChild(bare);
+      bare.setAttribute("anchor", "");
+      bare.setCollapsed(false);
+      expect(warn).not.toHaveBeenCalled();
+      warn.mockRestore();
+    });
+
+    it("is not looked up before the element is connected", () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const el = create({ "collapse-to": "none", anchor: "#missing" });
+      el.anchor = null;
+      expect(warn).not.toHaveBeenCalled();
+      warn.mockRestore();
+    });
+  });
+});

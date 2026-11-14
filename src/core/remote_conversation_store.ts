@@ -1,0 +1,283 @@
+import type { Message } from "@ag-ui/core";
+import {
+  type ClientConversationStore,
+  type NavigationCheckpoint,
+  SessionStorageStore,
+  type ThreadMeta,
+  threadTitleFrom,
+} from "./conversation_store.js";
+import { mintThread, withCredentials } from "./utils.js";
+
+/** One row of the server thread index (django-ag-ui's `ThreadsView` wire shape). */
+interface ServerThreadRow {
+  readonly thread_id: string;
+  readonly title: string;
+  readonly updated_at: string | null;
+  readonly preview: string;
+}
+
+const PROVISIONAL_TITLE = "New conversation";
+
+/** Live header source, read per request so rotated tokens / CSRF reach the server. */
+type HeadersProvider = () => Record<string, string>;
+
+/**
+ * Live cookie policy, read per request. A provider rather than a value: the
+ * store is built once on connect, but a host may configure the element after
+ * inserting it, and a captured value would pin that first frame's setting.
+ */
+type CredentialsProvider = () => RequestCredentials | undefined;
+
+/**
+ * A {@link ClientConversationStore} backed by a server thread-index endpoint —
+ * django-ag-ui's owner-scoped `ThreadsView`, the URL passed to `<ag-ui-chat>`
+ * as `data-threads-url`:
+ *
+ * - `GET  <url>`        → list the user's threads (metadata only);
+ * - `GET  <url><id>/`   → that thread's messages;
+ * - `PATCH <url><id>/`  → rename (`{ "title": … }`);
+ * - `DELETE <url><id>/` → delete.
+ *
+ * Wraps a local store (default {@link SessionStorageStore}) for the client-only
+ * concerns — active thread id, navigation checkpoint, message cache — and as
+ * the fallback when a request fails. Rename and delete apply optimistically via
+ * a local overlay, so the drawer reflects them before the fire-and-forget
+ * round-trip lands.
+ *
+ * Pass `cacheMessages: false` to keep message bodies out of the browser
+ * entirely; see the constructor.
+ */
+export class RemoteConversationStore implements ClientConversationStore {
+  readonly #url: string;
+  readonly #headers: HeadersProvider;
+  readonly #local: ClientConversationStore;
+  readonly #credentials: CredentialsProvider;
+  readonly #cacheMessages: boolean;
+  readonly #dropped = new Set<string>();
+  readonly #renamed = new Map<string, string>();
+  /**
+   * The row each thread saved here would have, held in memory until the server
+   * lists it. Derived from what was sent rather than read from the local store,
+   * which holds no body (and so no title) when `cacheMessages` is off.
+   */
+  readonly #provisional = new Map<string, ThreadMeta>();
+  /** The active id as last read or set through this store; listing must not mint one. */
+  #active: string | null = null;
+
+  /**
+   * @param cacheMessages Whether to mirror message bodies into the local store.
+   *
+   * `true` (the default, and the behaviour this class has always had) keeps a
+   * local copy of every turn, so the transcript still replays when the thread
+   * endpoint is unreachable. `false` is for the deployment that chose a
+   * server-backed store precisely so transcripts do not sit in the browser:
+   * regulated content, a shared workstation, an operator who has to be able to
+   * say where the conversation lives. It is not the same as passing a local
+   * store that does nothing — the local store also owns the active thread id,
+   * the navigation checkpoint and the "nothing sent here yet" marker, all of
+   * which must keep working — so the opt-out is scoped to the bodies alone.
+   *
+   * The cost is deliberate and worth stating: with no local copy there is
+   * nothing to fall back to, so a failed request shows an empty transcript
+   * rather than a stale one, and the drawer's offline list loses its previews
+   * (a preview is an excerpt of a message, which is the very thing being kept
+   * off the client).
+   */
+  constructor(
+    url: string,
+    headers: HeadersProvider = () => ({}),
+    local: ClientConversationStore = new SessionStorageStore(),
+    credentials: CredentialsProvider = () => undefined,
+    cacheMessages = true,
+  ) {
+    this.#url = url.endsWith("/") ? url : `${url}/`;
+    this.#headers = headers;
+    this.#local = local;
+    this.#credentials = credentials;
+    this.#cacheMessages = cacheMessages;
+  }
+
+  threadId(): string {
+    this.#active = this.#local.threadId();
+    return this.#active;
+  }
+
+  setActiveThread(threadId: string): void {
+    this.#local.setActiveThread(threadId);
+    this.#active = threadId;
+  }
+
+  /**
+   * Delegated to the local store, which owns the active id — and deliberately
+   * silent on the wire: the server learns of a thread when its first message is
+   * persisted, so an abandoned new chat costs no round-trip and leaves no row.
+   */
+  newThread(): string {
+    this.#active = mintThread(this.#local);
+    return this.#active;
+  }
+
+  /** Delegated, so wrapping a store does not lose what it knows about its own ids. */
+  isUnsent(threadId: string): boolean {
+    return this.#local.isUnsent?.(threadId) === true;
+  }
+
+  saveMessages(threadId: string, messages: readonly Message[]): void {
+    // The agent run persists server-side; keep a local cache for offline replay
+    // unless the host asked for the bodies to stay off the client.
+    //
+    // The empty list is not a way of saying "nothing happened". A save is what
+    // retires the local store's minted marker, and `loadMessages` skips the
+    // server for a thread that store still calls unsent — so dropping the call
+    // entirely would leave every thread permanently unsent and its history
+    // unreachable after a reload. Saving an empty list records that the thread
+    // is real without recording a word of what was said in it.
+    this.#local.saveMessages(threadId, this.#cacheMessages ? messages : []);
+    this.#provisional.set(threadId, {
+      threadId,
+      title: threadTitleFrom(messages) || PROVISIONAL_TITLE,
+      updatedAt: Date.now(),
+      preview: "",
+    });
+  }
+
+  loadCheckpoint(threadId: string): NavigationCheckpoint | null {
+    return this.#local.loadCheckpoint(threadId);
+  }
+
+  saveCheckpoint(threadId: string, checkpoint: NavigationCheckpoint | null): void {
+    this.#local.saveCheckpoint(threadId, checkpoint);
+  }
+
+  renameThread(threadId: string, title: string): void {
+    this.#local.renameThread(threadId, title);
+    this.#renamed.set(threadId, title);
+    void this.#mutate(threadId, "PATCH", { title });
+  }
+
+  clear(threadId: string): void {
+    this.#local.clear(threadId);
+    this.#dropped.add(threadId);
+    this.#provisional.delete(threadId);
+    void this.#mutate(threadId, "DELETE");
+  }
+
+  async listThreads(): Promise<readonly ThreadMeta[]> {
+    const rows = await this.#fetchThreads();
+    if (rows === null) {
+      return this.#local.listThreads();
+    }
+    const metas = rows
+      .filter((row) => !this.#dropped.has(row.thread_id))
+      .map((row) => this.#toMeta(row));
+    const pending = this.#pendingRow(rows);
+    return pending === null ? metas : [pending, ...metas];
+  }
+
+  /**
+   * The thread on screen as a provisional row, while the server's index does
+   * not have it yet: sent from here, not deleted since, and not yet listed.
+   * Once the server lists a thread, its row is the only one.
+   */
+  #pendingRow(rows: readonly ServerThreadRow[]): ThreadMeta | null {
+    for (const listed of rows) {
+      this.#provisional.delete(listed.thread_id);
+    }
+    const row = this.#active === null ? undefined : this.#provisional.get(this.#active);
+    if (row === undefined) {
+      return null;
+    }
+    return { ...row, title: this.#renamed.get(row.threadId) ?? row.title };
+  }
+
+  async loadMessages(threadId: string): Promise<readonly Message[] | null> {
+    // Don't ask the server for a thread it cannot have. The element mints an id
+    // on first mount and immediately tries to restore it, so every first visit
+    // spent a request to be told `404` — and logged one in the console, on a page
+    // where nothing had gone wrong. Only the store that minted the id can say
+    // that; a thread chosen from the drawer, or one created on another device, is
+    // still fetched. See `ClientConversationStore.isUnsent`.
+    if (this.#local.isUnsent?.(threadId) === true) {
+      return null;
+    }
+    const response = await this.#get(`${this.#url}${encodeURIComponent(threadId)}/`);
+    if (response === null || !response.ok) {
+      return this.#local.loadMessages(threadId);
+    }
+    // A 200 whose body isn't JSON (a proxy's HTML error page, a truncated
+    // stream) must not throw an unhandled rejection that the caller's
+    // `void rehydrate()` swallows; fall back to the local cache.
+    const body = await this.#readJson<{ messages?: readonly Message[] }>(response);
+    if (body === null) {
+      return this.#local.loadMessages(threadId);
+    }
+    return body.messages ?? null;
+  }
+
+  async #fetchThreads(): Promise<readonly ServerThreadRow[] | null> {
+    const response = await this.#get(this.#url);
+    if (response === null || !response.ok) {
+      return null;
+    }
+    const body = await this.#readJson<{ threads?: readonly ServerThreadRow[] }>(response);
+    if (body === null) {
+      return null;
+    }
+    return body.threads ?? [];
+  }
+
+  /** Parse a `Response` body as JSON, or `null` when it isn't valid JSON. */
+  async #readJson<T>(response: Response): Promise<T | null> {
+    try {
+      return (await response.json()) as T;
+    } catch {
+      return null;
+    }
+  }
+
+  #toMeta(row: ServerThreadRow): ThreadMeta {
+    return {
+      threadId: row.thread_id,
+      title: this.#renamed.get(row.thread_id) ?? row.title,
+      // `null` and an unparseable date both become NaN, Date.parse's own
+      // signal, which `relativeTime` renders as a neutral label rather than an
+      // epoch-0 or NaN duration.
+      updatedAt: row.updated_at === null ? Number.NaN : Date.parse(row.updated_at),
+      preview: row.preview,
+    };
+  }
+
+  /** GET that resolves to the `Response`, or `null` on a network error. */
+  async #get(url: string): Promise<Response | null> {
+    try {
+      return await fetch(url, withCredentials({ headers: this.#headers() }, this.#credentials()));
+    } catch {
+      return null;
+    }
+  }
+
+  /** Fire a best-effort write to the thread endpoint; failures are tolerated. */
+  async #mutate(
+    threadId: string,
+    method: "PATCH" | "DELETE",
+    body?: { title: string },
+  ): Promise<void> {
+    const headers = this.#headers();
+    try {
+      await fetch(
+        `${this.#url}${encodeURIComponent(threadId)}/`,
+        withCredentials(
+          {
+            method,
+            headers:
+              body === undefined ? headers : { ...headers, "content-type": "application/json" },
+            body: body === undefined ? null : JSON.stringify(body),
+          },
+          this.#credentials(),
+        ),
+      );
+    } catch {
+      // Best-effort; the optimistic overlay keeps the drawer consistent.
+    }
+  }
+}

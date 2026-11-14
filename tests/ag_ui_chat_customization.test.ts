@@ -1,0 +1,912 @@
+import type { Tool } from "@ag-ui/core";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { ELEMENT_TAG, MESSAGE_ROLE } from "../src/constants.js";
+import type { AgUiChat } from "../src/core/ag_ui_chat.js";
+import { defineChat } from "../src/core/define_chat.js";
+import { DEFAULT_UI_STRINGS, type UiStrings } from "../src/ui/ui_strings.js";
+import { type Emit, makeFakeAgent } from "./helpers/fake_agent.js";
+import { installFakeMedia } from "./helpers/fake_media.js";
+
+function shadow(el: AgUiChat): ShadowRoot {
+  const root = el.shadowRoot;
+  if (root === null) {
+    throw new Error("expected a shadow root");
+  }
+  return root;
+}
+
+/** Mount the element, applying attributes and a pre-connect setup hook. */
+function mount(attrs: Record<string, string> = {}, setup?: (el: AgUiChat) => void): AgUiChat {
+  const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+  for (const [key, value] of Object.entries({ "data-start-open": "", ...attrs })) {
+    el.setAttribute(key, value);
+  }
+  setup?.(el);
+  document.body.appendChild(el);
+  return el;
+}
+
+/** Mount with a fake agent + run script (optionally a dropped stream). */
+function mountWithAgent(
+  script: (emit: Emit) => void | Promise<void>,
+  dropStream = false,
+): AgUiChat {
+  const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+  el.setAttribute("endpoint", "/agent/");
+  el.setAttribute("data-tool-display", "full");
+  const handle = makeFakeAgent({ script, dropStream });
+  el.agentFactory = () => handle.agent;
+  document.body.appendChild(el);
+  return el;
+}
+
+async function flush(): Promise<void> {
+  for (let i = 0; i < 5; i += 1) {
+    await Promise.resolve();
+  }
+}
+
+function clickSend(el: AgUiChat, text: string): void {
+  const input = shadow(el).querySelector<HTMLTextAreaElement>(".input");
+  if (input === null) {
+    throw new Error("expected an input");
+  }
+  input.value = text;
+  shadow(el).querySelector<HTMLButtonElement>(".send")?.click();
+}
+
+/** The rendered shadow chrome (everything but the <style> block). */
+function chromeHtml(el: AgUiChat): string {
+  return Array.from(shadow(el).children)
+    .filter((child) => child.tagName !== "STYLE")
+    .map((child) => child.outerHTML)
+    .join("");
+}
+
+describe("AgUiChat — UX & customization", () => {
+  beforeAll(() => {
+    defineChat();
+  });
+
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    sessionStorage.clear();
+  });
+
+  describe("string table (i18n)", () => {
+    it("routes chrome through the `strings` property override", () => {
+      const el = mount({}, (e) => {
+        e.strings = { inputPlaceholder: "Frag mich…", send: "Senden", chatHistory: "Verlauf" };
+      });
+      expect(shadow(el).querySelector<HTMLTextAreaElement>(".input")?.placeholder).toBe(
+        "Frag mich…",
+      );
+      expect(shadow(el).querySelector<HTMLButtonElement>(".send")?.title).toBe("Senden");
+      expect(shadow(el).querySelector(".header-btn--history")?.getAttribute("aria-label")).toBe(
+        "Verlauf",
+      );
+    });
+
+    it("reads overrides from the `data-strings` JSON attribute", () => {
+      const el = mount({ "data-strings": JSON.stringify({ send: "Go" }) });
+      expect(shadow(el).querySelector<HTMLButtonElement>(".send")?.title).toBe("Go");
+    });
+
+    it("lets the property win over the attribute key-by-key", () => {
+      const el = mount(
+        { "data-strings": JSON.stringify({ send: "Attr", collapse: "Zu" }) },
+        (e) => {
+          e.strings = { send: "Prop" };
+        },
+      );
+      expect(shadow(el).querySelector<HTMLButtonElement>(".send")?.title).toBe("Prop");
+      expect(shadow(el).querySelector(".header-btn--collapse")?.getAttribute("aria-label")).toBe(
+        "Zu",
+      );
+    });
+
+    it("falls back to defaults on malformed `data-strings`", () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      try {
+        const el = mount({ "data-strings": "{not json" });
+        expect(shadow(el).querySelector<HTMLTextAreaElement>(".input")?.placeholder).toBe(
+          "Ask anything…",
+        );
+      } finally {
+        warn.mockRestore();
+      }
+    });
+
+    it("names the attribute on the console rather than reading as untranslated", () => {
+      // Quoting JSON inside an HTML attribute is fiddly, and a typo there looks
+      // exactly like never having set the attribute: English strings, and no
+      // reason given anywhere.
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      try {
+        mount({ "data-strings": "{not json" });
+
+        const said = warn.mock.calls.map((c) => String(c[0])).join(" ");
+        expect(said).toContain("data-strings");
+        expect(said).toContain("JSON");
+      } finally {
+        warn.mockRestore();
+      }
+    });
+
+    it("ignores a non-object `data-strings` payload", () => {
+      const el = mount({ "data-strings": "42" });
+      expect(shadow(el).querySelector<HTMLButtonElement>(".send")?.title).toBe("Send");
+    });
+
+    it("renders no default literals under a full override (regression guard)", () => {
+      // Opaque, word-free sentinels so the negative grep can't false-match the
+      // English inside a camelCase key (e.g. "noConversations" → "Conversation").
+      const keys = Object.keys(DEFAULT_UI_STRINGS);
+      const fullOverride = Object.fromEntries(
+        keys.map((key, index) => [key, `OVR${index}`]),
+      ) as Partial<UiStrings>;
+      const el = mount({}, (e) => {
+        e.strings = fullOverride;
+      });
+      const html = chromeHtml(el);
+      for (const literal of [
+        "Assistant",
+        "Ask anything…",
+        "Chat history",
+        "New chat",
+        "Conversation",
+        "Message",
+      ]) {
+        expect(html).not.toContain(literal);
+      }
+      // The overrides are what render instead.
+      expect(shadow(el).querySelector<HTMLButtonElement>(".send")?.title).toBe(fullOverride.send);
+      expect(shadow(el).querySelector<HTMLTextAreaElement>(".input")?.placeholder).toBe(
+        fullOverride.inputPlaceholder,
+      );
+    });
+
+    it("localizes the drawer chrome via setStrings on connect", () => {
+      const el = mount({}, (e) => {
+        e.strings = { chats: "Unterhaltungen", newChat: "Neu" };
+      });
+      shadow(el).querySelector<HTMLButtonElement>(".header-btn--history")?.click();
+      expect(shadow(el).querySelector(".drawer-title")?.textContent).toBe("Unterhaltungen");
+      expect(shadow(el).querySelector(".drawer-new")?.textContent).toBe("Neu");
+    });
+  });
+
+  describe("parts & slots", () => {
+    it("exposes structural `part` attributes", () => {
+      const el = mount();
+      const parts = Array.from(shadow(el).querySelectorAll("[part]")).map((node) =>
+        node.getAttribute("part"),
+      );
+      for (const part of ["panel", "header", "title", "messages", "composer", "input", "send"]) {
+        expect(parts).toContain(part);
+      }
+    });
+
+    it("renders the coarse replaceable slots", () => {
+      const el = mount();
+      for (const name of ["header-actions", "footer", "empty"]) {
+        expect(shadow(el).querySelector(`slot[name="${name}"]`)).not.toBeNull();
+      }
+    });
+
+    it("hides the empty-state region once content renders, restoring it on new chat", () => {
+      const el = mount();
+      const empty = shadow(el).querySelector<HTMLElement>(".empty");
+      expect(empty?.hidden).toBe(false);
+      el.appendMessage(MESSAGE_ROLE.USER, "hi");
+      expect(empty?.hidden).toBe(true);
+      shadow(el).querySelector<HTMLButtonElement>(".header-btn--new")?.click();
+      expect(shadow(el).querySelector<HTMLElement>(".empty")?.hidden).toBe(false);
+    });
+  });
+
+  describe("header & launcher icon", () => {
+    it("renders a data-icon-url image as the header icon", () => {
+      const el = mount({ "data-icon-url": "/logo.png" });
+      const img = shadow(el).querySelector<HTMLImageElement>(".header .icon-img");
+      expect(img).not.toBeNull();
+      expect(img?.getAttribute("src")).toBe("/logo.png");
+    });
+
+    it("renders a header icon slot when the host slots one", () => {
+      const el = mount({}, (e) => {
+        const icon = document.createElement("span");
+        icon.setAttribute("slot", "icon");
+        icon.textContent = "🤖";
+        e.appendChild(icon);
+      });
+      expect(shadow(el).querySelector('.header slot[name="icon"]')).not.toBeNull();
+    });
+
+    it("omits the header icon holder when neither slot nor url is given", () => {
+      const el = mount();
+      expect(shadow(el).querySelector('.header slot[name="icon"]')).toBeNull();
+    });
+  });
+
+  describe("launcher", () => {
+    it("renders the launcher and reflects collapsed on aria-expanded", () => {
+      const el = mount();
+      const launcher = shadow(el).querySelector<HTMLButtonElement>(".launcher");
+      expect(launcher).not.toBeNull();
+      expect(launcher?.getAttribute("aria-expanded")).toBe("true");
+      el.setCollapsed(true);
+      expect(launcher?.getAttribute("aria-expanded")).toBe("false");
+    });
+
+    it("expands the widget when the launcher is clicked", () => {
+      const el = mount({ placement: "sidebar" });
+      el.setCollapsed(true);
+      expect(el.collapsed).toBe(true);
+      shadow(el).querySelector<HTMLButtonElement>(".launcher")?.click();
+      expect(el.collapsed).toBe(false);
+      expect(shadow(el).querySelector(".launcher")?.getAttribute("aria-expanded")).toBe("true");
+    });
+
+    it("gives the launcher a part and a default glyph", () => {
+      const el = mount();
+      const launcher = shadow(el).querySelector(".launcher");
+      expect(launcher?.getAttribute("part")).toBe("launcher");
+      expect(launcher?.querySelector('slot[name="launcher"] svg')).not.toBeNull();
+    });
+
+    it("takes its own icon url, so the launcher mark can differ from the header's", () => {
+      const el = mount({ "data-icon-url": "/logo.png", "data-launcher-icon-url": "/mark.png" });
+      expect(
+        shadow(el).querySelector<HTMLImageElement>(".header .icon-img")?.getAttribute("src"),
+      ).toBe("/logo.png");
+      expect(
+        shadow(el).querySelector<HTMLImageElement>(".launcher .icon-img")?.getAttribute("src"),
+      ).toBe("/mark.png");
+    });
+
+    it("falls back to the header icon url when no launcher-specific one is set", () => {
+      const el = mount({ "data-icon-url": "/logo.png" });
+      expect(
+        shadow(el).querySelector<HTMLImageElement>(".launcher .icon-img")?.getAttribute("src"),
+      ).toBe("/logo.png");
+    });
+  });
+
+  describe("page-action tools", () => {
+    function toolNames(el: AgUiChat): string[] {
+      return el.getTools().map((tool: Tool) => tool.name);
+    }
+
+    it("registers no page-action tools without the opt-in", () => {
+      const el = mount();
+      expect(toolNames(el)).not.toContain("scroll_to");
+      expect(toolNames(el)).not.toContain("drag_and_drop");
+    });
+
+    it("registers the opted-in page actions", () => {
+      const el = mount({ "data-page-actions": "scroll, drag" });
+      expect(toolNames(el)).toContain("scroll_to");
+      expect(toolNames(el)).toContain("drag_and_drop");
+    });
+
+    it("registers the chat's own controls only when asked for by name", () => {
+      // Off by default like every other page action: a chat that can move
+      // itself is a capability the host grants, not one it has to remember to
+      // take away.
+      expect(toolNames(mount())).not.toContain("move_chat");
+      expect(toolNames(mount({ "data-page-actions": "scroll" }))).not.toContain("move_chat");
+
+      const el = mount({ "data-page-actions": "chat" });
+      expect(toolNames(el)).toEqual(
+        expect.arrayContaining(["read_chat_surface", "move_chat", "minimise_chat", "restore_chat"]),
+      );
+      // ...and the token buys only those, not the page-driving ones beside it.
+      expect(toolNames(el)).not.toContain("scroll_to");
+    });
+
+    it("registers only the named subset", () => {
+      const el = mount({ "data-page-actions": "scroll" });
+      expect(toolNames(el)).toContain("scroll_to");
+      expect(toolNames(el)).not.toContain("drag_and_drop");
+    });
+
+    it("a page-action tool resolves its target through resolvePageTarget", async () => {
+      // The other tests here only assert that the tools are *registered*. This
+      // one runs one, which is the only way to reach the closure the element
+      // hands the factory — the seam a host overrides to bound what the agent
+      // can touch.
+      const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+      el.setAttribute("endpoint", "/agent/");
+      el.setAttribute("data-page-actions", "scroll");
+      const asked: string[] = [];
+      const target = document.createElement("div");
+      target.scrollIntoView = () => {};
+      el.resolvePageTarget = (selector) => {
+        asked.push(selector);
+        return target;
+      };
+      const handle = makeFakeAgent({
+        script: (emit) => {
+          emit.toolCall("tc1", "scroll_to", { target: "#somewhere" });
+        },
+      });
+      el.agentFactory = () => handle.agent;
+      el.setAttribute("data-tool-display", "full");
+      document.body.appendChild(el);
+
+      const input = shadow(el).querySelector<HTMLTextAreaElement>(".input");
+      if (input === null) {
+        throw new Error("expected an input");
+      }
+      input.value = "scroll down";
+      shadow(el).querySelector<HTMLButtonElement>(".send")?.click();
+      await flush();
+      expect(asked).toEqual(["#somewhere"]);
+    });
+
+    it("default resolvePageTarget queries the document", () => {
+      const el = mount();
+      const target = document.createElement("div");
+      target.id = "needle";
+      document.body.appendChild(target);
+      expect(el.resolvePageTarget("#needle")).toBe(target);
+      expect(el.resolvePageTarget("#absent")).toBeNull();
+      target.remove();
+    });
+  });
+
+  describe("stuck tool card swept at settle", () => {
+    it("settles a pending tool card and shows the error when the stream drops", async () => {
+      // A server tool card opens, then the stream closes with no terminal event.
+      const el = mountWithAgent((emit) => {
+        emit.toolCall("srv1", "server_tool", {});
+      }, true);
+      clickSend(el, "do it");
+      await flush();
+
+      // The pending indicator is gone, the connection-loss bubble is shown,
+      const root = shadow(el);
+      expect(root.querySelector(".pending")).toBeNull();
+      const error = Array.from(root.querySelectorAll(".message--assistant")).find((m) =>
+        m.textContent?.includes("Connection lost"),
+      );
+      expect(error).toBeDefined();
+      // and the orphaned tool card is settled rather than stuck on "running…".
+      const card = root.querySelector(".tool-call");
+      expect(card?.getAttribute("data-status")).toBe("interrupted");
+      expect(card?.querySelector(".tool-call-result")?.textContent).toBe(
+        "Not finished: the run ended or moved on before this tool call returned a result.",
+      );
+    });
+  });
+
+  describe("voice input", () => {
+    it("hides the mic until transcription is wired", () => {
+      expect(shadow(mount()).querySelector(".voice-btn")).toBeNull();
+    });
+
+    it("reveals the mic with data-transcribe-url", () => {
+      const el = mount({ "data-transcribe-url": "/agent/transcribe/" });
+      expect(shadow(el).querySelector(".voice-btn")).not.toBeNull();
+    });
+
+    it("reveals the mic with a custom transcribeHandler and no url", () => {
+      const el = mount({}, (e) => {
+        e.transcribeHandler = async () => "x";
+      });
+      expect(shadow(el).querySelector(".voice-btn")).not.toBeNull();
+    });
+
+    it("the built-in handler posts the clip to data-transcribe-url", async () => {
+      // Every other voice test supplies its own `transcribeHandler`, so this is
+      // the only one that exercises the handler the element builds when only
+      // the url is given — the default path most consumers actually take.
+      const media = installFakeMedia();
+      const original = globalThis.fetch;
+      const seen: { url: string; audio: unknown }[] = [];
+      globalThis.fetch = (async (url: string, init: RequestInit) => {
+        seen.push({ url, audio: (init.body as FormData).get("audio") });
+        return new Response(JSON.stringify({ text: "spoken words" }), { status: 200 });
+      }) as unknown as typeof fetch;
+      try {
+        const el = mount({ "data-transcribe-url": "/agent/transcribe/" });
+        const input = shadow(el).querySelector<HTMLTextAreaElement>(".input");
+        const mic = shadow(el).querySelector<HTMLButtonElement>(".voice-btn");
+        mic?.click(); // start
+        await flush();
+        mic?.click(); // stop → transcribe
+        await flush();
+        expect(seen).toHaveLength(1);
+        expect(seen[0]?.url).toBe("/agent/transcribe/");
+        expect(seen[0]?.audio).toBeInstanceOf(Blob);
+        expect(input?.value).toBe("spoken words");
+      } finally {
+        globalThis.fetch = original;
+        media.restore();
+      }
+    });
+
+    it("drops a transcript into the composer, appending to typed text", async () => {
+      const media = installFakeMedia();
+      try {
+        const el = mount({}, (e) => {
+          e.transcribeHandler = async () => "from voice";
+        });
+        const input = shadow(el).querySelector<HTMLTextAreaElement>(".input");
+        if (input === null) {
+          throw new Error("expected an input");
+        }
+        input.value = "typed";
+        const mic = shadow(el).querySelector<HTMLButtonElement>(".voice-btn");
+        mic?.click(); // start
+        await flush();
+        mic?.click(); // stop → transcribe → insert
+        await flush();
+        expect(input.value).toBe("typed from voice");
+      } finally {
+        media.restore();
+      }
+    });
+
+    it("sets the transcript as-is when the composer is empty", async () => {
+      const media = installFakeMedia();
+      try {
+        const el = mount({}, (e) => {
+          e.transcribeHandler = async () => "just voice";
+        });
+        const mic = shadow(el).querySelector<HTMLButtonElement>(".voice-btn");
+        mic?.click();
+        await flush();
+        mic?.click();
+        await flush();
+        expect(shadow(el).querySelector<HTMLTextAreaElement>(".input")?.value).toBe("just voice");
+      } finally {
+        media.restore();
+      }
+    });
+  });
+
+  describe("built-in theme toggle", () => {
+    it("is absent unless opted in", () => {
+      expect(shadow(mount()).querySelector(".header-btn--theme")).toBeNull();
+    });
+
+    it("flips the theme attribute and persists it per tab", () => {
+      const el = mount({ "data-theme-toggle": "" });
+      const toggle = shadow(el).querySelector<HTMLButtonElement>(".header-btn--theme");
+      expect(toggle?.getAttribute("part")).toBe("header-button theme-toggle");
+      // A drawn path now, not a typed emoji: an emoji is painted by the
+      // platform's own font and its ink runs outside the box measured for it,
+      // which is why this one control never sat right beside the others.
+      expect(toggle?.querySelector("svg")).not.toBeNull(); // light -> offer dark
+
+      toggle?.click();
+      expect(el.getAttribute("theme")).toBe("dark");
+      expect(sessionStorage.getItem("ag-ui-chat:theme")).toBe("dark");
+      expect(toggle?.querySelector("svg")).not.toBeNull(); // dark -> offer light
+
+      toggle?.click();
+      expect(el.getAttribute("theme")).toBe("light");
+    });
+
+    it("flips only the scheme word of a named theme", () => {
+      const el = mount({ "data-theme-toggle": "", theme: "ledger  acme" });
+      el.toggleTheme();
+      expect(el.getAttribute("theme")).toBe("ledger acme dark");
+      expect(sessionStorage.getItem("ag-ui-chat:theme")).toBe("dark");
+      el.toggleTheme();
+      expect(el.getAttribute("theme")).toBe("ledger acme light");
+      el.setAttribute("theme", "auto soft");
+      el.toggleTheme();
+      expect(el.getAttribute("theme")).toBe("soft dark");
+    });
+
+    it("restores a persisted theme on connect (opt-in only)", () => {
+      sessionStorage.setItem("ag-ui-chat:theme", "dark");
+      // Without the opt-in the persisted value is ignored…
+      expect(mount().getAttribute("theme")).toBeNull();
+      // …with it, the theme is restored.
+      expect(mount({ "data-theme-toggle": "" }).getAttribute("theme")).toBe("dark");
+    });
+
+    // The saved value is the user's scheme, not the host's theme: a tab that
+    // toggled on one page must not carry that page's theme name to another.
+    it.each([
+      ["dark", "classic", "classic dark"],
+      // What this release's first cut saved: a whole value, name included.
+      ["soft dark", "ledger", "ledger dark"],
+      // What the toggle before themes saved: a bare scheme.
+      ["light", "soft", "soft light"],
+      ["dark", "auto soft", "soft dark"],
+      ["light", "ledger dark acme", "ledger acme light"],
+    ])("restores saved %j onto markup %j as %j", (saved, markup, restored) => {
+      sessionStorage.setItem("ag-ui-chat:theme", saved);
+      expect(mount({ "data-theme-toggle": "", theme: markup }).getAttribute("theme")).toBe(
+        restored,
+      );
+    });
+
+    it("leaves the markup alone when the saved value names no scheme", () => {
+      sessionStorage.setItem("ag-ui-chat:theme", "code");
+      expect(mount({ "data-theme-toggle": "", theme: "ledger" }).getAttribute("theme")).toBe(
+        "ledger",
+      );
+      expect(mount({ "data-theme-toggle": "" }).getAttribute("theme")).toBeNull();
+    });
+
+    // The mark offers the destination: a sun in the dark scheme, a moon
+    // otherwise. The moon is one path and the sun adds a circle, so a circle
+    // tells them apart where "there is an svg" does not.
+    function offers(el: AgUiChat): "light" | "dark" {
+      const toggle = shadow(el).querySelector<HTMLButtonElement>(".header-btn--theme");
+      return toggle?.querySelector("svg circle") === null ? "dark" : "light";
+    }
+
+    it.each([
+      ["", "dark"],
+      ["dark", "light"],
+      ["light", "dark"],
+      ["auto", "dark"],
+      // The scheme word is one of several, not the whole value.
+      ["soft dark", "light"],
+      ["dark soft", "light"],
+      ["soft acme dark", "light"],
+      ["soft acme", "dark"],
+      // A word that merely contains the scheme's is not it.
+      ["darkroom", "dark"],
+    ])("offers the opposite scheme to theme %j: %s", (theme, expected) => {
+      const markup = theme === "" ? {} : { theme };
+      expect(offers(mount({ "data-theme-toggle": "", ...markup }))).toBe(expected);
+    });
+
+    it("turns the mark over with each flip, on a named theme", () => {
+      const el = mount({ "data-theme-toggle": "", theme: "soft acme" });
+      expect(offers(el)).toBe("dark");
+      el.toggleTheme();
+      expect(el.getAttribute("theme")).toBe("soft acme dark");
+      expect(offers(el)).toBe("light");
+      el.toggleTheme();
+      expect(offers(el)).toBe("dark");
+    });
+
+    it("draws the mark for the restored scheme on connect", () => {
+      sessionStorage.setItem("ag-ui-chat:theme", "dark");
+      const el = mount({ "data-theme-toggle": "", theme: "ledger" });
+      expect(el.getAttribute("theme")).toBe("ledger dark");
+      expect(offers(el)).toBe("light");
+    });
+
+    // Words are what is split, so the spaces around them are not words.
+    it.each([
+      ["  soft  ", "soft dark"],
+      ["soft ", "soft dark"],
+      [" acme soft dark ", "acme soft light"],
+      ["   ", "dark"],
+      // A host's own word that contains the scheme's is a name, not a scheme.
+      ["darkroom", "darkroom dark"],
+      // CSS ~= splits on any whitespace, so the toggle has to as well.
+      ["soft\tdark", "soft light"],
+      ["soft\ndark acme", "soft acme light"],
+    ])("flips theme %j to %j", (theme, flipped) => {
+      const el = mount({ "data-theme-toggle": "", theme });
+      el.toggleTheme();
+      expect(el.getAttribute("theme")).toBe(flipped);
+    });
+
+    it("treats light, dark and auto each as the scheme word, never as a name", () => {
+      for (const scheme of ["light", "dark", "auto"]) {
+        const el = mount({ "data-theme-toggle": "", theme: `soft ${scheme} acme` });
+        el.toggleTheme();
+        const words = (el.getAttribute("theme") ?? "").split(" ");
+        expect(words.filter((word) => ["light", "dark", "auto"].includes(word))).toHaveLength(1);
+        expect(words.filter((word) => word === "soft" || word === "acme")).toHaveLength(2);
+      }
+    });
+
+    it("takes the last scheme word of a saved value, and ignores the names in it", () => {
+      sessionStorage.setItem("ag-ui-chat:theme", "light dark");
+      expect(mount({ "data-theme-toggle": "", theme: "soft" }).getAttribute("theme")).toBe(
+        "soft dark",
+      );
+      sessionStorage.setItem("ag-ui-chat:theme", "dark light");
+      expect(mount({ "data-theme-toggle": "", theme: "soft" }).getAttribute("theme")).toBe(
+        "soft light",
+      );
+      sessionStorage.setItem("ag-ui-chat:theme", "light\tdark");
+      expect(mount({ "data-theme-toggle": "", theme: "soft" }).getAttribute("theme")).toBe(
+        "soft dark",
+      );
+      sessionStorage.setItem("ag-ui-chat:theme", " ledger   auto ");
+      expect(mount({ "data-theme-toggle": "", theme: "soft" }).getAttribute("theme")).toBe(
+        "soft auto",
+      );
+    });
+
+    it("saves only the scheme word, never the theme name", () => {
+      const el = mount({ "data-theme-toggle": "", theme: "soft" });
+      el.toggleTheme();
+      expect(el.getAttribute("theme")).toBe("soft dark");
+      expect(sessionStorage.getItem("ag-ui-chat:theme")).toBe("dark");
+      el.toggleTheme();
+      expect(sessionStorage.getItem("ag-ui-chat:theme")).toBe("light");
+    });
+  });
+});
+
+describe("header control icons", () => {
+  it("exposes a named slot per control, with the built-in glyph as fallback", async () => {
+    // The glyph used to be the button's own textContent, so a host could
+    // restyle a control but never replace it with a brand icon.
+    const el = mount();
+    const buttons = [...shadow(el).querySelectorAll<HTMLButtonElement>(".header-btn")];
+    const slots = buttons.map((b) => b.querySelector("slot")?.name);
+    expect(slots).toContain("icon-history");
+    expect(slots).toContain("icon-new");
+    expect(slots).toContain("icon-collapse");
+    // Existing embeds are untouched: the glyph is the slot's fallback content.
+    const history = buttons.find((b) => b.classList.contains("header-btn--history"));
+    expect(history?.querySelector("slot > svg.glyph")).not.toBeNull();
+    expect(history?.getAttribute("part")).toBe("header-button history-button");
+  });
+});
+
+const SIZE_KEY = "ag-ui-chat:size";
+
+describe("panel resize", () => {
+  beforeEach(() => {
+    sessionStorage.removeItem(SIZE_KEY);
+  });
+
+  it("keeps the same grips and lets placement decide what they do", () => {
+    // Which grips are shown and what each may move is CSS and the live axis
+    // check, so switching placement re-purposes the set rather than rebuilding
+    // it. All eight edges and corners are always present.
+    const el = mount();
+    const grips = [...shadow(el).querySelectorAll(".resize-handle")];
+    expect(grips).toHaveLength(8);
+    el.setAttribute("placement", "full");
+    expect([...shadow(el).querySelectorAll(".resize-handle")]).toEqual(grips);
+  });
+
+  it("puts exactly one grip in the tab order", () => {
+    // Eight separators between the transcript and the composer is not keyboard
+    // parity, it is a keyboard obstacle; one grip already reaches both axes.
+    const el = mount();
+    const reachable = [...shadow(el).querySelectorAll<HTMLElement>(".resize-handle")].filter(
+      (grip) => grip.tabIndex === 0,
+    );
+
+    expect(reachable).toHaveLength(1);
+    // And the rest are out of the accessibility tree, not just out of the tab
+    // order, so they are not announced as seven unusable separators.
+    expect(
+      [...shadow(el).querySelectorAll(".resize-handle")].filter(
+        (grip) => grip.getAttribute("aria-hidden") === "true",
+      ),
+    ).toHaveLength(7);
+  });
+
+  it("computes each grip from the edge that grip does not drag", () => {
+    // The reported defect: the direction was derived from `placement`, so a
+    // host that right-aligns the panel got a resize that shrank when dragged
+    // outward and travelled by the opposite corner. A grip now names its own
+    // edge, which makes the layout unable to invert it at all.
+    const el = mount();
+    // A right-anchored layout: growing the panel moves its left edge outward.
+    let width = 300;
+    el.getBoundingClientRect = () =>
+      ({ left: 500 - width, top: 100, right: 500, bottom: 500 }) as DOMRect;
+    const original = el.style.setProperty.bind(el.style);
+    el.style.setProperty = (name: string, value: string) => {
+      if (name === "--_drag-width") {
+        width = Number.parseFloat(value);
+      }
+      original(name, value);
+    };
+
+    const handle = shadow(el).querySelector<HTMLElement>(".resize-handle--left");
+    const down = new Event("pointerdown", { bubbles: true, cancelable: true });
+    Object.assign(down, { clientX: 200, clientY: 100 });
+    handle?.dispatchEvent(down);
+    const move = new Event("pointermove", { bubbles: true });
+    Object.assign(move, { clientX: 150, clientY: 100 });
+    window.dispatchEvent(move);
+
+    // The left grip holds the right edge: 500 - 150 = 350, whatever the host's
+    // own layout pins.
+    expect(el.style.getPropertyValue("--_drag-width")).toBe("350px");
+  });
+
+  it("allows the axes the placement allows, and no others", () => {
+    const cases: Array<[string, boolean]> = [
+      ["full", false],
+      ["page", false],
+      ["side", true],
+      ["sidebar", true],
+      ["embedded", true],
+    ];
+    for (const [placement, resizable] of cases) {
+      sessionStorage.removeItem(SIZE_KEY);
+      const el = mount({ placement });
+      el.getBoundingClientRect = () => ({ left: 0, top: 0, right: 300, bottom: 400 }) as DOMRect;
+      // The corner, so one gesture asks for both axes and the placement is
+      // what decides which of them it gets.
+      const handle = shadow(el).querySelector<HTMLElement>(".resize-handle--bottom-right");
+      const down = new Event("pointerdown", { bubbles: true, cancelable: true });
+      Object.assign(down, { clientX: 0, clientY: 0 });
+      handle?.dispatchEvent(down);
+      const move = new Event("pointermove", { bubbles: true });
+      Object.assign(move, { clientX: 400, clientY: 0 });
+      window.dispatchEvent(move);
+      const up = new Event("pointerup", { bubbles: true });
+      Object.assign(up, { clientX: 400, clientY: 0 });
+      window.dispatchEvent(up);
+      const changed = el.style.getPropertyValue("--_drag-width") !== "";
+      expect(changed, placement).toBe(resizable);
+      // Height only where both axes are allowed.
+      const heightChanged = el.style.getPropertyValue("--_drag-height") !== "";
+      expect(heightChanged, `${placement} height`).toBe(
+        resizable && placement !== "side" && placement !== "sidebar",
+      );
+    }
+  });
+
+  it("never applies a persisted size on an axis the placement owns", () => {
+    // ⚠ The cascade cannot arbitrate this. An inline custom property outranks
+    // a `:host([placement=…])` rule setting the same property, so a height
+    // dragged while floating capped a docked sidebar that had asked for 100vh.
+    const size = { width: 640, height: 700 };
+    sessionStorage.setItem(
+      SIZE_KEY,
+      JSON.stringify({ v: 2, placements: { side: size, full: size } }),
+    );
+
+    const docked = mount({ placement: "side" });
+    expect(docked.style.getPropertyValue("--_drag-width")).toBe("640px");
+    expect(docked.style.getPropertyValue("--_drag-height")).toBe("");
+
+    const bleed = mount({ placement: "full" });
+    expect(bleed.style.getPropertyValue("--_drag-width")).toBe("");
+    expect(bleed.style.getPropertyValue("--_drag-height")).toBe("");
+  });
+
+  it("swaps in the new placement's own size when the placement changes", () => {
+    // A size belongs to its placement: one dragged floating never sizes another.
+    sessionStorage.setItem(
+      SIZE_KEY,
+      JSON.stringify({
+        v: 2,
+        placements: { floating: { width: 640, height: 700 }, side: { width: 500, height: 600 } },
+      }),
+    );
+    const el = mount();
+    expect(el.style.getPropertyValue("--_drag-width")).toBe("640px");
+    expect(el.style.getPropertyValue("--_drag-height")).toBe("700px");
+
+    el.setAttribute("placement", "side");
+    expect(el.style.getPropertyValue("--_drag-width")).toBe("500px");
+    expect(el.style.getPropertyValue("--_drag-height")).toBe("");
+
+    el.setAttribute("placement", "full");
+    expect(el.style.getPropertyValue("--_drag-width")).toBe("");
+
+    el.setAttribute("placement", "bottom-left");
+    expect(el.style.getPropertyValue("--_drag-width")).toBe("");
+    sessionStorage.removeItem(SIZE_KEY);
+  });
+
+  it.each([
+    ["an empty placement reads floating's size", { placement: "" }, { floating: { width: 640 } }],
+    [
+      "a left and a right sidebar share one size",
+      { placement: "sidebar", "data-side": "left" },
+      { sidebar: { width: 500 } },
+    ],
+  ])("%s", (_name, attrs, placements) => {
+    const width = Object.values(placements)[0]?.width;
+    sessionStorage.setItem(SIZE_KEY, JSON.stringify({ v: 2, placements }));
+    const el = mount(attrs);
+    expect(el.style.getPropertyValue("--_drag-width")).toBe(`${width}px`);
+  });
+
+  it("drops an inline size on a reconnect that finds none stored", () => {
+    sessionStorage.setItem(
+      SIZE_KEY,
+      JSON.stringify({ v: 2, placements: { floating: { width: 640 } } }),
+    );
+    const el = mount();
+    expect(el.style.getPropertyValue("--_drag-width")).toBe("640px");
+    el.remove();
+    sessionStorage.removeItem(SIZE_KEY);
+    document.body.appendChild(el);
+    expect(el.style.getPropertyValue("--_drag-width")).toBe("");
+  });
+
+  it("reads a record with no placements as no size", () => {
+    sessionStorage.setItem(SIZE_KEY, JSON.stringify({ v: 2, placements: null }));
+    const el = mount();
+    expect(el.style.getPropertyValue("--_drag-width")).toBe("");
+  });
+
+  it("reads no size for a placement set before connect from another namespace", () => {
+    // Before connect the store is not scoped yet, so its unscoped key is another element's.
+    sessionStorage.setItem(
+      SIZE_KEY,
+      JSON.stringify({ v: 2, placements: { sidebar: { width: 999 } } }),
+    );
+    const scoped = `${SIZE_KEY}:scoped-size`;
+    sessionStorage.setItem(
+      scoped,
+      JSON.stringify({ v: 2, placements: { floating: { width: 640 } } }),
+    );
+    const el = mount({ id: "scoped-size", placement: "sidebar" });
+    expect(el.style.getPropertyValue("--_drag-width")).toBe("");
+    sessionStorage.removeItem(scoped);
+  });
+
+  it("does nothing at all where the placement is full-bleed", () => {
+    const el = mount({ placement: "full" });
+    const handle = shadow(el).querySelector<HTMLElement>(".resize-handle");
+    const down = new Event("pointerdown", { bubbles: true, cancelable: true });
+    Object.assign(down, { clientX: 200, clientY: 200 });
+    handle?.dispatchEvent(down);
+    const move = new Event("pointermove", { bubbles: true });
+    Object.assign(move, { clientX: 50, clientY: 50 });
+    window.dispatchEvent(move);
+    expect(el.style.getPropertyValue("--_drag-width")).toBe("");
+  });
+
+  it("writes the custom properties, not inline width and height", () => {
+    // The placement rules set those same properties; an inline dimension would
+    // outrank them and survive a placement change.
+    const el = mount();
+    const handle = shadow(el).querySelector<HTMLElement>(".resize-handle");
+    const down = new Event("pointerdown", { bubbles: true, cancelable: true });
+    Object.assign(down, { clientX: 200, clientY: 200 });
+    handle?.dispatchEvent(down);
+    const move = new Event("pointermove", { bubbles: true });
+    Object.assign(move, { clientX: 150, clientY: 150 });
+    window.dispatchEvent(move);
+
+    expect(el.style.getPropertyValue("--_drag-width")).not.toBe("");
+    expect(el.style.width).toBe("");
+    const up = new Event("pointerup", { bubbles: true });
+    Object.assign(up, { clientX: 150, clientY: 150 });
+    window.dispatchEvent(up);
+    expect(sessionStorage.getItem(SIZE_KEY)).toContain("width");
+  });
+
+  it("restores a persisted size on mount", () => {
+    sessionStorage.setItem(SIZE_KEY, JSON.stringify({ width: 640, height: 700 }));
+    const el = mount();
+    expect(el.style.getPropertyValue("--_drag-width")).toBe("640px");
+    expect(el.style.getPropertyValue("--_drag-height")).toBe("700px");
+  });
+
+  it("drops the dragged size and its stored copy on resetSize, and leaves host tokens alone", () => {
+    sessionStorage.setItem(SIZE_KEY, JSON.stringify({ width: 640, height: 700 }));
+    const el = mount();
+    el.style.setProperty("--ag-ui-width", "500px");
+    expect(el.style.getPropertyValue("--_drag-width")).toBe("640px");
+
+    el.resetSize();
+
+    expect(el.style.getPropertyValue("--_drag-width")).toBe("");
+    expect(el.style.getPropertyValue("--_drag-height")).toBe("");
+    expect(sessionStorage.getItem(SIZE_KEY)).toBeNull();
+    expect(el.style.getPropertyValue("--ag-ui-width")).toBe("500px");
+  });
+
+  it("falls back to the placement size when the stored entry is corrupt", () => {
+    sessionStorage.setItem(SIZE_KEY, "{not json");
+    const el = mount();
+    expect(el.style.getPropertyValue("--_drag-width")).toBe("");
+  });
+
+  it("ignores a stored entry that is not an object", () => {
+    sessionStorage.setItem(SIZE_KEY, "42");
+    const el = mount();
+    expect(el.style.getPropertyValue("--_drag-width")).toBe("");
+  });
+});

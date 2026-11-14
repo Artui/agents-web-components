@@ -1,0 +1,171 @@
+/** Controllable fakes for `navigator.mediaDevices.getUserMedia` + `MediaRecorder`
+ * (neither exists in happy-dom), for the voice-input tests. */
+
+type Listener = (event?: unknown) => void;
+
+/** A fake mic track that records whether it was stopped. */
+class FakeTrack {
+  stopped = false;
+  stop(): void {
+    this.stopped = true;
+  }
+}
+
+/** A fake `MediaStream` exposing one stoppable track. */
+export class FakeMediaStream {
+  readonly track = new FakeTrack();
+  getTracks(): FakeTrack[] {
+    return [this.track];
+  }
+}
+
+/** A fake `MediaRecorder` driven by {@link stop} (which flushes data + fires stop). */
+export class FakeMediaRecorder {
+  static instances: FakeMediaRecorder[] = [];
+  /** How many more constructions throw, then how many more `start()` calls. */
+  static constructFailures = 0;
+  static startFailures = 0;
+  mimeType = "audio/webm";
+  state: "inactive" | "recording" = "inactive";
+  readonly #listeners = new Map<string, Listener[]>();
+
+  constructor(readonly stream: FakeMediaStream) {
+    // Before the push, so recorder() answers with the one that did construct.
+    if (FakeMediaRecorder.constructFailures > 0) {
+      FakeMediaRecorder.constructFailures -= 1;
+      throw new DOMException("The stream cannot be recorded", "NotSupportedError");
+    }
+    FakeMediaRecorder.instances.push(this);
+  }
+
+  addEventListener(type: string, cb: Listener): void {
+    const list = this.#listeners.get(type) ?? [];
+    list.push(cb);
+    this.#listeners.set(type, list);
+  }
+
+  start(): void {
+    // Chromium leaves a recorder whose start() threw reporting "recording", with
+    // no events fired until something calls stop() on it.
+    if (FakeMediaRecorder.startFailures > 0) {
+      FakeMediaRecorder.startFailures -= 1;
+      this.state = "recording";
+      throw new DOMException("The recorder could not start", "NotSupportedError");
+    }
+    this.state = "recording";
+  }
+
+  stop(): void {
+    this.state = "inactive";
+    this.#emit("dataavailable", { data: new Blob(["audio-bytes"], { type: this.mimeType }) });
+    this.#emit("stop");
+  }
+
+  #emit(type: string, event?: unknown): void {
+    for (const cb of this.#listeners.get(type) ?? []) {
+      cb(event);
+    }
+  }
+}
+
+/** One `getUserMedia` call a gated install is holding open for the test to settle. */
+export interface PendingPrompt {
+  /** The stream this call will hand out if granted; stopped-ness is readable either way. */
+  readonly stream: FakeMediaStream;
+  /** Resolve the call with its stream (and record the stream in `streams()`). */
+  grant(): FakeMediaStream;
+  /** Reject the call, as a refused or unavailable mic does. */
+  refuse(): void;
+}
+
+/** Handle returned by {@link installFakeMedia}. */
+export interface FakeMediaController {
+  /** With `gated: true`, every `getUserMedia` call in order; empty otherwise. */
+  prompts(): PendingPrompt[];
+  /** The most recently constructed recorder (throws if none). */
+  recorder(): FakeMediaRecorder;
+  /** Every stream `getUserMedia` has handed out, in order. */
+  streams(): FakeMediaStream[];
+  restore(): void;
+}
+
+/**
+ * Install the fakes. With `deny: true`, `getUserMedia` rejects (permission
+ * denied / no device). `failConstruct` and `failStart` make that many
+ * recorders throw a `NotSupportedError` from the constructor, or from
+ * `start()`, before behaving normally: a granted stream the browser then
+ * cannot record. With `gated: true`, `getUserMedia` waits on a prompt the test
+ * settles by hand through `prompts()`, in any order, or never. Call `restore()`
+ * afterwards.
+ */
+export function installFakeMedia({
+  deny = false,
+  failConstruct = 0,
+  failStart = 0,
+  gated = false,
+} = {}): FakeMediaController {
+  FakeMediaRecorder.instances = [];
+  FakeMediaRecorder.constructFailures = failConstruct;
+  FakeMediaRecorder.startFailures = failStart;
+  const streams: FakeMediaStream[] = [];
+  const prompts: PendingPrompt[] = [];
+  const g = globalThis as Record<string, unknown>;
+  const originalRecorder = g["MediaRecorder"];
+  const originalMediaDevices = (globalThis.navigator as { mediaDevices?: unknown }).mediaDevices;
+
+  g["MediaRecorder"] = FakeMediaRecorder;
+  Object.defineProperty(globalThis.navigator, "mediaDevices", {
+    configurable: true,
+    value: {
+      getUserMedia: () => {
+        if (deny) {
+          return Promise.reject(new Error("denied"));
+        }
+        const stream = new FakeMediaStream();
+        if (gated) {
+          const gate = new Promise<FakeMediaStream>((resolve, reject) => {
+            prompts.push({
+              stream,
+              grant() {
+                streams.push(stream);
+                resolve(stream);
+                return stream;
+              },
+              refuse() {
+                reject(new Error("denied"));
+              },
+            });
+          });
+          return gate;
+        }
+        streams.push(stream);
+        return Promise.resolve(stream);
+      },
+    },
+  });
+
+  return {
+    prompts(): PendingPrompt[] {
+      return prompts;
+    },
+    recorder(): FakeMediaRecorder {
+      const last = FakeMediaRecorder.instances.at(-1);
+      if (last === undefined) {
+        throw new Error("no MediaRecorder was created");
+      }
+      return last;
+    },
+    streams(): FakeMediaStream[] {
+      return streams;
+    },
+    restore(): void {
+      FakeMediaRecorder.constructFailures = 0;
+      FakeMediaRecorder.startFailures = 0;
+      g["MediaRecorder"] = originalRecorder;
+      Object.defineProperty(globalThis.navigator, "mediaDevices", {
+        configurable: true,
+        value: originalMediaDevices,
+      });
+    },
+  };
+}

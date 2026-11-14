@@ -1,0 +1,714 @@
+// Self-contained demo server. No build step beyond `pnpm build` (which emits
+// the vendored bundle the page loads). Run: `node demo/mock-server.mjs`, then
+// open http://localhost:5173 — the playground (themes/index.html) lets you flip
+// theme / density / placement / text-animation / tool-display live.
+//
+// It binds every interface, so the addresses it prints are reachable from other
+// devices on the same network — which is the only way to look at the
+// small-viewport layout on a real phone, keyboard and all, rather than at a
+// resized desktop window pretending to be one. It serves a scripted mock agent
+// and the playground, and holds nothing but what the page puts in the browser's
+// own storage. Set HOST=127.0.0.1 to keep it to this machine.
+//
+// Speaks just enough of the AG-UI wire protocol for @ag-ui/client's HttpAgent:
+// a POST of RunAgentInput is answered with an SSE stream of AG-UI events. The
+// scripted agent fills an article form via frontend tools, pausing on the
+// destructive "save" for the inline confirmation card.
+import { readFile } from "node:fs/promises";
+import { createServer } from "node:http";
+import { networkInterfaces } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const ROOT = join(HERE, "..");
+const PORT = Number(process.env.PORT ?? 5173);
+// The unspecified IPv6 address, which on a dual-stack host also accepts IPv4 --
+// so this reaches the local network and `http://[::1]:5173` still answers.
+// Plain "0.0.0.0" is IPv4-only and quietly drops the IPv6 loopback, which is
+// what `localhost` resolves to first on most machines.
+const HOST = process.env.HOST ?? "::";
+
+const HTML = "text/html; charset=utf-8";
+// Two pages. The playground flips every option live over an article form the
+// agent drives (see themes/index.html), and replaces the old per-theme pages.
+// The full page is the chat as a route of its own (see page/index.html), which
+// is the layout the greeting on an empty conversation is for.
+const PAGE_ASSETS = new Map([
+  ["/themes/", { path: "themes/index.html", contentType: HTML }],
+  ["/themes/index.html", { path: "themes/index.html", contentType: HTML }],
+  ["/themes/demo.js", { path: "themes/demo.js", contentType: "text/javascript" }],
+  ["/page/", { path: "page/index.html", contentType: HTML }],
+  ["/page/index.html", { path: "page/index.html", contentType: HTML }],
+  ["/page/page.js", { path: "page/page.js", contentType: "text/javascript" }],
+  // Both pages load it; it does nothing unless the URL carries `?readout`.
+  ["/viewport-readout.js", { path: "viewport-readout.js", contentType: "text/javascript" }],
+]);
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Fresh ids per message and per tool call, as a real server issues.
+//
+// This mattered more than it looks. The scripted answers used to stream under
+// fixed ids ("m-done", "tc1"...), and @ag-ui/client keys assistant messages by
+// messageId: a TEXT_MESSAGE_START for an id already in the history appends to
+// that message rather than starting a new one. So repeating the same prompt
+// concatenated every answer onto one entry, which then replayed out of order on
+// reload (a single grown message sitting where it was first created, with the
+// later prompts after it) and tripped the unfinished-run notice. Three symptoms
+// that all read as component bugs, from one line of harness.
+const id = (prefix) => `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
+
+function emit(res, event) {
+  res.write(`data: ${JSON.stringify(event)}\n\n`);
+}
+
+async function streamText(res, messageId, chunks) {
+  emit(res, { type: "TEXT_MESSAGE_START", messageId, role: "assistant" });
+  for (const delta of chunks) {
+    emit(res, { type: "TEXT_MESSAGE_CONTENT", messageId, delta });
+    await sleep(110);
+  }
+  emit(res, { type: "TEXT_MESSAGE_END", messageId });
+}
+
+function emitToolCall(res, id, name, args, parentMessageId) {
+  emit(res, { type: "TOOL_CALL_START", toolCallId: id, toolCallName: name, parentMessageId });
+  emit(res, { type: "TOOL_CALL_ARGS", toolCallId: id, delta: JSON.stringify(args) });
+  emit(res, { type: "TOOL_CALL_END", toolCallId: id });
+}
+
+// A server-side tool's own result, which is how an approved gated call settles:
+// nothing runs in the browser, so the card is waiting on this event.
+function emitToolResult(res, toolCallId, content) {
+  emit(res, { type: "TOOL_CALL_RESULT", toolCallId, messageId: id("m"), content });
+}
+
+// A denied gated call's result, as django-ag-ui streams it. pydantic-ai answers
+// a denial with a tool return carrying the denial's message, and the server
+// stamps how the call ended on both carriers: `metadata` for a 1.0 client, the
+// top-level key for a 0.x one. Without it the call has no result at all, so the
+// next request answers it as not finished and a reload shows that instead of
+// the decline the person made.
+function emitDeniedResult(res, toolCallId, content) {
+  emit(res, {
+    type: "TOOL_CALL_RESULT",
+    toolCallId,
+    messageId: id("m"),
+    content,
+    outcome: "denied",
+    metadata: { outcome: "denied" },
+  });
+}
+
+// The message pydantic-ai's AG-UI adapter denies an answer with: Deny sends
+// `cancelled`, and anything else that is not an approval is denied by default.
+function denialMessage(answer) {
+  if (answer.status === "cancelled") {
+    return "Cancelled by user.";
+  }
+  const reason = answer.payload?.reason;
+  return typeof reason === "string" && reason !== "" ? reason : "The tool call was denied.";
+}
+
+// Whether an answer approves its call. pydantic-ai denies by default: only a
+// `resolved` answer whose payload says `approved: true` runs the tool.
+function isApproval(answer) {
+  return answer.status === "resolved" && answer.payload?.approved === true;
+}
+
+// A reasoning model's streamed chain-of-thought: the web component
+// renders it as a collapsible "thinking" region that folds on the first answer.
+async function streamReasoning(res, messageId, chunks) {
+  emit(res, { type: "REASONING_START", messageId });
+  emit(res, { type: "REASONING_MESSAGE_START", messageId, role: "reasoning" });
+  let buffer = "";
+  for (const delta of chunks) {
+    buffer += delta;
+    emit(res, { type: "REASONING_MESSAGE_CONTENT", messageId, delta });
+    await sleep(90);
+  }
+  emit(res, { type: "REASONING_MESSAGE_END", messageId });
+  emit(res, { type: "REASONING_END", messageId });
+}
+
+/** The most recent user turn, which is what the scripted agent dispatches on. */
+function lastUserText(messages) {
+  const last = [...messages].reverse().find((m) => m.role === "user");
+  return typeof last?.content === "string" ? last.content.trim() : "";
+}
+
+/**
+ * The scripted agent.
+ *
+ * Dispatches on the latest user turn so the playground can exercise each
+ * surface on its own, rather than replaying one canned script for everything.
+ */
+async function handleAgent(res, body) {
+  const input = JSON.parse(body);
+  const { threadId, runId, messages } = input;
+
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
+  emit(res, { type: "RUN_STARTED", threadId, runId });
+
+  const prompt = lastUserText(messages);
+  // Answers to a previous round's approval interrupts. Every answered call gets
+  // a result, as it does from django-ag-ui: an approved one its tool's return,
+  // a denied one the denial, marked as such.
+  const resume = Array.isArray(input.resume) ? input.resume : [];
+  // The *last* message, not any message: a thread that has ever run a tool
+  // keeps those results in history forever, so `some()` made every later turn
+  // look like a tool follow-up and answer "Done" to everything.
+  const isFollowUp = messages.at(-1)?.role === "tool";
+
+  if (resume.length > 0) {
+    const approved = resume.filter(isApproval);
+    for (const answer of resume) {
+      const toolCallId = answer.interruptId.replace("int-", "");
+      if (!isApproval(answer)) {
+        emitDeniedResult(res, toolCallId, denialMessage(answer));
+        continue;
+      }
+      // Echo what was actually approved. A server that accepts `editedArgs`
+      // has to run the edited call rather than the one it proposed, and
+      // reflecting it here is what makes that visible in the demo.
+      const edited = answer.payload?.editedArgs;
+      emitToolResult(
+        res,
+        toolCallId,
+        JSON.stringify(edited === undefined ? { created: true } : { created: true, as: edited }),
+      );
+    }
+    await streamText(res, id("msg"), [
+      `Added ${approved.length} of ${resume.length}`,
+      approved.length === resume.length ? " — all of them." : ", and left the rest alone.",
+    ]);
+  } else if (/\bwhere am i\b/i.test(prompt)) {
+    // The place chip's other half: quote the place entry this round carried,
+    // so the chip and what the agent was told can be compared side by side.
+    // Withholding the place drops the page map too, which the answer says.
+    const context = Array.isArray(input.context) ? input.context : [];
+    const entry = context.find((item) => item.description === "place");
+    const page = context.some((item) => item.description === "page_map");
+    const place = entry === undefined ? null : JSON.parse(entry.value);
+    const where =
+      place === null
+        ? "I was not told where you are"
+        : `You are on **${place.label}**${place.detail ? ` (${place.detail})` : ""}` +
+          (place.href ? `, at \`${place.href}\`` : "");
+    await streamText(res, id("msg"), [
+      `${where}. `,
+      page ? "I was given the page map too." : "I was not given the page map.",
+    ]);
+  } else if (/\becho\b/i.test(prompt)) {
+    // A plain answer and nothing else, which is the shape most turns have and
+    // the one every other branch here dresses up. Sending, the queue behind a
+    // run, ArrowUp recall and Retry are about turns rather than tools, and
+    // looking at them through the article script put a confirmation card in
+    // the way of every run. The pause keeps the run in flight for over a
+    // second, long enough to type and queue a second turn behind it.
+    //
+    // "note" adds an activity of that type ahead of the answer, which no
+    // renderer here draws: a page that registers one for it can look at what
+    // a host's renderer does while the element replays a conversation.
+    await sleep(1200);
+    if (/\bnote\b/i.test(prompt)) {
+      emit(res, {
+        type: "ACTIVITY_SNAPSHOT",
+        messageId: id("note"),
+        activityType: "note",
+        content: { text: prompt },
+      });
+    }
+    await streamText(res, id("msg"), ["You said: ", ...prompt.split(/\s+/).map((w) => `${w} `)]);
+  } else if (/\bimport\b/i.test(prompt)) {
+    // Three gated calls in one run: the case a single approval never shows. Each
+    // interrupt is answered independently, and every prompt is the same sentence
+    // because a confirmation is written per *tool*, so the card has to say which
+    // call it belongs to some other way.
+    const parent = id("msg");
+    await streamText(res, parent, ["Three rows — ", "each needs your approval."]);
+    const rows = [
+      { title: "Design sync", day: "2026-08-14", start_hour: 14 },
+      { title: "Retro", day: "2026-08-15", start_hour: 10 },
+      { title: "One-on-one", day: "2026-08-15", start_hour: 16 },
+    ];
+    const interrupts = rows.map((row) => {
+      const callId = id("call");
+      emitToolCall(res, callId, "create_event", row, parent);
+      return {
+        id: `int-${callId}`,
+        reason: "tool_call",
+        toolCallId: callId,
+        message: `Approve create_event(${JSON.stringify(row)})?`,
+        metadata: { "x-confirm": "Add this event to the board?" },
+      };
+    });
+    emit(res, {
+      type: "RUN_FINISHED",
+      threadId,
+      runId,
+      outcome: { type: "interrupt", interrupts },
+    });
+    res.end();
+    return;
+  } else if (/\bdelegate\b/i.test(prompt) || /\bsub-?agent\b/i.test(prompt)) {
+    // Two delegations, narrated. The point of the scenario is the wait: each
+    // sleep below is time a `delegate_task` card used to spend at "running…"
+    // with nothing on screen, which is the stall the nested row exists to end.
+    //
+    // The shape follows the fixture the tests replay, which means **two
+    // carriers**: the delegation's own lifetime rides the protocol's
+    // SUBAGENT_STARTED / _FINISHED / _ERROR, and each tool call the child makes
+    // rides a CUSTOM `ag_ui.subagent` event keyed on the parent's call id.
+    //
+    // The lifecycle is where the protocol's own client is strict, so this
+    // scenario has to be too, or it streams something a browser rejects rather
+    // than something a server writes: exactly one open and one close per
+    // delegation, no reused subagentRunId, and no RUN_FINISHED while either is
+    // still open. The failure carries no exception text on the lifecycle event
+    // -- only on the tool result underneath it.
+    //
+    // `subagentRunId` is derived from the delegation's call id the way the
+    // server derives it, rather than minted here, so the id on screen is
+    // traceable to the card it belongs to.
+    const parent = id("msg");
+    await streamText(res, parent, ["Handing this to two sub-agents."]);
+
+    const progress = (value) => emit(res, { type: "CUSTOM", name: "ag_ui.subagent", value });
+    const opened = (call, name) =>
+      emit(res, {
+        type: "SUBAGENT_STARTED",
+        subagentRunId: `subagent-${call}`,
+        name,
+        parentToolCallId: call,
+      });
+    // Optional fields are omitted rather than sent as null: the protocol's own
+    // client refuses an explicit null on every one of them.
+    const closed = (call) =>
+      emit(res, { type: "SUBAGENT_FINISHED", subagentRunId: `subagent-${call}` });
+    const errored = (call, message) =>
+      emit(res, { type: "SUBAGENT_ERROR", subagentRunId: `subagent-${call}`, message });
+
+    const first = id("call");
+    emitToolCall(res, first, "delegate_task", {
+      agent_name: "researcher",
+      task: "Find settlement passages.",
+    });
+    opened(first, "researcher");
+    for (const [step, outcome] of [
+      ["sub-1", true],
+      ["sub-2", false],
+      ["sub-3", true],
+    ]) {
+      await sleep(700);
+      progress({
+        delegationId: first,
+        agent: "researcher",
+        phase: "tool_call",
+        status: "researcher: calling lookup_docs",
+        tool: { toolCallId: step, name: "lookup_docs", ok: null },
+      });
+      await sleep(900);
+      progress({
+        delegationId: first,
+        agent: "researcher",
+        phase: "tool_result",
+        status: `researcher: lookup_docs ${outcome ? "returned" : "failed"}`,
+        tool: { toolCallId: step, name: "lookup_docs", ok: outcome },
+      });
+    }
+    await sleep(600);
+    closed(first);
+    emitToolResult(res, first, "Three passages mention settlement.");
+
+    const second = id("call");
+    emitToolCall(res, second, "delegate_task", {
+      agent_name: "auditor",
+      task: "Check them against the ledger.",
+    });
+    opened(second, "auditor");
+    await sleep(900);
+    errored(second, "auditor failed");
+    emitToolResult(
+      res,
+      second,
+      "Sub-agent 'auditor' failed: the auditor model went away",
+    );
+
+    await streamText(res, id("msg"), [
+      "The handbook mentions settlement three times; ",
+      "the ledger check did not run.",
+    ]);
+  } else if (/\bchart\b/i.test(prompt) && !isFollowUp) {
+    // Both routes and every kind, driven from one prompt so they can be
+    // compared on the page rather than in the abstract.
+    const parent = id("msg");
+    const labels = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+    const series = [
+      { label: "new", points: [12, 19, 9, 24, 17] },
+      { label: "returning", points: [5, 7, 11, 6, 14] },
+    ];
+
+    await streamText(res, parent, ["The agent asks the page to draw it:"]);
+    const callId = id("call");
+    emitToolCall(res, callId, "render_chart", { kind: "bar", title: "Weekly signups", labels, series }, parent);
+    await sleep(500);
+    emitToolResult(res, callId, "chart rendered");
+
+    await streamText(res, id("msg"), ["And the server pushes one, then revises it live:"]);
+    // A stable message id, so the second and third sends *replace* the chart
+    // rather than stacking three copies -- the capability the tool route has no
+    // way to express, since a tool call returns once.
+    const live = id("m");
+    emit(res, {
+      type: "ACTIVITY_SNAPSHOT",
+      messageId: live,
+      activityType: "chart",
+      content: { kind: "line", title: "Signups (live)", labels, series },
+    });
+    for (const kind of ["scatter", "stacked"]) {
+      await sleep(900);
+      emit(res, {
+        type: "ACTIVITY_SNAPSHOT",
+        messageId: live,
+        activityType: "chart",
+        replace: true,
+        content: { kind, title: `Signups (live, ${kind})`, labels, series },
+      });
+    }
+    await sleep(700);
+    emit(res, {
+      type: "ACTIVITY_SNAPSHOT",
+      messageId: id("m"),
+      activityType: "chart",
+      content: { kind: "pie", title: "Share by day", labels, series: [series[0]] },
+    });
+    await streamText(res, id("msg"), [
+      "The line, scatter and stacked views are one chart redrawn in place. ",
+      "I can only discuss the first — the pushed ones never reached me.",
+    ]);
+  } else if (isFollowUp) {
+    await streamText(res, id("msg"), ["Done — ", "the article ", "is filled in ", "and saved. ✅"]);
+    // Follow-up chips, pushed after the work rather than configured up front --
+    // which is the whole difference from the static skill chips above the
+    // composer. Clicking one sends it as the user's next message.
+    emit(res, {
+      type: "ACTIVITY_SNAPSHOT",
+      messageId: id("suggestions"),
+      activityType: "suggestions",
+      replace: true,
+      content: {
+        prompts: [
+          "Publish it now",
+          "Change the slug",
+          "Show me what changed",
+        ],
+      },
+    });
+  } else if (prompt.startsWith("/")) {
+    // A server-resolved skill: the client sent only the token, so this is the
+    // first point at which the prompt behind it exists at all. Answering here
+    // is what demonstrates that the wording never left the server.
+    await streamText(res, id("msg"), [
+      `Resolved **${prompt}** server-side. `,
+      "The browser only ever sent the token — ",
+      "the prompt behind it lives here.",
+    ]);
+  } else if (/\bask\b/i.test(prompt)) {
+    // Drives the built-in ask_user frontend tool, so the question card is
+    // reachable without a real agent.
+    const parent = id("msg");
+    await streamText(res, parent, ["Before I continue —"]);
+    emitToolCall(
+      res,
+      id("call"),
+      "ask_user",
+      {
+        question: "Which status should the article go out with?",
+        options: ["draft", "published"],
+        allowCustom: true,
+      },
+      parent,
+    );
+  } else if (/\bfail|error|break\b/i.test(prompt)) {
+    // A tool that throws, so the card's error region is reachable.
+    const parent = id("msg");
+    await streamText(res, parent, ["Trying the flaky one…"]);
+    emitToolCall(res, id("call"), "break_something", {}, parent);
+  } else if (/\bthink silently\b/i.test(prompt)) {
+    // Reasoning that carries no text, the way a provider sends redacted
+    // thinking or reasoning with its summaries off: a start and an end and
+    // nothing between. The block settles to a plain timed label, not a toggle
+    // over an empty box. Long enough to be timed rather than read as a blink.
+    const reasoning = id("reasoning");
+    emit(res, { type: "REASONING_START", messageId: reasoning });
+    await sleep(2300);
+    emit(res, { type: "REASONING_END", messageId: reasoning });
+    await streamText(res, id("msg"), ["Thought it over ", "without a word."]);
+  } else if (/\bping\b/i.test(prompt)) {
+    // One server-side call with no arguments that returns nothing: the card or
+    // the step row is a plain status line, with nothing to open.
+    const parent = id("msg");
+    const call = id("call");
+    emitToolCall(res, call, "ping", {}, parent);
+    await sleep(600);
+    emitToolResult(res, call, "");
+    await streamText(res, id("msg"), ["Pinged."]);
+  } else {
+    await streamReasoning(res, id("reasoning"), [
+      "The user wants the article filled. ",
+      "I'll set the title and slug, ",
+      "publish it, mark it featured, ",
+      "then save.",
+    ]);
+    const parent = id("msg");
+    await streamText(res, parent, ["On it — ", "filling in ", "the article form ", "now."]);
+    emitToolCall(res, id("call"), "fill_field", { field: "title", value: "Hello, AG-UI" }, parent);
+    emitToolCall(res, id("call"), "fill_field", { field: "slug", value: "hello-ag-ui" }, parent);
+    emitToolCall(res, id("call"), "select_option", { field: "status", value: "published" }, parent);
+    emitToolCall(res, id("call"), "toggle_checkbox", { field: "featured", value: true }, parent);
+    emitToolCall(res, id("call"), "click_save", {}, parent);
+  }
+
+  emit(res, { type: "RUN_FINISHED", threadId, runId });
+  res.end();
+}
+
+async function serveFile(res, path, contentType) {
+  try {
+    const data = await readFile(path);
+    res.writeHead(200, { "Content-Type": contentType });
+    res.end(data);
+  } catch {
+    res.writeHead(404);
+    res.end("not found");
+  }
+}
+
+// Fixed ids so a row's short id is stable across reloads while you look at it;
+// timestamps are relative to boot so the labels stay honest.
+const BOOTED = Date.now();
+const RUNS = [
+  {
+    run_id: "931fef34-e1ba-4eed-a239-0444a5bcb996",
+    preview: "Fill in the article form and publish it",
+    thread_id: "t-demo",
+    parent_run_id: null,
+    started_at: new Date(BOOTED - 22 * 60_000).toISOString(),
+    continuable: true,
+  },
+  {
+    run_id: "5087f329-a842-473f-b16b-881f7c91668d",
+    preview: "Import these three events onto the board",
+    thread_id: "t-demo",
+    parent_run_id: "931fef34-e1ba-4eed-a239-0444a5bcb996",
+    started_at: new Date(BOOTED - 4_000).toISOString(),
+    continuable: true,
+  },
+  // Two runs that opened on the same sentence, which is what a real index
+  // produces once a board has been asked about twice. The words no longer tell
+  // these two apart, so they carry the short id and the rows above still do not.
+  {
+    run_id: "a7c31d90-58b4-42ee-9f0c-6d2a1b3e77c5",
+    preview: "What is on the board?",
+    thread_id: "t-demo",
+    parent_run_id: null,
+    started_at: new Date(BOOTED - 13 * 60 * 60_000).toISOString(),
+    continuable: true,
+  },
+  {
+    run_id: "e02f4a17-9c65-4b38-8ad1-70f9c5e2b4aa",
+    preview: "What is on the board?",
+    thread_id: "t-demo",
+    parent_run_id: null,
+    started_at: new Date(BOOTED - 14 * 60 * 60_000).toISOString(),
+    continuable: true,
+  },
+  // No preview at all: an index older than the field, or a run opened with an
+  // image and no caption. Falls back to the time plus the id, as every row was.
+  {
+    run_id: "b46d8e52-0f19-4c77-83b2-1d5ae9f30c68",
+    preview: null,
+    thread_id: "t-demo",
+    parent_run_id: null,
+    started_at: new Date(BOOTED - 3 * 60 * 60_000).toISOString(),
+    continuable: true,
+  },
+  {
+    run_id: "c14b8a02-7d1e-4f77-9a30-2b6e5f0c8d41",
+    preview: "Move standup to Friday at 11:00",
+    thread_id: "t-demo",
+    parent_run_id: "931fef34-e1ba-4eed-a239-0444a5bcb996",
+    started_at: new Date(BOOTED - 2_000).toISOString(),
+    // No snapshot to seed from, so the panel must not offer it: the client
+    // filters on this field, and a row without it would resume from nothing.
+    continuable: false,
+  },
+];
+
+async function streamContinuation(res, verb, runId) {
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
+  const threadId = "t-demo";
+  const runIdOut = id("run");
+  emit(res, { type: "RUN_STARTED", threadId, runId: runIdOut });
+  await streamText(res, id("m"), [
+    verb === "fork" ? "Forked " : "Continued ",
+    `from run ${runId.slice(0, 8)}`,
+    ", seeded from its snapshot.",
+  ]);
+  emit(res, { type: "RUN_FINISHED", threadId, runId: runIdOut });
+  res.end();
+}
+
+const server = createServer((req, res) => {
+  // The pages are matched on their path alone, so `/page/?readout` is the same
+  // page as `/page/`. The API routes below still match the whole URL.
+  const path = req.url.split("?")[0];
+  if (req.method === "POST" && req.url === "/viewport-readout/") {
+    // What viewport-readout.js measured on a device, one line per settled
+    // reading, so the numbers can be read off this process's output instead of
+    // transcribed from a phone screenshot.
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk;
+    });
+    req.on("end", () => {
+      process.stdout.write(`viewport-readout ${body}\n`);
+      res.writeHead(204);
+      res.end();
+    });
+    return;
+  }
+  if (req.method === "POST" && req.url === "/agent/") {
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk;
+    });
+    req.on("end", () => {
+      handleAgent(res, body).catch((error) => {
+        res.writeHead(500);
+        res.end(String(error));
+      });
+    });
+    return;
+  }
+  if (req.method === "POST" && req.url === "/attachments/") {
+    // Uploads: a real backend would store the file and hand back a durable
+    // ref; the demo buffers the body and echoes one, so the composer's
+    // paperclip and the pending-attachment tray are both reachable.
+    //
+    // The ref has to carry name and mime as well as id and size: the client
+    // rejects a body missing any of the four, and while this handler answered
+    // with only id/size every demo upload settled into an error chip. Both live
+    // in the multipart part headers, so read them from there rather than
+    // inventing them.
+    const chunks = [];
+    req.on("data", (chunk) => chunks.push(chunk));
+    req.on("end", () => {
+      const body = Buffer.concat(chunks);
+      const headers = body.subarray(0, 1024).toString("latin1");
+      const name = /filename="([^"]*)"/.exec(headers)?.[1] || "upload.bin";
+      const mime = /Content-Type:\s*([^\r\n]+)/i.exec(headers)?.[1]?.trim() || "";
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          id: id("file"),
+          url: `/uploads/${id("f")}`,
+          name,
+          mime,
+          size: body.length,
+        }),
+      );
+    });
+    return;
+  }
+  if (req.method === "POST" && req.url === "/transcribe/") {
+    // Voice input: a real backend would run STT on the posted clip;
+    // the demo just drains the body and returns a canned transcript.
+    req.on("data", () => {});
+    req.on("end", () => {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ text: "Draft an article about sea otters." }));
+    });
+    return;
+  }
+  if (req.method === "GET" && req.url === "/runs/") {
+    // The run index behind the header's checkpoint control. Without this route
+    // the button is not built at all — the element only offers it when a host
+    // sets `data-runs-url` — so the panel had no way to be looked at.
+    //
+    // Every row shape on purpose: a root run, a branch off it seconds later, a
+    // pair that opened on the same sentence, a run the server sent no preview
+    // for, and one it reports as having no snapshot. Between them they cover
+    // each identity the row can lead with, and each case where it needs a
+    // second one.
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ runs: RUNS }));
+    return;
+  }
+  const continuation = /^\/(resume|fork)\/([^/]+)\/$/.exec(req.url ?? "");
+  if (req.method === "POST" && continuation) {
+    // A real server seeds the new run from the picked run's snapshot and streams
+    // the continuation. The demo answers in one sentence naming what it did, so
+    // that picking a row visibly lands in the transcript.
+    const [, verb, runId] = continuation;
+    req.on("data", () => {});
+    req.on("end", () => {
+      streamContinuation(res, verb, runId).catch((error) => {
+        res.writeHead(500);
+        res.end(String(error));
+      });
+    });
+    return;
+  }
+  if (req.method === "GET" && (path === "/" || path === "/index.html")) {
+    serveFile(res, join(HERE, "themes", "index.html"), "text/html; charset=utf-8");
+    return;
+  }
+  if (req.method === "GET" && req.url === "/bundle.js") {
+    serveFile(res, join(ROOT, "dist", "agents-web-components.bundle.js"), "text/javascript");
+    return;
+  }
+  const asset = req.method === "GET" && PAGE_ASSETS.get(path);
+  if (asset) {
+    serveFile(res, join(HERE, asset.path), asset.contentType);
+    return;
+  }
+  res.writeHead(404);
+  res.end("not found");
+});
+
+/**
+ * The addresses this machine can be reached on, for typing into a phone.
+ *
+ * IPv4 and non-internal only: a link-local IPv6 address carries a zone index
+ * that no phone browser will accept, and the loopback entry is the one already
+ * printed above it.
+ */
+function networkUrls() {
+  return Object.values(networkInterfaces())
+    .flat()
+    .filter((nic) => nic && nic.family === "IPv4" && !nic.internal)
+    .map((nic) => `http://${nic.address}:${PORT}`);
+}
+
+server.listen(PORT, HOST, () => {
+  process.stdout.write(`ag-ui-web-component demo: http://localhost:${PORT}\n`);
+  process.stdout.write(`  full page: http://localhost:${PORT}/page/\n`);
+  // Any wildcard bind reaches the LAN, so the addresses are worth printing for
+  // both spellings rather than only the one this file happens to default to.
+  if (HOST === "::" || HOST === "0.0.0.0") {
+    for (const url of networkUrls()) {
+      process.stdout.write(`  on this network: ${url}\n`);
+    }
+  }
+});

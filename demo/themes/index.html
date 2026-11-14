@@ -1,0 +1,907 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ag-ui-web-component — playground</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        color: #1a1a2e;
+        background: #f7f7fb;
+      }
+
+      /* Sticky config header — switch every option live, no page reload. */
+      header.bar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 16px 22px;
+        padding: 12px 24px;
+        background: #15151f;
+        color: #fff;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+      }
+      header.bar .brand {
+        font-weight: 700;
+        margin-right: 6px;
+      }
+      header.bar .brand small,
+      header.bar .brand a {
+        color: #b6b6d8;
+        font-weight: 400;
+      }
+      header.bar label {
+        display: inline-flex;
+        flex-direction: column;
+        gap: 3px;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #b6b6d8;
+      }
+      header.bar select,
+      header.bar input[type="text"] {
+        font: inherit;
+        font-size: 13px;
+        text-transform: none;
+        letter-spacing: 0;
+        color: #15151f;
+        background: #fff;
+        border: 1px solid #33334a;
+        border-radius: 7px;
+        padding: 5px 8px;
+      }
+
+      main {
+        max-width: 760px;
+        margin: 32px auto;
+        padding: 0 24px;
+      }
+      .card {
+        background: #fff;
+        border: 1px solid #e2e2ec;
+        border-radius: 14px;
+        padding: 24px 28px 28px;
+        box-shadow: 0 6px 20px rgba(20, 20, 50, 0.05);
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 22px;
+      }
+      .subtitle {
+        margin: 0 0 20px;
+        color: #6b7280;
+      }
+      .field {
+        margin-bottom: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .field.checkbox {
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+      }
+      label.lbl {
+        font-size: 13px;
+        font-weight: 600;
+        color: #374151;
+      }
+      input[type="text"],
+      select.form {
+        font: inherit;
+        padding: 8px 10px;
+        border: 1px solid #e2e2ec;
+        border-radius: 8px;
+      }
+      .actions {
+        margin-top: 18px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      button.save {
+        border: none;
+        border-radius: 8px;
+        padding: 9px 18px;
+        background: #4f46e5;
+        color: #fff;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .banner {
+        color: #047857;
+        font-weight: 600;
+        opacity: 0;
+        transition: opacity 0.2s;
+      }
+      .banner.show {
+        opacity: 1;
+      }
+      .hint {
+        color: #6b7280;
+        font-size: 14px;
+      }
+      .hint code {
+        background: #eef2ff;
+        padding: 1px 6px;
+        border-radius: 5px;
+      }
+
+      /* Where the widget renders when placement="embedded"; floating/side/full
+         placements position themselves and overlay, leaving this slot as a
+         labelled drop-target. */
+      .embed-slot {
+        position: relative;
+        height: 68vh;
+        min-height: 420px;
+        margin-top: 28px;
+        border: 1px dashed #c7c7d6;
+        border-radius: 14px;
+        display: flex;
+      }
+      .embed-slot::before {
+        content: 'embedded render target (placement="embedded")';
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #b0b0c4;
+        font-size: 13px;
+      }
+      /* The 0.47.0 additions: one card, four sections, each a control and a
+         readout for something the playground bar had no room for. */
+      .additions {
+        margin-top: 20px;
+      }
+      .additions h2 {
+        margin: 0 0 4px;
+        font-size: 17px;
+      }
+      .additions section {
+        margin-top: 18px;
+        padding-top: 14px;
+        border-top: 1px solid #e2e2ec;
+      }
+      .additions h3 {
+        margin: 0 0 4px;
+        font-size: 14px;
+      }
+      .additions p {
+        margin: 0 0 8px;
+        font-size: 13px;
+        line-height: 1.5;
+        color: #4b5563;
+      }
+      .additions .row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 12px;
+        margin-bottom: 8px;
+        font-size: 13px;
+      }
+      .additions code,
+      .additions output {
+        background: #eef2ff;
+        padding: 1px 6px;
+        border-radius: 5px;
+        font-size: 12px;
+      }
+      .additions button,
+      .additions select {
+        font: inherit;
+        font-size: 13px;
+        padding: 4px 10px;
+      }
+      .additions ol.log {
+        margin: 6px 0 0;
+        padding-left: 20px;
+        font-size: 12px;
+        font-family: ui-monospace, Menlo, monospace;
+        color: #374151;
+      }
+      .additions .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 6px;
+      }
+      .additions .legend span {
+        font-size: 12px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 2px solid var(--swatch);
+      }
+
+      /* The host's own markup for the above-composer slot. A slotted node is
+         styled from here like any light-DOM element. */
+      .context-strip {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        font-size: 12px;
+        color: #374151;
+        background: #eef2ff;
+        border: 1px solid #c7d2fe;
+        border-radius: 8px;
+      }
+      .context-strip b {
+        font-weight: 600;
+      }
+      .context-strip button {
+        margin-left: auto;
+        font: inherit;
+        font-size: 12px;
+        border: 1px solid #c7d2fe;
+        background: #fff;
+        border-radius: 6px;
+        padding: 2px 8px;
+        cursor: pointer;
+      }
+
+      .tour {
+        margin: 0 0 18px;
+        font-size: 13px;
+        line-height: 1.55;
+      }
+      .tour summary {
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .tour ul {
+        margin: 10px 0 0;
+        padding-left: 18px;
+      }
+      .tour li {
+        margin-bottom: 6px;
+      }
+      .bar button {
+        font: inherit;
+        padding: 3px 10px;
+        cursor: pointer;
+      }
+
+      /* `flex: 1` would stretch the panel to the slot and silently outrank the
+         width the resize handle writes, which reads as a broken component
+         rather than a host stylesheet winning. Let the element keep its own
+         size and cap it to the slot instead.
+
+         Scoped to the placement that is actually in the flow. A document rule
+         naming the element beats the component's own :host rule, so leaving
+         this unscoped replaced the widget's viewport cap with a percentage of
+         the initial containing block for every placement -- and a fixed panel
+         anchored 24px off the right edge then hangs 24px off the left one. */
+      ag-ui-chat[placement="embedded"] {
+        flex: 0 1 auto;
+        max-width: 100%;
+      }
+
+      /* The widget defaults to a z-index near the 32-bit ceiling so it clears
+         whatever a host page stacks. That is right for a real host and wrong
+         for this one: the full-bleed placements are position: fixed at inset 0,
+         so they buried the config bar -- and the control that switches
+         placement back is in that bar. Collapsing used to be the only way out,
+         and the page placement no longer has a collapse button, so the escape
+         has to be structural.
+
+         This is the backstop rather than the mechanism: the bar reserves its
+         own height below, so nothing should be overlapping in the first place.
+         Keeping the widget under the bar means a mis-measurement shows as the
+         bar covering a strip of chat, not as a playground with no way out.
+
+         Every placement, unlike the cap above: this is the escape hatch, and
+         the placements that need it are the ones it must not be scoped away
+         from. */
+      ag-ui-chat {
+        --ag-ui-z-index: 5;
+      }
+
+      /* The bar is sticky chrome the widget does not know about, so the demo
+         reserves the height it occupies and every placement stays out of it.
+         One declaration: the placements do their own arithmetic, including
+         keeping their heights in step, which is the whole point of the token.
+
+         This replaced a per-placement-family restatement of --ag-ui-inset with
+         --ag-ui-height and --ag-ui-max-height maintained alongside it by hand.
+         That version worked and was the argument for building this: if the
+         reference host needs twenty-five lines to coexist with its own nav bar,
+         so does every other host with one. */
+      ag-ui-chat {
+        --ag-ui-viewport-inset-top: var(--bar-h, 0px);
+      }
+      /* collapse-to: the page pads itself by the bottom bar the widget reports
+         (demo.js publishes barHeight as --chat-bar-height), or by its own bar
+         under none. The widget never writes the host's CSS, so this is the
+         host's line, and the README's. */
+      body {
+        padding-bottom: var(--chat-bar-height, 0px);
+        padding-top: var(--chat-header-height, 0px);
+      }
+      /* A host's own toolbar for collapse-to="none": fixed to the bottom edge,
+         with the button the panel rises from. Under the widget's z-index, so a
+         full-bleed panel on a phone still covers it. */
+      .host-bar {
+        position: fixed;
+        inset: auto 0 0 0;
+        z-index: 4;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        height: 40px;
+        padding: 0 16px;
+        font-size: 13px;
+        color: #374151;
+        background: #f9fafb;
+        border-top: 1px solid #e5e7eb;
+      }
+      .host-bar[hidden] {
+        display: none;
+      }
+      /* The same toolbar as a header across the top, for anchor-side: auto
+         opens the panel below its button there. The left variant moves the
+         button to the left end, where the panel stops at the left gutter. */
+      .host-bar[data-edge="top"] {
+        inset: 0 0 auto 0;
+        border-top: none;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      .host-bar[data-align="left"] button {
+        order: -1;
+      }
+      .host-bar .spacer {
+        flex: 1;
+      }
+      .host-bar button {
+        height: 28px;
+      }
+      .host-bar button[aria-pressed="true"] {
+        background: #e0e7ff;
+      }
+      /* The panel rises from the Agent button, which stands about 7px below
+         the toolbar's top edge (the border, then half of what is left of 40
+         less 28). The default 8px gap would leave the panel's foot on that
+         edge, so the host opens the gap to 15px and the panel clears the
+         toolbar by about 8px. */
+      ag-ui-chat {
+        --ag-ui-anchor-gap: 15px;
+      }
+      /* When embedded + collapsed, shrink to the header instead of filling the slot. */
+      ag-ui-chat[collapsed] {
+        flex: 0 0 auto;
+        align-self: flex-start;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="bar">
+      <span class="brand"
+        >ag-ui playground <small>· flip a control to reconfigure live ·</small>
+        <a href="/page/">full page</a></span
+      >
+      <label
+        >Theme
+        <select id="cfg-theme">
+          <option value="">quiet (default)</option>
+          <option value="soft">soft</option>
+          <option value="ledger">ledger</option>
+          <option value="classic">classic</option>
+          <option value="code">code</option>
+        </select>
+      </label>
+      <label
+        >Scheme
+        <select id="cfg-scheme">
+          <option value="">light (default)</option>
+          <option value="dark">dark</option>
+          <option value="auto">auto (OS)</option>
+        </select>
+      </label>
+      <label
+        >Density
+        <select id="cfg-density">
+          <option value="comfortable">comfortable</option>
+          <option value="compact">compact</option>
+        </select>
+      </label>
+      <label
+        >Placement
+        <select id="cfg-placement">
+          <optgroup label="documented">
+            <option value="floating">floating</option>
+            <option value="sidebar">sidebar (rail)</option>
+            <option value="page">page (centred column)</option>
+            <option value="embedded">embedded</option>
+          </optgroup>
+          <!-- Still parsed, still styled, still tested -- just not in the
+               README's four. This is the only place they can be looked at, so
+               dropping them from the harness would leave the three placements
+               with the least documentation also the only ones nobody sees. -->
+          <optgroup label="supported, undocumented">
+            <option value="bottom-left">bottom-left</option>
+            <option value="side">side</option>
+            <option value="full">full</option>
+          </optgroup>
+        </select>
+      </label>
+      <!-- data-side: which edge a sidebar docks to; right removes the attribute. -->
+      <label
+        >Side
+        <select id="cfg-side">
+          <option value="" selected>right</option>
+          <option value="left">left</option>
+        </select>
+      </label>
+      <!-- data-collapse-icon: default removes the attribute so the placement's
+           own mark shows (the panel mark on a sidebar, the chevron down elsewhere). -->
+      <label
+        >Collapse icon
+        <select id="cfg-collapse-icon">
+          <option value="" selected>default (by placement)</option>
+          <option value="panel-close">panel-close</option>
+          <option value="chevron-down">chevron-down</option>
+          <option value="chevron-up">chevron-up</option>
+          <option value="chevron-left">chevron-left</option>
+          <option value="chevron-right">chevron-right</option>
+        </select>
+      </label>
+      <!-- auto removes the attribute; none also shows the host bar below and
+           anchors the panel to its Agent button; none (corner) shows the bar
+           without anchoring, so the panel rises from its own corner. -->
+      <label
+        >Collapse to
+        <select id="cfg-collapse-to">
+          <option value="" selected>auto</option>
+          <option value="bar">bar</option>
+          <option value="none">none (host bar)</option>
+          <option value="none-corner">none (corner)</option>
+          <option value="none-header">none (host header)</option>
+          <option value="none-header-left">none (host header, button left)</option>
+        </select>
+      </label>
+      <!-- Which side of the host's button the panel opens on under none; auto
+           removes the attribute, which takes the side with more room. -->
+      <label
+        >Anchor side
+        <select id="cfg-anchor-side">
+          <option value="" selected>auto</option>
+          <option value="above">above</option>
+          <option value="below">below</option>
+        </select>
+      </label>
+      <!-- The page a sidebar or side column must leave beside it, dragged,
+           token or maximized; unset caps nothing. The header's maximize
+           control is the state itself; the readout shows the event. -->
+      <label
+        >Min page width
+        <select id="cfg-min-page">
+          <option value="" selected>unset</option>
+          <option value="480px">480px</option>
+          <option value="800px">800px</option>
+        </select>
+      </label>
+      <output id="cfg-maximized">maximized: false</output>
+      <!-- The greeting layout is on by default for page and opt-in for embedded;
+           "default" removes the attribute so the placement's own default shows. -->
+      <label
+        >Greeting
+        <select id="cfg-greeting">
+          <option value="" selected>default (page only)</option>
+          <option value="on">on (embedded too)</option>
+          <option value="off">off</option>
+        </select>
+      </label>
+      <label
+        >User name
+        <input type="text" id="cfg-user-name" value="Ada" size="8" />
+      </label>
+      <label
+        >Text animation
+        <select id="cfg-text">
+          <option value="none">none</option>
+          <option value="fade" selected>fade</option>
+          <option value="word">word-by-word</option>
+        </select>
+      </label>
+      <label
+        >Tool cards
+        <select id="cfg-tools">
+          <option value="grouped" selected>grouped</option>
+          <option value="full">full</option>
+          <option value="compact">compact</option>
+          <option value="minimal">minimal</option>
+          <option value="inline">inline</option>
+        </select>
+      </label>
+      <label
+        >Group cards
+        <select id="cfg-group-tools">
+          <option value="full" selected>full</option>
+          <option value="compact">compact</option>
+          <option value="minimal">minimal</option>
+          <option value="inline">inline</option>
+        </select>
+      </label>
+      <label
+        >Answer well
+        <input type="checkbox" id="cfg-well" />
+      </label>
+      <label
+        >Header icons
+        <input type="checkbox" id="cfg-icons" />
+      </label>
+      <label title="The documented recipe for keeping a brand accent, under any theme: header, launcher and tool names"
+        >Accent recipe
+        <input type="checkbox" id="cfg-accent-recipe" />
+      </label>
+      <label
+        >Deutsch
+        <input type="checkbox" id="cfg-i18n" />
+      </label>
+      <label
+        >Unread badge
+        <input type="checkbox" id="cfg-badge" checked />
+      </label>
+      <label title="Every conversation load waits 3 seconds, as a slow data-threads-url would"
+        >Slow store
+        <input type="checkbox" id="cfg-slow-store" />
+      </label>
+      <button type="button" id="cfg-restore-send" title="reload(), then sendMessage() at once">
+        Reload + send
+      </button>
+      <output id="cfg-restore-out"></output>
+      <label title="Adds the rating pair (data-message-actions) and shows what each rating names"
+        >Ratings
+        <input type="checkbox" id="cfg-ratings" />
+      </label>
+      <output id="cfg-ratings-out"></output>
+      <button type="button" id="cfg-ping">Collapse + ping</button>
+      <button type="button" id="cfg-reset-size">Reset size</button>
+      <button type="button" id="cfg-move" title="moveTo('top-left'), and what describeSurface() says"
+        >Move top-left</button
+      >
+      <output id="cfg-move-out"></output>
+      <button type="button" id="cfg-spotlight">Spotlight form</button>
+    </header>
+
+    <main>
+      <div class="card">
+        <h1>Create Article</h1>
+        <p class="subtitle">
+          Ask the assistant to fill this in — or run a skill (type <code>/</code> or click a chip).
+        </p>
+
+        <details class="tour">
+          <summary>What to try</summary>
+          <ul>
+            <li>
+              <strong>0.47.0 additions.</strong> The card under the form has a control and
+              a readout for the <code>above-composer</code> slot, the thread API
+              (<code>threadId</code>, <code>newChat()</code>, <code>switchThread()</code>,
+              <code>ag-ui-thread</code>), the <code>tool-card-status-*</code> and
+              <code>tool-group-*</code> parts, and the <code>--ag-ui-ring</code> token.
+            </li>
+            <li>
+              <strong>Step group.</strong> Run <em>Fill the article</em>: its calls fold
+              into one row, <em>Worked through 5 steps</em>, with the cards one click
+              down and the second <em>Fill field</em> numbered <em>(2)</em>. Ask it to
+              <em>delegate</em> to watch the folded row name the sub-agent, or to
+              <em>import</em> to watch it open for three approvals.
+            </li>
+            <li>
+              <strong>Tool cards.</strong> Flip <em>Tool cards</em> in the bar to a card
+              mode. It applies to cards already on screen, and flattens the groups;
+              each settled card separates <em>Arguments</em> from <em>Result</em> behind
+              its own toggle.
+            </li>
+            <li>
+              <strong>Confirmation.</strong> The same run ends on a destructive
+              <em>Save article</em>. The prompt appears inside the turn, disappears once
+              answered, and the tool card keeps the decision.
+            </li>
+            <li>
+              <strong>A failing tool.</strong> Ask it to <em>break something</em> — the
+              card settles to an <em>Error</em> region rather than losing the turn.
+            </li>
+            <li>
+              <strong>Nothing behind it.</strong> Say <em>think silently</em>: the model
+              reasons without sending any text, and the block settles to a plain
+              <em>Thought for 2s</em> label with no toggle and no box under it. Say
+              <em>ping</em>: one call with no arguments returns nothing, so its row has
+              no chevron and nothing to open, in the grouped default and in every card
+              mode. <em>Fill the article</em> still shows a reasoning toggle and rows
+              that open.
+            </li>
+            <li>
+              <strong>A question.</strong> Say <em>ask me something</em> to reach the
+              built-in <code>ask_user</code> card.
+            </li>
+            <li>
+              <strong>Three approvals at once.</strong> Say <em>import three rows</em>: the
+              server defers three <code>create_event</code> calls in one run and each is
+              answered on its own. Every prompt is the same sentence, because a
+              confirmation is written per tool — so each one renders inside its own card,
+              above the arguments that say which row it is. Approve two and deny one; the
+              cards settle differently. While they wait they read
+              <em>waiting for you</em>, not <em>running</em>, since nothing is running.
+            </li>
+            <li>
+              <strong>A delegated sub-agent.</strong> Say <em>delegate this</em>: the run
+              hands work to two sub-agents, and each <code>delegate_task</code> card grows a
+              live row instead of sitting at <em>running…</em> for the whole wait. Open one
+              to see the child's own tool calls, including the one that came back to it.
+              The second delegation fails — the row says so and nothing more, because the
+              reason is on the tool result underneath it.
+            </li>
+            <li>
+              <strong>Server-resolved skill.</strong> The <em>Triage this article</em>
+              chip ships no prompt: it sends <code>/triage</code> and the server answers.
+              Watch the request — the wording is never in this page.
+            </li>
+            <li>
+              <strong>Greeting.</strong> The <a href="/page/">full page</a> demo is the
+              chat as a route of its own, greeting on arrival. Here, switch
+              <em>Placement</em> to <em>page</em> and
+              press the header's <em>New chat</em>: the empty page greets
+              <em>User name</em> with the composer centred under it. Typing and a
+              growing draft leave it centred; sending slides it to the foot. Edit the
+              name to see it follow live, clear it for the nameless greeting, and set
+              <em>Greeting</em> to <em>off</em> for the old layout, or to <em>on</em> with
+              <em>embedded</em> to opt that placement in. On a phone, focus the composer
+              to check it stays centred above the on-screen keyboard.
+            </li>
+            <li>
+              <strong>Collapse.</strong> Hit the header's chevron: the panel
+              scales into the round launcher in the corner, and the launcher
+              expands it again. <em>sidebar</em> slides to an edge rail instead,
+              and its control draws a panel closing into that edge; set
+              <em>Side</em> to <em>left</em> and the mark turns to point left.
+              <em>Collapse icon</em> picks the mark outright and keeps it through a
+              placement change; <em>default</em> hands it back to the placement.
+              <em>embedded</em> and <em>page</em> keep the header bar.
+            </li>
+            <li>
+              <strong>Bottom bar.</strong> Set <em>Collapse to</em> to <em>bar</em> on
+              <em>floating</em>, collapse, and the launcher becomes a strip along the
+              bottom edge with the title, the badge and a running mark; the page pads
+              itself by the reported height. Press the strip: the panel rises from its
+              right end with the bar still beneath it. The strip's history button (the clock) opens the
+              history as a popover over the bar without expanding. Dragging the header
+              does nothing; the free edges still resize. On a phone the open panel is
+              full-bleed and the bar is gone until you minimise. <em>none</em> hides the
+              widget while collapsed and shows a host toolbar: its <em>Agent</em> button
+              toggles the panel, which rises above it, right-aligned.
+            </li>
+            <li>
+              <strong>Chat history.</strong> The history button's drawer slides in over
+              the panel and back out — the same motion tokens drive both.
+            </li>
+            <li>
+              <strong>Unread badge.</strong> <em>Collapse + ping</em> collapses the
+              widget and sends, so the answer lands behind the launcher and the
+              badge counts it. Expanding marks it read. Uncheck
+              <em>Unread badge</em> to see the opt-out — the count still runs
+              (watch <code>ag-ui-unread</code>), only the dot is gone.
+            </li>
+            <li>
+              <strong>Resize.</strong> Drag the panel's top-left grip. Switch
+              <em>Placement</em> to see the axes change: <code>side</code> is width-only,
+              <code>full</code> and <code>page</code> have no grip at all.
+            </li>
+            <li>
+              <strong>Ratings.</strong> Tick <em>Ratings</em> (the page reloads), send
+              <em>echo hello</em> twice and rate both answers: they read the same, and the
+              readout beside the box names two different messages, each with the run
+              that streamed it. Reload and rate the first again: same message id, same
+              thread, and <em>no run</em>, since a stored message carries none.
+            </li>
+            <li>
+              <strong>Header icons / Deutsch.</strong> Both check that the chrome is
+              host-replaceable and that every label comes from the string table.
+            </li>
+          </ul>
+        </details>
+
+        <form id="article-form">
+          <div class="field">
+            <label class="lbl" for="title">Title</label>
+            <input type="text" id="title" name="title" placeholder="Article title" />
+          </div>
+          <div class="field">
+            <label class="lbl" for="slug">Slug</label>
+            <input type="text" id="slug" name="slug" placeholder="article-slug" />
+          </div>
+          <div class="field">
+            <label class="lbl" for="status">Status</label>
+            <select class="form" id="status" name="status">
+              <option value="draft">Draft</option>
+              <option value="review">In review</option>
+              <option value="published">Published</option>
+            </select>
+          </div>
+          <div class="field checkbox">
+            <input type="checkbox" id="featured" name="featured" />
+            <label class="lbl" for="featured">Featured on homepage</label>
+          </div>
+          <div class="actions">
+            <button type="button" class="save" id="save">Save</button>
+            <span class="banner" id="banner">✓ Article saved</span>
+          </div>
+        </form>
+      </div>
+
+      <p class="hint">
+        Try:
+        <code>Create an article titled "Hello, AG-UI", slug hello-ag-ui, published and featured, then save</code>
+        — or pick a skill from the chips / <code>/</code> palette.
+      </p>
+
+      <div class="card additions" id="additions">
+        <h2>0.47.0 additions</h2>
+        <p>
+          Four things the bar above has no room for. Each section has a control and a
+          readout; the numbers beside them are read from the element, not kept here.
+        </p>
+
+        <section id="add-slot">
+          <h3>The above-composer slot</h3>
+          <p>
+            Host markup directly above the composer, below the chips, the hint, queued
+            turns and the attachment tray. It takes no space while empty. Switch
+            <em>Placement</em> to <em>page</em> and press <em>New chat</em> to see it
+            travel with the centred composer.
+          </p>
+          <div class="row">
+            <label
+              ><input type="checkbox" id="cfg-above" /> Fill
+              <code>slot="above-composer"</code></label
+            >
+            <output id="cfg-above-out">empty</output>
+          </div>
+        </section>
+
+        <section id="add-place">
+          <h3>The place chip</h3>
+          <p>
+            <code>getPlace</code> names where the user is; the chip in the composer's tool
+            row draws it and the next round sends it as a <code>place</code> context entry.
+            Pick a place, then <em>Where am I?</em>: the mock agent quotes the entry it
+            received. The eye on the chip withholds it (dashed, struck through), which
+            also withholds the page map. <em>A long one</em> shows the label truncating
+            before Send; <em>None</em> shows the chip taking no space.
+          </p>
+          <div class="row">
+            <label
+              >getPlace(
+              <select id="cfg-place">
+                <option value="article" selected>Create Article</option>
+                <option value="billing">Billing settings</option>
+                <option value="long">A long one</option>
+                <option value="none">None (null)</option>
+              </select>
+              )</label
+            >
+            <button type="button" id="cfg-place-ask">Where am I?</button>
+            <output id="cfg-place-out">-</output>
+          </div>
+        </section>
+
+        <section id="add-thread">
+          <h3>The thread API</h3>
+          <p>
+            <code>threadId</code> is read-only; <code>newChat()</code> and
+            <code>switchThread()</code> change the conversation, and each change fires one
+            <code>ag-ui-thread</code> with a <code>reason</code>. Send a message or two,
+            press <em>newChat()</em>, then pick the first thread back.
+          </p>
+          <div class="row">
+            <span>threadId: <output id="thr-id">-</output></span>
+            <span>running: <output id="thr-running">-</output></span>
+          </div>
+          <div class="row">
+            <button type="button" id="thr-new">newChat()</button>
+            <label
+              >switchThread(
+              <select id="thr-pick">
+                <option value="">(stored threads)</option>
+              </select>
+              )</label
+            >
+            <button type="button" id="thr-reload">reload()</button>
+          </div>
+          <ol class="log" id="thr-log" aria-label="ag-ui-thread events"></ol>
+        </section>
+
+        <section id="add-status">
+          <h3>Tool status parts</h3>
+          <p>
+            Every tool card carries <code>tool-card-status-&lt;status&gt;</code> and every
+            step group <code>tool-group-&lt;state&gt;</code>, so a host styles one outcome
+            with <code>::part()</code>. Tick the box to draw each in its own colour from this
+            page. The census counts the parts in the transcript now. Reach each:
+            <em>Fill the article</em> (done, then the group settles), <em>break something</em>
+            (error), <em>import three rows</em> (deferred, the group waits; deny one for
+            declined), <em>delegate this</em> (sub-agent error). Press Stop mid-run for
+            interrupted. Needs <em>Tool cards</em> on <em>grouped</em>.
+          </p>
+          <div class="row">
+            <label><input type="checkbox" id="cfg-status-parts" /> Style the status parts</label>
+          </div>
+          <div class="legend" id="status-legend"></div>
+          <div class="row" style="margin-top: 8px">
+            <span>census: <output id="status-census">no tool cards yet</output></span>
+          </div>
+        </section>
+
+        <section id="add-ring">
+          <h3>The focus ring token</h3>
+          <p>
+            <code>--ag-ui-ring</code> is the step group head's focus outline (default: the
+            accent at 55%). Pick a colour to set it on the element, then Tab to a group head
+            (or press the button from the keyboard) to see it. Needs a settled step group:
+            run <em>Fill the article</em> first.
+          </p>
+          <div class="row">
+            <label><input type="checkbox" id="cfg-ring-on" /> Set</label>
+            <input type="color" id="cfg-ring" value="#e11d48" aria-label="Ring colour" />
+            <button type="button" id="cfg-ring-focus">Focus a group head</button>
+            <output id="cfg-ring-out">default</output>
+          </div>
+        </section>
+
+        <section id="add-header-hover">
+          <h3>The header hover square token</h3>
+          <p>
+            <code>--ag-ui-header-btn-hover</code> draws the square behind a hovered header button
+            exactly as given. Unset, the square follows the header text once the accent recipe sets
+            it, and is the theme's own otherwise. Hover a header button to see it.
+          </p>
+          <div class="row">
+            <label><input type="checkbox" id="cfg-hover-on" /> Set</label>
+            <input type="color" id="cfg-hover" value="#fde68a" aria-label="Hover square colour" />
+            <output id="cfg-hover-out">default</output>
+          </div>
+        </section>
+      </div>
+
+      <nav class="host-bar" id="host-bar" hidden>
+        <span>Host toolbar</span>
+        <span class="spacer"></span>
+        <button type="button" id="host-agent" aria-pressed="false">Agent</button>
+      </nav>
+
+      <div class="embed-slot">
+        <ag-ui-chat
+          id="chat"
+          endpoint="/agent/"
+          title-text="Admin Copilot"
+          user-name="Ada"
+          data-start-open
+          data-text-animation="fade"
+          data-tool-display="grouped"
+          data-slash-commands="true"
+          data-prompt-chips="true"
+          data-transcribe-url="/transcribe/"
+          data-attachments-url="/attachments/"
+          data-runs-url="/runs/"
+          data-theme-toggle=""
+        ></ag-ui-chat>
+      </div>
+    </main>
+
+    <script type="module" src="/themes/demo.js"></script>
+    <script type="module" src="/viewport-readout.js"></script>
+  </body>
+</html>

@@ -1,0 +1,647 @@
+// The package's single home for enums and constant-like values, and per
+// CLAUDE.md the only file allowed to export multiple symbols.
+
+/** The Custom Element tag name registered by {@link defineChat}. */
+export const ELEMENT_TAG = "ag-ui-chat";
+
+/**
+ * User submitted a message. `detail` is {@link SubmitDetail}.
+ *
+ * Fires for every turn the user sends: with Send, through `sendMessage`, and
+ * as the next turn of a run resumed or forked from the checkpoint panel. A
+ * listener runs while that turn is already the one in flight, so a
+ * `sendMessage` from it is refused rather than starting a second run.
+ */
+export const SUBMIT_EVENT = "ag-ui-submit";
+
+/**
+ * Collapsed state changed, via the built-in toggle or `setCollapsed`; and,
+ * under `collapse-to="none"`, once at connect with the state it mounted in.
+ * `detail` is {@link ToggleDetail}.
+ */
+export const TOGGLE_EVENT = "ag-ui-toggle";
+
+/**
+ * Maximized state changed, via the built-in header control, the `maximized`
+ * property or attribute, or on leaving it for a collapse, a placement without
+ * the control, or a viewport of 600px or less. `detail` is {@link MaximizeDetail}.
+ */
+export const MAXIMIZE_EVENT = "ag-ui-maximize";
+
+/**
+ * The bottom bar's height changed (`collapse-to="bar"`): the host pads its
+ * page by it. `detail` is {@link BarHeightDetail}; 0 when no bar is drawn.
+ */
+export const BAR_HEIGHT_EVENT = "ag-ui-bar-height";
+
+/**
+ * The width a docked panel covers at rest changed (`placement="sidebar"` or
+ * `"side"`): the host pushes its page by it. `detail` is {@link DockWidthDetail};
+ * 0 when the panel covers none of the page.
+ */
+export const DOCK_WIDTH_EVENT = "ag-ui-dock-width";
+
+/**
+ * The count of answers that arrived while collapsed changed. `detail` is
+ * {@link UnreadDetail}. The built-in launcher badge renders exactly this; a
+ * host driving its own chrome sets `data-unread-badge="false"` and listens.
+ */
+export const UNREAD_EVENT = "ag-ui-unread";
+
+/**
+ * AG-UI shared state changed — a streamed `STATE_SNAPSHOT` / `STATE_DELTA`, or
+ * a host assignment to `sharedState`. `detail` is {@link StateDetail}.
+ *
+ * The protocol's own state channel, distinct from `registerPageState`, which
+ * exposes host state to the agent as ordinary tools.
+ */
+export const STATE_EVENT = "ag-ui-state";
+
+/**
+ * The attachment tray changed — a file queued, an upload finishing or failing,
+ * a chip removed, the tray cleared after a send. `detail` is
+ * {@link AttachmentsDetail}, carrying the refs that finished uploading and how
+ * many are still in flight. A host driving its own composer uses this to know
+ * whether a send would leave files behind.
+ */
+export const ATTACHMENT_EVENT = "ag-ui-attachments";
+
+/**
+ * An interaction has finished, whatever ended it. `detail` is
+ * {@link RunFinishedDetail}, listing the tools that ran and which side ran them.
+ *
+ * For hosts that render data the agent can change. A server-side tool writes
+ * without the page's knowledge — nothing else the element dispatches implies
+ * "something may have moved underneath you", so a page showing that data has no
+ * reason to refetch and quietly goes stale. Shared state
+ * ({@link STATE_EVENT}) is the richer channel, but it needs the agent to emit
+ * state; this needs nothing of the agent at all.
+ *
+ * Fires once per interaction rather than once per tool round, on completion,
+ * error and cancellation alike, since a partial write is still a write.
+ */
+export const RUN_FINISHED_EVENT = "ag-ui-run-finished";
+
+/**
+ * The conversation on screen changed: a new chat, a thread switched to, the
+ * active thread deleted, the stored thread restored, or a `user-key` change
+ * handing the element to another principal. `detail` is {@link ThreadDetail}.
+ *
+ * Fires once per change, after the transcript has been replaced, so a listener
+ * reads the conversation it is told about. A host listing conversations in its
+ * own chrome marks the active one from here rather than watching attributes.
+ */
+export const THREAD_EVENT = "ag-ui-thread";
+
+/**
+ * The title of the thread on screen changed: its first send, a rename, a
+ * switch, a new chat or a delete, or a title the conversation list brought in.
+ * `detail` is {@link ThreadTitleDetail}. `title-text="auto"` draws it in the
+ * header without a listener; a host drawing its own chrome listens.
+ */
+export const THREAD_TITLE_EVENT = "ag-ui-thread-title";
+
+/**
+ * The agent sent an AG-UI `CUSTOM` event. `detail` is {@link CustomAgentDetail}.
+ *
+ * `CUSTOM` is one of exactly two carriers whose payload name the protocol leaves
+ * an open string, and it is the **imperative** one: something for the host page
+ * to *do*, with no place in the transcript. Its sibling `ACTIVITY_SNAPSHOT`
+ * carries transcript **content**, which is why that one is materialised into a
+ * message, persisted, and replayed on restore while this one is not.
+ *
+ * That asymmetry is the rule for choosing between them. Content has a place in
+ * the conversation and should replay; an imperative has no place and no meaning
+ * once acted on, so replaying it on a thread load would be a bug. Anything that
+ * must survive a reload belongs on the other carrier.
+ *
+ * The element takes no view of what a name means -- it forwards every one. A
+ * host that does not recognise a name ignores the event, which is the graceful
+ * outcome the open field exists for.
+ */
+export const CUSTOM_AGENT_EVENT = "ag-ui-custom";
+
+/**
+ * The agent named resources its write has moved. `detail` is
+ * {@link InvalidateDetail}.
+ *
+ * A convention on top of {@link CUSTOM_AGENT_EVENT}, not a second channel: the
+ * wire carries an ordinary AG-UI `CUSTOM` event whose `name` is
+ * {@link INVALIDATE_CUSTOM_NAME}, and this is that one name routed to its own
+ * DOM event so a host does not have to string-match. Every other name still
+ * arrives as `ag-ui-custom`.
+ *
+ * Fires **as each announcement arrives**, during the run, which is what makes a
+ * long multi-step run feel live: the list refreshes as the third of eight writes
+ * lands rather than when everything finishes. {@link RUN_FINISHED_EVENT} carries
+ * the same keys again at the end, de-duplicated, for a host that would rather
+ * refetch once.
+ */
+export const INVALIDATE_EVENT = "ag-ui-invalidate";
+
+/**
+ * Fired when the user rates an assistant message from its action row.
+ *
+ * `detail` is a {@link FeedbackDetail}: which message was rated -- its AG-UI
+ * `messageId` and the `threadId` it belongs to, plus the `runId` that streamed
+ * it when it arrived live (absent on a restored message, which carries no run
+ * id) -- with its text and the rating. A host stores the rating against
+ * `messageId`, not `content`: two answers can read the same. A restored
+ * message is named by the id its store returns, so with a server-backed store
+ * the id holds across a reload only where the server persists the ids it
+ * streamed; the built-in browser store keeps them as they streamed.
+ *
+ * **Nothing is stored** -- a rating belongs to whatever the host already uses
+ * to hold product signals, and a write-only table inside a chat widget is a
+ * schema nobody reads.
+ */
+export const FEEDBACK_EVENT = "ag-ui-feedback";
+
+/**
+ * The `activity_type` carrying server-pushed follow-up prompts.
+ *
+ * Matches django-ag-ui's `SUGGESTIONS_ACTIVITY_TYPE`. A convention inside the
+ * protocol's open `activity_type` field, not an extension of it -- so a client
+ * that has never heard of it ignores the event, and this one is not privileged.
+ */
+export const SUGGESTIONS_ACTIVITY_TYPE = "suggestions";
+
+/**
+ * The AG-UI `CUSTOM` event `name` that carries an invalidation.
+ *
+ * Matched exactly. Namespaced so it cannot collide with a host's own custom
+ * events, which share the field.
+ */
+export const INVALIDATE_CUSTOM_NAME = "ag_ui.invalidate";
+
+/**
+ * The AG-UI `CUSTOM` event `name` carrying one step a delegated sub-agent took.
+ *
+ * Matched exactly, and namespaced the way {@link INVALIDATE_CUSTOM_NAME} is, so
+ * it cannot collide with a host's own custom events on the same open field.
+ *
+ * Routed to the delegating tool card rather than dispatched to the page: the
+ * payload keys on the **parent's own `delegate_task` call id**, so what it
+ * describes is already on screen and the progress belongs beside it. Every other
+ * name still reaches the host as {@link CUSTOM_AGENT_EVENT}.
+ *
+ * **This carries the steps only.** The delegation's own lifetime arrives on the
+ * protocol's `SUBAGENT_STARTED` / `SUBAGENT_FINISHED` / `SUBAGENT_ERROR` events,
+ * which name the same card through their `parentToolCallId`. The two are joined
+ * by that id, which is why the panel is keyed on it rather than on the
+ * `subagentRunId` the protocol's events carry.
+ *
+ * Deliberately on the imperative carrier and not on an activity, which means it
+ * is **never persisted and never replayed**. That is the right half of the
+ * split: a delegation that was live an hour ago is not live now, and replaying
+ * its progress on a thread restore would be a lie about a run that is over. On a
+ * reload mid-run the nested detail is gone and the tool card remains. The three
+ * lifecycle events share that property -- `@ag-ui/client` dispatches them to
+ * subscribers without writing them into `agent.messages` -- which is what made
+ * them safe to adopt while the steps stayed here.
+ */
+export const SUBAGENT_CUSTOM_NAME = "ag_ui.subagent";
+
+/**
+ * The phases one delegation moves through, as the panel draws them.
+ *
+ * Exactly one `STARTED` opens a delegation and exactly one `FINISHED` or
+ * `FAILED` closes it; the two tool phases repeat in between, once per call the
+ * child makes and once per result it gets back.
+ *
+ * **These are this element's five visual states, and they no longer come off one
+ * wire.** `TOOL_CALL` and `TOOL_RESULT` are spelled by the server, on the
+ * {@link SUBAGENT_CUSTOM_NAME} payload's `phase` field. The other three are this
+ * element's own names for the protocol's `SUBAGENT_STARTED` / `SUBAGENT_FINISHED`
+ * / `SUBAGENT_ERROR` events, which carry no phase field of their own because the
+ * event type *is* the phase. Keeping one vocabulary is what lets the panel stay
+ * a single state machine with one `data-phase` attribute for a host to style.
+ *
+ * `FAILED` carries **no exception text** from us — the protocol's error event
+ * has a required `message`, and the server sends only the sub-agent's name in
+ * it, on the same reasoning that redacts a `RUN_ERROR`, since an exception's
+ * words are written for an operator. The detail rides the ordinary
+ * `TOOL_CALL_RESULT` for that delegation, on the card the progress is already
+ * attached to.
+ */
+export const SUBAGENT_PHASE = {
+  STARTED: "started",
+  TOOL_CALL: "tool_call",
+  TOOL_RESULT: "tool_result",
+  FINISHED: "finished",
+  FAILED: "failed",
+} as const;
+
+/** Roles a chat message can take. */
+export const MESSAGE_ROLE = {
+  USER: "user",
+  ASSISTANT: "assistant",
+} as const;
+
+/**
+ * Schema-root key marking a tool destructive: the element gates its execution
+ * behind the confirmation card unless `autoConfirm` is set. All four `x-*` keys
+ * below mirror the `django-ag-ui` server side.
+ */
+export const X_DESTRUCTIVE_KEY = "x-destructive";
+
+/**
+ * Schema-root key holding a confirmation prompt (e.g. `"Activate this
+ * project?"`), shown instead of the generic `Run "<tool>"?`.
+ */
+export const X_CONFIRM_KEY = "x-confirm";
+
+/**
+ * Schema-root key holding a short label for a tool (e.g. `"Query orders"` for
+ * `query_model`), shown on the card instead of the raw tool name.
+ */
+export const X_SUMMARY_KEY = "x-summary";
+
+/**
+ * Schema-root key marking a tool as navigating — its handler triggers a full
+ * page reload. The element checkpoints the call before the reload and resumes
+ * the run loop once the next page mounts.
+ */
+export const X_NAVIGATES_KEY = "x-navigates";
+
+/**
+ * The built-in tool that re-reads the current page, registered only when a
+ * page-map provider is set. Named here because the stale-page guard must exempt
+ * it: refusing the one call that would refresh the agent's view deadlocks.
+ */
+export const READ_PAGE_TOOL = "read_page";
+
+/** The description of the context entry carrying the page map. */
+export const PAGE_MAP_CONTEXT = "page_map";
+
+/**
+ * The description of the context entry carrying the place the chip shows. Its
+ * value is the place as JSON: the label, and the detail and href when set.
+ */
+export const PLACE_CONTEXT = "place";
+
+/**
+ * Default upper bound on frontend tool-call → re-run rounds within one send.
+ * Overridable via `data-max-tool-rounds`, or `AgUiClientConfig.maxToolRounds`
+ * for a host driving the client directly.
+ */
+export const MAX_TOOL_ROUNDS = 10;
+
+/**
+ * The actions a finished assistant message's row can carry, and the tokens
+ * `data-message-actions` selects them by.
+ *
+ * All three are on when the attribute is absent. Naming them individually
+ * rather than shipping one on/off switch is what the three differ over: feedback
+ * is only useful to a host listening for {@link FEEDBACK_EVENT}, retry re-runs
+ * the agent and a constrained surface may not permit that, and copy is the one
+ * nobody objects to. A single switch would make dropping either of the first two
+ * cost the third, and a host that only wanted one gone would rebuild the row
+ * from `attachMessageActions` -- reimplementing the part names, the accessible
+ * grouping and the retry hand-off to lose two buttons.
+ */
+export const MESSAGE_ACTIONS = {
+  COPY: "copy",
+  RETRY: "retry",
+  FEEDBACK: "feedback",
+} as const;
+
+/**
+ * Lifecycle status of a rendered tool-call card. A card opens as `PENDING`
+ * while the call runs, then settles to `DONE`, `ERROR`, `DECLINED` or
+ * `INTERRUPTED`.
+ *
+ * `INTERRUPTED` is a call that never produced a result and that nobody refused:
+ * the run was stopped or failed before it finished, or no tool here answered it.
+ * Neither of the older terminal states is true of it. `DONE` claimed a success
+ * nothing achieved, and `DECLINED` says a person or a guard refused.
+ *
+ * `DEFERRED` is the one non-terminal state that is not "running": a server-side
+ * tool a `ToolGuard` gated never executed, the run finished on an interrupt, and
+ * the call is waiting on a person. Without it such a card sat at `PENDING` and
+ * read "running…" while the stream was over and the server idle — a status enum
+ * missing a state does not omit that state, it renders it as whichever neighbour
+ * is closest, and here the closest one claimed the opposite of the truth. A
+ * *frontend* tool waiting on its own card (`ask_user`) stays `PENDING`, because
+ * the browser really is running it.
+ */
+export const TOOL_CALL_STATUS = {
+  PENDING: "pending",
+  DEFERRED: "deferred",
+  DONE: "done",
+  ERROR: "error",
+  DECLINED: "declined",
+  INTERRUPTED: "interrupted",
+} as const;
+
+/**
+ * How a tool call ended, as the server states it under `outcome` in a
+ * `TOOL_CALL_RESULT`'s `metadata`.
+ *
+ * The vocabulary is pydantic-ai's own `ToolReturnPart.outcome`, carried whole
+ * rather than re-spelled, so the four repos that pass a refusal along agree on
+ * one word for it.
+ *
+ * **Absent means {@link TOOL_OUTCOME.SUCCESS}, and that is load-bearing.** Every
+ * server written before the field existed omits it, so a missing field has to
+ * render exactly as a plain result did — which is why this is an optional
+ * key in the event's metadata and not a required field. `FAILED` is a call that ran
+ * and failed; `DENIED` is one a person or a guard refused, so it never ran at
+ * all. The two are worth distinguishing on screen because only the second is
+ * something the user did. `INTERRUPTED` is a call that produced no result because
+ * the run ended first: pydantic-ai writes it when it repairs a history a
+ * cancelled stream left, and the element writes it for the same reason when a
+ * run ends with a call still unanswered, so the next request carries a result
+ * for every call without claiming anyone refused one.
+ *
+ * Anything *else* on the wire — a value from a later protocol version — is read
+ * as a success rather than rejected.
+ * A card is a claim about what happened, and "I do not know this word" is not
+ * grounds for claiming failure. `toolStatusFromOutcome` is where that is done.
+ */
+export const TOOL_OUTCOME = {
+  SUCCESS: "success",
+  FAILED: "failed",
+  DENIED: "denied",
+  INTERRUPTED: "interrupted",
+} as const;
+
+/**
+ * Lifecycle status of a pending-attachment chip in the composer tray. A chip
+ * opens as `UPLOADING` (with a progress bar), then settles to `READY` (a durable
+ * ref) or `ERROR` (with a retry control).
+ */
+export const ATTACHMENT_STATUS = {
+  UPLOADING: "uploading",
+  READY: "ready",
+  ERROR: "error",
+} as const;
+
+/**
+ * Default client-side upload size cap (10 MiB), matching django-ag-ui's
+ * `ATTACHMENT_MAX_BYTES`. Overridable via `data-attachment-max-bytes`; the
+ * server stays authoritative.
+ */
+export const DEFAULT_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
+
+/**
+ * How much detail a tool-call card shows. Set via `data-tool-display`; the
+ * default is `grouped`.
+ *
+ * - `grouped` — a run's consecutive calls fold into one quiet row ("Worked
+ *   through 5 steps"), with the calls one click down as `full` cards, or as
+ *   {@link TOOL_GROUP_DISPLAY} names.
+ * - `inline` — one status row (icon + summary), no card chrome, result behind
+ *   its own toggle. Reads as a line of the answer rather than a boxed card.
+ * - `minimal` — tool name + status pill only. No args, no result body.
+ * - `compact` — name + status, args and result behind one "Details" toggle.
+ * - `full` — args inline, result behind its own toggle.
+ */
+export const TOOL_DISPLAY = {
+  GROUPED: "grouped",
+  INLINE: "inline",
+  MINIMAL: "minimal",
+  COMPACT: "compact",
+  FULL: "full",
+} as const;
+
+/**
+ * How an opened step group draws its calls. Set via `data-tool-group-display`
+ * and read only while `data-tool-display` is `grouped`; an outer card mode
+ * flattens the groups into its own cards and this value is ignored there.
+ *
+ * The same four card modes as {@link TOOL_DISPLAY}, applied to the calls inside
+ * the group: `full` (the default, and what an absent or unknown value reads
+ * as), `compact`, `minimal` and `inline`. A call waiting on an approval shows
+ * its arguments in every one of them.
+ */
+export const TOOL_GROUP_DISPLAY = {
+  INLINE: "inline",
+  MINIMAL: "minimal",
+  COMPACT: "compact",
+  FULL: "full",
+} as const;
+
+/** One of the {@link TOOL_GROUP_DISPLAY} values. */
+export type ToolGroupDisplayMode = (typeof TOOL_GROUP_DISPLAY)[keyof typeof TOOL_GROUP_DISPLAY];
+
+/**
+ * `activityType` of the `ACTIVITY_SNAPSHOT` event django-ag-ui emits when a
+ * compaction capability trimmed the history. `content` carries
+ * `{ removed, before, after }`.
+ */
+export const COMPACTION_ACTIVITY_TYPE = "compaction";
+
+/**
+ * Pydantic-AI's built-in tool for loading a deferred capability, with `{ id }`
+ * naming it. Agent skills are deferred capabilities keyed by skill name, so a
+ * call to this tool is the only signal that the agent picked a skill.
+ *
+ * Distinct from the host-provided {@link Skill} catalog, which is a human
+ * affordance launched from the slash palette.
+ */
+export const LOAD_CAPABILITY_TOOL = "load_capability";
+
+/**
+ * The chrome's glyphs, as inline SVG markup.
+ *
+ * Static author-written markup assigned as a `<slot>`'s fallback content, so it
+ * never passes through the sanitiser — nothing here is user or server data, and
+ * nothing user-supplied may be interpolated into it. Each icon is a 24x24
+ * viewBox carrying the shared `glyph` class, which `STYLES` sizes and paints
+ * from `currentColor`; `glyph--solid` fills instead of stroking. A host wanting
+ * its own mark projects a matching `slot="icon-…"` child instead of editing
+ * these.
+ */
+export const ICON_SEND = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19.5V5m-6.5 6.5L12 5l6.5 6.5"/></svg>`;
+
+/** The Stop glyph the composer button wears while a run is in flight. */
+export const ICON_STOP = `<svg class="glyph glyph--solid" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2.5"/></svg>`;
+
+/** The file-picker glyph (a paperclip). */
+export const ICON_ATTACH = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 8.5V15a5 5 0 0 1-10 0V7a3 3 0 0 1 6 0v7.5a1 1 0 0 1-2 0V8.5"/></svg>`;
+
+/** The voice-input glyph (a microphone on its stand). */
+export const ICON_VOICE = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V7a3 3 0 0 1 3-3z"/><path d="M5 11v1a7 7 0 0 0 14 0v-1"/><path d="M12 19v3"/></svg>`;
+
+/** The place chip's mark when the place brings no icon of its own (a map pin). */
+export const ICON_PLACE = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg>`;
+
+/** The place toggle while the place is sent (an open eye). */
+export const ICON_PLACE_SHARED = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></svg>`;
+
+/** The place toggle while the place is withheld (the eye struck through). */
+export const ICON_PLACE_WITHHELD = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6.5 9.5-6.5c2 0 3.7.7 5.1 1.7M21.5 12s-3.5 6.5-9.5 6.5c-2 0-3.7-.7-5.1-1.7"/><path d="M4 20 20 4"/></svg>`;
+
+/**
+ * The theme toggle's two marks, drawn rather than typed.
+ *
+ * They were the emoji `\u{1F319}` and `\u2600\uFE0F`, which is why this one
+ * control never sat right beside the others: an emoji is painted by the
+ * platform's own font, at its own weight and colour, and its ink routinely
+ * exceeds the text metrics it is laid out with -- so it drew outside the box
+ * measured for it and clipped, while every neighbour is a stroked path that
+ * fits its viewBox exactly.
+ *
+ * The moon is drawn as one closed crescent rather than a disc with a second
+ * disc cut out of it, because these are stroked (`fill: none`) and a cut-out
+ * needs a fill to hide anything.
+ */
+export const ICON_MOON = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>`;
+
+/** The other half of the pair; see {@link ICON_MOON}. */
+export const ICON_SUN = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>`;
+
+/**
+ * The header controls' marks, drawn for the reason the theme pair is: typed
+ * glyphs (U+2630, U+21BA, U+271A, U+2014, U+25A1, U+2750) were painted by the
+ * platform font at its own weight and size, so they never matched the moon
+ * beside them. Maximize points outward, restore inward.
+ */
+export const ICON_MAXIMIZE = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 10l6-6M15 4h5v5M10 14l-6 6M4 15v5h5"/></svg>`;
+
+/** The maximize control's mark while the panel is maximized; see {@link ICON_MAXIMIZE}. */
+export const ICON_RESTORE = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4l-6 6M14 5v5h5M4 20l6-6M5 14h5v5"/></svg>`;
+
+/**
+ * The collapse control's marks, chosen by `data-collapse-icon`. The panel mark
+ * is a window with its docked pane and an arrow into the edge it hides into;
+ * its left twin, and the up and left chevrons, are the right and down ones
+ * turned in the path data, so each mark is told apart by its paths alone.
+ */
+export const ICON_PANEL_CLOSE_RIGHT = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M15 4v16"/><path d="M8 9.5l2.5 2.5L8 14.5"/></svg>`;
+
+/** The panel mark for a panel docked to the left edge; see {@link ICON_PANEL_CLOSE_RIGHT}. */
+export const ICON_PANEL_CLOSE_LEFT = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M9 4v16"/><path d="M16 9.5L13.5 12l2.5 2.5"/></svg>`;
+
+/** A chevron down, the corner placements' collapse mark; see {@link ICON_PANEL_CLOSE_RIGHT}. */
+export const ICON_CHEVRON_DOWN = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9.5l6 6 6-6"/></svg>`;
+
+/** A chevron up; see {@link ICON_PANEL_CLOSE_RIGHT}. */
+export const ICON_CHEVRON_UP = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14.5l6-6 6 6"/></svg>`;
+
+/** A chevron right; see {@link ICON_PANEL_CLOSE_RIGHT}. */
+export const ICON_CHEVRON_RIGHT = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6l6 6-6 6"/></svg>`;
+
+/** A chevron left; see {@link ICON_PANEL_CLOSE_RIGHT}. */
+export const ICON_CHEVRON_LEFT = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6l-6 6 6 6"/></svg>`;
+
+/** The new-chat control's mark (a pencil on a square). */
+export const ICON_NEW_CHAT = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4.5H6.5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V13"/><path d="M17.5 3.5a2.1 2.1 0 0 1 3 3L12 15l-3.5 1 1-3.5z"/></svg>`;
+
+/** The history control's mark (a clock with a back arrow). */
+export const ICON_HISTORY = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 12A8.5 8.5 0 1 0 6 6L3.5 8.5"/><path d="M3.5 4v4.5H8"/><path d="M12 7.5V12l3 2"/></svg>`;
+
+/** The checkpoints control's mark (an arrow turning back, counter-clockwise). */
+export const ICON_CHECKPOINTS = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>`;
+
+/** The default launcher mark (a speech bubble), shown when the host slots none. */
+export const ICON_LAUNCHER = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H9l-5 4z"/></svg>`;
+
+/**
+ * The generic attachment-chip mark, for a file family with nothing more
+ * specific to say. The chip marks share the contract of the chrome glyphs
+ * above; `iconFor` selects one by MIME family, never interpolating the MIME
+ * string into the markup.
+ */
+/** Copy: two overlapping sheets, the shape every toolbar uses for it. */
+export const ICON_COPY: string = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/></svg>`;
+
+/** Retry: a circular arrow. */
+export const ICON_RETRY: string = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.5-5.8"/><path d="M20 4v4h-4"/></svg>`;
+
+/** Rate up. */
+export const ICON_THUMB_UP: string = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10v10H4V10z"/><path d="M7 10l4.5-7a2 2 0 0 1 3.4 2L13.5 9H19a2 2 0 0 1 2 2.3l-1.1 6.4A2 2 0 0 1 17.9 20H7"/></svg>`;
+
+/** Rate down: the up mark turned over, so the pair reads as one control. */
+export const ICON_THUMB_DOWN: string = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 14V4h3v10z"/><path d="M17 14l-4.5 7a2 2 0 0 1-3.4-2l1.4-4H5a2 2 0 0 1-2-2.3l1.1-6.4A2 2 0 0 1 6.1 4H17"/></svg>`;
+
+export const ICON_FILE = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>`;
+
+/** An image attachment: a framed picture with a horizon and a sun. */
+export const ICON_FILE_IMAGE = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.5"/><path d="M4.5 17.5 9 13.5l3.5 3 3-2.5 4.5 4"/></svg>`;
+
+/** A PDF: the generic page, banded to read as a labelled document. */
+export const ICON_FILE_PDF = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><rect class="glyph--solid" x="7.5" y="13.5" width="9" height="4.5" rx="1"/></svg>`;
+
+/** A text document: the generic page, ruled. */
+export const ICON_FILE_TEXT = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M8.5 13.5h7M8.5 17h4.5"/></svg>`;
+
+/**
+ * ``activityType`` of the ``ACTIVITY_SNAPSHOT`` / ``ACTIVITY_DELTA`` events a
+ * server sends to draw a chart.
+ *
+ * A convention inside an extension point the protocol already provides, not a
+ * protocol extension: AG-UI defines the envelope and leaves ``activityType`` an
+ * open string. Another vendor's client does not know this name and ignores the
+ * event, which is the graceful outcome.
+ */
+export const CHART_ACTIVITY_TYPE = "chart";
+
+/**
+ * The gutter a floating panel *rests* at, before anyone has touched it.
+ *
+ * It matches the default `--ag-ui-inset` and the stylesheet's
+ * `--ag-ui-edge-gutter`, so an undragged widget resolves to exactly the
+ * placement it already had, and it is what the size cap subtracts so a resting
+ * panel grown to its limit stops at the far edge rather than one gutter past
+ * it.
+ *
+ * Not a limit on where a *person* may put the widget -- that is
+ * {@link SCREEN_EDGE_MARGIN}, and the two being one number is what made a
+ * dragged panel feel stuck short of every edge on all four sides at once.
+ */
+export const EDGE_MARGIN = 24;
+
+/**
+ * How long a screen-reader status stays in the announcer before it is emptied.
+ *
+ * Long enough for a reader to pick the change up, short enough that the region
+ * is empty again before the next status lands. Emptying is what makes an
+ * identical consecutive message announce at all -- a live region is read on
+ * *change*, and setting the same string twice is not one.
+ */
+export const ANNOUNCE_CLEAR_MS = 150;
+
+/**
+ * Stacking order for the host-page highlight overlay.
+ *
+ * One above the widget's own default, because the overlay's whole job is to
+ * point at something on the page the widget is sitting over -- a ring drawn
+ * underneath the panel would be hidden by the thing that asked for it. It takes
+ * no pointer events at any point, so being on top costs the page nothing.
+ */
+export const HIGHLIGHT_OVERLAY_Z_INDEX = 2147483001;
+
+/**
+ * How many characters a pasted string has to reach before it becomes an
+ * attachment rather than composer text.
+ *
+ * The composer is capped at 40vh, so anything near this is already taller than
+ * the box that holds it: the user cannot read what they pasted or edit around
+ * it. Roughly where the field stops being usable rather than a number with a
+ * meaning of its own -- `data-paste-attach` moves it.
+ */
+export const PASTE_ATTACH_CHARS = 5000;
+
+/**
+ * How close the launcher may be pushed to the edge of the screen.
+ *
+ * Not the panel's 24px gutter, which was rejected here on purpose: a launcher
+ * held that far in refuses the corners people actually drag it to. But zero is
+ * wrong too. The bubble is a circle with a drop shadow, and one sitting flush
+ * against the edge has its shadow cut and its curve running into the boundary,
+ * which reads as clipped whether or not a single pixel is missing -- and on a
+ * screen with rounded corners, or under a scrollbar, it is genuinely clipped.
+ *
+ * Small enough that every corner is still reachable, large enough that the
+ * circle always closes.
+ *
+ * The panel obeys the same bound, for the same reason: it is a rounded box
+ * with the same drop shadow, and there is no account of why a bubble held off
+ * the boundary should sit beside a panel welded to it. Before this was shared
+ * there were four answers to one question -- a drag stopped at 0, a resize at
+ * 0, a restore at 24 and the launcher at 8 -- so a panel dragged flush leapt
+ * 24px inward the next time anything re-placed it.
+ */
+export const SCREEN_EDGE_MARGIN = 8;

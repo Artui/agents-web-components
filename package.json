@@ -1,0 +1,84 @@
+{
+  "name": "@artooi/agents-web-components",
+  "version": "0.0.0",
+  "description": "Framework-free <ag-ui-chat> Web Component over the AG-UI protocol. Drop-in chat sidebar with a pluggable client-side tool registry, DOM driver primitives, animations, and destructive-action confirmation modal.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./bundle": {
+      "import": "./dist/agents-web-components.bundle.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "src/",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "node esbuild.config.mjs && tsc -p tsconfig.build.json",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run --coverage"
+  },
+  "keywords": [
+    "ag-ui",
+    "agent",
+    "web-component",
+    "custom-element",
+    "shadow-dom",
+    "ai",
+    "llm",
+    "pydantic-ai",
+    "chat"
+  ],
+  "author": {
+    "name": "Artur Veres",
+    "email": "artur8118@gmail.com"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/Artui/agents-web-components",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Artui/agents-web-components.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Artui/agents-web-components/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@ag-ui/client": ">=1.0.0 <2",
+    "@ag-ui/core": ">=1.0.0 <2",
+    "dompurify": "^3.4.13",
+    "marked": "^18.0.9"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.7",
+    "@types/node": "^26.1.2",
+    "@vitest/browser": "^5.0.0",
+    "@vitest/browser-playwright": "^5.0.0",
+    "@vitest/coverage-v8": "^5.0.0",
+    "esbuild": "^0.28.1",
+    "happy-dom": "^21.0.1",
+    "playwright": "^1.62.1",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.0"
+  },
+  "packageManager": "pnpm@11.2.2"
+}

@@ -1,0 +1,295 @@
+import { randomUUID } from "@ag-ui/client";
+import { ATTACHMENT_STATUS } from "../../constants.js";
+import type { AttachmentRef } from "../../core/attachment.js";
+import type { UploadHandler } from "../../core/upload_attachment.js";
+import { commaTokens } from "../../core/utils.js";
+import { fillUiString } from "../fill_ui_string.js";
+import { formatBytes, iconFor } from "../transcript/attachment_chips.js";
+import { DEFAULT_UI_STRINGS, type UiStrings } from "../ui_strings.js";
+
+/** Status of a pending tray chip. */
+type AttachmentStatus = (typeof ATTACHMENT_STATUS)[keyof typeof ATTACHMENT_STATUS];
+
+/** Config the host ({@link AgUiChat}) hands the tray. */
+export interface AttachmentTrayConfig {
+  /** Upload one file, reporting `0..1` progress; resolves to a durable ref. */
+  readonly upload: UploadHandler;
+  /** Client-side size cap in bytes (`0` = no cap). The server stays authoritative. */
+  readonly maxBytes: number;
+  /** Client-side accept list (`<input accept>` syntax; `""` = any). */
+  readonly accept: string;
+  /** Fired when the set of attachments changes (add / settle / remove). */
+  readonly onChange?: () => void;
+  /** Localized strings; defaults to the English {@link DEFAULT_UI_STRINGS}. */
+  readonly strings?: UiStrings;
+}
+
+/** One pending file in the tray, from pick to ready/error. */
+interface TrayItem {
+  readonly localId: string;
+  readonly file: File;
+  status: AttachmentStatus;
+  progress: number;
+  ref: AttachmentRef | null;
+  error: string;
+  /** Aborts the in-flight upload when the chip is removed / the tray cleared. */
+  controller: AbortController | null;
+}
+
+/**
+ * The composer's pending-attachments tray: a chip per picked file with a
+ * progress bar while it uploads, settling to a ready chip holding the durable
+ * ref or an error chip with retry. A stateful view like {@link ThreadDrawer}:
+ * the host appends {@link element}, calls {@link add} on pick or drop, reads
+ * {@link readyRefs} on send, and clears it.
+ *
+ * Client-side size and type guards reject a bad file into an error chip without
+ * uploading, for instant feedback, but the server stays the authority.
+ */
+export class AttachmentTray {
+  /** The tray root; append above the input row. Hidden while empty. */
+  readonly element: HTMLDivElement;
+
+  readonly #config: AttachmentTrayConfig;
+  readonly #strings: UiStrings;
+  #items: TrayItem[] = [];
+
+  constructor(config: AttachmentTrayConfig) {
+    this.#config = config;
+    this.#strings = config.strings ?? DEFAULT_UI_STRINGS;
+    this.element = document.createElement("div");
+    this.element.className = "attachment-tray";
+    this.element.setAttribute("part", "attachment-tray");
+    this.element.hidden = true;
+  }
+
+  /** Queue a file: reject oversize/disallowed into an error chip, else upload. */
+  add(file: File): void {
+    const item: TrayItem = {
+      localId: randomUUID(),
+      file,
+      status: ATTACHMENT_STATUS.UPLOADING,
+      progress: 0,
+      ref: null,
+      error: "",
+      controller: null,
+    };
+    this.#items.push(item);
+    const rejection = this.#reject(file);
+    if (rejection !== null) {
+      item.status = ATTACHMENT_STATUS.ERROR;
+      item.error = rejection;
+      this.#render();
+      this.#config.onChange?.();
+      return;
+    }
+    this.#render();
+    this.#config.onChange?.();
+    this.#upload(item);
+  }
+
+  /** The durable refs of every chip that finished uploading. */
+  readyRefs(): readonly AttachmentRef[] {
+    const refs: AttachmentRef[] = [];
+    for (const item of this.#items) {
+      if (item.ref !== null) {
+        refs.push(item.ref);
+      }
+    }
+    return refs;
+  }
+
+  /** Whether any chip is still uploading (a send would drop nothing if false). */
+  hasPending(): boolean {
+    return this.#items.some((item) => item.status === ATTACHMENT_STATUS.UPLOADING);
+  }
+
+  /** How many chips are still uploading — the count a send-time notice names. */
+  pendingCount(): number {
+    return this.#items.filter((item) => item.status === ATTACHMENT_STATUS.UPLOADING).length;
+  }
+
+  /** Whether the tray holds no chips. */
+  isEmpty(): boolean {
+    return this.#items.length === 0;
+  }
+
+  /** Drop the settled (ready / error) chips, leaving any still uploading. */
+  clearReady(): void {
+    this.#items = this.#items.filter((item) => item.status === ATTACHMENT_STATUS.UPLOADING);
+    this.#render();
+  }
+
+  /** Drop every chip (a reset / new-chat), aborting any in-flight upload. */
+  clear(): void {
+    for (const item of this.#items) {
+      item.controller?.abort();
+    }
+    this.#items = [];
+    this.#render();
+  }
+
+  /**
+   * Abort every in-flight upload without touching the rendered chips — the
+   * teardown path when the host element is removed mid-upload, so a cancelled
+   * transfer doesn't orphan a server-side file.
+   */
+  dispose(): void {
+    for (const item of this.#items) {
+      item.controller?.abort();
+    }
+  }
+
+  /** The size/type rejection reason for a file, or `null` when accepted. */
+  #reject(file: File): string | null {
+    if (this.#config.maxBytes > 0 && file.size > this.#config.maxBytes) {
+      return fillUiString(this.#strings.tooLarge, { size: formatBytes(this.#config.maxBytes) });
+    }
+    if (!accepts(this.#config.accept, file)) {
+      return this.#strings.fileTypeNotAllowed;
+    }
+    return null;
+  }
+
+  #upload(item: TrayItem): void {
+    // Re-apply the client guard on every attempt, not just the first `add` — an
+    // ERROR chip always renders retry, so without this a size/type-rejected file
+    // would upload in full on ↻.
+    const rejection = this.#reject(item.file);
+    if (rejection !== null) {
+      item.status = ATTACHMENT_STATUS.ERROR;
+      item.error = rejection;
+      this.#render();
+      this.#config.onChange?.();
+      return;
+    }
+    item.status = ATTACHMENT_STATUS.UPLOADING;
+    item.progress = 0;
+    item.error = "";
+    const controller = new AbortController();
+    item.controller = controller;
+    this.#render();
+    this.#config
+      .upload(
+        item.file,
+        (fraction) => {
+          item.progress = fraction;
+          this.#render();
+        },
+        controller.signal,
+      )
+      .then((ref) => {
+        item.status = ATTACHMENT_STATUS.READY;
+        item.ref = ref;
+      })
+      .catch((error: unknown) => {
+        item.status = ATTACHMENT_STATUS.ERROR;
+        item.error = error instanceof Error ? error.message : this.#strings.uploadFailed;
+      })
+      .finally(() => {
+        item.controller = null;
+        this.#render();
+        this.#config.onChange?.();
+      });
+  }
+
+  #remove(item: TrayItem): void {
+    // Abort an in-flight upload so removing its chip doesn't orphan the file.
+    item.controller?.abort();
+    this.#items = this.#items.filter((other) => other !== item);
+    this.#render();
+    this.#config.onChange?.();
+  }
+
+  #render(): void {
+    this.element.replaceChildren();
+    this.element.hidden = this.#items.length === 0;
+    for (const item of this.#items) {
+      this.element.appendChild(this.#renderChip(item));
+    }
+  }
+
+  #renderChip(item: TrayItem): HTMLDivElement {
+    const chip = document.createElement("div");
+    chip.className = `attachment-chip attachment-chip--${item.status}`;
+    chip.setAttribute("part", "attachment-chip");
+
+    const icon = document.createElement("span");
+    icon.className = "attachment-chip-icon";
+    icon.setAttribute("part", "attachment-chip-icon");
+    // Author-written glyph markup, selected by MIME family — see iconFor.
+    icon.innerHTML = iconFor(item.file.type);
+    icon.setAttribute("aria-hidden", "true");
+
+    const name = document.createElement("span");
+    name.className = "attachment-chip-name";
+    name.setAttribute("part", "attachment-chip-name");
+    name.textContent = item.file.name;
+    name.title = item.file.name;
+
+    const meta = document.createElement("span");
+    meta.className = "attachment-chip-size";
+    meta.setAttribute("part", "attachment-chip-size");
+    meta.textContent =
+      item.status === ATTACHMENT_STATUS.ERROR ? item.error : formatBytes(item.file.size);
+
+    chip.append(icon, name, meta);
+
+    if (item.status === ATTACHMENT_STATUS.UPLOADING) {
+      const bar = document.createElement("div");
+      bar.className = "attachment-chip-bar";
+      bar.setAttribute("part", "attachment-chip-bar");
+      const fill = document.createElement("div");
+      fill.className = "attachment-chip-bar-fill";
+      fill.setAttribute("part", "attachment-chip-bar-fill");
+      fill.style.width = `${Math.round(item.progress * 100)}%`;
+      bar.appendChild(fill);
+      chip.appendChild(bar);
+    }
+
+    if (item.status === ATTACHMENT_STATUS.ERROR) {
+      const retry = document.createElement("button");
+      retry.type = "button";
+      retry.className = "attachment-chip-retry";
+      retry.setAttribute("part", "attachment-chip-retry");
+      retry.title = this.#strings.retry;
+      retry.setAttribute("aria-label", this.#strings.retryUpload);
+      retry.textContent = "↻";
+      retry.addEventListener("click", () => this.#upload(item));
+      chip.appendChild(retry);
+    }
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "attachment-chip-remove";
+    remove.setAttribute("part", "attachment-chip-remove");
+    remove.title = this.#strings.remove;
+    remove.setAttribute("aria-label", this.#strings.removeAttachment);
+    remove.textContent = "✕";
+    remove.addEventListener("click", () => this.#remove(item));
+    chip.appendChild(remove);
+
+    return chip;
+  }
+}
+
+/** Whether `file` matches an `<input accept>` list (`""` accepts anything). */
+function accepts(accept: string, file: File): boolean {
+  // Lower-cased after the shared split rather than before the filter: no
+  // non-empty token lower-cases to an empty one, so the order cannot matter.
+  const tokens = commaTokens(accept).map((token) => token.toLowerCase());
+  if (tokens.length === 0) {
+    return true;
+  }
+  const mime = file.type.toLowerCase();
+  const name = file.name.toLowerCase();
+  return tokens.some((token) => {
+    if (token.startsWith(".")) {
+      return name.endsWith(token);
+    }
+    if (token.endsWith("/*")) {
+      return mime.startsWith(token.slice(0, -1));
+    }
+    return mime === token;
+  });
+}

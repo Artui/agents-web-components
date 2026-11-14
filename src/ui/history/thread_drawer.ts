@@ -1,0 +1,471 @@
+import type { ThreadMeta } from "../../core/conversation_store.js";
+import { DEFAULT_UI_STRINGS, type UiStrings } from "../ui_strings.js";
+import { type RelativeTimeFormatter, relativeTime } from "./relative_time.js";
+import { openerElement } from "./utils.js";
+
+/**
+ * How many conversations there have to be before the filter appears.
+ *
+ * A search box above a list you can already read in one glance is a control
+ * asking to be used on nothing.
+ */
+export const FILTER_FROM = 8;
+
+/**
+ * When the search box shows: from {@link FILTER_FROM} conversations (`auto`),
+ * over any list (`always`), or not at all (`never`).
+ */
+export type ThreadsSearch = "auto" | "always" | "never";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Actions the host ({@link AgUiChat}) wires to the drawer's rows. */
+export interface ThreadDrawerCallbacks {
+  /** A row was picked — load that thread and make it active. */
+  readonly onSelect: (threadId: string) => void;
+  /** The "New chat" action — start a fresh thread. */
+  readonly onNew: () => void;
+  /** A row was renamed to `title`. */
+  readonly onRename: (threadId: string, title: string) => void;
+  /** A row was deleted (after the inline confirm). */
+  readonly onDelete: (threadId: string) => void;
+}
+
+/**
+ * The chat-history drawer: a slide-over listing the user's threads (title,
+ * relative time, preview), with select / new / rename / delete actions and an
+ * empty state. Pure DOM, like {@link SkillsMenu}: the host appends
+ * {@link element}, toggles it, feeds rows via {@link setThreads}, and acts on
+ * the callbacks.
+ *
+ * A view only — it never mutates the store. After a callback the host updates
+ * the store and calls {@link setThreads} to refresh. All visible text comes
+ * from {@link UiStrings}; {@link setStrings} re-localizes a drawer built before
+ * its strings resolved.
+ */
+export class ThreadDrawer {
+  /** The drawer root (backdrop + panel). Append to the chat shell; hidden until opened. */
+  readonly element: HTMLDivElement;
+
+  readonly #callbacks: ThreadDrawerCallbacks;
+  readonly #panel: HTMLDivElement;
+  readonly #heading: HTMLSpanElement;
+  readonly #newButton: HTMLButtonElement;
+  readonly #list: HTMLDivElement;
+  #formatRelativeTime: RelativeTimeFormatter | null = null;
+  #strings: UiStrings;
+  #threads: readonly ThreadMeta[] = [];
+  #activeId = "";
+  /** Dismisses the list without starting a new conversation. */
+  #closeButton: HTMLButtonElement;
+  /** Narrows the list. Only rendered once there is enough of a list to narrow. */
+  #filter: HTMLInputElement;
+  /** The current filter text, lowercased once rather than per row. */
+  #query = "";
+  #search: ThreadsSearch = "auto";
+
+  /** The element focused before the drawer opened, restored on close. */
+  #lastFocused: HTMLElement | null = null;
+
+  constructor(callbacks: ThreadDrawerCallbacks, strings: UiStrings = DEFAULT_UI_STRINGS) {
+    this.#callbacks = callbacks;
+    this.#strings = strings;
+
+    this.element = document.createElement("div");
+    this.element.className = "drawer";
+    this.element.setAttribute("part", "drawer");
+    this.element.hidden = true;
+
+    const backdrop = document.createElement("div");
+    backdrop.className = "drawer-backdrop";
+    backdrop.setAttribute("part", "drawer-backdrop");
+    backdrop.addEventListener("click", () => this.close());
+
+    this.#panel = document.createElement("div");
+    this.#panel.className = "drawer-panel";
+    this.#panel.setAttribute("part", "drawer-panel");
+    this.#panel.setAttribute("role", "dialog");
+    this.#panel.setAttribute("aria-modal", "true");
+    this.#panel.setAttribute("aria-label", strings.chatHistory);
+    // Escape closes the drawer; Tab is trapped within the panel while it's open.
+    this.#panel.addEventListener("keydown", (event) => this.#onPanelKeydown(event));
+
+    const header = document.createElement("div");
+    header.className = "drawer-header";
+    header.setAttribute("part", "drawer-header");
+    this.#heading = document.createElement("span");
+    this.#heading.className = "drawer-title";
+    this.#heading.setAttribute("part", "drawer-title");
+    this.#heading.textContent = strings.chats;
+    this.#newButton = document.createElement("button");
+    this.#newButton.type = "button";
+    this.#newButton.className = "drawer-new";
+    this.#newButton.setAttribute("part", "drawer-new");
+    this.#newButton.textContent = strings.newChat;
+    this.#newButton.addEventListener("click", () => {
+      this.close();
+      this.#callbacks.onNew();
+    });
+    // An explicit way back. The backdrop closes on click, which is enough
+    // wherever a strip of it is showing -- but the embedded placement widens
+    // the panel to the full width of the host's box, so there is no backdrop
+    // left to hit and the only exits were Escape, picking a row, or starting a
+    // new conversation. The first is invisible and the last is destructive of
+    // the thing you were looking at.
+    this.#closeButton = document.createElement("button");
+    this.#closeButton.type = "button";
+    this.#closeButton.className = "drawer-close";
+    this.#closeButton.setAttribute("part", "drawer-close");
+    this.#closeButton.title = strings.closeHistory;
+    this.#closeButton.setAttribute("aria-label", strings.closeHistory);
+    this.#closeButton.append(document.createTextNode("\u00d7"));
+    this.#closeButton.addEventListener("click", () => this.close());
+    header.append(this.#heading, this.#newButton, this.#closeButton);
+
+    // Hidden until the list is long enough to be worth narrowing. A search box
+    // above four conversations is a control asking to be used on something
+    // already entirely visible.
+    this.#filter = document.createElement("input");
+    this.#filter.type = "search";
+    this.#filter.className = "drawer-filter";
+    this.#filter.setAttribute("part", "drawer-filter");
+    this.#filter.placeholder = strings.searchConversations;
+    this.#filter.setAttribute("aria-label", strings.searchConversations);
+    this.#filter.addEventListener("input", () => {
+      this.#query = this.#filter.value.trim().toLowerCase();
+      this.#renderList();
+    });
+
+    this.#list = document.createElement("div");
+    this.#list.className = "drawer-list";
+    this.#list.setAttribute("part", "drawer-list");
+
+    this.#panel.append(header, this.#filter, this.#list);
+    this.element.append(backdrop, this.#panel);
+  }
+
+  /** Re-localize the drawer's chrome and rows (the host calls this on connect). */
+  /**
+   * Replace the timestamp formatter, or restore the built-in with `null`.
+   *
+   * The built-in is deliberately locale-neutral -- there is no `Intl` anywhere
+   * in this component, so it never disagrees with a host's own formatting by
+   * guessing a locale. That is a defensible default and a poor requirement, so
+   * this is the way out.
+   */
+  setRelativeTimeFormatter(format: RelativeTimeFormatter | null): void {
+    this.#formatRelativeTime = format;
+  }
+
+  /** This row's timestamp, through the host's formatter when it set one. */
+  #formatTime(timestamp: number): string {
+    return this.#formatRelativeTime !== null
+      ? this.#formatRelativeTime(timestamp)
+      : relativeTime(timestamp, undefined, this.#strings);
+  }
+
+  setStrings(strings: UiStrings): void {
+    this.#strings = strings;
+    this.#panel.setAttribute("aria-label", strings.chatHistory);
+    this.#heading.textContent = strings.chats;
+    this.#newButton.textContent = strings.newChat;
+    this.#closeButton.title = strings.closeHistory;
+    this.#closeButton.setAttribute("aria-label", strings.closeHistory);
+    this.#filter.placeholder = strings.searchConversations;
+    this.#filter.setAttribute("aria-label", strings.searchConversations);
+    this.#renderList();
+  }
+
+  isOpen(): boolean {
+    return !this.element.hidden;
+  }
+
+  open(): void {
+    if (this.isOpen()) {
+      return;
+    }
+    // Remember what had focus so it's restored on close, then move focus into
+    // the panel (its first control) so keyboard users land inside the dialog.
+    this.#lastFocused = openerElement(
+      this.element.getRootNode() as Document | ShadowRoot,
+    ) as HTMLElement | null;
+    this.element.hidden = false;
+    this.#newButton.focus();
+  }
+
+  close(): void {
+    if (!this.isOpen()) {
+      return;
+    }
+    this.element.hidden = true;
+    this.#lastFocused?.focus();
+    this.#lastFocused = null;
+  }
+
+  toggle(): void {
+    if (this.isOpen()) {
+      this.close();
+    } else {
+      this.open();
+    }
+  }
+
+  /** The currently-focused element within the drawer's root (shadow-aware). */
+  #activeElement(): Element | null {
+    return (this.element.getRootNode() as Document | ShadowRoot).activeElement;
+  }
+
+  /** Escape-to-close and a Tab focus trap while the dialog is open. */
+  #onPanelKeydown(event: KeyboardEvent): void {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      this.close();
+      return;
+    }
+    if (event.key !== "Tab") {
+      return;
+    }
+    const focusables = Array.from(
+      this.#panel.querySelectorAll<HTMLElement>("button, input, [tabindex]"),
+    ).filter((el) => !el.hidden);
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const active = this.#activeElement();
+    if (event.shiftKey && active === first) {
+      event.preventDefault();
+      last?.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first?.focus();
+    }
+  }
+
+  /** Choose when the search box shows; the host's `data-threads-search`. */
+  setSearchMode(mode: ThreadsSearch): void {
+    this.#search = mode;
+    this.#renderList();
+  }
+
+  /** Render the rows (or the empty state), highlighting the active thread. */
+  setThreads(threads: readonly ThreadMeta[], activeId: string): void {
+    this.#threads = threads;
+    this.#activeId = activeId;
+    this.#renderList();
+  }
+
+  #renderList(): void {
+    this.#list.replaceChildren();
+    const hideFilter =
+      this.#search === "auto" ? this.#threads.length < FILTER_FROM : this.#search === "never";
+    this.#filter.hidden = hideFilter;
+    // Cleared as it goes, or the query outlives the control that set it: a
+    // list that drops below the threshold while a query matches nothing shows
+    // "no conversations match that" over conversations that are right there,
+    // with nothing left on screen to clear. Reopening does not help either --
+    // only a new drawer would.
+    if (hideFilter && this.#query !== "") {
+      this.#filter.value = "";
+      this.#query = "";
+    }
+    const shown = this.#matching();
+    if (shown.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "drawer-empty";
+      empty.setAttribute("part", "drawer-empty");
+      // Two different situations wearing one sentence would be a small lie:
+      // "no conversations yet" reads as data loss when what happened is that a
+      // filter matched nothing.
+      empty.textContent =
+        this.#threads.length === 0 ? this.#strings.noConversations : this.#strings.noMatches;
+      this.#list.appendChild(empty);
+      return;
+    }
+    const groups = this.#groups(shown);
+    for (const [label, metas] of groups) {
+      // One group would label the whole list, which says nothing the rows do not.
+      if (groups.length > 1) {
+        const heading = document.createElement("div");
+        heading.className = "drawer-group-label";
+        heading.setAttribute("part", "drawer-group-label");
+        heading.setAttribute("role", "heading");
+        heading.setAttribute("aria-level", "3");
+        heading.textContent = label;
+        this.#list.appendChild(heading);
+      }
+      for (const meta of metas) {
+        this.#list.appendChild(this.#renderRow(meta));
+      }
+    }
+  }
+
+  /**
+   * The rows by age from local midnight, in list order within each group, empty
+   * groups dropped. A date that does not parse is never today, so it lands in Older.
+   */
+  #groups(shown: readonly ThreadMeta[]): [string, ThreadMeta[]][] {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const recent: ThreadMeta[] = [];
+    const week: ThreadMeta[] = [];
+    const older: ThreadMeta[] = [];
+    for (const meta of shown) {
+      const at = meta.updatedAt;
+      (at >= today ? recent : at >= today - 7 * DAY_MS ? week : older).push(meta);
+    }
+    const groups: [string, ThreadMeta[]][] = [
+      [this.#strings.threadsToday, recent],
+      [this.#strings.threadsPreviousWeek, week],
+      [this.#strings.threadsOlder, older],
+    ];
+    return groups.filter(([, metas]) => metas.length > 0);
+  }
+
+  /**
+   * The rows the filter leaves.
+   *
+   * Title and preview both, because the title is often the model's summary of
+   * a conversation and the thing being looked for is as likely to be a phrase
+   * from inside it. Client-side over what the drawer already holds: the server
+   * index is fetched whole, so a query would be a round trip to filter a list
+   * already in memory.
+   */
+  #matching(): readonly ThreadMeta[] {
+    if (this.#query === "") {
+      return this.#threads;
+    }
+    return this.#threads.filter(
+      (meta) =>
+        meta.title.toLowerCase().includes(this.#query) ||
+        meta.preview.toLowerCase().includes(this.#query),
+    );
+  }
+
+  #renderRow(meta: ThreadMeta): HTMLDivElement {
+    const row = document.createElement("div");
+    row.className = "drawer-row";
+    row.setAttribute("part", "drawer-row");
+    if (meta.threadId === this.#activeId) {
+      row.classList.add("drawer-row--active");
+    }
+
+    const select = document.createElement("button");
+    select.type = "button";
+    select.className = "drawer-row-select";
+    select.setAttribute("part", "drawer-row-select");
+    const title = document.createElement("span");
+    title.className = "drawer-row-title";
+    title.setAttribute("part", "drawer-row-title");
+    title.textContent = meta.title;
+    const time = document.createElement("span");
+    time.className = "drawer-row-time";
+    time.setAttribute("part", "drawer-row-time");
+    time.textContent = this.#formatTime(meta.updatedAt);
+    const preview = document.createElement("span");
+    preview.className = "drawer-row-preview";
+    preview.setAttribute("part", "drawer-row-preview");
+    preview.textContent = meta.preview;
+    select.append(title, time, preview);
+    select.addEventListener("click", () => {
+      this.close();
+      this.#callbacks.onSelect(meta.threadId);
+    });
+
+    const rename = document.createElement("button");
+    rename.type = "button";
+    rename.className = "drawer-row-rename";
+    rename.setAttribute("part", "drawer-row-rename");
+    rename.title = this.#strings.rename;
+    rename.setAttribute("aria-label", this.#strings.renameConversation);
+    rename.textContent = "✎";
+    rename.addEventListener("click", () => this.#startRename(row, meta));
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "drawer-row-delete";
+    remove.setAttribute("part", "drawer-row-delete");
+    remove.title = this.#strings.delete;
+    remove.setAttribute("aria-label", this.#strings.deleteConversation);
+    remove.textContent = "🗑";
+    remove.addEventListener("click", () => this.#confirmDelete(row, meta));
+
+    const actions = document.createElement("div");
+    actions.className = "drawer-row-actions";
+    actions.setAttribute("part", "drawer-row-actions");
+    actions.append(rename, remove);
+
+    row.append(select, actions);
+    return row;
+  }
+
+  /** Swap a row for an inline rename input; Enter/blur commits, Escape cancels. */
+  #startRename(row: HTMLDivElement, meta: ThreadMeta): void {
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "drawer-rename-input";
+    input.setAttribute("part", "drawer-rename-input");
+    input.value = meta.title;
+    // One-shot: Enter, Escape, and blur can all fire for a single edit (Enter
+    // commits and re-renders, which blurs the detached input); the flag makes
+    // the later events no-ops so a rename isn't submitted twice.
+    let done = false;
+    const commit = (): void => {
+      if (done) {
+        return;
+      }
+      done = true;
+      const value = input.value.trim();
+      if (value === "" || value === meta.title) {
+        this.#renderList();
+      } else {
+        this.#callbacks.onRename(meta.threadId, value);
+      }
+    };
+    const cancel = (): void => {
+      if (done) {
+        return;
+      }
+      done = true;
+      this.#renderList();
+    };
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        commit();
+      } else if (event.key === "Escape") {
+        // Stop the panel's Escape handler from also closing the drawer.
+        event.preventDefault();
+        event.stopPropagation();
+        cancel();
+      }
+    });
+    input.addEventListener("blur", () => commit());
+    row.replaceChildren(input);
+    input.focus();
+    input.select();
+  }
+
+  /** Swap a row for an inline "Delete? [Delete] [Cancel]" confirm. */
+  #confirmDelete(row: HTMLDivElement, meta: ThreadMeta): void {
+    const confirm = document.createElement("div");
+    confirm.className = "drawer-confirm";
+    confirm.setAttribute("part", "drawer-confirm");
+    const label = document.createElement("span");
+    label.className = "drawer-confirm-label";
+    label.setAttribute("part", "drawer-confirm-label");
+    label.textContent = this.#strings.deletePrompt;
+    const yes = document.createElement("button");
+    yes.type = "button";
+    yes.className = "drawer-confirm-yes";
+    yes.setAttribute("part", "drawer-confirm-yes");
+    yes.textContent = this.#strings.delete;
+    yes.addEventListener("click", () => this.#callbacks.onDelete(meta.threadId));
+    const no = document.createElement("button");
+    no.type = "button";
+    no.className = "drawer-confirm-no";
+    no.setAttribute("part", "drawer-confirm-no");
+    no.textContent = this.#strings.cancel;
+    no.addEventListener("click", () => this.#renderList());
+    confirm.append(label, yes, no);
+    row.replaceChildren(confirm);
+  }
+}
