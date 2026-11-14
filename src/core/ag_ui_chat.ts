@@ -1244,6 +1244,7 @@ export class AgUiChat extends HTMLElement {
       "user-name",
       "data-tool-group-display",
       "data-collapse-icon",
+      "theme",
       ...CONNECT_TIME_ATTRIBUTES,
     ];
   }
@@ -1283,6 +1284,14 @@ export class AgUiChat extends HTMLElement {
     }
     if (name === "data-collapse-icon") {
       this.#paintCollapseControl();
+      return;
+    }
+    // Whoever sets the scheme (a host, a picker, the toggle itself), the
+    // toggle's glyph has to offer the way out of the one now drawn.
+    if (name === "theme") {
+      if (this.#themeToggle.isConnected) {
+        this.#syncThemeGlyph();
+      }
       return;
     }
     if (name === "anchor-side" || name === "data-side" || name === "data-small-viewport") {
@@ -2566,7 +2575,6 @@ export class AgUiChat extends HTMLElement {
     const scheme = this.#drawnScheme() === "dark" ? "light" : "dark";
     this.setAttribute("theme", withScheme(theme, scheme));
     this.#storage.writePreference(THEME_KEY, scheme);
-    this.#syncThemeGlyph();
   }
 
   /**
