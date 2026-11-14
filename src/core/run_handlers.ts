@@ -74,10 +74,10 @@ interface RunLedger {
   /**
    * Which of those calls had a result streamed back, and so ran on the server.
    *
-   * The transcript keeps the same fact for its cards, and this used to be read
-   * from there. But New chat clears the transcript, and a run it cut off
-   * reports afterwards -- so a booking the server made came out as the host's
-   * own tool, which is the one side the documented listener skips a refetch for.
+   * Kept here rather than read from the transcript's cards, because New chat
+   * clears the transcript and a run it cut off reports afterwards: a booking
+   * the server made would come out as the host's own tool, which is the one
+   * side the documented listener skips a refetch for.
    */
   readonly serverSettled: Set<string>;
   /**
@@ -376,12 +376,11 @@ export class RunHandlers {
         if (card === undefined) {
           return;
         }
-        // Settled as the server says it ended, not as "it ended". This path used
-        // to pass DONE unconditionally, so a refusal arrived as a green card
-        // with the reason folded inside it -- a booking the server declined
-        // read, at a glance, as a booking that was made. An absent or
-        // unrecognised outcome still means DONE, so every server written before
-        // the field existed renders exactly as it did.
+        // Settled as the server says it ended, not as "it ended": a refusal
+        // settled as DONE is a green card, and a booking the server declined
+        // reads, at a glance, as a booking that was made. An absent or
+        // unrecognised outcome still means DONE, so a server that never states
+        // one renders every call as done.
         card.settle(toolStatusFromOutcome(outcome), content);
         this.#host.transcript.markServerSettled(toolCallId);
         ledger.serverSettled.add(toolCallId);

@@ -56,8 +56,8 @@ export interface ClientConversationStore {
    * Existing threads are left where they are: "new chat" adds one, and
    * {@link clear} is the only method that takes one away.
    *
-   * Optional, so a store written before this method existed still works. The
-   * caller then mints the id itself and hands it to {@link setActiveThread},
+   * Optional: for a store without it, the caller mints the id itself and
+   * hands it to {@link setActiveThread},
    * which loses only the store's own record that the thread is new (see
    * {@link isUnsent}).
    */
