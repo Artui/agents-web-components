@@ -15,14 +15,7 @@ import {
   typeInto,
 } from "./animations.js";
 import { setNativeChecked, setNativeValue } from "./native_setter.js";
-
-/**
- * Generic, framework-free DOM-driving primitives.
- *
- * Each operates on an element the caller has already located. Host packages
- * (e.g. `django-admin-agent`) wrap these with environment-aware lookups —
- * `fill_field(name, value)` finds `#id_<name>` then calls {@link fillField}.
- */
+import { dispatchInputAndChange } from "./utils.js";
 
 /**
  * Every flash option except `focus`, which is not on offer: a field has to hold
@@ -94,6 +87,5 @@ export function setControlValue(
   } else {
     setNativeValue(el, String(value));
   }
-  el.dispatchEvent(new Event("input", { bubbles: true }));
-  el.dispatchEvent(new Event("change", { bubbles: true }));
+  dispatchInputAndChange(el);
 }

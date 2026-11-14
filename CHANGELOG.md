@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **`createStateHookTools` and `StateHook`**, the deprecated aliases of `createPageStateTools` and `PageState`. Opt-in: a host still importing either name switches to the new one; behaviour is identical.
+
 ### Changed
 
 - **The deprecated `noResult` string is removed** from `UiStrings`: nothing drew it since a call that never returned is answered with `callNotFinished`. A string table that sets it no longer type-checks; delete the entry.

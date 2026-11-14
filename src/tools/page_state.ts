@@ -55,15 +55,3 @@ export function createPageStateTools(binding: PageState): ClientTool[] {
   }
   return tools;
 }
-
-/**
- * @deprecated Renamed to {@link PageState} — the old name read as AG-UI
- * shared-state sync. Will be removed in a future major.
- */
-export type StateHook = PageState;
-
-/**
- * @deprecated Renamed to {@link createPageStateTools}. Will be removed in a
- * future major.
- */
-export const createStateHookTools = createPageStateTools;

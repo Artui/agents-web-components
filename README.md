@@ -3351,7 +3351,6 @@ paths.
 | `MessageActionsOptions` | type | What `attachMessageActions` takes: `strings`, a `text` source, an optional `html` source for the rich clipboard flavour, an optional `onFeedback`. |
 | `ActivityRenderer` | type | Draws one activity from its `content`. Pure: it runs again on every restore. |
 | `ActivityRegistration` | type | What `registerActivityRenderer` takes: `type`, `render`, and an optional `removedNotice`. |
-| `createStateHookTools(binding)` / `StateHook` | deprecated | The former names for `createPageStateTools` / `PageState`. |
 
 ### Durability
 

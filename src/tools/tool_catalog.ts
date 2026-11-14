@@ -67,28 +67,15 @@ export interface ToolCatalogHost {
  */
 export class ToolCatalog {
   readonly #host: ToolCatalogHost;
-  /**
-   * The server tool catalog fetched from `data-tools-url`, keyed by tool
-   * name. Cards label themselves from each entry's `summary`, the base
-   * layer behind `toolSummaries`: an explicit entry in `toolSummaries`
-   * wins, this fills the rest. Held as whole entries rather than labels so a
-   * field the server sent is not lost on the way in. Populated once on connect.
-   */
+  /** The `data-tools-url` catalog by tool name: the base layer behind `toolSummaries`, filled once on connect. */
   #toolCatalog: Record<string, ToolCatalogEntry> = {};
   /**
-   * The tool names the current round handed the agent, captured as the catalog
-   * went out.
+   * The tool names the current round handed the agent, snapshotted as the catalog went out.
    *
-   * The registry is mount-wide but `getTools` is per-run, so a host is
-   * free to scope what a given page offers — and a call naming a tool this run
-   * withheld must not reach the handler that is merely still registered.
-   * Snapshotted rather than re-asked at dispatch: a provider is a function, and
-   * calling it again asks a question the run already answered, which is exactly
-   * the window a scoped catalog exists to close.
-   *
-   * Empty until the first round advertises, which cannot precede a call: the
-   * client builds `RunAgentInput.tools` at the top of every round, before the
-   * calls that round produces are executed.
+   * The registry is mount-wide but `getTools` is per-run, so a call naming a tool this run
+   * withheld must not reach a handler that is merely still registered. Not re-asked at
+   * dispatch: the provider is a function and may answer differently. Empty until the first
+   * round advertises, which always precedes the calls that round produces.
    */
   #advertisedTools: ReadonlySet<string> = new Set();
   readonly #toolRegistry = new ClientToolRegistry();
@@ -288,31 +275,25 @@ export class ToolCatalog {
     if (args["allow_custom"] === true) {
       request.allowCustom = true;
     }
-    // The run is suspended on the card; a Stop aborts the controller, resolving
-    // it with an empty answer (the run is then cancelled).
+    // A Stop aborts the signal, resolving the card with an empty answer.
     const signal = this.#host.decision.open();
     this.#host.hidePending();
-    // The built-in inline card renders into the current answer group.
     const builtIn = (): Promise<string> =>
       requestQuestion(this.#host.ensureGroup(), request, {
         signal,
         strings: this.#host.strings(),
       });
-    // A host-supplied renderer takes full control of the UI.
     const renderer = this.#host.askUserRenderer();
     let answer: string;
-    // The card says it is asking for as long as a question is open on it, an
-    // answer, a Stop and a renderer that failed alike, so the step group's row
-    // does not read as running while the run waits on a person.
+    // Asking until answered, stopped or failed, so the step row does not read as running.
     this.#host.setAsking(callId, true);
     try {
       if (renderer === null) {
         answer = await builtIn();
       } else {
-        // Awaited here rather than inside a helper, so an answering renderer
-        // takes exactly as many turns to be heard as it always did.
+        // Called on the element, as `this.askUserRenderer(...)` always was.
+        // Awaited here, not in a helper, to keep the microtask count of an answering renderer.
         try {
-          // Called on the element, as `this.askUserRenderer(...)` always was.
           answer = await renderer.call(this.#host.element, request, { signal });
         } catch (error) {
           answer = await this.#afterRendererFailed(error, signal, callId, builtIn);
@@ -328,27 +309,11 @@ export class ToolCatalog {
   }
 
   /**
-   * Answer an `ask_user` call whose host renderer threw or rejected instead of
-   * answering: put the question to the built-in card.
+   * Answer an `ask_user` call whose host renderer failed: the built-in card asks instead.
    *
-   * The same answer `approvalRenderer` gets for the same failure, and for the
-   * same reason: a renderer is presentation, not a policy. It decides how the
-   * question looks, never whether the agent's question is put to the user.
-   * Uncaught, the throw escaped the handler, so the call's card settled as an
-   * error quoting the host's message, that message went on to the agent as the
-   * tool result -- a detail of the host's page, never written for the model --
-   * and the pending decision was never closed, so the next Stop, in whatever
-   * round, aborted the signal of a wait that had already ended rather than
-   * finding nothing open. The built-in card still asks,
-   * and the run carries on as if no renderer had been set. Reported the way a
-   * failed `render` is, and for the same reason: survived is not the same as
-   * findable.
-   *
-   * Except when the wait was already abandoned. A renderer honouring its signal
-   * rejects once a Stop fires it, which is the signal working rather than the
-   * renderer failing, and a card drawn then would ask about a run the user just
-   * ended. So it resolves with the empty answer the built-in card resolves with
-   * on the same abort, and says nothing.
+   * A renderer is presentation, not policy, so its failure must neither reach the agent as
+   * the tool result nor leave the pending decision open. A rejection after a Stop is the
+   * signal working: it resolves empty and says nothing.
    */
   #afterRendererFailed(
     error: unknown,
@@ -359,8 +324,7 @@ export class ToolCatalog {
     if (signal.aborted) {
       return Promise.resolve("");
     }
-    // Named by call rather than by question: the model can ask the same thing
-    // twice in one turn, and the id is the one thing that tells them apart.
+    // Named by call id: the model can ask the same question twice in a turn.
     console.warn(
       `ag-ui-chat: askUserRenderer failed for tool call ${callId}, so the built-in question card asks instead`,
       error,

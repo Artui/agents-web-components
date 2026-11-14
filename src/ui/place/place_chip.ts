@@ -14,16 +14,18 @@ function keyOf(place: Place): string {
   return place.href ?? `${place.label}\u0000${place.detail ?? ""}`;
 }
 
+/** Draw `text` into `el`, hiding it when there is none. */
+function setText(el: HTMLElement, text: string | undefined): void {
+  el.textContent = text ?? "";
+  el.hidden = text === undefined;
+}
+
 /**
- * The "you are here" chip in the composer's tool row, and the context entry it
- * stands for. It holds the last place read and whether the user withheld it;
- * the element decides when to read.
+ * The "you are here" chip in the composer's tool row, and the context entry it stands for.
  *
- * The exclusion is keyed on the place, so it holds across turns on the same
- * place and lapses by itself when a different place is read. A read of no
- * place keeps it, so a page that briefly names nothing mid-navigation does not
- * undo what the user withheld. Nothing here persists, and nothing the host
- * sets can lift it.
+ * The exclusion is keyed on the place: it holds across turns on the same place and lapses
+ * when a different one is read. A read of no place keeps it, so a page naming nothing
+ * mid-navigation does not undo it. Nothing persists, and nothing the host sets can lift it.
  */
 export class PlaceChip {
   readonly element: HTMLElement = document.createElement("div");
@@ -128,12 +130,10 @@ export class PlaceChip {
       img.alt = "";
       this.#icon.replaceChildren(img);
     }
-    this.#label.textContent = place.label;
-    this.#detail.textContent = place.detail ?? "";
-    this.#detail.hidden = place.detail === undefined;
-    this.#barLabel.textContent = place.label;
-    this.#barDetail.textContent = place.detail ?? "";
-    this.#barDetail.hidden = place.detail === undefined;
+    setText(this.#label, place.label);
+    setText(this.#detail, place.detail);
+    setText(this.#barLabel, place.label);
+    setText(this.#barDetail, place.detail);
     this.element.title = fillUiString(
       shared ? this.#strings.placeShared : this.#strings.placeWithheld,
       { label: place.label },

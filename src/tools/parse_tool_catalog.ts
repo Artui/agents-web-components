@@ -16,12 +16,7 @@ export interface ToolCatalogEntry {
  * that isn't a `{ name: string, summary: string }` object. Tolerant by design:
  * a malformed payload yields an empty map rather than throwing, and an
  * optional field of the wrong type costs that field rather than the entry.
- *
- * Whole entries rather than bare summaries, even though the element itself
- * only labels cards with `summary`: the map is what a caller gets, so
- * narrowing it here would put `description` on the wire with nowhere to
- * arrive, and no consumer could recover it without changing this signature
- * first.
+ * Whole entries are kept, so a consumer can reach `description`.
  */
 export function parseToolCatalog(data: unknown): Record<string, ToolCatalogEntry> {
   const out: Record<string, ToolCatalogEntry> = {};
@@ -37,9 +32,7 @@ export function parseToolCatalog(data: unknown): Record<string, ToolCatalogEntry
     const summary = record["summary"];
     const description = record["description"];
     if (typeof name === "string" && typeof summary === "string") {
-      // Built conditionally rather than with an `undefined` field:
-      // `exactOptionalPropertyTypes` makes "absent" and "present as
-      // undefined" different types, and only the former is the wire shape.
+      // `exactOptionalPropertyTypes`: absent is not the same type as present-as-undefined.
       out[name] =
         typeof description === "string" ? { name, summary, description } : { name, summary };
     }

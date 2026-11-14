@@ -9,6 +9,7 @@
 import { showHighlightOverlay } from "./highlight_overlay.js";
 import { setNativeChecked, setNativeValue } from "./native_setter.js";
 import { ringColor } from "./ring_color.js";
+import { dispatchInputAndChange } from "./utils.js";
 
 function delay(ms: number): Promise<void> {
   return new Promise<void>((resolve) => {
@@ -19,11 +20,9 @@ function delay(ms: number): Promise<void> {
 /**
  * Whether the user has asked the OS/browser to minimise motion.
  *
- * Honoured by every primitive that moves something: hold delays are skipped,
- * `scrollIntoCenterView` jumps instead of gliding, and the flash drops its fade
- * but still holds the ring long enough to be seen — reduced motion asks for no
- * animation, not for no feedback. `typeInto` and `highlightThenClick` keep
- * their explicit-duration contract instead.
+ * Honoured by every primitive that moves something, except `typeInto` and
+ * `highlightThenClick`, which keep their explicit durations. The flash drops its fade
+ * but still holds the ring: reduced motion asks for no animation, not no feedback.
  */
 export function prefersReducedMotion(): boolean {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -38,23 +37,29 @@ function motionDelay(ms: number): Promise<void> {
 }
 
 /**
- * Which `<ag-ui-chat>` a ring speaks for, so it is drawn in that chat's colour.
- *
- * The ring is drawn in the host's page, which a token set on the chat never
- * reaches, so the chat is read directly. Unset, it is the most recently
- * connected chat; a page with two widgets names the one acting.
+ * Which `<ag-ui-chat>` a ring speaks for. The ring is drawn in the host page, which a
+ * token set on the chat never reaches, so the chat is read directly.
  */
 export interface RingOwnerOptions {
   /** The chat whose ring colour and accent to use. Default: the latest connected. */
   chat?: HTMLElement;
 }
 
-/**
- * The soft halo the press and toggle rings draw: the ring colour at 40%.
- * Mixed rather than given its own alpha, so it follows whichever colour won.
- */
+/** The soft halo of the press and toggle rings: the ring colour at 40%. */
 function ringShadow(el: HTMLElement, chat: HTMLElement | undefined): string {
   return `0 0 0 3px color-mix(in srgb, ${ringColor(el, chat)} 40%, transparent)`;
+}
+
+/** Outline `el` in the ring colour and return the function that restores its own outline. */
+function outlineElement(el: HTMLElement, chat: HTMLElement | undefined): () => void {
+  const previousOutline = el.style.outline;
+  const previousOffset = el.style.outlineOffset;
+  el.style.outline = `2px solid ${ringColor(el, chat)}`;
+  el.style.outlineOffset = "2px";
+  return () => {
+    el.style.outline = previousOutline;
+    el.style.outlineOffset = previousOffset;
+  };
 }
 
 /** An element whose `value` can be typed into. */
@@ -97,14 +102,9 @@ export async function highlightThenClick(
   el: HTMLElement,
   options: HighlightClickOptions = {},
 ): Promise<void> {
-  const highlightMs = options.highlightMs ?? 280;
-  const previousOutline = el.style.outline;
-  const previousOffset = el.style.outlineOffset;
-  el.style.outline = `2px solid ${ringColor(el, options.chat)}`;
-  el.style.outlineOffset = "2px";
-  await delay(highlightMs);
-  el.style.outline = previousOutline;
-  el.style.outlineOffset = previousOffset;
+  const restore = outlineElement(el, options.chat);
+  await delay(options.highlightMs ?? 280);
+  restore();
   el.click();
 }
 
@@ -124,9 +124,8 @@ const SCROLL_START_MS = 100;
 /**
  * Scroll `el` to the vertical centre of the viewport.
  *
- * Resolves once the scroll settles, so a caller can hold its animation until
- * the element stops moving — a ring drawn mid-glide lands where the user is not
- * looking yet. Awaiting is optional; the scroll is requested synchronously.
+ * Resolves once the scroll settles, so a ring is not drawn mid-glide. Awaiting is
+ * optional; the scroll is requested synchronously.
  */
 export function scrollIntoCenterView(el: HTMLElement, options: ScrollOptions = {}): Promise<void> {
   const reduced = prefersReducedMotion();
@@ -151,13 +150,9 @@ export function scrollIntoCenterView(el: HTMLElement, options: ScrollOptions = {
       clearTimeout(timer);
       timer = setTimeout(settle, options.settleMs ?? SCROLL_SETTLE_MS);
     };
-    // Neither event bubbles, and both fire on whichever ancestor actually
-    // scrolled, so listen on the document in the capture phase.
-    //
-    // Two timeouts, for two failure modes: an element already in view never
-    // scrolls and so never fires scrollend (the short did-anything-move probe),
-    // and once something is moving the longer budget covers browsers without
-    // scrollend at all.
+    // Neither event bubbles, so listen on the document in the capture phase. Two timeouts:
+    // an element already in view never fires scrollend (the short probe), and once moving,
+    // the longer budget covers browsers without scrollend.
     timer = setTimeout(settle, SCROLL_START_MS);
     document.addEventListener("scroll", started, true);
     document.addEventListener("scrollend", settle, true);
@@ -180,13 +175,9 @@ export interface FlashOptions extends RingOwnerOptions {
    */
   color?: string;
   /**
-   * Dim everything except the target.
-   *
-   * Switches the ring from an outline on the element to an overlay drawn
-   * outside it -- see {@link showHighlightOverlay} for why those are the same
-   * decision. The overlay never takes a pointer event, so a scrim here does
-   * not stop the page being used, or the driver clicking what it just pointed
-   * at.
+   * Dim everything except the target. Draws an overlay outside the element instead of an
+   * outline (see {@link showHighlightOverlay}); it takes no pointer event, so the page
+   * stays usable.
    */
   scrim?: boolean;
   /** Draw the ring as a moving gradient. Also an overlay, for the same reason. */
@@ -206,18 +197,14 @@ async function flashRing(
   focusByDefault: boolean,
 ): Promise<void> {
   if (options.focus ?? focusByDefault) {
-    // preventScroll: a caller's smooth scroll is typically still in flight, and
-    // the instant scroll focus() would otherwise do fights it.
+    // preventScroll: focus()'s instant scroll would fight a smooth scroll still in flight.
     el.focus({ preventScroll: true });
   }
   const flashMs = options.flashMs ?? FLASH_MS;
   if (flashMs <= 0) {
     return;
   }
-  // A scrim or a gradient cannot be an outline on the element -- an outline
-  // takes a colour, and anything that can be a gradient is a property of the
-  // target and so is clipped by whatever is clipping the target. Both are the
-  // same overlay, so asking for either takes that path.
+  // A scrim or gradient cannot be an outline (a colour only, and clipped with the target).
   if (options.scrim === true || options.gradient === true) {
     const dismiss = showHighlightOverlay(el, {
       scrim: options.scrim === true,
@@ -234,16 +221,13 @@ async function flashRing(
   const previousOffset = el.style.outlineOffset;
   const previousTransition = el.style.transition;
   const color = options.color ?? ringColor(el, options.chat);
-  // outline, not box-shadow: a shadow paints outside the border box, so any
-  // overflow:hidden ancestor sharing the target's box (a card, a table cell)
-  // clips the whole ring away while the helper still reports success.
+  // outline, not box-shadow: an overflow:hidden ancestor sharing the target's box clips a shadow away.
   el.style.outline = `3px solid ${color}`;
   el.style.outlineOffset = "2px";
   const fadeMs = prefersReducedMotion() ? 0 : Math.round(flashMs * FLASH_FADE_RATIO);
   await delay(flashMs - fadeMs);
   if (fadeMs > 0) {
-    // Transition and new colour in the same task is fine: the browser starts
-    // transitions from the after-change style.
+    // Setting the transition and the new colour in one task is fine: transitions start from the after-change style.
     el.style.transition = `outline-color ${fadeMs}ms ease-out`;
     el.style.outline = "3px solid transparent";
     await delay(fadeMs);
@@ -326,17 +310,11 @@ export async function selectOption(
   if (option === null) {
     throw new Error(`no <option> matching "${value}"`);
   }
-  const highlightMs = options.highlightMs ?? 220;
-  const previousOutline = el.style.outline;
-  const previousOffset = el.style.outlineOffset;
-  el.style.outline = `2px solid ${ringColor(el, options.chat)}`;
-  el.style.outlineOffset = "2px";
-  await motionDelay(highlightMs);
+  const restore = outlineElement(el, options.chat);
+  await motionDelay(options.highlightMs ?? 220);
   setNativeValue(el, option.value);
-  el.dispatchEvent(new Event("input", { bubbles: true }));
-  el.dispatchEvent(new Event("change", { bubbles: true }));
-  el.style.outline = previousOutline;
-  el.style.outlineOffset = previousOffset;
+  dispatchInputAndChange(el);
+  restore();
 }
 
 export interface ToggleOptions extends RingOwnerOptions {
@@ -358,7 +336,6 @@ export async function toggleControl(
   el.style.boxShadow = ringShadow(el, options.chat);
   await motionDelay(flashMs);
   setNativeChecked(el, checked);
-  el.dispatchEvent(new Event("input", { bubbles: true }));
-  el.dispatchEvent(new Event("change", { bubbles: true }));
+  dispatchInputAndChange(el);
   el.style.boxShadow = previousShadow;
 }
