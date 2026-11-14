@@ -73,54 +73,51 @@ describe("gripName", () => {
 });
 
 describe("what each grip moves", () => {
-  it("moves the left edge and holds the right", () => {
-    const h = harness({ x: "left" });
+  // Each grip moves the edges it names and holds the rest, the other axis
+  // included. 150 leaves a 350px panel, comfortably above the 280px minimum.
+  it.each<[string, ResizeGrip, { x: number; y: number }, PanelRect]>([
+    [
+      "the left edge and holds the right",
+      { x: "left" },
+      { x: 150, y: 400 },
+      { left: 150, top: 100, right: 500, bottom: 600 },
+    ],
+    [
+      "the right edge and holds the left",
+      { x: "right" },
+      { x: 900, y: 400 },
+      { left: 100, top: 100, right: 900, bottom: 600 },
+    ],
+    [
+      "the top edge and holds the bottom",
+      { y: "top" },
+      { x: 250, y: 200 },
+      { left: 100, top: 200, right: 500, bottom: 600 },
+    ],
+    [
+      "the bottom edge and holds the top",
+      { y: "bottom" },
+      { x: 250, y: 900 },
+      { left: 100, top: 100, right: 500, bottom: 900 },
+    ],
+    [
+      "both edges from a corner",
+      { x: "right", y: "bottom" },
+      { x: 900, y: 900 },
+      { left: 100, top: 100, right: 900, bottom: 900 },
+    ],
+    [
+      "the two edges a mixed corner names",
+      { x: "left", y: "bottom" },
+      { x: 200, y: 900 },
+      { left: 200, top: 100, right: 500, bottom: 900 },
+    ],
+  ])("moves %s", (_name, grip, to, box) => {
+    const h = harness(grip);
 
-    // 150 leaves a 350px panel, comfortably above the 280px minimum.
-    drag(h.handle, { x: 150, y: 400 });
+    drag(h.handle, to);
 
-    // The right edge is untouched, and so is the whole vertical axis.
-    expect(h.committed).toEqual([{ left: 150, top: 100, right: 500, bottom: 600 }]);
-  });
-
-  it("moves the right edge and holds the left", () => {
-    const h = harness({ x: "right" });
-
-    drag(h.handle, { x: 900, y: 400 });
-
-    expect(h.committed).toEqual([{ left: 100, top: 100, right: 900, bottom: 600 }]);
-  });
-
-  it("moves the top edge and holds the bottom", () => {
-    const h = harness({ y: "top" });
-
-    drag(h.handle, { x: 250, y: 200 });
-
-    expect(h.committed).toEqual([{ left: 100, top: 200, right: 500, bottom: 600 }]);
-  });
-
-  it("moves the bottom edge and holds the top", () => {
-    const h = harness({ y: "bottom" });
-
-    drag(h.handle, { x: 250, y: 900 });
-
-    expect(h.committed).toEqual([{ left: 100, top: 100, right: 500, bottom: 900 }]);
-  });
-
-  it("moves both edges from a corner", () => {
-    const h = harness({ x: "right", y: "bottom" });
-
-    drag(h.handle, { x: 900, y: 900 });
-
-    expect(h.committed).toEqual([{ left: 100, top: 100, right: 900, bottom: 900 }]);
-  });
-
-  it("moves the two edges a mixed corner names", () => {
-    const h = harness({ x: "left", y: "bottom" });
-
-    drag(h.handle, { x: 200, y: 900 });
-
-    expect(h.committed).toEqual([{ left: 200, top: 100, right: 500, bottom: 900 }]);
+    expect(h.committed).toEqual([box]);
   });
 
   it("reports every move, not only the last", () => {

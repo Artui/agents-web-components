@@ -602,3 +602,33 @@ describe("an askUserRenderer that throws", () => {
     warn.mockRestore();
   });
 });
+
+describe("an askUserRenderer", () => {
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    sessionStorage.clear();
+  });
+
+  it("is called on the element, as a method of it", async () => {
+    let round = 0;
+    const el = mountWithAgent((emit) => {
+      emit.runStart();
+      if (round === 0) {
+        emit.toolCall("q1", "ask_user", { question: "Which colour?", options: ["red", "blue"] });
+      }
+      round += 1;
+      emit.runEnd();
+    });
+    el.askUser = true;
+    const receivers: unknown[] = [];
+    el.askUserRenderer = function (this: unknown) {
+      receivers.push(this);
+      return Promise.resolve("blue");
+    };
+
+    await send(el, "ask me");
+
+    expect(receivers).toHaveLength(1);
+    expect(receivers[0]).toBe(el);
+  });
+});

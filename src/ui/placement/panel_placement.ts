@@ -266,12 +266,10 @@ export class PanelPlacement {
         },
         label: this.#host.strings().resizePanel,
       });
-      // Only one of the eight is in the tab order. Eight separators between the
-      // transcript and the composer is not keyboard parity, it is a keyboard
-      // obstacle -- and one grip already reaches both axes, which is exactly
-      // what the single grip this replaced offered. syncResizeAnchor decides
-      // which one, and it is the free corner, so an arrow key grows the panel
-      // rather than moving it.
+      // Only one of the eight is in the tab order: eight separators between the
+      // transcript and the composer would be an obstacle, and one grip reaches
+      // both axes. syncResizeAnchor picks the free corner, so an arrow key grows
+      // the panel rather than moving it.
       handle.tabIndex = -1;
       handle.setAttribute("aria-hidden", "true");
       this.#resizeHandles.set(gripName(grip), handle);
@@ -443,9 +441,9 @@ export class PanelPlacement {
    * viewport, because that is where a press finds them and a drag starts from.
    * This is what the user asked for, kept apart so that a window narrower than
    * the spot, or a phone that took the panel full-bleed, gives it back unchanged
-   * once there is room again. Only a gesture, a move or a dragged size coming off
-   * changes it; re-applying it against a viewport never does, which is the difference from a clamped
-   * position quietly becoming the record one resize at a time.
+   * once there is room again. Only a gesture, a move or a dragged size coming
+   * off changes it; re-applying it against a viewport never does, so a clamped
+   * position never quietly becomes the record.
    */
   #cornerSpot: CornerSpot | null = null;
 
@@ -584,11 +582,8 @@ export class PanelPlacement {
       collapsible: this.#host.collapsible(),
       maximized: this.#host.element.hasAttribute("maximized"),
       movable: this.#panelMovable() && !fullBleed,
-      // The page's setting alone: true for every placement unless the host set
-      // `data-launcher-drag="false"`. Whether this panel moves is `movable`,
-      // and reading the launcher or the dock in here made the field change
-      // with `collapse-to`, so a docked sidebar reported that the page had
-      // turned moving off when the placement owned its position.
+      // The page's setting alone, true unless `data-launcher-drag="false"`, so
+      // it does not change with `collapse-to`; whether this panel moves is `movable`.
       draggable: this.#host.element.getAttribute("data-launcher-drag") !== "false",
       fullBleed,
       box: {
@@ -760,15 +755,10 @@ export class PanelPlacement {
     const before = this.#host.element.getBoundingClientRect();
     const width = this.#host.element.style.getPropertyValue(DRAG_WIDTH);
     const height = this.#host.element.style.getPropertyValue(DRAG_HEIGHT);
-    // Shrink first. Growing is the obvious probe and cannot answer the question
-    // at a size already resting against max-width or max-height: the box does
-    // not change, no edge moves, and every clamped axis then reads as pinned on
-    // the side that did not move -- which is the side that is free. That is not
-    // an edge case. The default panel is 380px wide against a max-width of
-    // 100vw minus 48, so any viewport under 428px is born clamped, and the grip
-    // rendered on the wrong corner with the drag inverted before anyone touched
-    // it. Shrinking always moves an edge, because the shrink is measured from
-    // the box's *used* width rather than from whatever was asked for.
+    // Shrink first: at a size resting against max-width or max-height a grown
+    // box does not change, and every clamped axis would read as pinned on its
+    // free side (the default panel is born clamped under 428px). Shrinking is
+    // measured from the used width, so it always moves an edge.
     const shrunk = this.#probeAnchor(before, -1);
     // Unless a host rule sets a minimum, in which case that axis is asked the
     // opposite question rather than left to a guess.
@@ -892,13 +882,10 @@ export class PanelPlacement {
     if (axis === "none") {
       return;
     }
-    // The placement's max-width and max-height are left alone, which means a
-    // grip pushed against the edge the placement is *not* anchored to stops one
-    // gutter short of the screen. Moving the cap with the size fixes that and
-    // shifts several resting sizes by a pixel or two, because the cap and the
-    // size are not measured from the same box -- not worth the churn for a
-    // symmetry nobody has asked for. The limit that matters, staying inside
-    // what the host left free, is enforced above.
+    // The placement's max-width and max-height are left alone, so a grip pushed
+    // against the edge the placement is not anchored to stops one gutter short:
+    // moving the cap would shift several resting sizes by a pixel. Staying inside
+    // what the host left free is enforced by #withinViewport.
     if (size.width !== undefined) {
       this.#host.element.style.setProperty(DRAG_WIDTH, `${size.width}px`);
     }
@@ -1448,21 +1435,13 @@ export class PanelPlacement {
     // The launcher as it was when the gesture began. Held for the whole drag:
     // every move measures from here, so the two halves cannot drift apart.
     const start = this.#launcherPos;
-    // The screen-edge bound, not the resting gutter. The 24px margin is where
-    // a placement rests one, not a rule about where a person may put it, and
-    // enforcing it against a drag is what made the panel feel stuck short of
-    // every edge on all four sides at once. Zero was the correction and it
-    // went too far the other way: it welded the panel to the boundary while
-    // the launcher -- same shadow, same rounded edge -- was held 8px off it,
-    // and it disagreed with the restore below, so a panel dragged flush leapt
-    // inward the next time the viewport changed.
+    // The screen-edge bound, not the resting gutter: the 24px margin is where a
+    // placement rests one, not where a person may put it. Not zero either: the
+    // launcher is held the same distance off, and the restore below agrees.
     const held = clampPanel(box, this.#viewport(), SCREEN_EDGE_MARGIN);
     const corner = this.#expandCorner ?? this.#anchor;
-    // The usable box decides where the panel may rest, above; the screen is
-    // what these insets are measured from, because that is what the browser
-    // measures a fixed element's inset from. Using the usable box here made a
-    // right or bottom short by whatever the host had reserved, and the panel
-    // jumped by that much the first time a gesture wrote one.
+    // The usable box decides where the panel may rest, above; these insets are
+    // measured from the screen, as the browser measures a fixed element's.
     this.#host.element.style.setProperty("--ag-ui-inset", insetFrom(corner, held, this.#screen()));
     this.#panelPos = { left: held.left, top: held.top };
 

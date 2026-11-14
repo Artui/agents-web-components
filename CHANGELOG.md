@@ -30,6 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `SessionStorageStore.adopt` call warns at most once. Opt-in: none; a host that read
   `annotatedMessages` reads `messages`.
 
+### Removed
+
+- **The deprecated `registerStateHook` method is removed** from `AgUiChat`: it was an alias for `registerPageState`, which takes the same binding and does the same thing. A host still calling it renames the call; nothing else changes.
+
 ### Fixed
 
 - **The theme toggle's glyph follows a `theme` written from outside**: setting or removing `theme` after the header is drawn (a host's own picker or saved choice) now redraws the toggle, which kept offering the moon under `theme="dark"`. Only the toggle's own click redrew it before. A host opts in to nothing.

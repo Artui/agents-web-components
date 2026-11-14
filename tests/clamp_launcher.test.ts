@@ -2,22 +2,17 @@ import { describe, expect, it } from "vitest";
 import { clampLauncher } from "../src/ui/placement/clamp_launcher.js";
 
 const launcher = (left: number, top: number) => ({ left, top, width: 56, height: 56 });
-// A screen with an origin: the clamps take a box rather than a size now, because
-// a host can reserve the edges its own chrome occupies and a widget clamped
-// against the whole screen parks itself underneath one.
+// A screen with an origin: a host can reserve the edges its own chrome occupies,
+// and a widget clamped against the whole screen parks itself underneath one.
 const viewport = { left: 0, top: 0, width: 1000, height: 800 };
 
 describe("clampLauncher", () => {
-  it("leaves a launcher already on screen alone", () => {
-    expect(clampLauncher(launcher(300, 200), viewport)).toEqual({ left: 300, top: 200 });
-  });
-
-  it("pulls a launcher back from past the far edges", () => {
-    expect(clampLauncher(launcher(1200, 900), viewport)).toEqual({ left: 936, top: 736 });
-  });
-
-  it("pulls a launcher back from past the near edges", () => {
-    expect(clampLauncher(launcher(-80, -30), viewport)).toEqual({ left: 8, top: 8 });
+  it.each([
+    ["leaves a launcher already on screen alone", launcher(300, 200), { left: 300, top: 200 }],
+    ["pulls a launcher back from past the far edges", launcher(1200, 900), { left: 936, top: 736 }],
+    ["pulls a launcher back from past the near edges", launcher(-80, -30), { left: 8, top: 8 }],
+  ])("%s", (_name, box, held) => {
+    expect(clampLauncher(box, viewport)).toEqual(held);
   });
 
   it("keeps a launcher larger than its viewport reachable at the origin", () => {

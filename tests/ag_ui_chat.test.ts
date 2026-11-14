@@ -21,6 +21,7 @@ import type { UnreadDetail } from "../src/core/events/unread_detail.js";
 import { RemoteConversationStore } from "../src/core/remote_conversation_store.js";
 import type { ApprovalRequest } from "../src/ui/interrupts/approval_card.js";
 import type { QuestionRequest } from "../src/ui/interrupts/question_card.js";
+import { DEFAULT_UI_STRINGS } from "../src/ui/ui_strings.js";
 import { type Emit, type FakeRunParams, makeFakeAgent } from "./helpers/fake_agent.js";
 
 /** Mount the element with a fake agent factory and an optional run script. */
@@ -1109,8 +1110,11 @@ describe("AgUiChat", () => {
     // wire string.
     expect(result).toContain('"projects": 3');
     // The streamed result already settled it, so the executeTool sweep must
-    // not overwrite with the fallback.
-    expect(result).not.toContain("No result returned.");
+    // not overwrite with the fallback: headed as a result, holding only the payload.
+    expect(
+      card?.querySelector(".tool-call-section--result .tool-call-section-label")?.textContent,
+    ).toBe(DEFAULT_UI_STRINGS.resultLabel);
+    expect(result).toBe('{\n  "projects": 3\n}');
     expect(shadow(el).querySelectorAll(".pending")).toHaveLength(0);
   });
 
@@ -1271,7 +1275,11 @@ describe("AgUiChat", () => {
     const srv = shadow(el).querySelector<HTMLElement>('.tool-call[data-tool-name="server_tool"]');
     const srvResult = srv?.querySelector(".tool-call-result")?.textContent;
     expect(srvResult).toContain('"found": 1');
-    expect(srvResult).not.toContain("No result returned.");
+    expect(srv?.getAttribute("data-status")).toBe("done");
+    expect(
+      srv?.querySelector(".tool-call-section--result .tool-call-section-label")?.textContent,
+    ).toBe(DEFAULT_UI_STRINGS.resultLabel);
+    expect(srvResult).toBe('{\n  "found": 1\n}');
     const ui = shadow(el).querySelector<HTMLElement>('.tool-call[data-tool-name="fill_field"]');
     expect(ui?.querySelector(".tool-call-result")?.textContent).toContain("filled-ok");
     // The frontend tool drove a second round, which finished cleanly.
@@ -2550,15 +2558,6 @@ describe("AgUiChat", () => {
     expect(handle.messages.find((m) => m.role === "tool")?.content).toBe(
       JSON.stringify({ items: 3 }),
     );
-  });
-
-  it("registerStateHook still works, so the rename is not a hard break", async () => {
-    // The old name read as AG-UI shared-state sync, which this component does
-    // not implement — but a consumer on the old spelling must keep working.
-    const { el } = mountWithAgent(() => {});
-    el.registerStateHook({ name: "cart", read: () => ({ items: 3 }) });
-
-    expect(el.getTools().map((t) => t.name)).toContain("read_cart");
   });
 
   it("injects the compact page map into the run context", async () => {
