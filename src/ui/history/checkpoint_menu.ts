@@ -204,8 +204,8 @@ export class CheckpointMenu {
    *
    * A preview identifies a run only while it is that run's alone. A real index
    * answered with five runs opening on the same sentence, so those rows read
-   * alike — where the words repeat the
-   * short id comes back, and where they do not the row is left as it is.
+   * alike, as bare timestamps do. Where the words repeat the short id comes
+   * back, and where they do not the row is left as it is.
    */
   #repeatedPreviews(): ReadonlySet<string> {
     const seen = new Set<string>();
