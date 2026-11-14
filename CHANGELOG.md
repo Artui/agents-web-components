@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **The markdown sanitiser is built once and kept as an immutable memo**, and the transcript's simplify pass folds the two copies of the quote-offer placement into one. No behaviour changes: sanitised output, attributes, parts and positions are as before.
+- **The markdown sanitiser is recorded as an immutable memo**, and the transcript's simplify pass folds the two copies of the quote-offer placement into one. No behaviour changes: sanitised output, attributes, parts and positions are as before.
 - **The deprecated `noResult` string is removed** from `UiStrings`: nothing drew it since a call that never returned is answered with `callNotFinished`. A string table that sets it no longer type-checks; delete the entry.
 - **Storage keys start with `agents-web-components`** (was `ag-ui-chat`): collapsed state, theme, panel size, launcher and dock position, and the built-in conversation store all move to the new root, and an element no longer adopts keys written without a namespace. A host opts in to nothing; the first deploy forgets the open thread and the saved preferences once. A host that reads these keys itself must read the new root.
 - **The element moves to its own entry, `@artooi/agents-web-components/chat`**, which exports
