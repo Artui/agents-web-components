@@ -1,5 +1,8 @@
 import type { Tool } from "@ag-ui/core";
 
+/** Draws one call from its arguments alone; the replay path takes this, never a `handler`. */
+export type ChartRenderer = (args: Record<string, unknown>) => Node | null;
+
 /**
  * A tool the frontend declares and executes itself.
  *
@@ -7,16 +10,6 @@ import type { Tool } from "@ag-ui/core";
  * `handler` receives the parsed arguments and returns a result that is
  * JSON-serialised into the AG-UI tool-result message sent back to the agent.
  */
-/**
- * Draws one call from its arguments alone.
- *
- * Named separately so the replay path can take *this* and never the tool that
- * owns it: a function of this type cannot reach a `handler`, which is what
- * makes "a reload never re-runs a tool's effect" a property of the code rather
- * than a note asking maintainers to be careful.
- */
-export type ChartRenderer = (args: Record<string, unknown>) => Node | null;
-
 export interface ClientTool {
   name: string;
   description: string;
@@ -30,13 +23,10 @@ export interface ClientTool {
   /**
    * Draw this call, from its arguments alone.
    *
-   * Optional, and **the only half that is replayed**. A restored transcript
-   * redraws by calling `render`; it never calls {@link handler}. That is what
-   * keeps a replayable tool apart from an effectful one *structurally* rather
-   * than by promise: the restore path holds no reference to the half that acts,
-   * so re-running `fill_field` on every reload is not a mistake anyone can make.
+   * Optional, and the only half that is replayed: a restored transcript calls
+   * `render`, never {@link handler}, so a reload cannot re-run an effect.
    *
-   * The contract this must keep, because it runs again on every restore:
+   * It runs again on every restore, so it must be:
    *
    * - a pure function of `args` — no host state, no network, no clock;
    * - deterministic, so a reload reproduces what was there before;
@@ -60,8 +50,7 @@ export class ClientToolRegistry {
   /**
    * Register a tool, replacing any existing one with the same name.
    *
-   * Idempotent on the name so a re-fired host ref or React StrictMode's
-   * double-invoke replaces rather than throws.
+   * Replacing rather than throwing keeps a re-fired host ref or StrictMode double-invoke safe.
    */
   register(tool: ClientTool): void {
     this.#tools.set(tool.name, tool);

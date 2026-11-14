@@ -32,9 +32,7 @@ const PATH_PARAM_RE = /:([A-Za-z_][A-Za-z0-9_]*)/g;
 
 /** The `:name` path-parameter names declared in a path template, in order. */
 function pathParamNames(path: string): string[] {
-  // Slice the ":" off the whole match rather than read the capture group: under
-  // `noUncheckedIndexedAccess`, indexing the group forces an `undefined` guard
-  // on a case the regex cannot produce, which no test can cover.
+  // Slicing the match avoids an uncoverable `undefined` guard on the capture group.
   return [...path.matchAll(PATH_PARAM_RE)].map((match) => match[0].slice(1));
 }
 

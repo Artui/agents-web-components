@@ -27,15 +27,8 @@ export interface HighlightOverlayOptions {
 }
 
 /**
- * Read a `--ag-ui-*` token from the element being pointed at.
- *
- * From the *target*, not from the overlay. The overlay is appended to the
- * document body so it can escape the clipping this exists to avoid, which also
- * means a `var()` in its own inline style resolves against the body's cascade --
- * so a host that themes the widget the documented way, on `ag-ui-chat` or on a
- * wrapper, would never reach it. The target is on the host's page and inherits
- * the host's cascade, which is the same reason the flat ring reads its accent
- * there.
+ * Read a `--ag-ui-*` token from the target, not the overlay: the overlay sits in the body, so
+ * a host that themes the widget on `ag-ui-chat` or a wrapper would never reach a `var()` there.
  */
 function tokenOn(target: HTMLElement, name: string, fallback: string): string {
   const value = window.getComputedStyle(target).getPropertyValue(name).trim();
@@ -46,32 +39,19 @@ function tokenOn(target: HTMLElement, name: string, fallback: string): string {
 const DEFAULT_PADDING_PX = 4;
 
 /**
- * Draw an overlay that points at `target`, and return a function that removes
- * it.
+ * Draw an overlay that points at `target`, and return a function that removes it.
  *
- * **Why an overlay rather than a style on the target.** The flat highlight
- * writes an `outline` onto the element itself, and that is deliberate: a
- * `box-shadow` paints outside the border box, so any `overflow: hidden`
- * ancestor sharing the target's box -- a card, a table cell -- clips the whole
- * ring away while the helper still reports success. But an outline takes a
- * *colour*. There is no `outline-image`, so a gradient ring cannot be one, and
- * every alternative that can be a gradient is a property of the target and
- * lands back inside whatever is clipping it.
+ * An overlay rather than a style on the target: a flat highlight is an `outline` so an
+ * `overflow: hidden` ancestor cannot clip it, but an outline takes a colour, never a
+ * gradient, and a dim needs a surface larger than the target. Nothing here is a descendant
+ * of the target, so none of it is clipped.
  *
- * Dimming everything else wants the same thing from the other direction: a
- * surface larger than the target, which cannot be a property of the target. So
- * the scrim and the gradient are one mechanism rather than two features, and
- * both escape the clipping the outline was chosen to avoid, because nothing
- * here is a descendant of the element being pointed at.
+
+ * It is inert: it never takes a pointer event, so the driver can still click what it
+ * just pointed at.
  *
- * **It is inert.** The overlay never takes a pointer event, at the cut-out or
- * anywhere else. A dim that swallows clicks is a modal the user did not open,
- * and the driver's own point-then-click helper has to reach the control it just
- * finished pointing at.
  *
- * **It follows.** The cut-out is recomputed on scroll and resize, because a
- * highlight that stays where the target used to be is worse than none: it
- * points confidently at the wrong thing.
+ * It follows: the cut-out is recomputed on scroll and resize.
  */
 export function showHighlightOverlay(
   target: HTMLElement,
@@ -79,25 +59,19 @@ export function showHighlightOverlay(
 ): () => void {
   const root = document.createElement("div");
   root.setAttribute("data-ag-ui-highlight", "");
-  // aria-hidden because the ring is decoration: the announcement that this
-  // element matters is the agent's message, and a screen reader reaching a
-  // second, contentless copy of it learns nothing.
+  // Decoration: the agent's message is what announces that the element matters.
   root.setAttribute("aria-hidden", "true");
   root.style.cssText = [
     "position: fixed",
     "inset: 0",
     "pointer-events: none",
-    // Above the widget's own default, because the overlay's whole job is to
-    // point at something on the page the widget is sitting over. A host whose
-    // chrome stacks higher still can say so.
+    // Above the widget's own default, since it points at the page the widget sits over.
     `z-index: ${tokenOn(target, "--ag-ui-highlight-z-index", String(HIGHLIGHT_OVERLAY_Z_INDEX))}`,
   ].join(";");
 
   const scrim = document.createElement("div");
   const ring = document.createElement("div");
-  // Named, because this overlay lives in the host's document rather than in
-  // the shadow tree: `::part` cannot reach it, so a class is the only handle a
-  // host has on the two boxes beyond the tokens they read.
+  // Classes, since `::part` cannot reach the host document.
   root.className = "ag-ui-highlight";
   scrim.className = "ag-ui-highlight-scrim";
   ring.className = "ag-ui-highlight-ring";
@@ -114,10 +88,7 @@ export function showHighlightOverlay(
   const paint = (): void => {
     const box = target.getBoundingClientRect();
     const pad = options.padding ?? DEFAULT_PADDING_PX;
-    // No fallback for an unparseable radius: getComputedStyle on an element in
-    // the document always resolves this, and the overlay is only ever shown for
-    // one the driver has already found. A guard here would be a branch no test
-    // can reach honestly.
+    // No fallback for an unparseable radius: it always resolves for an element in the document.
     const radius = options.radius ?? Number.parseFloat(getComputedStyle(target).borderRadius);
     const left = box.left - pad;
     const top = box.top - pad;
@@ -125,9 +96,7 @@ export function showHighlightOverlay(
     const height = box.height + pad * 2;
 
     if (options.scrim === true) {
-      // A hole rather than four rectangles: one element, and it stays a hole
-      // through a radius. The outer ring runs clockwise and the inner one
-      // anticlockwise, which is what makes evenodd treat the inside as outside.
+      // One element with a hole; the opposite winding makes evenodd treat the inside as outside.
       scrim.style.cssText = [
         "position: absolute",
         "inset: 0",
@@ -150,14 +119,8 @@ export function showHighlightOverlay(
   };
 
   paint();
-  // Animated from script rather than a CSS keyframe, because the overlay lives
-  // in the host's document and not in the shadow tree: a keyframe would mean
-  // injecting a rule into someone else's stylesheet and remembering whether it
-  // had already been injected, which is module-level state this package does
-  // not keep.
-  //
-  // Reduced motion asks for no animation, not for no feedback -- the gradient
-  // is still drawn, it simply stops travelling.
+  // Animated from script: a keyframe would mean injecting a rule into the host stylesheet,
+  // which is module-level state. Reduced motion draws the gradient but stops it travelling.
   let flow: Animation | null = null;
   if (options.gradient === true && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
     flow = ring.animate([{ backgroundPosition: "100% 0" }, { backgroundPosition: "-100% 0" }], {
@@ -166,8 +129,7 @@ export function showHighlightOverlay(
       easing: "linear",
     });
   }
-  // Capture, so a scroll inside any container reaches this and not just one on
-  // the document. Passive: this only reads geometry and paints.
+  // Capture reaches a scroll in any container; passive, as this only reads geometry.
   const listen = { capture: true, passive: true } as const;
   window.addEventListener("scroll", paint, listen);
   window.addEventListener("resize", paint, listen);
@@ -176,24 +138,15 @@ export function showHighlightOverlay(
   return () => {
     window.removeEventListener("scroll", paint, listen);
     window.removeEventListener("resize", paint, listen);
-    // Cancelled as well as detached. An infinite animation never finishes, so
-    // it is never auto-removed the way a finite one is; removing the node
-    // ought to make it irrelevant and collectable, but that is a claim about
-    // when an engine drops a non-relevant animation rather than something this
-    // function controls. Cancelling makes the teardown total and costs a call.
+    // An infinite animation never finishes, so cancel it rather than rely on the engine dropping it.
     flow?.cancel();
     root.remove();
   };
 }
 
 /**
- * A caller's colour, or `null` if it is not one.
- *
- * The value is joined into a `;`-separated `cssText` run, so a string carrying
- * its own semicolon would write further declarations onto a `position: fixed;
- * inset: 0` element in the host's page. This function is newly public and
- * "point at this element in colour X" is the obvious wiring for it, with X
- * coming from wherever the host got it -- which can be the agent.
+ * A caller's colour, or `null` if it is not one: the value is joined into a `;`-separated
+ * `cssText`, so a string carrying a semicolon would write further declarations.
  */
 function safeColor(value: string | undefined): string | null {
   if (value === undefined) {
@@ -202,13 +155,7 @@ function safeColor(value: string | undefined): string | null {
   return CSS.supports("color", value) ? value : null;
 }
 
-/**
- * The ring's paint: a flat border, or a gradient masked to the border box.
- *
- * A gradient border needs the mask because a background paints inside the
- * border, not on it -- the two-layer mask keeps the border box and subtracts
- * the padding box, leaving the frame.
- */
+/** The ring's paint: a flat border, or a gradient masked to the frame (border box less padding box). */
 function ringPaint(target: HTMLElement, options: HighlightOverlayOptions): string {
   const color = safeColor(options.color) ?? ringColor(target, options.chat);
   if (options.gradient !== true) {
@@ -233,12 +180,9 @@ function ringPaint(target: HTMLElement, options: HighlightOverlayOptions): strin
 }
 
 /**
- * A viewport-sized rectangle with a rounded rectangle cut out of it, as an SVG
- * path for `clip-path: path(evenodd, ...)`.
- *
- * Written in absolute commands and closed explicitly, because a `clip-path`
- * that fails to parse is not an error anywhere -- the declaration is dropped
- * and the scrim silently covers the target it was meant to reveal.
+ * A viewport-sized rectangle with a rounded rectangle cut out, as a path for
+ * `clip-path: path(evenodd, ...)`. Absolute commands, closed explicitly: an unparseable
+ * `clip-path` is dropped silently and the scrim would cover the target.
  */
 function holePath(x: number, y: number, width: number, height: number, radius: number): string {
   const r = Math.max(0, Math.min(radius, width / 2, height / 2));

@@ -10,8 +10,7 @@ type CheckedSetter = (this: HTMLElement, checked: boolean) => void;
 
 /** The original prototype setter for `prop` on `proto`. */
 function prototypeSetter(proto: object, prop: string): (this: HTMLElement, value: never) => void {
-  // Captured once at module load; DOM environments always define these, which
-  // is what makes the descriptor cast safe.
+  // Captured at module load; DOM environments always define these, so the cast is safe.
   const setter = (Object.getOwnPropertyDescriptor(proto, prop) as PropertyDescriptor).set;
   return setter as unknown as (this: HTMLElement, value: never) => void;
 }

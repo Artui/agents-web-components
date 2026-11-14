@@ -19,22 +19,14 @@ const PACKAGE_ACCENT = "#4f46e5";
 /**
  * The colour a highlight ring is drawn in when the caller passed none.
  *
- * In order: `--ag-ui-highlight-ring-color` on the target, the same token on
- * the chat, the target's `--ag-ui-accent`, the chat's resolved accent, the
- * package indigo. The target's accent stays above the chat's own default so a
- * host that themes `--ag-ui-accent` on its page keeps the rings it has; the
- * ring token sits above both so a host can keep the ring apart from the accent.
+ * In order: `--ag-ui-highlight-ring-color` on the target, the same token on the chat, the
+ * target's `--ag-ui-accent`, the chat's resolved accent, the package indigo. Only the
+ * chat's own accent is adjusted, since it follows the widget's scheme rather than the
+ * page's: it is held to 3:1 against the surface behind the target (see
+ * {@link surfaceBehind}) by trying the other half of its light-dark pair, then stepping
+ * toward black or white. Every other value is a host's choice and is drawn as given.
  *
- * Only the chat's own accent is adjusted, because it follows the widget's
- * scheme rather than the page's: a dark widget's near-white accent on a light
- * page all but disappears. It is held to 3:1 against the surface behind the
- * target (see {@link surfaceBehind}): the accent as resolved if it holds, else
- * the other half of the chat's light-dark pair, else the accent stepped toward
- * black or white. Every value above it is a choice someone made, and is drawn
- * as given.
- *
- * `chat` defaults to the most recently connected `<ag-ui-chat>`, the common
- * page with one widget. A page with two passes the one the ring speaks for.
+ * `chat` defaults to the most recently connected `<ag-ui-chat>`.
  */
 export function ringColor(target: HTMLElement, chat?: HTMLElement): string {
   const onTarget = readToken(target, RING_TOKEN);
@@ -181,20 +173,13 @@ function readToken(el: HTMLElement, name: string): string {
 }
 
 /**
- * The custom property `name` on `chat`, as the colour it computes to there, or
- * `""` when it is unset or not a colour.
+ * The custom property `name` on `chat`, as the colour it computes to there, or `""` when
+ * unset or not a colour.
  *
- * Resolved inside the chat rather than handed to the target, because the
- * chat's colours are `light-dark()` pairs and a custom property keeps them
- * unresolved: written onto an element in the page, the pair would pick its
- * half by the page's colour scheme, so a dark widget on a light page would ring
- * in its light-mode accent. A probe inside the shadow tree inherits the chat's
- * scheme, and its computed `color` is the resolved value.
- *
- * An element with no open shadow root (a host passing something other than a
- * chat) is read as it is, unresolved; that is the best it offers. `scheme`
- * forces one half of the pair, which is how a ring finds the chat's other
- * accent when its own scheme's is too faint against the page.
+ * Resolved by a probe inside the shadow tree, because the chat's colours are `light-dark()`
+ * pairs that a custom property keeps unresolved: on a page element the pair would follow the
+ * page's scheme. An element with no open shadow root is read as it is. `scheme` forces one
+ * half of the pair, to find the chat's other accent.
  */
 function resolveOn(chat: HTMLElement, name: string, scheme?: "light" | "dark"): string {
   const value = readToken(chat, name);
@@ -204,14 +189,11 @@ function resolveOn(chat: HTMLElement, name: string, scheme?: "light" | "dark"): 
   }
   const probe = document.createElement("span");
   probe.hidden = true;
-  // A scheme named here picks that half of a light-dark() pair instead of
-  // the one the chat's own scheme picks.
   if (scheme !== undefined) {
     probe.style.colorScheme = scheme;
   }
   probe.style.color = value;
-  // An unparseable value leaves the declaration empty, and the probe would
-  // then report the colour it inherits instead of saying it has none.
+  // An unparseable value leaves the declaration empty; the probe would report an inherited colour.
   if (probe.style.color === "") {
     return "";
   }

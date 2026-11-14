@@ -289,29 +289,17 @@ function interfaceMembers(name: string): string[] | null {
     .map((match) => match[1] ?? "");
 }
 
-/**
- * The parameters of an exported callable, or `null` when the source shape is
- * one this file does not read (a class, a `const` that is not an alias).
- */
-function signatureParams(name: string, seen: Set<string> = new Set()): string[] | null {
-  /* c8 ignore next 3 -- a cycle needs `export const a = b; export const b = a`,
-     which does not compile; the guard is here so a typo cannot hang the suite. */
-  if (seen.has(name)) {
-    return null;
-  }
-  seen.add(name);
+/** The parameters of an exported callable, or `null` for a source shape this file does not read. */
+function signatureParams(name: string): string[] | null {
   const callable = new RegExp(`export (?:async function|function|type) ${name}\\b[^(]*\\(`).exec(
     SOURCE,
   );
-  if (callable !== null) {
-    // The match ends on the opening parenthesis of the parameter list.
-    const open = callable.index + callable[0].length - 1;
-    return splitTopLevel(balanced(SOURCE, open, "(", ")"));
+  if (callable === null) {
+    return null;
   }
-  // `export const createStateHookTools = createPageStateTools;` — a deprecated
-  // alias documents the signature of what it points at.
-  const alias = new RegExp(`export const ${name} = ([A-Za-z][A-Za-z0-9_]*);`).exec(SOURCE);
-  return alias === null ? null : signatureParams(alias[1] ?? "", seen);
+  // The match ends on the opening parenthesis of the parameter list.
+  const open = callable.index + callable[0].length - 1;
+  return splitTopLevel(balanced(SOURCE, open, "(", ")"));
 }
 
 // --------------------------------------------------------------------------

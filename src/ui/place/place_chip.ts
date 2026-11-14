@@ -14,26 +14,36 @@ function keyOf(place: Place): string {
   return place.href ?? `${place.label}\u0000${place.detail ?? ""}`;
 }
 
+/** Draw `text` into `el`, hiding it when there is none. */
+function setText(el: HTMLElement, text: string | undefined): void {
+  el.textContent = text ?? "";
+  el.hidden = text === undefined;
+}
+
+/** A span with a class and the same-named part. */
+function span(name: string): HTMLElement {
+  const el = document.createElement("span");
+  el.className = name;
+  el.setAttribute("part", name);
+  return el;
+}
+
 /**
- * The "you are here" chip in the composer's tool row, and the context entry it
- * stands for. It holds the last place read and whether the user withheld it;
- * the element decides when to read.
+ * The "you are here" chip in the composer's tool row, and the context entry it stands for.
  *
- * The exclusion is keyed on the place, so it holds across turns on the same
- * place and lapses by itself when a different place is read. A read of no
- * place keeps it, so a page that briefly names nothing mid-navigation does not
- * undo what the user withheld. Nothing here persists, and nothing the host
- * sets can lift it.
+ * The exclusion is keyed on the place: it holds across turns on the same place and lapses
+ * when a different one is read. A read of no place keeps it, so a page naming nothing
+ * mid-navigation does not undo it. Nothing persists, and nothing the host sets can lift it.
  */
 export class PlaceChip {
   readonly element: HTMLElement = document.createElement("div");
   /** The same place for the collapsed bar, drawn by the same render. */
   readonly barElement: HTMLElement = document.createElement("span");
-  readonly #barLabel: HTMLElement = document.createElement("span");
-  readonly #barDetail: HTMLElement = document.createElement("span");
-  readonly #icon: HTMLElement = document.createElement("span");
-  readonly #label: HTMLElement = document.createElement("span");
-  readonly #detail: HTMLElement = document.createElement("span");
+  readonly #barLabel: HTMLElement = span("place-label");
+  readonly #barDetail: HTMLElement = span("place-detail");
+  readonly #icon: HTMLElement = span("place-icon");
+  readonly #label: HTMLElement = span("place-label");
+  readonly #detail: HTMLElement = span("place-detail");
   readonly #toggle: HTMLButtonElement = document.createElement("button");
   #place: Place | null = null;
   #excluded: string | null = null;
@@ -43,12 +53,6 @@ export class PlaceChip {
     this.element.className = "place";
     this.element.setAttribute("part", "place");
     this.element.hidden = true;
-    this.#icon.className = "place-icon";
-    this.#icon.setAttribute("part", "place-icon");
-    this.#label.className = "place-label";
-    this.#label.setAttribute("part", "place-label");
-    this.#detail.className = "place-detail";
-    this.#detail.setAttribute("part", "place-detail");
     this.#toggle.type = "button";
     this.#toggle.className = "place-toggle";
     this.#toggle.setAttribute("part", "place-toggle");
@@ -59,10 +63,6 @@ export class PlaceChip {
     this.barElement.className = "bar-place";
     this.barElement.setAttribute("part", "bar-place");
     this.barElement.hidden = true;
-    this.#barLabel.className = "place-label";
-    this.#barLabel.setAttribute("part", "place-label");
-    this.#barDetail.className = "place-detail";
-    this.#barDetail.setAttribute("part", "place-detail");
     this.barElement.append(this.#barLabel, this.#barDetail);
   }
 
@@ -128,12 +128,10 @@ export class PlaceChip {
       img.alt = "";
       this.#icon.replaceChildren(img);
     }
-    this.#label.textContent = place.label;
-    this.#detail.textContent = place.detail ?? "";
-    this.#detail.hidden = place.detail === undefined;
-    this.#barLabel.textContent = place.label;
-    this.#barDetail.textContent = place.detail ?? "";
-    this.#barDetail.hidden = place.detail === undefined;
+    setText(this.#label, place.label);
+    setText(this.#detail, place.detail);
+    setText(this.#barLabel, place.label);
+    setText(this.#barDetail, place.detail);
     this.element.title = fillUiString(
       shared ? this.#strings.placeShared : this.#strings.placeWithheld,
       { label: place.label },
