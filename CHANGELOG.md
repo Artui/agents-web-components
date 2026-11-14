@@ -18,4 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   export and defines nothing at import. Opt-in: a host imports `AgUiChat` and `defineChat` from
   `./chat`; bundle hosts change nothing.
 
+### Fixed
+
+- **The theme toggle's glyph follows a scheme set from outside**: setting or removing `theme` after the header is drawn (a host's own picker, a stored preference) now redraws the toggle, which kept offering the moon under `theme="dark"`. Only the toggle's own click redrew it before. A host opts in to nothing.
+
 [Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.0.0...HEAD
