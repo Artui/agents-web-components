@@ -157,6 +157,20 @@ describe("where the offer lands", () => {
     expect(placed.top).toBeGreaterThanOrEqual(wrapRect(el).top - SLACK);
   });
 
+  it("centres on the selection when the transcript sits away from the viewport edge", () => {
+    const el = mount();
+    el.style.marginLeft = "200px";
+    for (let i = 0; i < 6; i += 1) {
+      el.appendMessage("assistant", `answer number ${i} with words to select`);
+    }
+    const last = shadow(el).querySelectorAll(".message--assistant");
+    const rect = drag(el, firstText(last[last.length - 1] as HTMLElement), 7, 13);
+
+    const placed = offer(el).getBoundingClientRect();
+    expect(wrapRect(el).left).toBeGreaterThan(150);
+    expect(placed.left + placed.width / 2).toBeCloseTo(rect.left + rect.width / 2, 0);
+  });
+
   /**
    * The clamp only has anything to do once the offer is wider than the margin
    * the transcript already keeps, which the English label is not -- so these
