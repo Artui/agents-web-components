@@ -47,6 +47,9 @@ describe("the package entries", () => {
 
   it("builds the vendored bundle from the bundle entry alone", () => {
     expect(VENDORED_BUNDLE.entryPoints).toEqual(["src/bundle.ts"]);
-    expect(MANIFEST.exports["./bundle"]?.import).toBe(`./${VENDORED_BUNDLE.outfile}`);
+    expect(MANIFEST.exports["./bundle"]).toEqual({
+      types: "./dist/bundle.d.ts",
+      import: `./${VENDORED_BUNDLE.outfile}`,
+    });
   });
 });
