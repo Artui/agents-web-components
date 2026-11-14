@@ -92,14 +92,6 @@ export interface UiStrings {
   /** Error shown when the stream drops without a terminal AG-UI event. */
   connectionLost: string;
   /**
-   * Formerly the card text for a tool call that produced no result.
-   *
-   * @deprecated No longer drawn: such a call is now answered with
-   * {@link callNotFinished}, on its card and in the conversation alike. Kept so a
-   * string table that sets it still type-checks.
-   */
-  noResult: string;
-  /**
    * Tool-result content (and card text) for a call that never produced a result
    * and that nobody refused: the run was stopped or failed first, the page
    * reloaded, or no tool here answered it. Sent to the agent, so it must not say
@@ -424,7 +416,6 @@ export const DEFAULT_UI_STRINGS: UiStrings = {
   thoughtFor: "Thought for {seconds}s",
   stopped: "⏹ Stopped",
   connectionLost: "Connection lost",
-  noResult: "No result returned.",
   callNotFinished:
     "Not finished: the run ended or moved on before this tool call returned a result.",
   declinedAction: "User declined the action.",
