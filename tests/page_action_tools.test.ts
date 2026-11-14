@@ -36,23 +36,12 @@ describe("page action tools", () => {
   });
 
   describe("scroll_to", () => {
-    it("scrolls to the top of the page", async () => {
+    it.each(["top", "bottom"])("scrolls to the %s of the page", async (target) => {
+      const top = target === "top" ? 0 : document.body.scrollHeight;
       const spy = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
-      const result = await toolsByName([PAGE_ACTIONS.SCROLL])["scroll_to"]?.handler({
-        target: "top",
-      });
-      expect(spy).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
-      expect(result).toEqual({ scrolled: true, target: "top" });
-      spy.mockRestore();
-    });
-
-    it("scrolls to the bottom of the page", async () => {
-      const spy = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
-      const result = await toolsByName([PAGE_ACTIONS.SCROLL])["scroll_to"]?.handler({
-        target: "bottom",
-      });
-      expect(spy).toHaveBeenCalledWith({ top: document.body.scrollHeight, behavior: "smooth" });
-      expect(result).toEqual({ scrolled: true, target: "bottom" });
+      const result = await toolsByName([PAGE_ACTIONS.SCROLL])["scroll_to"]?.handler({ target });
+      expect(spy).toHaveBeenCalledWith({ top, behavior: "smooth" });
+      expect(result).toEqual({ scrolled: true, target });
       spy.mockRestore();
     });
 

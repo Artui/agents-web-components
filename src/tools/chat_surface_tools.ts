@@ -33,12 +33,8 @@ export interface ChatSurfaceReport {
    * Whether this page allows the panel to be moved at all: true for every
    * placement unless the host set `data-launcher-drag="false"`. It is the
    * page's setting alone and does not vary with the placement or `collapse-to`;
-   * whether this panel moves is {@link ChatSurfaceReport.movable}.
-   *
-   * Reported apart from `movable` only because the two reasons a move is
-   * refused call for different sentences: a host that turned dragging off is
-   * not the placement owning the position, and telling the user the second
-   * when the first is true is a plain falsehood.
+   * whether this panel moves is {@link ChatSurfaceReport.movable}. Kept apart because
+   * the two refusals need different sentences.
    */
   readonly draggable: boolean;
   /** Whether the panel currently covers the whole viewport. */
@@ -51,12 +47,8 @@ export interface ChatSurfaceReport {
     readonly height: number;
   };
   /**
-   * The part of the viewport the panel may rest in.
-   *
-   * With an origin, because it is not always the screen's: a host can reserve
-   * the edges its own chrome occupies, and an agent reasoning about the room
-   * to the left of `box.left` would otherwise be mixing two coordinate frames
-   * without being told there were two.
+   * The part of the viewport the panel may rest in, with an origin: a host can reserve
+   * edges for its own chrome, so it is not always the screen's.
    */
   readonly viewport: {
     readonly left: number;
@@ -71,46 +63,20 @@ export function isChatCorner(value: string): value is ChatCorner {
   return (CHAT_CORNERS as readonly string[]).includes(value);
 }
 
-/**
- * The part of the widget these tools drive.
- *
- * A narrow port rather than the element itself, because the element imports
- * this module to build its own tools and importing it back would be a cycle.
- * It also says exactly what the agent is allowed to reach, which is a shorter
- * list than the element's public surface.
- */
+/** The part of the widget these tools drive: a port, since the element imports this module. */
 export interface ChatSurface {
   describeSurface(): ChatSurfaceReport;
-  /**
-   * `announce` writes a notice into the transcript with an undo beside it.
-   * The tools always pass it: a panel that rearranges itself mid-conversation
-   * has to say so, and a host driving the same method is arranging its own
-   * page and needs no telling.
-   */
+  /** `announce` writes a transcript notice with an undo; the tools always pass it. */
   moveTo(corner: ChatCorner, options?: { readonly announce?: boolean }): boolean;
   setCollapsed(collapsed: boolean, options?: { readonly announce?: boolean }): void;
 }
 
 /**
- * Tools that let the agent move the panel it is speaking from.
+ * Tools that let the agent move or collapse the panel it is speaking from.
  *
- * This is the affordance nobody else can offer: every other assistant's chat
- * is a surface of its own, so there is nothing for it to be in the way *of*.
- * Ours is mounted in the page the user is working in, which is what makes
- * "let me move this aside so you can see the table" a sentence the agent can
- * act on rather than apologise for.
- *
- * **They report what happened, not what was asked.** A full-bleed panel on a
- * phone has nowhere to move to, and a placement that places itself owns its
- * position -- so `move_chat` answers `moved: false` with the reason and what
- * would work instead, rather than returning success on a panel that did not
- * budge. The same rule the page actions already follow: a tool reports that it
- * fired, not that it worked.
- *
- * `read_chat_surface` exists so the agent can ask before it acts rather than
- * discovering the answer through a failure. It is deliberately a tool and not
- * ambient context: a snapshot the agent chose to take is honest about being
- * one, and it needs no channel that does not already exist.
+ * They report what happened, not what was asked: `move_chat` answers `moved: false`
+ * with the reason when the panel cannot move, rather than succeeding on a panel that
+ * did not budge.
  */
 export function createChatSurfaceTools(surface: ChatSurface): ClientTool[] {
   return [
@@ -151,11 +117,7 @@ export function createChatSurfaceTools(surface: ChatSurface): ClientTool[] {
       handler: (args) => {
         const asked = String(args["corner"] ?? "");
         const report = surface.describeSurface();
-        // Checked, not cast. `required` is advisory and a model can answer
-        // with a corner that does not exist; `moveTo` would then match none of
-        // its edge tests, send the panel bottom-right, and this would report
-        // success for the corner it was asked for -- so the agent tells the
-        // user it moved the chat somewhere it did not.
+        // `required` is advisory: an unknown corner would send the panel bottom-right yet report success.
         if (!isChatCorner(asked)) {
           return {
             moved: false,
@@ -163,8 +125,7 @@ export function createChatSurfaceTools(surface: ChatSurface): ClientTool[] {
           };
         }
         if (!report.movable) {
-          // Named rather than thrown: this is a fact about the surface the
-          // agent can act on -- minimise instead -- not a malformed call.
+          // A fact the agent can act on (minimise instead), not a malformed call.
           return {
             moved: false,
             reason: report.fullBleed
@@ -213,8 +174,7 @@ export function createChatSurfaceTools(surface: ChatSurface): ClientTool[] {
         [X_SUMMARY_KEY]: "Restore the chat",
       },
       handler: () => {
-        // No notice: the user can see the panel come back, and a notice about
-        // something visibly happening is noise.
+        // No notice: the user sees the panel come back.
         surface.setCollapsed(false);
         return { restored: true };
       },

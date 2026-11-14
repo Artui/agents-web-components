@@ -22,7 +22,11 @@ beforeEach(() => {
   vi.useFakeTimers();
   written = [];
   Object.defineProperty(navigator, "clipboard", {
-    value: { writeText: (text: string) => (written.push(text), Promise.resolve()) },
+    value: {
+      writeText: async (text: string) => {
+        written.push(text);
+      },
+    },
     configurable: true,
   });
 });

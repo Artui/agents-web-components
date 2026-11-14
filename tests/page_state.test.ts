@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  createPageStateTools,
-  createStateHookTools,
-  type PageState,
-  type StateHook,
-} from "../src/tools/page_state.js";
+import { createPageStateTools } from "../src/tools/page_state.js";
 
 describe("createPageStateTools", () => {
   it("creates a read-only tool when no write is given", () => {
@@ -41,20 +36,5 @@ describe("createPageStateTools", () => {
       "x-destructive": true,
       "x-summary": "Update x",
     });
-  });
-});
-
-describe("the deprecated aliases", () => {
-  it("createStateHookTools is the same function", () => {
-    // A consumer on the old spelling keeps working; the rename is a signal,
-    // not a break.
-    expect(createStateHookTools).toBe(createPageStateTools);
-  });
-
-  it("StateHook still types a binding", () => {
-    const binding: StateHook = { name: "cart", read: () => 1 };
-    const alsoValid: PageState = binding;
-
-    expect(createStateHookTools(alsoValid)[0]?.name).toBe("read_cart");
   });
 });

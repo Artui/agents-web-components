@@ -99,7 +99,6 @@ import {
   SessionStorageStore,
   type ThreadMeta,
   threadTitleFrom,
-  writeStoredItem,
 } from "./conversation_store.js";
 import { type AgentFactory, createHttpAgent } from "./create_http_agent.js";
 import type { BarHeightDetail } from "./events/bar_height_detail.js";
@@ -2141,7 +2140,7 @@ export class AgUiChat extends HTMLElement {
       this.removeAttribute("collapsed");
     }
     this.#syncDock();
-    writeStoredItem(this.#storage.key(COLLAPSED_KEY), collapsed ? "1" : "0");
+    this.#storage.writeSession(COLLAPSED_KEY, collapsed ? "1" : "0");
     // Expanding reads the thread on screen; other threads keep their marks.
     // Reported on every toggle, as before, with the threads it cleared.
     this.#unreadChanged(this.#markSeen());

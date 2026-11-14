@@ -61,9 +61,7 @@ export interface ToolExecution {
    *
    * Distinct from {@link error}, which is a *message* and only exists for the
    * one failure shape that produces one. A refusal has no error and is still
-   * not a success, and that is the case this field exists for: without it a
-   * declined call was persisted as an ordinary result and came back from a
-   * reload as a green card.
+   * not a success, and that is the case this field exists for.
    */
   outcome?: ToolOutcome;
   /**
@@ -138,11 +136,6 @@ export interface AgUiClientHandlers {
    * states the outcome at the top level of the event, and 1.0 strips that key
    * before any subscriber runs, so from such a server this is `undefined` and
    * the card settles as done.
-   *
-   * Added as a third parameter rather than as a new callback, so an
-   * implementation written against the two-parameter form still satisfies this
-   * interface and still behaves exactly as it did — which is the same
-   * backwards-compatibility promise the wire field makes.
    */
   onToolResult(toolCallId: string, content: string, outcome?: unknown): void;
   /**
@@ -419,18 +412,15 @@ export class AgUiClient {
    * {@link messageAttachments}.
    */
   async send(content: string, attachments: readonly AttachmentRef[] = []): Promise<void> {
-    // A new interaction, so the Stop of the one before it is forgotten here --
-    // ahead of the save below, which is the host's store. Forgotten as the run
-    // began instead, a Stop that store made (a new chat started from the save)
-    // was erased before anything read it, and the turn went out regardless,
-    // into the conversation being left and with all of its history.
+    // A new interaction, so the Stop of the one before it is forgotten here,
+    // ahead of the save below: that save is the host's store, and a Stop it
+    // makes (a new chat started from the save) has to stop this turn.
     this.#cancelled = false;
     // In `metadata` because it is the one field on a message `@ag-ui/client`
     // declares open by key. 1.0 strips every undeclared key from the input it
-    // sends, so refs at the top level of the message -- where every release
-    // before 1.0 put them -- are removed with a console warning and the server
-    // is never told a file was attached. No metadata at all without refs: an
-    // empty object would put a field on every plain message that says nothing.
+    // sends, so refs at the top level of the message are removed with a
+    // console warning and the server is never told a file was attached. No metadata at all
+    // without refs: an empty object would put a field on every plain message that says nothing.
     const message: Message = {
       id: randomUUID(),
       role: "user",
@@ -481,9 +471,8 @@ export class AgUiClient {
     const kept = messages.slice(0, lastUser + 1);
     // Saved before the history is shortened, so a store that throws leaves it
     // as it was and the throw reaches the caller, as a refused save does from
-    // send(). Shortened first, the refusal left this client without the answer
-    // while the caller's transcript still showed it, and the next request then
-    // asked a follow-up about something the agent was never told it had said.
+    // send(), rather than leaving this client without an answer the caller's
+    // transcript still shows.
     // Handed over directly rather than through #persist, which saves the list
     // the agent holds, because the agent does not hold this one yet.
     this.#onPersist(kept);
@@ -497,9 +486,7 @@ export class AgUiClient {
    * message; it continues the conversation already in history.
    */
   async resume(): Promise<void> {
-    // A new interaction, as in send(). No host code runs between here and the
-    // loop, so for a resume this is the same moment the run used to forget a
-    // Stop at; it moved here so that both ways in forget it in one place.
+    // A new interaction, as in send(); no host code runs between here and the loop.
     this.#cancelled = false;
     await this.#run();
   }
@@ -666,23 +653,6 @@ export class AgUiClient {
    */
   #persist(): void {
     this.#onPersist(this.#agent.messages);
-  }
-
-  /**
-   * The history in the form a save writes it, which is now {@link messages}
-   * itself.
-   *
-   * It differed while this client kept how each tool call ended in a side table
-   * and annotated a copy for the store, because `@ag-ui/client` 0.x kept nothing
-   * but five named fields of a result. 1.0 folds a result's `metadata` onto the
-   * message it appends, so the outcome is on the message and there is no copy
-   * left to make.
-   *
-   * @deprecated Read {@link messages}. Kept so a caller written against the
-   * getter keeps compiling and gets the same list.
-   */
-  get annotatedMessages(): readonly Message[] {
-    return this.messages;
   }
 
   async #runLoop(): Promise<void> {
@@ -864,7 +834,7 @@ export class AgUiClient {
         // In the event's `metadata`, the one place on it `@ag-ui/client` 1.0
         // declares open by key. Its enforcement stage strips every undeclared
         // key before a subscriber runs, so an `outcome` stated at the top level
-        // of the event -- where servers wrote it for 0.x -- never gets here.
+        // of the event never gets here.
         //
         // Nothing is recorded for the transcript: after this returns, the
         // client builds the tool message and folds the event's metadata onto
@@ -900,9 +870,6 @@ export class AgUiClient {
       onActivityDeltaEvent({ event }) {
         pendingDeltas.add(event.messageId);
       },
-      // Emitted after the client has written the patched messages, which is the
-      // first moment the result exists. Only the ids marked above are looked at,
-      // so an ordinary text delta does not walk the transcript.
       onCustomEvent({ event }) {
         h.onCustomEvent(event.name, event.value);
       },
@@ -925,10 +892,10 @@ export class AgUiClient {
       onMessagesSnapshotEvent({ event }) {
         h.onMessagesSnapshot(event.messages as readonly Message[]);
       },
+      // Emitted after the client has written the patched messages, which is the
+      // first moment the result exists. Only the ids marked above are looked at,
+      // so an ordinary text delta does not walk the transcript.
       onMessagesChanged({ messages }) {
-        if (pendingDeltas.size === 0) {
-          return;
-        }
         for (const id of pendingDeltas) {
           const message = messages.find((entry) => entry.id === id);
           if (message !== undefined && message.role === "activity") {

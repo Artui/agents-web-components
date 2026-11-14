@@ -70,16 +70,12 @@ describe("createRouteTools", () => {
     expect(calls).toEqual(["/admin/shop/book/9/change/?tab=meta"]);
   });
 
-  it("navigate_to_route throws when a required path param is missing", () => {
+  it.each([
+    ["missing", {}],
+    ["empty", { pk: "" }],
+  ])("navigate_to_route throws when a required path param is %s", (_case, params) => {
     const [, nav] = tools();
-    expect(() => nav?.handler({ route_id: "book", params: {} })).toThrow(
-      'route "book" requires path param "pk"',
-    );
-  });
-
-  it("navigate_to_route throws when a path param is empty", () => {
-    const [, nav] = tools();
-    expect(() => nav?.handler({ route_id: "book", params: { pk: "" } })).toThrow(
+    expect(() => nav?.handler({ route_id: "book", params })).toThrow(
       'route "book" requires path param "pk"',
     );
   });
