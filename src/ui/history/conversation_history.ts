@@ -273,10 +273,9 @@ export class ConversationHistory {
     // The element clears the conversation through here, so a continuation
     // still saving afterwards learns the conversation is no longer this one.
     this.#cleared += 1;
-    // And so does a restore still loading or replaying it. Only a newer restore
-    // used to stop one, so New chat during a slow load drew the conversation
-    // being left into the new one once the store answered, and handed it to the
-    // new chat's client as the history its first turn would carry.
+    // A restore still loading or replaying must stop too, or New chat during a
+    // slow load would draw the conversation being left into the new one and hand
+    // it to the new chat's client as its history.
     this.#generation += 1;
     // A host's send waiting on that restore is addressed to the conversation
     // just cleared. The element's Stop has let go of it already; this wakes it
@@ -873,11 +872,9 @@ export class ConversationHistory {
    * it from then on: its resume clears it, and when it is stopped in turn this
    * same rule decides.
    *
-   * The newer restore's case used to forget it too, on the grounds that the
-   * newer one had read it and would resume once from that copy. It did until
-   * the element left the page while the newer one loaded: that one stood down
-   * keeping the checkpoint for the reconnect, as a departure should, but the
-   * store no longer held it, so the element came back with no run to resume.
+   * A newer restore's case does not forget it: if the element leaves the page
+   * while the newer one loads, that one stands down keeping the checkpoint for
+   * the reconnect, and a store that no longer held it would leave no run to resume.
    *
    * Written to the store and the thread it was read from. After a handover
    * that is the previous principal's: the built-in store's clear is a removal
