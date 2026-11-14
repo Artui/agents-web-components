@@ -3415,9 +3415,9 @@ describe("AgUiChat — answer group", () => {
     it("does not seed theme from an un-namespaced key on a namespaced mount", () => {
       sessionStorage.setItem("agents-web-components:theme", "dark");
       const el = mount({ endpoint: "/agent/", "data-theme-toggle": "" });
-      expect(el.getAttribute("theme")).not.toBe("dark");
+      expect(el.getAttribute("theme")).toBeNull();
       el.toggleTheme();
-      expect(sessionStorage.getItem("agents-web-components:theme:/agent/")).not.toBeNull();
+      expect(sessionStorage.getItem("agents-web-components:theme:/agent/")).toBe("dark");
     });
   });
 });

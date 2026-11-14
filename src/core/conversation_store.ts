@@ -164,7 +164,7 @@ export function writeStoredItem(key: string, value: string): void {
   }
 }
 
-/** The storage-key root for a namespace; `""` is the pre-namespacing global root. */
+/** The storage-key root for a namespace; `""` is the root of an element with nothing to key on. */
 function rootFor(namespace: string): string {
   return namespace === "" ? STORAGE_ROOT : `${STORAGE_ROOT}@${namespace}`;
 }
