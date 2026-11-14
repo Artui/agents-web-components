@@ -1,4 +1,4 @@
-// Public surface re-exports. Per CLAUDE.md, this is the only re-export point.
+// The package root. The element itself is the `./chat` entry (src/chat.ts).
 
 export {
   ATTACHMENT_EVENT,
@@ -36,7 +36,6 @@ export {
 } from "./constants.js";
 export type { ActivityRegistration } from "./core/activity_registration.js";
 export type { ActivityRenderer } from "./core/activity_renderer.js";
-export { AgUiChat } from "./core/ag_ui_chat.js";
 export {
   AgUiClient,
   type AgUiClientConfig,
@@ -62,7 +61,6 @@ export {
   createHttpAgent,
   type HttpAgentOptions,
 } from "./core/create_http_agent.js";
-export { defineChat } from "./core/define_chat.js";
 export type { AttachmentsDetail } from "./core/events/attachments_detail.js";
 export type { BarHeightDetail } from "./core/events/bar_height_detail.js";
 export type { CustomAgentDetail } from "./core/events/custom_agent_detail.js";
