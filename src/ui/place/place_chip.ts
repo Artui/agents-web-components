@@ -20,14 +20,6 @@ function setText(el: HTMLElement, text: string | undefined): void {
   el.hidden = text === undefined;
 }
 
-/** A span with a class and the same-named part. */
-function span(name: string): HTMLElement {
-  const el = document.createElement("span");
-  el.className = name;
-  el.setAttribute("part", name);
-  return el;
-}
-
 /**
  * The "you are here" chip in the composer's tool row, and the context entry it stands for.
  *
@@ -39,11 +31,11 @@ export class PlaceChip {
   readonly element: HTMLElement = document.createElement("div");
   /** The same place for the collapsed bar, drawn by the same render. */
   readonly barElement: HTMLElement = document.createElement("span");
-  readonly #barLabel: HTMLElement = span("place-label");
-  readonly #barDetail: HTMLElement = span("place-detail");
-  readonly #icon: HTMLElement = span("place-icon");
-  readonly #label: HTMLElement = span("place-label");
-  readonly #detail: HTMLElement = span("place-detail");
+  readonly #barLabel: HTMLElement = document.createElement("span");
+  readonly #barDetail: HTMLElement = document.createElement("span");
+  readonly #icon: HTMLElement = document.createElement("span");
+  readonly #label: HTMLElement = document.createElement("span");
+  readonly #detail: HTMLElement = document.createElement("span");
   readonly #toggle: HTMLButtonElement = document.createElement("button");
   #place: Place | null = null;
   #excluded: string | null = null;
@@ -53,6 +45,12 @@ export class PlaceChip {
     this.element.className = "place";
     this.element.setAttribute("part", "place");
     this.element.hidden = true;
+    this.#icon.className = "place-icon";
+    this.#icon.setAttribute("part", "place-icon");
+    this.#label.className = "place-label";
+    this.#label.setAttribute("part", "place-label");
+    this.#detail.className = "place-detail";
+    this.#detail.setAttribute("part", "place-detail");
     this.#toggle.type = "button";
     this.#toggle.className = "place-toggle";
     this.#toggle.setAttribute("part", "place-toggle");
@@ -63,6 +61,10 @@ export class PlaceChip {
     this.barElement.className = "bar-place";
     this.barElement.setAttribute("part", "bar-place");
     this.barElement.hidden = true;
+    this.#barLabel.className = "place-label";
+    this.#barLabel.setAttribute("part", "place-label");
+    this.#barDetail.className = "place-detail";
+    this.#barDetail.setAttribute("part", "place-detail");
     this.barElement.append(this.#barLabel, this.#barDetail);
   }
 
