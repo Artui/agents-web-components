@@ -16,7 +16,8 @@
  *
  * ## What is checked
  *
- * - Every symbol `src/index.ts` re-exports is named in the API surface section.
+ * - Every symbol an entry file (`src/index.ts`, `src/chat.ts`) re-exports is
+ *   named in the API surface section.
  * - Every `chat.x` / `AgUiChat.x` the README writes anywhere is a real public
  *   member of the element (or one of the three inherited DOM members it uses).
  * - The Methods and Properties lists are *complete* — every public method and
@@ -48,7 +49,7 @@
  *   with an `extends` clause, since resolving one means resolving a type graph.
  * - **Defaults, units, and nullability.** `MAX_QUOTE_CHARS` being documented as
  *   500 is not verified against the constant.
- * - **Anything outside `AgUiChat` and `src/index.ts`** — CSS custom properties,
+ * - **Anything outside `AgUiChat` and the entry files** — CSS custom properties,
  *   events, slots and parts. Parts have their own gate next door
  *   (`readme_parts.test.ts`); the rest have none.
  */
@@ -58,7 +59,10 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { STYLES } from "../src/ui/styles.js";
 
-const INDEX = readFileSync("src/index.ts", "utf8");
+/** The entry files the library build publishes; `src/bundle.ts` only re-exports them. */
+const ENTRIES = ["src/index.ts", "src/chat.ts"]
+  .map((path) => readFileSync(path, "utf8"))
+  .join("\n");
 const README = readFileSync("README.md", "utf8");
 const ELEMENT = readFileSync("src/core/ag_ui_chat.ts", "utf8");
 
@@ -384,10 +388,10 @@ function apiRows(): ApiRow[] {
   return rows;
 }
 
-/** Every name `src/index.ts` re-exports, values and types alike. */
+/** Every name an entry file re-exports, values and types alike. */
 function exported(): string[] {
   const names = new Set<string>();
-  for (const block of INDEX.matchAll(/export\s+(?:type\s+)?\{([^}]*)\}\s+from/g)) {
+  for (const block of ENTRIES.matchAll(/export\s+(?:type\s+)?\{([^}]*)\}\s+from/g)) {
     for (const entry of (block[1] ?? "").split(",")) {
       // `type Foo` and `Foo as Bar` both reduce to the name a consumer imports.
       const name =
@@ -407,7 +411,7 @@ function exported(): string[] {
 // --------------------------------------------------------------------------
 
 describe("the README's public API surface", () => {
-  it("names every symbol the package root re-exports", () => {
+  it("names every symbol the package entries re-export", () => {
     // A cell may list several names at once, so each backticked token is split
     // again on the slash the rows use to group them.
     const known = new Set(

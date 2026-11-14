@@ -85,6 +85,7 @@ The package ships two builds (see [`package.json` exports](package.json)):
 | Entry | What it is | When to use |
 | --- | --- | --- |
 | `@artooi/agents-web-components` | ESM library build; `@ag-ui/*` stay **external** | You bundle the app yourself (Vite, webpack, esbuild) and want to dedupe `@ag-ui/*`. |
+| `@artooi/agents-web-components/chat` | The same library build's `<ag-ui-chat>` entry: `AgUiChat` and `defineChat` | Beside the root entry; the two share one module instance, so import from both freely. |
 | `@artooi/agents-web-components/bundle` | ESM bundle with `@ag-ui/*` **inlined**, minified | Drop in via a single `<script type="module">` with no build step. |
 
 ### The vendored-bundle story
@@ -104,15 +105,12 @@ Drop the element into your page and register the tools the agent may call:
 
 ```html
 <script type="module">
-  import {
-    defineChat,
-    fillField,
-    clickElement,
-    X_DESTRUCTIVE_KEY,
-  } from "@artooi/agents-web-components";
+  import { fillField, clickElement, X_DESTRUCTIVE_KEY } from "@artooi/agents-web-components";
+  import { defineChat } from "@artooi/agents-web-components/chat";
 
-  // Register the <ag-ui-chat> Custom Element. Idempotent and SSR-safe — it is an
-  // explicit call, not an import side effect, so the package stays tree-shakeable.
+  // Register the <ag-ui-chat> Custom Element. An explicit call, not an import
+  // side effect, so importing the package defines nothing. Idempotent; it throws
+  // if another class already holds the tag (a second copy of the element).
   defineChat();
 
   const chat = document.querySelector("ag-ui-chat");
@@ -3266,15 +3264,17 @@ The server side is the matching half: the agent reads bytes by ref id, so point 
 
 ## Public API surface
 
-Everything below is re-exported from the package root ([`src/index.ts`](src/index.ts)) — the only
-re-export point. Internal modules import from leaf paths.
+Everything below is re-exported from the package root ([`src/index.ts`](src/index.ts)), except
+`AgUiChat` and `defineChat`, which are the `./chat` entry. The
+vendored bundle ([`src/bundle.ts`](src/bundle.ts)) carries both. Internal modules import from leaf
+paths.
 
 ### Element & registration
 
 | Export | Kind | Summary |
 | --- | --- | --- |
-| `AgUiChat` | class | The `<ag-ui-chat>` Custom Element. |
-| `defineChat()` | function | Idempotently register the element. |
+| `AgUiChat` | class | The `<ag-ui-chat>` Custom Element (`./chat`). |
+| `defineChat()` | function | Register the element (`./chat`); a no-op if it is already registered, and throws if another class holds the tag. |
 | `MessageRole` | type | Role of a rendered chat message. |
 | `SubmitDetail` | type | `detail` shape of the submit event. |
 | `ThreadDetail` | type | `detail` shape of the `ag-ui-thread` event (`{ threadId, previousThreadId, reason }`). |
