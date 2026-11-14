@@ -193,9 +193,9 @@ export class StorageScope {
    * than to no persistence at all. The read above prefers the durable copy, so
    * a tab that has both cannot be shadowed by its own stale one.
    *
-   * Neither write is worth an exception. Losing where the panel sat is not
-   * worth a warning either -- unlike the transcript, which says so once,
-   * because losing that loses the conversation on the next reload.
+   * Neither write is worth an exception. A refused per-tab write warns once
+   * per scope rather than once per write, because the size path writes on
+   * every step.
    */
   writePreference(base: string, value: string): void {
     const key = this.key(base);

@@ -312,17 +312,18 @@ describe("SessionStorageStore", () => {
     });
 
     it("says so once per adopt, however many keys it moves", () => {
-      const source = new SessionStorageStore("app-a");
-      source.saveMessages("t1", [{ role: "user", content: "x" }] as never);
+      // Two keys under one namespace, one under the other: once per call is two
+      // warnings, where once per key would be three and once per page one.
+      new SessionStorageStore("app-a").saveMessages("t1", [
+        { role: "user", content: "x" },
+      ] as never);
+      new SessionStorageStore("app-x").setActiveThread("t1");
       const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
       failEveryWrite();
 
       SessionStorageStore.adopt("app-a", "app-b");
-      SessionStorageStore.adopt("app-b", "app-c");
-      new SessionStorageStore("app-a").setActiveThread("t1");
+      SessionStorageStore.adopt("app-x", "app-y");
 
-      // The first adopt warns once for every write it was refused, the second
-      // finds nothing left to move, and the store is an owner of its own.
       expect(warn).toHaveBeenCalledTimes(2);
       vi.unstubAllGlobals();
       warn.mockRestore();
