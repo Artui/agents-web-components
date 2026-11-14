@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { ELEMENT_TAG, ICON_MOON, ICON_SUN } from "../../src/constants.js";
 import type { AgUiChat } from "../../src/core/ag_ui_chat.js";
 import { defineChat } from "../../src/core/define_chat.js";
@@ -54,6 +54,7 @@ describe("the theme toggle's glyph follows a scheme set from outside", () => {
     { from: "soft dark", to: null, glyph: ICON_MOON },
   ])("redraws when theme goes from $from to $to", ({ from, to, glyph }) => {
     const el = mount(from);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     expect(getComputedStyle(el).colorScheme).toBe(from?.includes("dark") ? "dark" : "light");
     if (to === null) {
       el.removeAttribute("theme");
@@ -62,6 +63,8 @@ describe("the theme toggle's glyph follows a scheme set from outside", () => {
     }
     expect(getComputedStyle(el).colorScheme).toBe(glyph === ICON_SUN ? "dark" : "light");
     expect(shown(el)).toBe(shape(glyph));
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
   });
 
   it("still flips the glyph on the toggle's own click", () => {

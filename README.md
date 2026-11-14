@@ -223,7 +223,7 @@ another origin, add `credentials="include"` too; see
 | `data-paste-attach` | — | When to turn a long text paste into an attachment instead of composer text: absent for the 5000-character default, `off` to never, or a positive number of characters. Only acts where `data-attachments-url` (or a custom `uploadHandler`) gives it somewhere to go. |
 | `data-starters` | — | JSON array of prompts offered on an empty transcript, e.g. `'["Summarise this page"]'`. Fallback content for `slot="empty"`, so slotting your own replaces them. Shares the four-prompt and 120-character limits with the suggestion chips a run pushes. Read once at connect. |
 | `data-start-open` | — | Mount the panel open on a first visit. The corner placements otherwise rest at their launcher, the way every corner chat does; a stored choice wins over both. The placements that place themselves are unaffected. |
-| `theme` | — | Styling: an optional theme name (`quiet` (default) / `soft` / `ledger` / `classic`, or a word of your own) and an optional scheme (`light` (default) / `dark` / `auto`), in any order, e.g. `soft dark`. Live: the [header theme toggle](#themes)'s glyph follows a scheme written after connect. See [Themes](#themes). |
+| `theme` | — | Styling: an optional theme name (`quiet` (default) / `soft` / `ledger` / `classic`, or a word of your own) and an optional scheme (`light` (default) / `dark` / `auto`), in any order, e.g. `soft dark`. Live: the [header theme toggle](#theme-toggle)'s glyph follows a scheme written after connect. See [Themes](#themes). |
 | `density` | — | CSS-only: `comfortable` (default) / `compact`. |
 | `placement` | — | CSS-only: `floating` (default) / `sidebar` / `page` / `embedded` / `full`. `full` fills the viewport at every width, inside the safe-area insets; the `--ag-ui-inset`, size and `--ag-ui-panel-radius` tokens still apply. |
 
@@ -4241,7 +4241,8 @@ persists the choice per tab. Only the scheme changes: `soft` becomes `soft dark`
 becomes `soft light`, and `auto` becomes the opposite of what the system shows, an explicit
 choice. With no scheme word the toggle flips the scheme the panel is drawn in, so a host rule
 that sets the element's `color-scheme` (to follow the page's own dark mode) is flipped from,
-and the written word then holds against that rule. Only the scheme is saved, too:
+and the written word then holds against that rule. The toggle's glyph follows a `theme` the host
+writes later too, so a host's own picker and the toggle never disagree. Only the scheme is saved, too:
 on the next load it is put beside whatever theme name the markup carries, so `dark` chosen on a
 `soft` page restores as `classic dark` on a `classic` one. Off by default so it never competes with
 a host-supplied control.
