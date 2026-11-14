@@ -109,7 +109,6 @@ describe("bounds on what is cheap enough to draw", () => {
     // `Array.prototype.some` skips holes, so this used to pass validation and
     // render a chart with no labels, reading as a rendering bug.
     const sparse = ["a", "b"];
-    // biome-ignore lint/performance/noDelete: creating a hole is the point
     delete (sparse as unknown as Record<number, string>)[1];
     expect(chartSpecFrom({ ...ok, labels: sparse })).toBeNull();
   });
