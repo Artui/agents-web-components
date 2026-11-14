@@ -18,8 +18,8 @@ import { defineChat } from "../../src/core/define_chat.js";
 const DESKTOP = { width: 1280, height: 800 };
 const PHONE = { width: 500, height: 720 };
 const ID = "drag-size";
-const SIZE_KEY = `ag-ui-chat:size:${ID}`;
-const LAUNCHER_KEY = `ag-ui-chat:launcher:${ID}`;
+const SIZE_KEY = `agents-web-components:size:${ID}`;
+const LAUNCHER_KEY = `agents-web-components:launcher:${ID}`;
 
 function mount(attrs: Record<string, string> = {}, style = ""): AgUiChat {
   const el = document.createElement(ELEMENT_TAG) as AgUiChat;

@@ -1,6 +1,9 @@
 // The package's single home for enums and constant-like values, and per
 // CLAUDE.md the only file allowed to export multiple symbols.
 
+/** The root every sessionStorage and localStorage key this package writes starts with. */
+export const STORAGE_ROOT = "agents-web-components";
+
 /** The Custom Element tag name registered by {@link defineChat}. */
 export const ELEMENT_TAG = "ag-ui-chat";
 

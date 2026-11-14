@@ -221,7 +221,7 @@ describe("restored history", () => {
   it("replays a skill load as a notice, not a tool card", async () => {
     // A reload must not resurrect the raw `load_capability` card the live path
     // deliberately replaced — the transcript should look the same either way.
-    const store = new SessionStorageStore();
+    const store = new SessionStorageStore("/agent/");
     const tid = store.threadId();
     store.saveMessages(tid, [
       { id: "1", role: "user", content: "summarise this" },
@@ -250,7 +250,7 @@ describe("restored history", () => {
   });
 
   it("still replays ordinary tool calls as cards", async () => {
-    const store = new SessionStorageStore();
+    const store = new SessionStorageStore("/agent/");
     const tid = store.threadId();
     store.saveMessages(tid, [
       { id: "1", role: "user", content: "count" },

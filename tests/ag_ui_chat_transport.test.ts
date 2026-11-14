@@ -132,7 +132,7 @@ afterEach(() => {
  * if the keys change.
  */
 function seedUsedThread(): void {
-  const store = new SessionStorageStore();
+  const store = new SessionStorageStore("/agent/");
   store.saveMessages(store.threadId(), [{ id: "m1", role: "user", content: "earlier" }] as never);
 }
 

@@ -423,7 +423,7 @@ describe("the bottom bar (real browser)", () => {
 
   it("opens at the dock from a stored spot that is not one", async () => {
     for (const store of [localStorage, sessionStorage]) {
-      store.setItem("ag-ui-chat:dock:corrupt", "{not json");
+      store.setItem("agents-web-components:dock:corrupt", "{not json");
     }
     const el = mount({ id: "corrupt", "data-start-open": "" });
     await settle();

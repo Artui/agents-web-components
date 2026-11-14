@@ -797,7 +797,9 @@ describe("the theme toggle (real browser)", () => {
 
     /** The saved scheme, under whatever namespace the element's endpoint gives it. */
     const saved = (): string | null => {
-      const key = Object.keys(localStorage).find((name) => name.startsWith("ag-ui-chat:theme"));
+      const key = Object.keys(localStorage).find((name) =>
+        name.startsWith("agents-web-components:theme"),
+      );
       return key === undefined ? null : localStorage.getItem(key);
     };
 
@@ -849,7 +851,7 @@ describe("the theme toggle (real browser)", () => {
 
     it("restores a saved light over a host rule that draws the element dark", () => {
       pageRule(HOST_DARK);
-      sessionStorage.setItem("ag-ui-chat:theme", "light");
+      sessionStorage.setItem("agents-web-components:theme:/agent/", "light");
       const el = mount({ "data-theme-toggle": "" });
       expect(el.getAttribute("theme")).toBe("light");
       expect(background(el, ".chat")).toEqual(QUIET_LIGHT_BG);

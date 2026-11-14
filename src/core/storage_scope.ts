@@ -41,7 +41,7 @@ export class StorageScope {
   readonly #host: StorageScopeHost;
   // Per-instance suffix for the origin-scoped storage keys (collapsed / theme /
   // size), so two instances on one origin don't clobber each other. Empty ⇒ the
-  // pre-namespacing global keys (back-compat). Resolved on connect; the
+  // root keys, for an element with nothing to key on. Resolved on connect; the
   // conversation adds `user-key` on top of it, see conversationNamespace.
   #storageNs = "";
   // The entry this element put in CLAIMED_NAMESPACES, to take back out on
@@ -145,17 +145,9 @@ export class StorageScope {
     return this.#storageNs === "" ? base : `${base}:${this.#storageNs}`;
   }
 
-  /**
-   * Read a namespaced origin-scoped value, falling back once to the legacy
-   * pre-namespacing global key (left in place) so an existing collapsed/theme
-   * preference survives the upgrade.
-   */
+  /** Read a namespaced origin-scoped value. */
   readScopedItem(base: string): string | null {
-    const scoped = sessionStorage.getItem(this.key(base));
-    if (scoped !== null || this.#storageNs === "") {
-      return scoped;
-    }
-    return sessionStorage.getItem(base);
+    return sessionStorage.getItem(this.key(base));
   }
 
   /**
@@ -174,8 +166,8 @@ export class StorageScope {
    * across would pop the panel open on every new tab because it was opened
    * once, somewhere else.
    *
-   * Falls back to the session value it used to be written to, so an existing
-   * position survives the upgrade rather than resetting once.
+   * Falls back to the per-tab copy, which is all a browser that denies
+   * `localStorage` has.
    */
   readPreference(base: string): string | null {
     try {
@@ -260,7 +252,7 @@ export class StorageScope {
   #claimNamespace(): string {
     const id = this.#host.id();
     const preferred = id !== "" ? id : this.#host.endpoint();
-    // Nothing to key on. The pre-namespacing global keys, as before: an element
+    // Nothing to key on. The root keys: an element
     // with neither an id nor an endpoint cannot send anything, so what it would
     // be claiming is an empty conversation.
     if (preferred === "") {

@@ -16,8 +16,8 @@ import { defineChat } from "../../src/core/define_chat.js";
 const DESKTOP = { width: 1280, height: 800 };
 const PHONE = { width: 390, height: 844 };
 const ID = "undo";
-const LAUNCHER_KEY = `ag-ui-chat:launcher:${ID}`;
-const DOCK_KEY = `ag-ui-chat:dock:${ID}`;
+const LAUNCHER_KEY = `agents-web-components:launcher:${ID}`;
+const DOCK_KEY = `agents-web-components:dock:${ID}`;
 const SPOT = { left: 376, top: 96 };
 
 function chat(attrs: Record<string, string> = {}): AgUiChat {

@@ -126,7 +126,7 @@ describe("a text message that carried no content", () => {
     await flush();
     sessionStorage.clear();
 
-    const store = new SessionStorageStore();
+    const store = new SessionStorageStore("/agent/");
     store.saveMessages(store.threadId(), [
       { id: "user-1", role: "user", content: "check the handbook" },
       // The declaration, as a stored history carries it: an assistant message
