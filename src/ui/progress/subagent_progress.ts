@@ -56,10 +56,9 @@ export class SubAgentProgress {
    *
    * `delegationId` is the parent's own `delegate_task` tool-call id, so the
    * attachment point is a card this element already drew on `TOOL_CALL_START`.
-   * That is the whole design: a run that hands work to a sub-agent used to read
-   * as a stall -- the card sat at "running…" for the child's entire duration --
-   * and the fix is to narrate *into* the thing that was already standing there,
-   * rather than to float a second element with the same identity.
+   * Without this a run that hands work to a sub-agent reads as a stall, the
+   * card sitting at "running…" for the child's whole duration, so the narration
+   * goes *into* that card rather than a second element with the same identity.
    *
    * A progress event for a call this client never drew is dropped. It has no
    * card to attach to, and inventing a floating one is precisely the alternative
