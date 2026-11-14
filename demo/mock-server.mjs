@@ -702,7 +702,7 @@ function networkUrls() {
 }
 
 server.listen(PORT, HOST, () => {
-  process.stdout.write(`ag-ui-web-component demo: http://localhost:${PORT}\n`);
+  process.stdout.write(`agents-web-components demo: http://localhost:${PORT}\n`);
   process.stdout.write(`  full page: http://localhost:${PORT}/page/\n`);
   // Any wildcard bind reaches the LAN, so the addresses are worth printing for
   // both spellings rather than only the one this file happens to default to.
