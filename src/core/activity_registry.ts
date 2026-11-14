@@ -105,9 +105,9 @@ export class ActivityRegistry {
    * because the *stored* content is the version that could not be drawn. Live
    * and reload should agree, and both should say "gone".
    *
-   * Removing is right; doing it in silence was not. A chart that had been drawn
-   * simply disappeared, with no `console` call anywhere on the path -- which
-   * nobody reports as a bug, they report as "the charts are flaky".
+   * Removing is right, but not in silence: a drawn chart that disappears with
+   * no `console` call anywhere on the path is reported not as a bug but as
+   * "the charts are flaky".
    */
   #remove(
     messageId: string,

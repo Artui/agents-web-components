@@ -8,50 +8,33 @@ describe("chartSpecFrom", () => {
     expect(chartSpecFrom(ok)).toEqual(ok);
   });
 
-  it("refuses anything that is not an object", () => {
-    for (const value of [null, undefined, 42, "chart", [ok]]) {
-      expect(chartSpecFrom(value)).toBeNull();
-    }
-  });
-
-  it("refuses labels that are not all strings", () => {
-    expect(chartSpecFrom({ ...ok, labels: ["a", 2] })).toBeNull();
-    expect(chartSpecFrom({ ...ok, labels: "ab" })).toBeNull();
-  });
-
-  it("refuses a missing or non-array series", () => {
-    expect(chartSpecFrom({ labels: ["a"] })).toBeNull();
-    expect(chartSpecFrom({ ...ok, series: {} })).toBeNull();
-  });
-
-  it("refuses a series entry that is not an object", () => {
-    expect(chartSpecFrom({ ...ok, series: ["nope"] })).toBeNull();
-    expect(chartSpecFrom({ ...ok, series: [null] })).toBeNull();
-  });
-
-  it("refuses a series whose length disagrees with the labels", () => {
-    // Silently misaligns every value after the gap, and a chart that is subtly
-    // wrong still reads as authoritative.
-    expect(chartSpecFrom({ ...ok, series: [{ label: "s", points: [1] }] })).toBeNull();
-    expect(chartSpecFrom({ ...ok, series: [{ label: "s", points: [1, 2, 3] }] })).toBeNull();
-  });
-
-  it("refuses points that are not finite numbers", () => {
-    // JSON encoders render NaN and Infinity as nulls or strings, and either
-    // would scale into a chart with no visible extent.
-    for (const points of [
-      [1, "2"],
-      [1, null],
-      [1, Number.NaN],
-      [1, Number.POSITIVE_INFINITY],
-    ]) {
-      expect(chartSpecFrom({ ...ok, series: [{ label: "s", points }] })).toBeNull();
-    }
-    expect(chartSpecFrom({ ...ok, series: [{ label: "s", points: "12" }] })).toBeNull();
-  });
-
-  it("refuses an empty series list", () => {
-    expect(chartSpecFrom({ ...ok, series: [] })).toBeNull();
+  // Silently misaligned values after a length gap still read as authoritative; JSON encoders
+  // render NaN and Infinity as nulls or strings, which would scale into a chart with no extent.
+  it.each([
+    ["a non-object", null],
+    ["undefined", undefined],
+    ["a number", 42],
+    ["a string", "chart"],
+    ["an array", [ok]],
+    ["labels that are not all strings", { ...ok, labels: ["a", 2] }],
+    ["labels that are not an array", { ...ok, labels: "ab" }],
+    ["a missing series", { labels: ["a"] }],
+    ["a non-array series", { ...ok, series: {} }],
+    ["a series entry that is a string", { ...ok, series: ["nope"] }],
+    ["a series entry that is null", { ...ok, series: [null] }],
+    ["too few points", { ...ok, series: [{ label: "s", points: [1] }] }],
+    ["too many points", { ...ok, series: [{ label: "s", points: [1, 2, 3] }] }],
+    ["a string point", { ...ok, series: [{ label: "s", points: [1, "2"] }] }],
+    ["a null point", { ...ok, series: [{ label: "s", points: [1, null] }] }],
+    ["a NaN point", { ...ok, series: [{ label: "s", points: [1, Number.NaN] }] }],
+    [
+      "an infinite point",
+      { ...ok, series: [{ label: "s", points: [1, Number.POSITIVE_INFINITY] }] },
+    ],
+    ["points that are not an array", { ...ok, series: [{ label: "s", points: "12" }] }],
+    ["an empty series list", { ...ok, series: [] }],
+  ])("refuses %s", (_name, value) => {
+    expect(chartSpecFrom(value)).toBeNull();
   });
 
   it("defaults an unknown or missing kind to bar rather than refusing the data", () => {
@@ -59,10 +42,8 @@ describe("chartSpecFrom", () => {
     expect(chartSpecFrom({ labels: ok.labels, series: ok.series })?.kind).toBe("bar");
   });
 
-  it("keeps every kind it knows", () => {
-    for (const kind of ["bar", "line", "pie", "scatter", "stacked"]) {
-      expect(chartSpecFrom({ ...ok, kind })?.kind).toBe(kind);
-    }
+  it.each(["bar", "line", "pie", "scatter", "stacked"])("keeps the %s kind", (kind) => {
+    expect(chartSpecFrom({ ...ok, kind })?.kind).toBe(kind);
   });
 
   it("defaults a missing series label to empty rather than refusing", () => {
@@ -109,7 +90,6 @@ describe("bounds on what is cheap enough to draw", () => {
     // `Array.prototype.some` skips holes, so this used to pass validation and
     // render a chart with no labels, reading as a rendering bug.
     const sparse = ["a", "b"];
-    // biome-ignore lint/performance/noDelete: creating a hole is the point
     delete (sparse as unknown as Record<number, string>)[1];
     expect(chartSpecFrom({ ...ok, labels: sparse })).toBeNull();
   });

@@ -15,7 +15,7 @@ export interface RunRow {
    * Optional because a server predating the field does not send it, and
    * `null` where the run holds no words to show (seeded from history alone, or
    * opened with an image and no caption). A row without one falls back to the
-   * time plus a short id, which is what every row used to be.
+   * time plus a short id.
    */
   readonly preview?: string | null;
 }

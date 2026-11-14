@@ -12,35 +12,47 @@ import { TOOL_CALL_STATUS, TOOL_OUTCOME } from "../src/constants.js";
 import { toolStatusFromOutcome } from "../src/core/tool_outcome.js";
 
 describe("toolStatusFromOutcome", () => {
-  it("reads an absent outcome as a success", () => {
-    // The backwards-compatibility case, and the only one that is load-bearing
-    // for servers that exist today: every one of them omits the field.
-    expect(toolStatusFromOutcome(undefined)).toBe(TOOL_CALL_STATUS.DONE);
-  });
-
-  it("reads a stated success as a success", () => {
-    expect(toolStatusFromOutcome(TOOL_OUTCOME.SUCCESS)).toBe(TOOL_CALL_STATUS.DONE);
-  });
-
-  it("reads a failure as an error", () => {
-    expect(toolStatusFromOutcome(TOOL_OUTCOME.FAILED)).toBe(TOOL_CALL_STATUS.ERROR);
-  });
-
-  it("reads a refusal as declined", () => {
-    expect(toolStatusFromOutcome(TOOL_OUTCOME.DENIED)).toBe(TOOL_CALL_STATUS.DECLINED);
-  });
-
-  it("reads interrupted as a call that did not finish, neither success nor failure", () => {
+  it.each([
+    // The only case load-bearing for servers that exist today: every one of
+    // them omits the field.
+    { reads: "an absent outcome as a success", outcome: undefined, status: TOOL_CALL_STATUS.DONE },
+    {
+      reads: "a stated success as a success",
+      outcome: TOOL_OUTCOME.SUCCESS,
+      status: TOOL_CALL_STATUS.DONE,
+    },
+    {
+      reads: "a failure as an error",
+      outcome: TOOL_OUTCOME.FAILED,
+      status: TOOL_CALL_STATUS.ERROR,
+    },
+    {
+      reads: "a refusal as declined",
+      outcome: TOOL_OUTCOME.DENIED,
+      status: TOOL_CALL_STATUS.DECLINED,
+    },
     // pydantic-ai's word for a call its history repair answered, and the one the
     // element writes for a call its own run left open.
-    expect(toolStatusFromOutcome(TOOL_OUTCOME.INTERRUPTED)).toBe(TOOL_CALL_STATUS.INTERRUPTED);
+    {
+      reads: "interrupted as a call that did not finish, neither success nor failure",
+      outcome: TOOL_OUTCOME.INTERRUPTED,
+      status: TOOL_CALL_STATUS.INTERRUPTED,
+    },
+  ])("reads $reads", ({ outcome, status }) => {
+    expect(toolStatusFromOutcome(outcome)).toBe(status);
   });
 
-  it("reads anything unrecognised as a success", () => {
-    // Every shape an undeclared field or a JSON blob out of a store can
-    // actually hand over. None of them is grounds for claiming a failure.
-    for (const value of [null, "", "FAILED", 1, true, {}, ["failed"]]) {
-      expect(toolStatusFromOutcome(value)).toBe(TOOL_CALL_STATUS.DONE);
-    }
+  // Every shape an undeclared field or a JSON blob out of a store can actually
+  // hand over. None of them is grounds for claiming a failure.
+  it.each([
+    { value: null },
+    { value: "" },
+    { value: "FAILED" },
+    { value: 1 },
+    { value: true },
+    { value: {} },
+    { value: ["failed"] },
+  ])("reads unrecognised $value as a success", ({ value }) => {
+    expect(toolStatusFromOutcome(value)).toBe(TOOL_CALL_STATUS.DONE);
   });
 });

@@ -1,16 +1,10 @@
-// This module's sanitisation is verified only by the `chromium` project in
-// vitest.config.ts, and must stay there. DOMPurify 3.4.8+ silently sanitises
-// nothing under happy-dom (every element resolves to an empty tag name), so a
-// happy-dom-only suite goes green while this module strips nothing at all.
-// Moving those assertions back under happy-dom for speed removes the only check
-// that this module does anything. CLAUDE.md records the upstream root cause.
+// Sanitisation is verified only in the `chromium` project: DOMPurify silently
+// sanitises nothing under happy-dom, so CLAUDE.md has the root cause.
 import DOMPurify, { type Config, type DOMPurify as Purifier } from "dompurify";
 import { Marked } from "marked";
 
-// A local parser instance, so configuration never leaks into the shared
-// `marked` singleton a host app's deduped copy would share. Built once at module
-// scope and never mutated; per-call construction would re-pay setup on every
-// streaming re-render.
+// A local instance, so configuration never leaks into a host's deduped `marked`.
+// Never mutated; per-call construction would re-pay setup on every streaming render.
 const parser = new Marked({ gfm: true, breaks: true });
 
 // Conservative allowlist for assistant chat content. Rendering untrusted
@@ -139,22 +133,21 @@ function harden(node: Element): void {
   node.setAttribute("class", kept.join(" "));
 }
 
-// DOMPurify's default export is a singleton, and `addHook` mutates it for every
-// caller sharing that copy — including the host app, if its bundler deduped to
-// ours. So this module builds its own instance, for the same reason `parser`
-// above is a local `Marked`.
-//
-// Built on first render rather than at module scope: a DOMPurify instance
-// created without a DOM has no `addHook` at all, and doing this eagerly would
-// turn a server-side `import` of the package into a throw.
-let purifier: Purifier | null = null;
+// A memo, not state: DOMPurify's default export is a singleton that `addHook`
+// mutates for every caller sharing the copy, host app included, so this module
+// builds its own instance. The hook is added before the instance is published
+// and nothing touches it afterwards, so every element reads the same value.
+// Built on first render, because an instance made without a DOM has no
+// `addHook` and an eager one would make a server-side `import` throw.
+let memo: Purifier | undefined;
 
 function sanitizer(): Purifier {
-  if (purifier === null) {
-    purifier = DOMPurify();
-    purifier.addHook("afterSanitizeAttributes", harden);
+  if (memo === undefined) {
+    const built = DOMPurify();
+    built.addHook("afterSanitizeAttributes", harden);
+    memo = built;
   }
-  return purifier;
+  return memo;
 }
 
 /** Options for {@link renderMarkdown}. */

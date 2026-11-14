@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **`createStateHookTools` and `StateHook`**, the deprecated aliases of `createPageStateTools` and `PageState`. Opt-in: a host still importing either name switches to the new one; behaviour is identical.
+
 ### Changed
 
+- **The markdown sanitiser is recorded as an immutable memo**, and the transcript's simplify pass folds the two copies of the quote-offer placement into one. No behaviour changes: sanitised output, attributes, parts and positions are as before.
 - **The deprecated `noResult` string is removed** from `UiStrings`: nothing drew it since a call that never returned is answered with `callNotFinished`. A string table that sets it no longer type-checks; delete the entry.
 - **Storage keys start with `agents-web-components`** (was `ag-ui-chat`): collapsed state, theme, panel size, launcher and dock position, and the built-in conversation store all move to the new root, and an element no longer adopts keys written without a namespace. A host opts in to nothing; the first deploy forgets the open thread and the saved preferences once. A host that reads these keys itself must read the new root.
 - **The element moves to its own entry, `@artooi/agents-web-components/chat`**, which exports
@@ -18,6 +23,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `sideEffects: false`, `./bundle` gains its `types`, and the vendored bundle still carries every
   export and defines nothing at import. Opt-in: a host imports `AgUiChat` and `defineChat` from
   `./chat`; bundle hosts change nothing.
+- **`AgUiClient.annotatedMessages` is gone, and a refused `sessionStorage` write warns once per
+  owner rather than once per page.** The getter returned `messages` itself. One element can now warn
+  once for its conversation store, once for its preferences (layout, theme and the collapsed
+  state), and once more after a `user-key` change rebuilds its store; each
+  `SessionStorageStore.adopt` call warns at most once. Opt-in: none; a host that read
+  `annotatedMessages` reads `messages`.
 
 ### Removed
 

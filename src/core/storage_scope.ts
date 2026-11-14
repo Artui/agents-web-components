@@ -2,6 +2,7 @@ import { randomUUID } from "@ag-ui/client";
 import {
   type ClientConversationStore,
   SessionStorageStore,
+  type WriteFailureReport,
   writeStoredItem,
 } from "./conversation_store.js";
 
@@ -60,6 +61,7 @@ export class StorageScope {
   // the host's own kind is never held here: the element does not know its
   // keying and must not guess at it.
   #builtinStore: SessionStorageStore | null = null;
+  readonly #writeFailure: WriteFailureReport = { reported: false };
 
   constructor(host: StorageScopeHost) {
     this.#host = host;
@@ -191,9 +193,9 @@ export class StorageScope {
    * than to no persistence at all. The read above prefers the durable copy, so
    * a tab that has both cannot be shadowed by its own stale one.
    *
-   * Neither write is worth an exception. Losing where the panel sat is not
-   * worth a warning either -- unlike the transcript, which says so once,
-   * because losing that loses the conversation on the next reload.
+   * Neither write is worth an exception. A refused per-tab write warns once
+   * per scope rather than once per write, because the size path writes on
+   * every step.
    */
   writePreference(base: string, value: string): void {
     const key = this.key(base);
@@ -202,7 +204,12 @@ export class StorageScope {
     } catch {
       // Quota, or a store that denies writes.
     }
-    writeStoredItem(key, value);
+    writeStoredItem(key, value, this.#writeFailure);
+  }
+
+  /** Write a per-tab value under this scope's key, sharing its one refused-write warning. */
+  writeSession(base: string, value: string): void {
+    writeStoredItem(this.key(base), value, this.#writeFailure);
   }
 
   /**
@@ -252,9 +259,9 @@ export class StorageScope {
   #claimNamespace(): string {
     const id = this.#host.id();
     const preferred = id !== "" ? id : this.#host.endpoint();
-    // Nothing to key on. The root keys: an element
-    // with neither an id nor an endpoint cannot send anything, so what it would
-    // be claiming is an empty conversation.
+    // Nothing to key on, so the root keys: an element with neither an id nor
+    // an endpoint cannot send anything, so what it would claim is an empty
+    // conversation.
     if (preferred === "") {
       return "";
     }

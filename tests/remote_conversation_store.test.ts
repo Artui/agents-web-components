@@ -79,18 +79,20 @@ describe("RemoteConversationStore", () => {
     expect(await new RemoteConversationStore("https://x/threads/").listThreads()).toEqual([]);
   });
 
-  it("falls back to the local list when the index responds not-ok", async () => {
+  it.each([
+    { when: "the index responds not-ok", respond: () => fetchMock.mockResolvedValue(notOk()) },
+    {
+      when: "a network error",
+      respond: () => fetchMock.mockRejectedValue(new Error("offline")),
+    },
+    {
+      when: "a 200 with an unreadable body",
+      respond: () => fetchMock.mockResolvedValue(badJson()),
+    },
+  ])("falls back to the local list on $when", async ({ respond }) => {
     const local = new SessionStorageStore();
     local.saveMessages("t1", [{ role: "user", content: "local" }] as never);
-    fetchMock.mockResolvedValue(notOk());
-    const store = new RemoteConversationStore("https://x/threads/", () => ({}), local);
-    expect((await store.listThreads()).map((m) => m.threadId)).toEqual(["t1"]);
-  });
-
-  it("falls back to the local list on a network error", async () => {
-    const local = new SessionStorageStore();
-    local.saveMessages("t1", [{ role: "user", content: "local" }] as never);
-    fetchMock.mockRejectedValue(new Error("offline"));
+    respond();
     const store = new RemoteConversationStore("https://x/threads/", () => ({}), local);
     expect((await store.listThreads()).map((m) => m.threadId)).toEqual(["t1"]);
   });
@@ -184,10 +186,16 @@ describe("RemoteConversationStore", () => {
     expect(await new RemoteConversationStore("https://x/threads/").loadMessages("t1")).toBeNull();
   });
 
-  it("falls back to local messages when a load responds not-ok", async () => {
+  it.each([
+    { when: "a load responds not-ok", respond: () => fetchMock.mockResolvedValue(notOk()) },
+    {
+      when: "a 200 with an unreadable body",
+      respond: () => fetchMock.mockResolvedValue(badJson()),
+    },
+  ])("falls back to local messages on $when", async ({ respond }) => {
     const local = new SessionStorageStore();
     local.saveMessages("t1", [{ id: "c", role: "user", content: "cached" }] as never);
-    fetchMock.mockResolvedValue(notOk());
+    respond();
     const store = new RemoteConversationStore("https://x/threads/", () => ({}), local);
     expect(await store.loadMessages("t1")).toEqual([{ id: "c", role: "user", content: "cached" }]);
   });
@@ -196,22 +204,6 @@ describe("RemoteConversationStore", () => {
     fetchMock.mockRejectedValue(new Error("offline"));
     const store = new RemoteConversationStore("https://x/threads/");
     expect(await store.loadMessages("absent")).toBeNull();
-  });
-
-  it("falls back to local messages on a 200 with an unreadable body", async () => {
-    const local = new SessionStorageStore();
-    local.saveMessages("t1", [{ id: "c", role: "user", content: "cached" }] as never);
-    fetchMock.mockResolvedValue(badJson());
-    const store = new RemoteConversationStore("https://x/threads/", () => ({}), local);
-    expect(await store.loadMessages("t1")).toEqual([{ id: "c", role: "user", content: "cached" }]);
-  });
-
-  it("falls back to the local list on a 200 with an unreadable body", async () => {
-    const local = new SessionStorageStore();
-    local.saveMessages("t1", [{ role: "user", content: "local" }] as never);
-    fetchMock.mockResolvedValue(badJson());
-    const store = new RemoteConversationStore("https://x/threads/", () => ({}), local);
-    expect((await store.listThreads()).map((m) => m.threadId)).toEqual(["t1"]);
   });
 
   it("carries a live credentials mode on both reads and writes", async () => {

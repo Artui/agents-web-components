@@ -104,13 +104,7 @@ function dragTool(resolveTarget: ResolvePageTarget): ClientTool {
   };
 }
 
-/**
- * Fire the standard HTML5 drag sequence in the order a page's own handlers
- * expect — `dragstart` on the source, `dragenter` / `dragover` / `drop` on the
- * target, `dragend` on the source — all sharing one {@link DataTransfer}, which
- * is attached to each event explicitly so a drop handler reads it in every
- * environment.
- */
+/** Fire the HTML5 drag sequence, sharing one {@link DataTransfer} attached to each event explicitly. */
 function dispatchDragSequence(from: HTMLElement, to: HTMLElement): void {
   const dataTransfer = new DataTransfer();
   fire(from, "dragstart", dataTransfer);

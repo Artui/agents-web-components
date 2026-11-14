@@ -191,12 +191,8 @@ export class RemoteConversationStore implements ClientConversationStore {
   }
 
   async loadMessages(threadId: string): Promise<readonly Message[] | null> {
-    // Don't ask the server for a thread it cannot have. The element mints an id
-    // on first mount and immediately tries to restore it, so every first visit
-    // spent a request to be told `404` — and logged one in the console, on a page
-    // where nothing had gone wrong. Only the store that minted the id can say
-    // that; a thread chosen from the drawer, or one created on another device, is
-    // still fetched. See `ClientConversationStore.isUnsent`.
+    // Don't ask the server for a thread it cannot have, which would answer
+    // `404` on every first visit; see `ClientConversationStore.isUnsent`.
     if (this.#local.isUnsent?.(threadId) === true) {
       return null;
     }
