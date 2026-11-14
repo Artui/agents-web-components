@@ -227,6 +227,7 @@ async function flashRing(
   const fadeMs = prefersReducedMotion() ? 0 : Math.round(flashMs * FLASH_FADE_RATIO);
   await delay(flashMs - fadeMs);
   if (fadeMs > 0) {
+    // Setting the transition and the new colour in one task is fine: transitions start from the after-change style.
     el.style.transition = `outline-color ${fadeMs}ms ease-out`;
     el.style.outline = "3px solid transparent";
     await delay(fadeMs);

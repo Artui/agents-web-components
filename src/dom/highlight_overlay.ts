@@ -46,10 +46,8 @@ const DEFAULT_PADDING_PX = 4;
  * gradient, and a dim needs a surface larger than the target. Nothing here is a descendant
  * of the target, so none of it is clipped.
  *
-
  * It is inert: it never takes a pointer event, so the driver can still click what it
  * just pointed at.
- *
  *
  * It follows: the cut-out is recomputed on scroll and resize.
  */
@@ -146,7 +144,8 @@ export function showHighlightOverlay(
 
 /**
  * A caller's colour, or `null` if it is not one: the value is joined into a `;`-separated
- * `cssText`, so a string carrying a semicolon would write further declarations.
+ * `cssText`, so a string carrying a semicolon would write further declarations, and the
+ * colour can come from the agent.
  */
 function safeColor(value: string | undefined): string | null {
   if (value === undefined) {

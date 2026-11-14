@@ -165,6 +165,7 @@ export class ToolDispatch {
       if (typeof confirmText === "string") {
         request.message = confirmText;
       }
+      // Into the turn's answer group: appending to the message list put the prompt after later streamed content.
       // A Stop while the card is open aborts the signal, declining it.
       const signal = this.#host.decision.open();
       // Asking for as long as the prompt is open, so a step row reads "waiting for you".
@@ -201,7 +202,8 @@ export class ToolDispatch {
         // The outcome annotation lets a reload show a refused action as denied.
         return { content: message, outcome: TOOL_OUTCOME.DENIED };
       }
-      // Confirm and Stop in the same task: not declined, but the run is over, so it does not run.
+      // Confirm and Stop in the same task: not declined, but the run is over, so it does not run
+      // (the server-side gate treats approve-then-Stop the same way).
       if (signal.aborted) {
         return this.#abandoned(card);
       }

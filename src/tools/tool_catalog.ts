@@ -74,7 +74,8 @@ export class ToolCatalog {
    *
    * The registry is mount-wide but `getTools` is per-run, so a call naming a tool this run
    * withheld must not reach a handler that is merely still registered. Not re-asked at
-   * dispatch: the provider is a function and may answer differently.
+   * dispatch: the provider is a function and may answer differently. Empty until the first
+   * round advertises, which always precedes the calls that round produces.
    */
   #advertisedTools: ReadonlySet<string> = new Set();
   readonly #toolRegistry = new ClientToolRegistry();
@@ -290,6 +291,7 @@ export class ToolCatalog {
       if (renderer === null) {
         answer = await builtIn();
       } else {
+        // Called on the element, as `this.askUserRenderer(...)` always was.
         // Awaited here, not in a helper, to keep the microtask count of an answering renderer.
         try {
           answer = await renderer.call(this.#host.element, request, { signal });

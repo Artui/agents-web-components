@@ -20,7 +20,9 @@ const PACKAGE_ACCENT = "#4f46e5";
  * The colour a highlight ring is drawn in when the caller passed none.
  *
  * In order: `--ag-ui-highlight-ring-color` on the target, the same token on the chat, the
- * target's `--ag-ui-accent`, the chat's resolved accent, the package indigo. Only the
+ * target's `--ag-ui-accent`, the chat's resolved accent, the package indigo. The target's
+ * accent outranks the chat's default so a host theming its page keeps its rings; the ring
+ * token outranks both so a host can keep the ring apart from the accent. Only the
  * chat's own accent is adjusted, since it follows the widget's scheme rather than the
  * page's: it is held to 3:1 against the surface behind the target (see
  * {@link surfaceBehind}) by trying the other half of its light-dark pair, then stepping

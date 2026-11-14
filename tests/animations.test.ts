@@ -90,6 +90,20 @@ describe("highlightThenClick", () => {
     expect(button.style.outline).toBe(originalOutline);
   });
 
+  it("restores a pre-existing outline offset", async () => {
+    vi.useFakeTimers();
+    const button = document.createElement("button");
+    button.style.outlineOffset = "4px";
+    document.body.appendChild(button);
+
+    const done = highlightThenClick(button, { highlightMs: 10 });
+    expect(button.style.outlineOffset).toBe("2px");
+    await vi.runAllTimersAsync();
+    await done;
+
+    expect(button.style.outlineOffset).toBe("4px");
+  });
+
   it("uses the default highlight duration when unspecified", async () => {
     vi.useFakeTimers();
     const button = document.createElement("button");
@@ -410,6 +424,16 @@ describe("selectOption", () => {
     expect(el.value).toBe("p");
     expect(changes).toBe(1);
     expect(el.style.outline).toBe("");
+  });
+
+  it("restores a pre-existing outline offset", async () => {
+    vi.useFakeTimers();
+    const el = select();
+    el.style.outlineOffset = "4px";
+    const done = selectOption(el, "p", { highlightMs: 10 });
+    await vi.runAllTimersAsync();
+    await done;
+    expect(el.style.outlineOffset).toBe("4px");
   });
 
   it("matches by visible option text", async () => {
