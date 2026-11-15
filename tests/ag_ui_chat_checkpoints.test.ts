@@ -142,14 +142,12 @@ describe("continuing a run", () => {
     return { el, built, input };
   }
 
-  it("posts to the resume endpoint for the picked run", async () => {
-    const { built } = await pick("resume");
-    expect(built.at(-1)?.endpoint).toBe("/agent/resume/r1/");
-  });
-
-  it("posts to the fork endpoint when forking", async () => {
-    const { built } = await pick("fork");
-    expect(built.at(-1)?.endpoint).toBe("/agent/fork/r1/");
+  it.each([
+    ["resume", "/agent/resume/r1/"],
+    ["fork", "/agent/fork/r1/"],
+  ] as const)("posts to the %s endpoint for the picked run", async (action, endpoint) => {
+    const { built } = await pick(action);
+    expect(built.at(-1)?.endpoint).toBe(endpoint);
   });
 
   it("seeds the continuation with no history at all", async () => {

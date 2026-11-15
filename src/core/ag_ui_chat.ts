@@ -2008,13 +2008,7 @@ export class AgUiChat extends HTMLElement {
     // Expanding reads the thread on screen; other threads keep their marks.
     // Reported on every toggle, as before, with the threads it cleared.
     this.#unreadChanged(this.#markSeen());
-    this.dispatchEvent(
-      new CustomEvent<ToggleDetail>(TOGGLE_EVENT, {
-        detail: { collapsed },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+    this.#emit<ToggleDetail>(TOGGLE_EVENT, { collapsed });
   }
 
   /**
@@ -2911,6 +2905,11 @@ export class AgUiChat extends HTMLElement {
     });
     if (themed) {
       this.#syncThemeGlyph();
+      // Under auto (or a host color-scheme naming both) the drawn scheme is the
+      // system's, which changes with no attribute write to hear it by.
+      window
+        .matchMedia("(prefers-color-scheme: dark)")
+        .addEventListener("change", () => this.#syncThemeGlyph(), { signal });
     }
 
     // A panel is a window and a header is its title bar.

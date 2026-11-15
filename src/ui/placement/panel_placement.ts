@@ -366,23 +366,11 @@ export class PanelPlacement {
   }
 
   /**
-   * Carry a stated corner spot along with a dragged size coming off.
-   *
-   * The size comes off toward the corner the layout holds still, so the top-left
-   * the spot is kept as moves with it, and a restore from the old one would swing
-   * the panel away from its launcher. Only that movement goes onto the spot, not
-   * where the box stands: in a window narrower than the spot the box is held
-   * short of it, and that is not something the user stated.
-   *
-   * Left alone while a host's own size is in force, because that cannot be told
-   * from the dragged size coming off, and it may be a state the host is about to
-   * leave: counting it would throw the spot off by as much as that state is
-   * bigger. A panel that is the screen needs no case of its own: the small-viewport
-   * block ignores a dragged size, so its box does not move.
-   *
-   * Left alone too under data-launcher-drag="false", where a spot left over from
-   * before the attribute is a record kept for the day it comes off, and nothing
-   * that happens to the box now is a statement about it.
+   * Carry a stated corner spot along with a dragged size coming off, since the size
+   * comes off toward the corner the layout holds still. Only that movement goes onto the
+   * spot, not where the box stands. Left alone while a host's own size is in force
+   * (it cannot be told from the dragged size and may be about to leave) and under
+   * data-launcher-drag="false", where the spot is a record kept for the day it comes off.
    */
   #carrySpotWithSize(sized: DOMRect): void {
     const element = this.#host.element;
@@ -519,18 +507,10 @@ export class PanelPlacement {
   readonly #resizeHandles = new Map<string, HTMLDivElement>();
 
   /**
-   * Hold a resized box inside the part of the screen the host left free.
-   *
-   * Each edge on its own, unlike the drag's clamp: a drag moves a box of fixed
-   * size, so pushing it back in is right, while a resize is anchored on the
-   * opposite edge and pushing it back would move the edge the user is not
-   * touching. Bounding each edge instead leaves the grip stopped at the limit
-   * -- the gesture keeps going and the panel simply stops growing, which is
-   * what dragging already does.
-   *
-   * The minimum size is the grip's own concern and is applied before this, so
-   * a panel that cannot fit the space is left at its minimum and overflowing
-   * rather than collapsed to nothing.
+   * Hold a resized box inside the part of the screen the host left free, each edge on
+   * its own: a resize is anchored opposite, so pushing the box back in (as a drag does)
+   * would move the edge the user is not touching. The grip's minimum size is applied
+   * first, so a panel that cannot fit stays at its minimum, overflowing.
    */
   #withinViewport(box: PanelRect): PanelRect {
     // A docked panel that moves has its room stop at the dock, so no grip
@@ -656,23 +636,13 @@ export class PanelPlacement {
   }
 
   /**
-   * Snapshot the panel's stated position, and return a function that puts it
-   * back.
+   * Snapshot the panel's stated position, and return a function that puts it back.
    *
-   * Both insets and the expand corner, because they are one decision: the
-   * corner is what the panel grows from, so restoring a position without it
-   * puts the box back and animates it out of the wrong side. Absent values are
-   * captured as absent and removed on the way back, rather than written as
-   * empty strings that would outrank the placement. And what the inset is, because
-   * one put back with no record of having come from a grip or a fill reads as a
-   * host's own, and a phone would leave it holding the panel off the screen.
-   *
-   * The surface may have changed by the time of the undo, so the two halves are
-   * put back apart. Both records are, always, each to its own store, so the
-   * memory and the storage cannot disagree and the surface they belong to finds
-   * them when it comes back. The inline values only mean something to the surface
-   * they were read from: written on any other, they pin a sidebar to where a
-   * floating panel used to be.
+   * Both insets and the expand corner are one decision, so they are restored together;
+   * absent values are removed rather than written empty, and what the inset is (grip,
+   * fill or host) comes back with it. The surface may have changed by the undo, so the
+   * records go back to their own stores always and the inline values only to the surface
+   * they were read from.
    */
   #captureGeometry(): () => void {
     const inset = this.#host.element.style.getPropertyValue("--ag-ui-inset");
@@ -1028,21 +998,11 @@ export class PanelPlacement {
   /**
    * Put a docked panel back where the user dragged it, held inside its room.
    *
-   * The inline inset comes off first, which is both how the panel's resting
-   * box is measured and what leaves a phone full-bleed: the small-viewport
-   * block reads the host's inset before its own, so a dragged spot written
-   * there would hold the panel off the screen's edges. The spot itself stays,
-   * for the next time there is room for it.
-   *
-   * A host's size that makes the panel the window hangs it off the resting inset's
-   * far side, past the top of the window with the header on it under the bar, so
-   * it stands at the start of the room instead, moved or not, as a corner panel
-   * does, and the stylesheet takes the bar away for as long as it does. A placement
-   * that owns its position keeps it, whatever the host's size.
-   *
-   * Under data-launcher-drag="false" a spot from before the attribute is left alone
-   * while the panel is on the screen, as a corner panel's is, and the record stays
-   * for the day the attribute comes off.
+   * The inline inset comes off first (it measures the resting box and keeps a phone
+   * full-bleed); the spot stays for the next time there is room. A host size that makes
+   * the panel the window stands at the start of the room, moved or not, as a corner
+   * panel does, and a placement owning its position keeps it. Under
+   * data-launcher-drag="false" the spot is left alone and the record kept.
    */
   #placeDocked(): void {
     if (!this.#docked() || !this.#surface().panelMovable || this.dragging()) {
@@ -1401,18 +1361,10 @@ export class PanelPlacement {
   }
 
   /**
-   * Move the panel live during a header drag, without persisting.
-   *
-   * Only the host box is written, and that is the whole trick: the launcher is
-   * positioned *inside* that box, so leaving its own inset alone carries it
-   * along by exactly the distance the panel travelled -- which is what a person
-   * dragging a window expects of the thing it collapses into. Placing it on the
-   * panel's pinned corner instead, as an earlier version did, sent it leaping
-   * across the panel the moment the drag re-picked that corner.
-   *
-   * The corner is therefore held for the length of the gesture. Both insets are
-   * measured from it, and rewriting one of them from a new corner while the
-   * other still names the old one would move the launcher for no reason.
+   * Move the panel live during a header drag, without persisting. Only the host box is
+   * written: the launcher is positioned inside it, so it travels by exactly the distance
+   * the panel did. The corner is held for the whole gesture, since rewriting one inset
+   * from a new corner while the other names the old one would move the launcher.
    */
   #movePanel(box: PanelRect, from: PanelRect): { held: PanelRect; launcher: LauncherBox | null } {
     if (this.#docked()) {
@@ -1651,26 +1603,15 @@ export class PanelPlacement {
   }
 
   /**
-   * Leave a corner panel full-bleed if it has become the screen, and say whether
-   * it has.
+   * Leave a corner panel full-bleed if it has become the screen, and say whether it has.
    *
-   * The inline inset comes off, because the small-viewport block reads the
-   * host's inset before its own: a spot written there holds the panel off the
-   * edges it should fill, and past them by the same amount, since its size is
-   * the screen's. What the panel covers is read before that, from the size
-   * alone, which no inset changes.
-   *
-   * The launcher stays a place of its own. It is positioned from the host box,
-   * so it is measured again from the box that has just moved, and it is held on
-   * the screen, because it is the way back from a collapsed conversation. The
-   * spot itself is untouched, for the next time there is room for it.
-   *
-   * Above the breakpoint nothing in the stylesheet takes the panel to the edges.
-   * A host's own size makes it the screen while the resting inset still spends a
-   * gutter on one corner, which hangs the box off the opposite one, so there it
-   * stands at the start of the room the host left free and keeps that inset. A
-   * box the placement already holds on the screen has no inset to keep, which is
-   * every phone, and a host's rule that placed the box itself.
+   * The inline inset comes off, since the small-viewport block reads the host's inset
+   * before its own; what the panel covers is read first, from the size alone. The
+   * launcher is measured again from the moved box and held on screen, and the spot
+   * itself is untouched. Above the breakpoint a host's own size can hang the box off the
+   * opposite corner, so it stands at the start of the room the host left free and keeps
+   * that inset, unless the placement already holds the box on screen or a host rule
+   * placed it.
    */
   #standFullBleed(spot: CornerSpot): boolean {
     const element = this.#host.element;
@@ -1794,18 +1735,10 @@ export class PanelPlacement {
   }
 
   /**
-   * Apply the box a grip is asking for.
-   *
-   * The size is the easy half. The other half is that **dragging the edge the
-   * layout is holding still moves the panel as well as resizing it**, and the
-   * layout cannot express that on its own: a floating panel pinned bottom-right
-   * cannot grow rightward, because its right edge is what the placement fixed.
-   * So a grip on a pinned edge takes the position over -- which is the same
-   * ownership the launcher drag takes, written the same way.
-   *
-   * A grip on a free edge writes nothing but the size, exactly as before, so a
-   * host positioning the panel with its own rule keeps that rule until someone
-   * drags the edge it was holding.
+   * Apply the box a grip is asking for. Dragging the edge the layout holds still moves
+   * the panel as well as resizing it, and the layout cannot express that, so a grip on
+   * a pinned edge takes the position over, as the launcher drag does. A grip on a free
+   * edge writes only the size, so a host's own positioning rule is kept.
    */
   #applyResize(grip: ResizeGrip, box: PanelRect): PanelRect {
     box = this.#withinViewport(box);
