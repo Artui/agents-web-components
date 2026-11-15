@@ -184,6 +184,25 @@ async function handleAgent(res, body) {
     return;
   }
 
+  // A surface the page redraws in place, and the run its button starts. The
+  // second snapshot reuses the message id after a pause long enough to type.
+  if (input.forwardedProps?.action === "submit_release") {
+    await streamText(res, id("msg"), [`Release "${input.forwardedProps.name}" noted. `, "No user message came with it: the props carried it."]);
+    emit(res, { type: "RUN_FINISHED", threadId, runId });
+    res.end();
+    return;
+  }
+  if (/\brelease form\b/i.test(prompt)) {
+    const surface = id("m");
+    emit(res, { type: "ACTIVITY_SNAPSHOT", messageId: surface, activityType: "release_form", content: { step: "Step 1 of 2: name the release" } });
+    await streamText(res, id("msg"), ["Type a name; the form is redrawn in five seconds."]);
+    await sleep(5000);
+    emit(res, { type: "ACTIVITY_SNAPSHOT", messageId: surface, activityType: "release_form", replace: true, content: { step: "Step 2 of 2: submit it" } });
+    emit(res, { type: "RUN_FINISHED", threadId, runId });
+    res.end();
+    return;
+  }
+
   // Answers to a previous round's approval interrupts. Every answered call gets
   // a result, as it does from django-ag-ui: an approved one its tool's return,
   // a denied one the denial, marked as such.

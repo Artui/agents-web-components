@@ -1640,4 +1640,42 @@ describe("over the real HttpAgent", () => {
     expect(messages.flatMap((m) => Object.keys(m))).not.toContain("outcome");
     expect(warnings()).toEqual([]);
   });
+
+  describe("forwardedProps", () => {
+    /** A round that calls the frontend tool `pick`, so the client runs another. */
+    const callsPick = run(
+      { type: "TOOL_CALL_START", toolCallId: "tc1", toolCallName: "pick" },
+      { type: "TOOL_CALL_ARGS", toolCallId: "tc1", delta: "{}" },
+      { type: "TOOL_CALL_END", toolCallId: "tc1" },
+    );
+
+    function client(): AgUiClient {
+      return new AgUiClient({
+        agent: createHttpAgent({ endpoint: "/agent/" }),
+        handlers: recordingHandlers(),
+        executeTool: async () => ({ content: "picked" }),
+      });
+    }
+
+    it("sends what a plain send puts there when none are given", async () => {
+      const bodies = stubFetch();
+
+      await client().send("hi");
+
+      expect(bodies[0]?.["forwardedProps"]).toEqual({});
+    });
+
+    it("rides on the first round of a run, adding no user message", async () => {
+      const bodies = stubFetch(callsPick);
+
+      await client().run({ action: "approve", surface: "s1" });
+
+      expect(bodies).toHaveLength(2);
+      expect(bodies[0]?.["forwardedProps"]).toEqual({ action: "approve", surface: "s1" });
+      expect(sent(bodies[0])).toEqual([]);
+      // The follow-up round a frontend tool started is not a second action.
+      expect(bodies[1]?.["forwardedProps"]).toEqual({});
+      expect(sent(bodies[1]).map((m) => m["role"])).toEqual(["assistant", "tool"]);
+    });
+  });
 });

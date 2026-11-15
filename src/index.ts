@@ -35,6 +35,7 @@ export {
   X_SUMMARY_KEY,
 } from "./constants.js";
 export type { ActivityRegistration } from "./core/activity_registration.js";
+export type { ActivityRenderContext } from "./core/activity_render_context.js";
 export type { ActivityRenderer } from "./core/activity_renderer.js";
 export {
   AgUiClient,

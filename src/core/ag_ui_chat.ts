@@ -87,6 +87,7 @@ import { Transcript } from "../ui/transcript/transcript.js";
 import { DEFAULT_UI_STRINGS, mergeUiStrings, type UiStrings } from "../ui/ui_strings.js";
 import type { ActivityRegistration } from "./activity_registration.js";
 import { ActivityRegistry } from "./activity_registry.js";
+import type { ActivityRenderContext } from "./activity_render_context.js";
 import type { ActivityRenderer } from "./activity_renderer.js";
 import { AgUiClient } from "./agui_client.js";
 // biome-ignore lint/style/useImportType: the emitted declaration file copies this form
@@ -535,6 +536,13 @@ export class AgUiChat extends HTMLElement {
     strings: () => this.#strings,
     follow: () => this.#transcript.follow(),
   });
+  /**
+   * The context providers {@link registerContext} added, in registration order.
+   * Replaced rather than changed in place, so a round reading it is not moved
+   * under by a provider that unregisters one, and each entry is a wrapper of
+   * its own, so registering one function twice is two registrations.
+   */
+  #contextProviders: readonly { readonly read: () => Context[] }[] = [];
   /**
    * The AG-UI activities this element can draw, and the blocks it drew. A field
    * rather than built in the constructor, because the constructor registers the
@@ -1364,6 +1372,28 @@ export class AgUiChat extends HTMLElement {
     this.#tools.registerPageState(binding);
   }
 
+  /**
+   * Add entries to every run's context, beside {@link getContext} rather than
+   * in place of it.
+   *
+   * Each round's context is what {@link getContext} returns, then what every
+   * registered provider returns, in registration order, then the place. Read
+   * fresh for every round, the conversation's own and a checkpoint
+   * continuation's alike, and filtered as {@link getContext}'s entries are
+   * while the place is withheld. Lets a piece of the host page (a surface an
+   * activity drew, a panel of its own) say what it holds without owning
+   * {@link getContext}, which one assignment would replace for everyone.
+   *
+   * Returns the function that unregisters it; calling that again does nothing.
+   */
+  registerContext(provider: () => Context[]): () => void {
+    const entry = { read: provider };
+    this.#contextProviders = [...this.#contextProviders, entry];
+    return () => {
+      this.#contextProviders = this.#contextProviders.filter((other) => other !== entry);
+    };
+  }
+
   /** The AG-UI endpoint URL, read from the `endpoint` attribute. */
   get endpoint(): string {
     return this.getAttribute("endpoint") ?? "";
@@ -1958,11 +1988,15 @@ export class AgUiChat extends HTMLElement {
   }
 
   /**
-   * A round's context: the host's, then the place. A withheld place withholds
-   * the page map too, so it is filtered out of whatever the host returned.
+   * A round's context: the host's, then its registered providers', then the
+   * place. A withheld place withholds the page map too, so it is filtered out
+   * of whatever the host returned.
    */
   #roundContext(): Context[] {
-    const context = this.getContext();
+    const context = [
+      ...this.getContext(),
+      ...this.#contextProviders.flatMap((provider) => provider.read()),
+    ];
     const kept = this.#place.withheld
       ? context.filter((entry) => entry.description !== PAGE_MAP_CONTEXT)
       : context;
@@ -3637,7 +3671,52 @@ export class AgUiChat extends HTMLElement {
    * is what is sent.
    */
   async sendMessage(content: string, attachments: readonly AttachmentRef[] = []): Promise<boolean> {
-    if (content === "" && attachments.length === 0) {
+    return this.#startRun({ content, attachments }, (client) => client.send(content, attachments));
+  }
+
+  /**
+   * Start a run carrying `forwardedProps`, with or without a user message.
+   *
+   * `forwardedProps` is sent as the first request's
+   * `RunAgentInput.forwardedProps`, which is how a host tells the server
+   * something that is not a turn of the conversation: what was picked on a
+   * surface an activity drew, say. Only the first request carries it; the
+   * rounds a frontend tool or an approval starts after it do not, since a
+   * server may turn it into a turn of its own and would then see it again.
+   *
+   * With `message`, the message is drawn as {@link sendMessage} draws a turn,
+   * as the user's bubble announced by {@link SUBMIT_EVENT}, but it is not added
+   * to the messages the request carries: the server builds that turn from
+   * `forwardedProps` and stores it, so sending it as well would put it in the
+   * conversation twice. Without it nothing is drawn or announced. Either way
+   * no user message is added, and the run answers the conversation as it
+   * stands. An empty `message` is refused, as an empty {@link sendMessage} is.
+   *
+   * Resolves as {@link sendMessage} does, and refuses or waits by the same
+   * rules: `false` while a run, a send or a picked checkpoint's continuation is
+   * in flight and with no `endpoint`; behind a restore it waits, then runs;
+   * `true` once the run has been handed to the client.
+   */
+  run(options: {
+    readonly forwardedProps: Readonly<Record<string, unknown>>;
+    readonly message?: string;
+  }): Promise<boolean> {
+    const { forwardedProps, message } = options;
+    return this.#startRun(
+      message === undefined ? null : { content: message, attachments: [] },
+      (client) => client.run(forwardedProps),
+    );
+  }
+
+  /**
+   * The one send behind {@link sendMessage} and {@link run}: the turn it draws,
+   * if any, and how it starts the client's run.
+   */
+  async #startRun(
+    turn: { readonly content: string; readonly attachments: readonly AttachmentRef[] } | null,
+    start: (client: AgUiClient) => Promise<void>,
+  ): Promise<boolean> {
+    if (turn !== null && turn.content === "" && turn.attachments.length === 0) {
       return false;
     }
     const restore = this.#restoreHold;
@@ -3658,7 +3737,7 @@ export class AgUiChat extends HTMLElement {
         return false;
       }
       this.#sending = null;
-      return this.sendMessage(content, attachments);
+      return this.#startRun(turn, start);
     }
     if (this.#busy()) {
       return false;
@@ -3672,13 +3751,16 @@ export class AgUiChat extends HTMLElement {
       // the user was doing, and snaps. Armed before the bubble lands so both
       // writes reach the same style recalculation, which is what makes the
       // change a transition rather than a jump.
-      if (this.#transcript.isEmpty()) {
-        this.setAttribute("data-composer-settling", "");
+      // A run with no turn draws nothing, and has nothing to travel.
+      if (turn !== null) {
+        if (this.#transcript.isEmpty()) {
+          this.setAttribute("data-composer-settling", "");
+        }
+        // Taken before the announcement, because its listeners run here: a
+        // host's own send from one is refused as overlapping this one, as it
+        // would be from any later moment of it.
+        this.#announceTurn(turn.content, turn.attachments);
       }
-      // Taken before the announcement, because its listeners run here: a host's
-      // own send from one is refused as overlapping this one, as it would be
-      // from any later moment of it.
-      this.#announceTurn(content, attachments);
       // A listener can also have stopped it -- New chat, a thread switch, a
       // change of principal, moving the element. All of them reach the Stop,
       // which let go of this send, and the turn would otherwise go out into the
@@ -3689,7 +3771,7 @@ export class AgUiChat extends HTMLElement {
       // Read where the request is made, which says why nothing was sent when
       // there is no endpoint to send to.
       const connected = this.endpoint !== "";
-      await this.#client_send(content, attachments);
+      await this.#client_send(start);
       return connected;
     } finally {
       // Still held here only if its run never started: no endpoint, or a
@@ -3743,10 +3825,10 @@ export class AgUiChat extends HTMLElement {
    * attribute is missing and the transcript tells the reader, on every
    * attempt: a once-only report is silence for each one after.
    */
-  async #client_send(content: string, attachments: readonly AttachmentRef[]): Promise<void> {
+  async #client_send(start: (client: AgUiClient) => Promise<void>): Promise<void> {
     if (this.endpoint === "") {
       console.error(
-        "<ag-ui-chat>: no endpoint is set, so this message was not sent and no " +
+        "<ag-ui-chat>: no endpoint is set, so nothing was sent and no " +
           "request was made. Point the element at your AG-UI mount with the " +
           'endpoint attribute (endpoint="/agent/"), or assign chat.endpoint ' +
           "before sending.",
@@ -3754,7 +3836,7 @@ export class AgUiChat extends HTMLElement {
       this.#transcript.appendNotice("⚠", this.#strings.notConnected, "not-connected");
       return;
     }
-    await this.#ensureClient().send(content, attachments);
+    await start(this.#ensureClient());
   }
 
   #ensureClient(): AgUiClient {
@@ -3931,6 +4013,10 @@ export class AgUiChat extends HTMLElement {
    * Registering a type twice replaces the earlier renderer, so a host can
    * override a built-in -- `chart` and `compaction` are registrations like any
    * other, not privileged branches.
+   *
+   * `render` is also handed an {@link ActivityRenderContext}: the message id,
+   * the node it drew for that id last (return it, updated, to keep it in place),
+   * and whether the draw is live or a replay, which must draw an inert surface.
    *
    * ⚠ `render` runs again on every thread load. See {@link ActivityRenderer}
    * for what that requires of it.

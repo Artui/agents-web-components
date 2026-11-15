@@ -457,6 +457,21 @@ export class AgUiClient {
   }
 
   /**
+   * Run the agent on the conversation as it stands, adding no user message,
+   * with `forwardedProps` as the first request's `RunAgentInput.forwardedProps`.
+   *
+   * No message, because a server that reads `forwardedProps` builds the turn
+   * from them and stores it itself. Only the first request: the frontend-tool
+   * and interrupt rounds that follow carry none, since the server would
+   * otherwise build that turn again for each of them.
+   */
+  async run(forwardedProps: Readonly<Record<string, unknown>>): Promise<void> {
+    // A new interaction, as in send(); no host code runs between here and the loop.
+    this.#cancelled = false;
+    await this.#run(forwardedProps);
+  }
+
+  /**
    * Drop everything after the most recent user message, so the same question
    * can be asked again.
    *
@@ -540,9 +555,9 @@ export class AgUiClient {
     this.#agent.abortRun();
   }
 
-  async #run(): Promise<void> {
+  async #run(forwardedProps?: Readonly<Record<string, unknown>>): Promise<void> {
     try {
-      await this.#runLoop();
+      await this.#runLoop(forwardedProps);
       // `@ag-ui/client` filters abort errors inside `runAgent` (it resolves
       // rather than rejects on a cancelled fetch), so a cancelled run usually
       // ends here, not in the catch.
@@ -685,7 +700,7 @@ export class AgUiClient {
     this.#onPersist(this.#agent.messages);
   }
 
-  async #runLoop(): Promise<void> {
+  async #runLoop(forwardedProps?: Readonly<Record<string, unknown>>): Promise<void> {
     // Carries resolved approval answers into the next run when a round finished
     // on a server-side-tool interrupt. Distinct from the public resume(), which
     // continues an unfinished frontend-tool round after a page load; this stays
@@ -714,6 +729,9 @@ export class AgUiClient {
       };
       if (resume !== undefined) {
         params.resume = resume;
+      }
+      if (round === 0 && forwardedProps !== undefined) {
+        params.forwardedProps = forwardedProps;
       }
       this.#answerUnansweredCalls(resuming);
       // Everything above since the check at the top is host code -- the tool

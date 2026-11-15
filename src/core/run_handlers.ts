@@ -331,7 +331,7 @@ export class RunHandlers {
         this.#host.transcript.cardFor(call);
       },
       onActivity: (activityType, content, messageId) => {
-        this.#host.activities.draw(messageId, activityType, content);
+        this.#host.activities.draw(messageId, activityType, content, true);
       },
       onCustomEvent: (name, value) => {
         if (name === INVALIDATE_CUSTOM_NAME) {
@@ -417,7 +417,7 @@ export class RunHandlers {
         this.#host.transcript.showPending();
       },
       onActivityChanged: (messageId, activityType, content) => {
-        this.#host.activities.draw(messageId, activityType, content);
+        this.#host.activities.draw(messageId, activityType, content, true);
       },
       onRunEnd: () => {
         // Per-round end; the button stays on Stop until the whole interaction

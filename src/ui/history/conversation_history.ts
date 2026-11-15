@@ -1042,7 +1042,7 @@ export class ConversationHistory {
       // the drawing had to be put back.
       const activity = message as unknown as { activityType?: unknown; content?: unknown };
       if (typeof activity.activityType === "string") {
-        this.#host.activities.draw(message.id, activity.activityType, activity.content);
+        this.#host.activities.draw(message.id, activity.activityType, activity.content, false);
       }
       return;
     }

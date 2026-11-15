@@ -331,8 +331,8 @@ Code blocks in an agent's answer carry a **copy button**, revealed on hover or
 keyboard focus and styleable via the `code-copy` part. Override its labels with
 the `copyCode` / `copied` / `copyFailed` strings.
 
-**Methods**: `registerTool`, `registerPageState`, `registerActivityRenderer`, `setSkills`,
-`sendMessage`, `attachFile`, `appendMessage`, `retryLastTurn`, `quote`, `offerQuoteInPage`,
+**Methods**: `registerTool`, `registerPageState`, `registerActivityRenderer`, `registerContext`,
+`setSkills`, `sendMessage`, `run`, `attachFile`, `appendMessage`, `retryLastTurn`, `quote`, `offerQuoteInPage`,
 `enableCharts`, `newChat`, `setCollapsed`, `toggleCollapsed`, `setMaximized`, `toggleMaximized`,
 `describeSurface`, `moveTo`, `resetSize`, `toggleTheme`, `openThreads`, `closeThreads`, `switchThread`, `deleteThread`,
 `openCheckpoints`, `closeCheckpoints`, `toggleCheckpoints`, `refreshPlace` and `reload`.
@@ -412,6 +412,50 @@ chat.addEventListener("ag-ui-attachments", (e) => {
 });
 chat.attachFile(fileInput.files[0]);
 ```
+
+### Starting a run with forwarded props
+
+`run({ forwardedProps, message? })` starts a run whose first request carries `forwardedProps` as
+`RunAgentInput.forwardedProps`: how a host tells the server something that is not a turn of the
+conversation, such as what the user picked on a surface an activity drew.
+
+```js
+await chat.run({
+  forwardedProps: { action: "approve", surface: "s1" },
+  message: "Approve the refund",
+});
+```
+
+- **Only the first request carries them.** The rounds a frontend tool or an approval starts
+  afterwards send none, because a server that turns them into a turn would otherwise add it again
+  for every round.
+- **`message` is drawn, not sent.** Given, it is drawn as the user's bubble and announced by
+  `ag-ui-submit`, exactly as a `sendMessage` turn is, but it is not added to the request's
+  `messages`: the server builds that turn from `forwardedProps` and stores it, and sending it as
+  well would put it in the conversation twice. Without it, nothing is drawn or announced. An empty
+  `message` is refused.
+- **It refuses and waits as `sendMessage` does.** It resolves `false` while a run, a send or a
+  picked checkpoint's continuation is in flight, and with no `endpoint`; behind a restore it waits,
+  then runs; it resolves `true` once the run is handed to the client.
+
+### Adding to every run's context
+
+`registerContext(provider)` adds entries to every run's context beside `getContext` rather than
+in place of it, and returns the function that removes them again:
+
+```js
+const unregister = chat.registerContext(() => [
+  { description: "open_surface", value: JSON.stringify(surface.state) },
+]);
+// later
+unregister();
+```
+
+Each round's context is what `getContext` returns, then each registered provider's entries in
+registration order, then the place. Providers are read fresh for every round, a checkpoint
+continuation's included, and are filtered like `getContext`'s while the place is withheld. Use it
+when a piece of your page has something to say for as long as it is on screen, without taking
+`getContext` over from whatever else set it.
 
 A self-contained live playground lives in [`demo/`](demo/) — run `make demo` to serve it against a
 mock AG-UI server.
@@ -1886,19 +1930,57 @@ chat.registerActivityRenderer({
 ```
 
 **`render` runs again on every thread load**, so it carries the same contract as
-a client tool's `render`: a pure function of `content`, deterministic, and free
-of effects outside the node it returns. Activities are materialised into
+a client tool's `render`: a pure function of `content` and the context it is
+drawn in (below), deterministic, and free of effects outside the node it returns. Activities are materialised into
 `role: "activity"` messages and persisted with the transcript, so a renderer that
 writes to the page instead of returning DOM fires again on every restore.
 
 The component places what you return, keyed by the activity's `messageId`, so a
 server repeating an id **replaces** your node rather than adding a second one —
-the same in-place update charts get. Returning `null` removes whatever was there:
+the same in-place update charts get, unless `render` hands back the node it was
+given (below). Returning `null` removes whatever was there:
 live and reload should agree, and the stored content is the version that could
 not be drawn.
 
 `chart` and `compaction` are registrations exactly like yours, not privileged
 branches, so registering either name **replaces the built-in**.
+
+### Updating a surface in place, and drawing it inert on replay
+
+`render` takes a second argument, an `ActivityRenderContext`:
+`{ messageId, previous, live }`. A one-argument renderer ignores it and keeps
+working as before.
+
+- **`previous`** is the node your renderer returned for this `messageId` last
+  (`null` on the first draw). Update it and **return it**, and the component
+  leaves it where it is instead of replacing it, so a field the user is typing
+  into keeps its value and its focus when the server redraws the activity.
+  Returning a new node replaces the old one, as before.
+- **`live`** is `true` when the draw comes from the run in flight and `false`
+  when a stored conversation is put back (a reload, a thread picked from the
+  drawer, a Retry redrawing what came before it). **A surface drawn with
+  `live: false` must be inert**: no button that acts, every input disabled. A
+  restored surface is redrawn on every thread load, and acting on it would
+  send an action from a turn the conversation has moved past.
+
+```js
+chat.registerActivityRenderer({
+  type: "approval_form",
+  render: (content, { previous, live }) => {
+    const form = previous ?? document.createElement("form");
+    if (previous === null) {
+      form.append(document.createElement("input"), document.createElement("button"));
+      form.querySelector("button").textContent = "Approve";
+      form.onsubmit = (event) => {
+        event.preventDefault();
+        void chat.run({ forwardedProps: { action: "approve", note: form.elements[0].value } });
+      };
+    }
+    for (const control of form.elements) control.disabled = !live;
+    return form;
+  },
+});
+```
 
 ### Which carrier should the server use?
 
@@ -3407,7 +3489,8 @@ paths.
 | `attachMessageActions` | function | Give a finished bubble its action row (copy, and feedback when a handler is passed). |
 | `messageActionBar` | function | The empty action row for a bubble, created if it has none — the shared shell both callers use. |
 | `MessageActionsOptions` | type | What `attachMessageActions` takes: `strings`, a `text` source, an optional `html` source for the rich clipboard flavour, an optional `onFeedback`. |
-| `ActivityRenderer` | type | Draws one activity from its `content`. Pure: it runs again on every restore. |
+| `ActivityRenderer` | type | Draws one activity from its `content` and an `ActivityRenderContext`. Pure: it runs again on every restore. |
+| `ActivityRenderContext` | type | What a renderer is told besides the content (`{ messageId, previous, live }`): the node it drew last for that id, and whether the draw is live. |
 | `ActivityRegistration` | type | What `registerActivityRenderer` takes: `type`, `render`, and an optional `removedNotice`. |
 
 ### Durability

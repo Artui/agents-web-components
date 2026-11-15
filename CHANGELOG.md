@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **An activity renderer is told what it drew last, and whether the draw is live.** `render`
+  takes a second argument, an `ActivityRenderContext` (`{ messageId, previous, live }`, exported
+  from the package root). Returning `previous`, updated in place, keeps the node where it is
+  across a redraw of the same message id, so a field the user is typing into keeps its value and
+  its focus; returning a new node replaces it, and `null` removes it, as before. `live` is `true`
+  for a draw from the run in flight and `false` for one replayed from a stored conversation, and a
+  surface drawn with `live: false` must be inert, since acting on it would re-send a stale action
+  on every thread load. One-argument renderers, the built-in chart among them, draw exactly as
+  before. A host opts in by reading the second argument.
+- **`chat.run({ forwardedProps, message? })` starts a run that forwards props.** The first
+  request carries `forwardedProps` as `RunAgentInput.forwardedProps`; the frontend-tool and
+  approval rounds after it carry none. `message`, when given, is drawn as the user's turn and
+  announced by `ag-ui-submit`, but is not added to the request's messages, because the server
+  builds that turn from the props. It refuses, waits behind a restore and resolves as
+  `sendMessage` does. `AgUiClient.run(forwardedProps)` is the client half. A host opts in by
+  calling it.
+- **`chat.registerContext(provider)` adds entries to every run's context** after what
+  `getContext` returns, in registration order, for the conversation's runs and checkpoint
+  continuations alike; it returns the function that removes them. A host opts in by calling it;
+  `getContext` is unchanged.
+
 ## [0.2.1] — 2026-11-15
 
 ### Fixed
