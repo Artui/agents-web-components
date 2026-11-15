@@ -47,7 +47,9 @@ import {
   framesOf,
   payloadOf,
   RUNS,
+  refusalOf,
   replay,
+  replayRefusal,
   shadow,
   text,
 } from "../helpers/recorded_wire.js";
@@ -233,6 +235,22 @@ describe("a run refused for an over-long identifier, decoded from recorded bytes
     const failed = bubbles[bubbles.length - 1]?.textContent;
     expect(failed).toContain("thread_id is 300 characters, over its 255-character limit");
     expect(failed).not.toContain(DEFAULT_UI_STRINGS.runErrorFailed);
+    expect(text(el, ".run-error-offer")).toBe(DEFAULT_UI_STRINGS.runErrorNewChat);
+  });
+
+  // django-ag-ui's view refuses an id over the store's limit before any stream
+  // opens, with a 400 whose JSON body carries the code; the real client turns
+  // it into a rejection, which has to read as the coded RUN_ERROR above does.
+  it("draws the same message and offer for the view's preflight 400", async () => {
+    const refusal = refusalOf("identifierTooLongPreflight");
+    expect(refusal.status).toBe(400);
+    const el = mount();
+    await replayRefusal(el, refusal);
+
+    const bubbles = shadow(el).querySelectorAll(".message");
+    const failed = bubbles[bubbles.length - 1]?.textContent;
+    expect(failed).toContain("thread_id is 300 characters, over its 255-character limit");
+    expect(failed).not.toContain("HTTP 400");
     expect(text(el, ".run-error-offer")).toBe(DEFAULT_UI_STRINGS.runErrorNewChat);
   });
 

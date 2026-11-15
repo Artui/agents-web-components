@@ -191,4 +191,64 @@ describe("a run POST the server refuses", () => {
     expect(failedText(el)).toBe('⚠️ HTTP 400: {"detail":"thread_id is too long"}');
     expect(offer(el)).toBeNull();
   });
+
+  /** A refusal whose body is `body`, sent as `contentType`. */
+  function refused(body: string, contentType = "application/json"): () => Response {
+    return () => new Response(body, { status: 400, headers: { "Content-Type": contentType } });
+  }
+
+  // django-ag-ui's `agui_view` refuses an over-long id before the stream opens
+  // with this body, so the coded path a RUN_ERROR takes has to reach it too.
+  it("shows identifier_too_long's message and the offer for a coded refusal", async () => {
+    stubRuns(refused(JSON.stringify({ error: TOO_LONG, code: "identifier_too_long" })));
+    const el = mountReal();
+
+    await el.sendMessage("go");
+    await settle();
+
+    expect(failedText(el)).toBe(`⚠️ ${TOO_LONG}`);
+    expect(offer(el)?.textContent).toBe(DEFAULT_UI_STRINGS.runErrorNewChat);
+  });
+
+  it("shows a known code's string for a coded refusal, with no offer", async () => {
+    stubRuns(refused(JSON.stringify({ error: "slow", code: "timed_out" })));
+    const el = mountReal();
+
+    await el.sendMessage("go");
+    await settle();
+
+    expect(failedText(el)).toBe(`⚠️ ${DEFAULT_UI_STRINGS.runErrorTimedOut}`);
+    expect(offer(el)).toBeNull();
+  });
+
+  it("falls back to the client's text for identifier_too_long with no error message", async () => {
+    stubRuns(refused(JSON.stringify({ code: "identifier_too_long" })));
+    const el = mountReal();
+
+    await el.sendMessage("go");
+    await settle();
+
+    expect(failedText(el)).toBe('⚠️ HTTP 400: {"code":"identifier_too_long"}');
+    expect(offer(el)).not.toBeNull();
+  });
+
+  it.each([
+    ["a body not sent as JSON", "Bad Request", "text/plain", "HTTP 400: Bad Request"],
+    ["a code that is not a string", '{"code":7}', "application/json", 'HTTP 400: {"code":7}'],
+    [
+      "a JSON array",
+      '["identifier_too_long"]',
+      "application/json",
+      'HTTP 400: ["identifier_too_long"]',
+    ],
+  ])("keeps the client's text for %s", async (_name, body, contentType, text) => {
+    stubRuns(refused(body, contentType));
+    const el = mountReal();
+
+    await el.sendMessage("go");
+    await settle();
+
+    expect(failedText(el)).toBe(`⚠️ ${text}`);
+    expect(offer(el)).toBeNull();
+  });
 });

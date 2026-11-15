@@ -215,8 +215,10 @@ export interface AgUiClientHandlers {
   onSubAgentError(subagentRunId: string, message: string): void;
   /**
    * The run failed. `runError` is present when the failure was a `RUN_ERROR`
-   * event, carrying its `code` if the server sent one; a thrown error (a dropped
-   * stream, a non-2xx POST) passes only the message.
+   * event, carrying its `code` if the server sent one, and when a non-2xx run
+   * POST's JSON body carries a string `code`; `message` is then the body's
+   * `error` when that is a string. Any other thrown error (a dropped stream, an
+   * uncoded non-2xx POST) passes only the message.
    */
   onError(message: string, runError?: RunErrorInfo): void;
   /**
@@ -225,8 +227,9 @@ export interface AgUiClientHandlers {
    */
   onUsage?(usage: readonly TokenUsage[]): void;
   /**
-   * Fired when the user cancelled the run ({@link AgUiClient.cancel}) — the
-   * deliberate-stop sibling of `onError`. Partial assistant text already
+   * Fired when the run was stopped: the user cancelled it ({@link AgUiClient.cancel}),
+   * or the server ended it with a `RUN_FINISHED` whose outcome is `cancelled` --
+   * the deliberate-stop sibling of `onError`. Partial assistant text already
    * streamed stays valid, so the host keeps the bubble and shows a stopped
    * affordance rather than an error. `onSettled` still follows.
    */
@@ -239,9 +242,12 @@ export interface AgUiClientHandlers {
   onSettled(): void;
 }
 
-/** What {@link AgUiClientHandlers.onError} is told about a `RUN_ERROR` event. */
+/**
+ * What {@link AgUiClientHandlers.onError} is told about a `RUN_ERROR` event, or
+ * about a non-2xx run POST whose JSON body carries a string `code`.
+ */
 export interface RunErrorInfo {
-  /** The event's machine-readable code; the protocol defines no vocabulary. */
+  /** The event's or the body's machine-readable code; the protocol defines no vocabulary. */
   readonly code?: string;
 }
 
@@ -356,10 +362,11 @@ export class AgUiClient {
   readonly #unfinishedMessage: string;
   readonly #declinedMessage: string;
   readonly #maxToolRounds: number;
-  // Set by cancel(); reset as send() or resume() begins, before either runs
-  // any host code. Checked by the loop so a cancel between frontend-tool
-  // rounds doesn't start another round, and again just before each request,
-  // so a cancel from host code the round itself runs is not sent anyway.
+  // Set by cancel() or a server-cancelled `RUN_FINISHED`; reset as send() or
+  // resume() begins, before either runs any host code. Checked by the loop so
+  // a cancel between frontend-tool rounds doesn't start another round, and
+  // again just before each request, so a cancel from host code the round
+  // itself runs is not sent anyway.
   #cancelled = false;
 
   constructor(config: AgUiClientConfig) {
@@ -546,7 +553,13 @@ export class AgUiClient {
       if (this.#cancelled || isAbortError(error)) {
         this.#onCancelled();
       } else {
-        this.#handlers.onError(error instanceof Error ? error.message : String(error));
+        const message = error instanceof Error ? error.message : String(error);
+        const refusal = codedRefusal(error);
+        if (refusal === null) {
+          this.#handlers.onError(message);
+        } else {
+          this.#handlers.onError(refusal.message ?? message, { code: refusal.code });
+        }
       }
     } finally {
       this.#handlers.onSettled();
@@ -689,7 +702,12 @@ export class AgUiClient {
         return;
       }
       const pending: AgUiToolCall[] = [];
-      const runState: RunState = { terminal: false, errored: false, interrupts: [] };
+      const runState: RunState = {
+        terminal: false,
+        errored: false,
+        cancelled: false,
+        interrupts: [],
+      };
       const params: RunAgentParameters = {
         tools: this.#getTools(),
         context: this.#getContext(),
@@ -727,6 +745,13 @@ export class AgUiClient {
       // would run into a broken context and raise a confusing second error.
       // Pending tool cards are swept at onSettled.
       if (runState.errored) {
+        return;
+      }
+      // The server stopped the run (`RUN_FINISHED` with outcome `cancelled`):
+      // it ends as Stop does, so the calls it streamed do not run and `#run`
+      // reports it through `onCancelled`.
+      if (runState.cancelled) {
+        this.#cancelled = true;
         return;
       }
       // A gated server-side tool deferred, so the run finished on an interrupt
@@ -958,6 +983,9 @@ export class AgUiClient {
         if (params.outcome === "interrupt") {
           runState.interrupts = params.interrupts;
         }
+        if (params.outcome === "cancelled") {
+          runState.cancelled = true;
+        }
       },
       onRunErrorEvent({ event }) {
         runState.terminal = true;
@@ -985,8 +1013,32 @@ export class AgUiClient {
 interface RunState {
   terminal: boolean;
   errored: boolean;
+  /** The server stopped the run: `RUN_FINISHED` carried the `cancelled` outcome. */
+  cancelled: boolean;
   /** Approval interrupts a run finished on (empty for a normal finish). */
   interrupts: Interrupt[];
+}
+
+/**
+ * The `code` (and `error` message) of a run POST the server refused with a JSON
+ * body, or `null` when the body carries no string `code`.
+ *
+ * `@ag-ui/client` rejects a non-2xx response with an `Error` whose `payload` is
+ * the body, parsed when it was sent as JSON. django-ag-ui refuses an over-long
+ * id that way, before any stream opens, with `{"error": ..., "code": ...}`; a
+ * coded refusal then reads exactly as a `RUN_ERROR` with that code would.
+ */
+function codedRefusal(error: unknown): { code: string; message?: string } | null {
+  const payload: unknown = error instanceof Error ? Reflect.get(error, "payload") : undefined;
+  if (typeof payload !== "object" || payload === null) {
+    return null;
+  }
+  const code: unknown = Reflect.get(payload, "code");
+  if (typeof code !== "string") {
+    return null;
+  }
+  const message: unknown = Reflect.get(payload, "error");
+  return typeof message === "string" ? { code, message } : { code };
 }
 
 /**

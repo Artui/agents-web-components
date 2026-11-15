@@ -203,6 +203,47 @@ describe("AgUiClient", () => {
     expect(handlers.calls).toEqual(["err:boom", "settled"]);
   });
 
+  /** An agent whose run rejects as `@ag-ui/client` does for a non-2xx POST with `payload`. */
+  function refusingAgent(message: string, payload: unknown, before?: () => void) {
+    const fake = makeFakeAgent();
+    (fake.agent as unknown as { runAgent: () => Promise<never> }).runAgent = () => {
+      before?.();
+      return Promise.reject(Object.assign(new Error(message), { status: 400, payload }));
+    };
+    return fake;
+  }
+
+  it.each([
+    ["a null body", null, "HTTP 400: null"],
+    [
+      "an error that is not a string",
+      { error: 5, code: "identifier_too_long" },
+      'HTTP 400: {"error":5,"code":"identifier_too_long"}',
+    ],
+  ])("keeps the client's message for %s", async (_name, payload, message) => {
+    const errors: unknown[] = [];
+    const handlers = recordingHandlers();
+    handlers.onError = (m, runError) => {
+      errors.push([m, runError]);
+    };
+    await new AgUiClient({ agent: refusingAgent(message, payload).agent, handlers }).send("x");
+    const code = (payload as { code?: string } | null)?.code;
+    expect(errors).toEqual([[message, code === undefined ? undefined : { code }]]);
+  });
+
+  it("reports a Stop, not a coded refusal that lands after it", async () => {
+    const handlers = recordingHandlers();
+    let client: AgUiClient | undefined;
+    const fake = refusingAgent("HTTP 400: {}", { error: "x", code: "identifier_too_long" }, () =>
+      client?.cancel(),
+    );
+    client = new AgUiClient({ agent: fake.agent, handlers });
+    await client.send("x");
+    expect(handlers.calls.filter((c) => c.startsWith("err:") || c === "cancelled")).toEqual([
+      "cancelled",
+    ]);
+  });
+
   it("reflects the agent's running state", () => {
     const idle = makeFakeAgent({ isRunning: false });
     const busy = makeFakeAgent({ isRunning: true });
@@ -1266,6 +1307,82 @@ describe("over the real HttpAgent", () => {
       ["Checking.", { messageId: "m1", runId: "srv-r1" }],
       ["Done.", { messageId: "m2", runId: "srv-r2" }],
     ]);
+  });
+
+  it("hands onError the code a refused run POST's JSON body carries", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({ error: "runId is too long", code: "identifier_too_long" }),
+            {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            },
+          ),
+        ),
+      ),
+    );
+    const errors: unknown[] = [];
+    const handlers = recordingHandlers();
+    handlers.onError = (message, runError) => {
+      errors.push([message, runError]);
+    };
+
+    await new AgUiClient({ agent: createHttpAgent({ endpoint: "/agent/" }), handlers }).send("hi");
+
+    expect(errors).toEqual([["runId is too long", { code: "identifier_too_long" }]]);
+  });
+
+  it("ends a run the server cancelled as a stop, running none of its tool calls", async () => {
+    // A server-side cancel (django-ag-ui relays pydantic-ai's `RunCancelled`,
+    // `RunTimedOut` among them) is the same ending as Stop: no host tool runs,
+    // no further round starts, and it is reported once, as a cancel.
+    const bodies = stubFetch([
+      { type: "RUN_STARTED", threadId: "t1", runId: "r1" },
+      { type: "TEXT_MESSAGE_START", messageId: "m1", role: "assistant" },
+      { type: "TEXT_MESSAGE_CONTENT", messageId: "m1", delta: "Working" },
+      { type: "TEXT_MESSAGE_END", messageId: "m1" },
+      { type: "TOOL_CALL_START", toolCallId: "fc1", toolCallName: "fill_field" },
+      { type: "TOOL_CALL_ARGS", toolCallId: "fc1", delta: "{}" },
+      { type: "TOOL_CALL_END", toolCallId: "fc1" },
+      {
+        type: "RUN_FINISHED",
+        threadId: "t1",
+        runId: "r1",
+        outcome: { type: "cancelled" },
+        usage: [{ inputTokens: 10, outputTokens: 2 }],
+      },
+    ]);
+    const handlers = recordingHandlers();
+    const usage: unknown[] = [];
+    handlers.onUsage = (entries) => {
+      usage.push(entries);
+    };
+    const executeTool = vi.fn(async () => ({ content: "ok" }));
+    let saved: readonly Message[] = [];
+
+    await new AgUiClient({
+      agent: createHttpAgent({ endpoint: "/agent/" }),
+      handlers,
+      executeTool,
+      onPersist: (messages) => {
+        saved = messages;
+      },
+    }).send("hi");
+
+    expect(bodies).toHaveLength(1);
+    expect(bodies[0]?.["protocolVersion"]).toBe("1.0");
+    expect(executeTool).not.toHaveBeenCalled();
+    expect(handlers.calls.filter((c) => c === "cancelled" || c === "settled")).toEqual([
+      "cancelled",
+      "settled",
+    ]);
+    expect(handlers.calls.some((c) => c.startsWith("err:"))).toBe(false);
+    // The usage still reaches the host; whether to draw it is the host's call.
+    expect(usage).toEqual([[{ inputTokens: 10, outputTokens: 2 }]]);
+    expect(saved.find((m) => m.role === "assistant")?.content).toBe("Working");
   });
 
   it("names a second run inside one stream by its own RUN_STARTED", async () => {

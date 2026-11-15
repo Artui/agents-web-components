@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] — 2026-11-15
+
+### Fixed
+
+- **A run the server cancelled now ends as a stop, not a finish.** A `RUN_FINISHED` whose
+  outcome is `cancelled` (pydantic-ai's AG-UI adapter, which django-ag-ui streams through, sends
+  it when the agent cancels its own run or a run deadline passes) was read as a finished turn:
+  it ran the tool calls it streamed, drew the `show-usage` line and announced an answer. It now
+  takes the Stop path: the Stopped note, no usage line, its tool calls not run and settled as
+  not finished, `onCancelled()` on `AgUiClientHandlers`, and `ag-ui-run-finished` reporting
+  `outcome: "stopped"`. A host that counts completions from that event no longer counts these.
+  A host opts in to nothing.
+- **A run POST refused with a coded JSON body now shows the coded failure.** django-ag-ui
+  refuses an over-long thread or run id before the stream opens, with a 400 whose body is
+  `{"error": <message>, "code": "identifier_too_long"}`; the bubble showed `HTTP 400: <body>`
+  and no new-conversation offer, so 0.2.0's offer reached only the in-stream `RUN_ERROR`. A
+  non-2xx body that is JSON with a string `code` now takes the same path as a `RUN_ERROR` with
+  that code: the code's string, or for `identifier_too_long` the server's `error` message and
+  the offer, and `onError` receives the code in `RunErrorInfo`. A body with no `code`, or one
+  not sent as `application/json`, keeps `HTTP <status>: <body>`. A host opts in to nothing.
+
 ## [0.2.0] — 2026-11-15
 
 ### Added
@@ -117,7 +138,8 @@ move page walks a host over. Each entry below says whether a host opts in.
   kept offering the moon under `theme="dark"`. Only the toggle's own click redrew it before. A host
   opts in to nothing.
 
-[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/Artui/agents-web-components/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Artui/agents-web-components/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/Artui/agents-web-components/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/Artui/agents-web-components/compare/v0.1.0...v0.1.1

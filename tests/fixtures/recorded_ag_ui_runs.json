@@ -61,5 +61,12 @@
       "data: {\"type\":\"RUN_STARTED\",\"timestamp\":1700000000000,\"threadId\":\"thread-recorded\",\"runId\":\"run-too-long\"}\n\n",
       "data: {\"type\":\"RUN_ERROR\",\"timestamp\":1700000000000,\"message\":\"thread_id is 300 characters, over its 255-character limit\",\"code\":\"identifier_too_long\"}\n\n"
     ]
+  },
+  "refusals": {
+    "identifierTooLongPreflight": {
+      "status": 400,
+      "contentType": "application/json",
+      "body": "{\"error\": \"thread_id is 300 characters, over its 255-character limit\", \"code\": \"identifier_too_long\"}"
+    }
   }
 }
