@@ -19,6 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   not finished, `onCancelled()` on `AgUiClientHandlers`, and `ag-ui-run-finished` reporting
   `outcome: "stopped"`. A host that counts completions from that event no longer counts these.
   A host opts in to nothing.
+- **A run POST refused with a coded JSON body now shows the coded failure.** django-ag-ui
+  refuses an over-long thread or run id before the stream opens, with a 400 whose body is
+  `{"error": <message>, "code": "identifier_too_long"}`; the bubble showed `HTTP 400: <body>`
+  and no new-conversation offer, so 0.2.0's offer reached only the in-stream `RUN_ERROR`. A
+  non-2xx body that is JSON with a string `code` now takes the same path as a `RUN_ERROR` with
+  that code: the code's string, or for `identifier_too_long` the server's `error` message and
+  the offer, and `onError` receives the code in `RunErrorInfo`. A body with no `code`, or one
+  that is not JSON, keeps `HTTP <status>: <body>`. A host opts in to nothing.
 
 ## [0.2.0] — 2026-11-15
 

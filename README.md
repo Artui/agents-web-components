@@ -783,9 +783,15 @@ the connection), each a key of the strings table:
 
 Where a code is known, the server's message is not shown: django-ag-ui redacts it unless told not
 to, and a code is the part a client can put words to. A server that sends no code never promised
-that, so its message is kept. A run that fails before any event arrives (the
-stream drops, or the run POST answers with a non-2xx status) shows the client's own error text,
-for example `HTTP 400: {"detail": ...}`, with no offer.
+that, so its message is kept.
+
+A run POST the server refuses before any event arrives reads the same table when its body is
+JSON with a string `code`: django-ag-ui answers an over-long thread or run id with a 400 whose
+body is `{"error": <message>, "code": "identifier_too_long"}`, which draws the server's `error`
+message and the new-conversation offer, exactly as the `RUN_ERROR` would. `onError` receives the
+code in `RunErrorInfo` either way. A refusal with no `code`, or a body that is not JSON, and a
+stream that drops, show the client's own error text, for example `HTTP 400: {"detail": ...}`,
+with no offer.
 
 With `show-usage` set, a finished turn ends with a muted line such as `1,234 in · 567 out
 tokens` (part `usage-line`), the sums of `inputTokens` and `outputTokens` over every usage entry

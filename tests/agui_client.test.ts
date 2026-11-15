@@ -1268,6 +1268,32 @@ describe("over the real HttpAgent", () => {
     ]);
   });
 
+  it("hands onError the code a refused run POST's JSON body carries", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({ error: "runId is too long", code: "identifier_too_long" }),
+            {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            },
+          ),
+        ),
+      ),
+    );
+    const errors: unknown[] = [];
+    const handlers = recordingHandlers();
+    handlers.onError = (message, runError) => {
+      errors.push([message, runError]);
+    };
+
+    await new AgUiClient({ agent: createHttpAgent({ endpoint: "/agent/" }), handlers }).send("hi");
+
+    expect(errors).toEqual([["runId is too long", { code: "identifier_too_long" }]]);
+  });
+
   it("ends a run the server cancelled as a stop, running none of its tool calls", async () => {
     // A server-side cancel (django-ag-ui relays pydantic-ai's `RunCancelled`,
     // `RunTimedOut` among them) is the same ending as Stop: no host tool runs,

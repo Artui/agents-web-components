@@ -548,7 +548,13 @@ export class AgUiClient {
       if (this.#cancelled || isAbortError(error)) {
         this.#onCancelled();
       } else {
-        this.#handlers.onError(error instanceof Error ? error.message : String(error));
+        const message = error instanceof Error ? error.message : String(error);
+        const refusal = codedRefusal(error);
+        if (refusal === null) {
+          this.#handlers.onError(message);
+        } else {
+          this.#handlers.onError(refusal.message ?? message, { code: refusal.code });
+        }
       }
     } finally {
       this.#handlers.onSettled();
@@ -1006,6 +1012,28 @@ interface RunState {
   cancelled: boolean;
   /** Approval interrupts a run finished on (empty for a normal finish). */
   interrupts: Interrupt[];
+}
+
+/**
+ * The `code` (and `error` message) of a run POST the server refused with a JSON
+ * body, or `null` when the body carries no string `code`.
+ *
+ * `@ag-ui/client` rejects a non-2xx response with an `Error` whose `payload` is
+ * the body, parsed when it was sent as JSON. django-ag-ui refuses an over-long
+ * id that way, before any stream opens, with `{"error": ..., "code": ...}`; a
+ * coded refusal then reads exactly as a `RUN_ERROR` with that code would.
+ */
+function codedRefusal(error: unknown): { code: string; message?: string } | null {
+  const payload: unknown = error instanceof Error ? Reflect.get(error, "payload") : undefined;
+  if (typeof payload !== "object" || payload === null || Array.isArray(payload)) {
+    return null;
+  }
+  const code: unknown = Reflect.get(payload, "code");
+  if (typeof code !== "string") {
+    return null;
+  }
+  const message: unknown = Reflect.get(payload, "error");
+  return typeof message === "string" ? { code, message } : { code };
 }
 
 /**
