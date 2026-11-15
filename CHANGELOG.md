@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A run the server cancelled now ends as a stop, not a finish.** A `RUN_FINISHED` whose
+  outcome is `cancelled` (pydantic-ai's AG-UI adapter, which django-ag-ui streams through, sends
+  it when the agent cancels its own run or a run deadline passes) was read as a finished turn:
+  it ran the tool calls it streamed, drew the `show-usage` line and announced an answer. It now
+  takes the Stop path: the Stopped note, no usage line, its tool calls not run and settled as
+  not finished, `onCancelled()` on `AgUiClientHandlers`, and `ag-ui-run-finished` reporting
+  `outcome: "stopped"`. A host that counts completions from that event no longer counts these.
+
 ## [0.2.0] — 2026-11-15
 
 ### Added

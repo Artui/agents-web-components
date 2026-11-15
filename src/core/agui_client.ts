@@ -225,8 +225,9 @@ export interface AgUiClientHandlers {
    */
   onUsage?(usage: readonly TokenUsage[]): void;
   /**
-   * Fired when the user cancelled the run ({@link AgUiClient.cancel}) — the
-   * deliberate-stop sibling of `onError`. Partial assistant text already
+   * Fired when the run was stopped: the user cancelled it ({@link AgUiClient.cancel}),
+   * or the server ended it with a `RUN_FINISHED` whose outcome is `cancelled` --
+   * the deliberate-stop sibling of `onError`. Partial assistant text already
    * streamed stays valid, so the host keeps the bubble and shows a stopped
    * affordance rather than an error. `onSettled` still follows.
    */
@@ -689,7 +690,12 @@ export class AgUiClient {
         return;
       }
       const pending: AgUiToolCall[] = [];
-      const runState: RunState = { terminal: false, errored: false, interrupts: [] };
+      const runState: RunState = {
+        terminal: false,
+        errored: false,
+        cancelled: false,
+        interrupts: [],
+      };
       const params: RunAgentParameters = {
         tools: this.#getTools(),
         context: this.#getContext(),
@@ -727,6 +733,13 @@ export class AgUiClient {
       // would run into a broken context and raise a confusing second error.
       // Pending tool cards are swept at onSettled.
       if (runState.errored) {
+        return;
+      }
+      // The server stopped the run (`RUN_FINISHED` with outcome `cancelled`):
+      // it ends as Stop does, so the calls it streamed do not run and `#run`
+      // reports it through `onCancelled`.
+      if (runState.cancelled) {
+        this.#cancelled = true;
         return;
       }
       // A gated server-side tool deferred, so the run finished on an interrupt
@@ -958,6 +971,9 @@ export class AgUiClient {
         if (params.outcome === "interrupt") {
           runState.interrupts = params.interrupts;
         }
+        if (params.outcome === "cancelled") {
+          runState.cancelled = true;
+        }
       },
       onRunErrorEvent({ event }) {
         runState.terminal = true;
@@ -985,6 +1001,8 @@ export class AgUiClient {
 interface RunState {
   terminal: boolean;
   errored: boolean;
+  /** The server stopped the run: `RUN_FINISHED` carried the `cancelled` outcome. */
+  cancelled: boolean;
   /** Approval interrupts a run finished on (empty for a normal finish). */
   interrupts: Interrupt[];
 }

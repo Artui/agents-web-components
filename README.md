@@ -45,6 +45,7 @@ This package is the successor of `@artooi/ag-ui-web-component`. Coming from it? 
 - [Core concepts](#core-concepts)
   - [The run loop and the AG-UI client](#the-run-loop-and-the-ag-ui-client)
   - [Stopping a run](#stopping-a-run)
+  - [A run the server stops](#a-run-the-server-stops)
   - [When a run fails, and what it cost](#when-a-run-fails-and-what-it-cost)
   - [Registering tools](#registering-tools)
   - [Inline confirmation (`x-destructive` / `x-confirm` / `confirmPredicate`)](#inline-confirmation-x-destructive--x-confirm--confirmpredicate)
@@ -747,6 +748,25 @@ returned. What it does then stays with the conversation it belonged to: its trun
 saved to that thread, `ag-ui-run-finished` still reports the tools it ran, and nothing reaches the
 transcript or the Stop button of the conversation that replaced it.
 
+### A run the server stops
+
+A `RUN_FINISHED` whose outcome is `cancelled` is a run the server stopped, and it ends exactly as
+Stop does: the partial answer stays and is saved, the muted **Stopped** note is appended,
+`onCancelled()` fires instead of a finish (then `onSettled()`), tool calls the run streamed are
+not executed and settle as not finished, no usage line is drawn, and `ag-ui-run-finished` reports
+`outcome: "stopped"`. It is not a failure, so there is no bubble and no Retry. The event does
+not say why the server stopped, so the note does not either.
+
+Where it comes from: django-ag-ui streams through pydantic-ai's AG-UI adapter, which sends this
+outcome when the run ends in pydantic-ai's own cancellation (`RunCancelled`): the agent's code
+calling `RunContext.cancel()`, or a run deadline passing, which pydantic-ai raises as
+`RunTimedOut`, itself a cancellation. django-ag-ui sets no run deadline and cancels no run
+itself today, so on its own it never sends the outcome; an agent or a deadline the host adds
+does. The adapter sends it only to a client that declares AG-UI 1.0 on
+`RunAgentInput.protocolVersion`, which `@ag-ui/client` 1.0 does on every request; an older
+client gets a bare `RUN_FINISHED` and reads a finish. When you press Stop the server sees the
+request close and sends nothing, so the two never meet.
+
 ### When a run fails, and what it cost
 
 A run that ends in `RUN_ERROR` draws a failed bubble with Retry. Its words come from the event's
@@ -770,9 +790,7 @@ for example `HTTP 400: {"detail": ...}`, with no offer.
 With `show-usage` set, a finished turn ends with a muted line such as `1,234 in · 567 out
 tokens` (part `usage-line`), the sums of `inputTokens` and `outputTokens` over every usage entry
 of every round in the turn. A side no entry carried is left out (`usageInput`, `usageOutput`);
-a turn with no usage, a failed turn and one you stop draw nothing. A `RUN_FINISHED` whose
-outcome is `cancelled` (a server-side stop) is still read as a finish today, and draws the
-line. The line is not stored, so a conversation restored from history has none. The digits
+a turn with no usage, a failed turn and a stopped one (by you or by the server) draw nothing. The line is not stored, so a conversation restored from history has none. The digits
 are grouped with commas whatever the locale; the three templates take `{input}` and
 `{output}`.
 
@@ -2948,7 +2966,8 @@ Route map + `navigate()` and the reload model are the same feature seen from two
 where each `ToolRun` is `{ name, side: "server" | "client" }` in settle order. `threadId` is the
 thread the run belonged to, which is not always the one on screen: a run that a new chat or a
 thread switch stopped still reports once its request closes. `outcome` is how the interaction
-ended: `"completed"`, `"stopped"` (Stop, a new chat or a thread switch cut it off) or `"failed"`
+ended: `"completed"`, `"stopped"` (Stop, a new chat or a thread switch cut it off, or the server
+cancelled it; see [A run the server stops](#a-run-the-server-stops)) or `"failed"`
 (the agent reported an error). Ignore an `outcome` you do not know: more may be added.
 
 **This is the seam for a host that renders data the agent can change.** A server-side tool writes

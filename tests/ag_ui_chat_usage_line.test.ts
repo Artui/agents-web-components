@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ELEMENT_TAG } from "../src/constants.js";
+import { ELEMENT_TAG, RUN_FINISHED_EVENT } from "../src/constants.js";
 import type { AgUiChat } from "../src/core/ag_ui_chat.js";
 import { defineChat } from "../src/core/define_chat.js";
 
@@ -249,6 +249,29 @@ describe("the usage line", () => {
 
     expect(shadow(el).querySelector(".stopped-note")).not.toBeNull();
     expect(lines(el)).toEqual([]);
+  });
+
+  it("draws the stopped note and no line when the server cancels the run", async () => {
+    // RUN_FINISHED with outcome `cancelled` is a server-side stop (a run
+    // deadline or the agent cancelling itself), not a finish: it ends as Stop does.
+    stubRuns(
+      answered(1, {
+        outcome: { type: "cancelled" },
+        usage: [{ inputTokens: 100, outputTokens: 1 }],
+      }),
+    );
+    const el = mountReal();
+    const finished: unknown[] = [];
+    el.addEventListener(RUN_FINISHED_EVENT, (e) => {
+      finished.push((e as CustomEvent<{ outcome: string }>).detail.outcome);
+    });
+
+    await turn(el);
+
+    expect(shadow(el).querySelector(".stopped-note")).not.toBeNull();
+    expect(shadow(el).querySelector(".message--failed")).toBeNull();
+    expect(lines(el)).toEqual([]);
+    expect(finished).toEqual(["stopped"]);
   });
 
   it("leaves a turn New chat cut off out of the next turn's count", async () => {

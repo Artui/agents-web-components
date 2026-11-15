@@ -1268,6 +1268,56 @@ describe("over the real HttpAgent", () => {
     ]);
   });
 
+  it("ends a run the server cancelled as a stop, running none of its tool calls", async () => {
+    // A server-side cancel (django-ag-ui relays pydantic-ai's `RunCancelled`,
+    // `RunTimedOut` among them) is the same ending as Stop: no host tool runs,
+    // no further round starts, and it is reported once, as a cancel.
+    const bodies = stubFetch([
+      { type: "RUN_STARTED", threadId: "t1", runId: "r1" },
+      { type: "TEXT_MESSAGE_START", messageId: "m1", role: "assistant" },
+      { type: "TEXT_MESSAGE_CONTENT", messageId: "m1", delta: "Working" },
+      { type: "TEXT_MESSAGE_END", messageId: "m1" },
+      { type: "TOOL_CALL_START", toolCallId: "fc1", toolCallName: "fill_field" },
+      { type: "TOOL_CALL_ARGS", toolCallId: "fc1", delta: "{}" },
+      { type: "TOOL_CALL_END", toolCallId: "fc1" },
+      {
+        type: "RUN_FINISHED",
+        threadId: "t1",
+        runId: "r1",
+        outcome: { type: "cancelled" },
+        usage: [{ inputTokens: 10, outputTokens: 2 }],
+      },
+    ]);
+    const handlers = recordingHandlers();
+    const usage: unknown[] = [];
+    handlers.onUsage = (entries) => {
+      usage.push(entries);
+    };
+    const executeTool = vi.fn(async () => ({ content: "ok" }));
+    let saved: readonly Message[] = [];
+
+    await new AgUiClient({
+      agent: createHttpAgent({ endpoint: "/agent/" }),
+      handlers,
+      executeTool,
+      onPersist: (messages) => {
+        saved = messages;
+      },
+    }).send("hi");
+
+    expect(bodies).toHaveLength(1);
+    expect(bodies[0]?.["protocolVersion"]).toBe("1.0");
+    expect(executeTool).not.toHaveBeenCalled();
+    expect(handlers.calls.filter((c) => c === "cancelled" || c === "settled")).toEqual([
+      "cancelled",
+      "settled",
+    ]);
+    expect(handlers.calls.some((c) => c.startsWith("err:"))).toBe(false);
+    // The usage still reaches the host; whether to draw it is the host's call.
+    expect(usage).toEqual([[{ inputTokens: 10, outputTokens: 2 }]]);
+    expect(saved.find((m) => m.role === "assistant")?.content).toBe("Working");
+  });
+
   it("names a second run inside one stream by its own RUN_STARTED", async () => {
     // The latest `RUN_STARTED` wins, so an answer is never filed under a run
     // that had already finished when it streamed.
