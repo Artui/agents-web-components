@@ -17,8 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   it ran the tool calls it streamed, drew the `show-usage` line and announced an answer. It now
   takes the Stop path: the Stopped note, no usage line, its tool calls not run and settled as
   not finished, `onCancelled()` on `AgUiClientHandlers`, and `ag-ui-run-finished` reporting
-  `outcome: "stopped"`. A host that counts completions from that event no longer counts these. A host opts in to
-  nothing.
+  `outcome: "stopped"`. A host that counts completions from that event no longer counts these.
+  A host opts in to nothing.
 
 ## [0.2.0] — 2026-11-15
 

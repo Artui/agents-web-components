@@ -357,8 +357,8 @@ export class AgUiClient {
   readonly #unfinishedMessage: string;
   readonly #declinedMessage: string;
   readonly #maxToolRounds: number;
-  // Set by cancel() or a server-cancelled `RUN_FINISHED`; reset as send() or resume() begins, before either runs
-  // any host code. Checked by the loop so a cancel between frontend-tool
+  // Set by cancel() or a server-cancelled `RUN_FINISHED`; reset as send() or
+  // resume() begins, before either runs any host code. Checked by the loop so a cancel between frontend-tool
   // rounds doesn't start another round, and again just before each request,
   // so a cancel from host code the round itself runs is not sent anyway.
   #cancelled = false;
