@@ -978,6 +978,8 @@ export class AgUiChat extends HTMLElement {
       setRunning: (running) => this.#setRunning(running),
       appendMessage: (role, content) => this.appendMessage(role, content),
       noteUnread: (threadId) => this.#noteUnread(threadId),
+      newChat: () => this.newChat(),
+      showUsage: () => readFlag(this, "show-usage"),
     });
     this.#placement = new PanelPlacement({
       element: this,

@@ -40,6 +40,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { ELEMENT_TAG } from "../../src/constants.js";
 import type { AgUiChat } from "../../src/core/ag_ui_chat.js";
 import { defineChat } from "../../src/core/define_chat.js";
+import { DEFAULT_UI_STRINGS } from "../../src/ui/ui_strings.js";
 import {
   corrupt,
   ENDPOINT,
@@ -208,12 +209,15 @@ describe("an ordinary run, decoded from recorded bytes", () => {
 });
 
 describe("a run the server aborts, decoded from recorded bytes", () => {
-  it("surfaces RUN_ERROR's message", async () => {
+  it("words RUN_ERROR by its code, the generic text for one it does not know", async () => {
+    // The recording's code is `upstream_timeout`, which no server of this family sends.
     const el = mount();
     await replay(el, framesOf("failed"));
 
     const bubbles = shadow(el).querySelectorAll(".message");
-    expect(bubbles[bubbles.length - 1]?.textContent).toContain("The upstream model timed out");
+    const failed = bubbles[bubbles.length - 1]?.textContent;
+    expect(failed).toContain(DEFAULT_UI_STRINGS.runErrorFailed);
+    expect(failed).not.toContain("The upstream model timed out");
   });
 });
 

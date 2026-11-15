@@ -1031,14 +1031,15 @@ describe("AgUiChat", () => {
     expect(handle.messages.find((m) => m.role === "tool")).toMatchObject({ content: '"hi"' });
   });
 
-  it("renders an error bubble and re-enables send", async () => {
+  it("renders an error bubble with the generic text and re-enables send", async () => {
     const { el } = mountWithAgent((emit) => {
       emit.runStart();
       emit.error("model exploded");
     });
     await send(el, "boom");
     const bubble = shadow(el).querySelector(".message--assistant");
-    expect(bubble?.textContent).toContain("model exploded");
+    expect(bubble?.textContent).toContain(DEFAULT_UI_STRINGS.runErrorFailed);
+    expect(bubble?.textContent).not.toContain("model exploded");
     expect(shadow(el).querySelector<HTMLButtonElement>(".send")?.disabled).toBe(false);
   });
 

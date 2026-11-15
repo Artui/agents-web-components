@@ -91,6 +91,20 @@ export interface UiStrings {
   stopped: string;
   /** Error shown when the stream drops without a terminal AG-UI event. */
   connectionLost: string;
+  /** A failed run's bubble when the server sent no code, or one not below. */
+  runErrorFailed: string;
+  /** A failed run's bubble for the server's `timed_out` code. */
+  runErrorTimedOut: string;
+  /** A failed run's bubble for the server's `interrupted` code. */
+  runErrorInterrupted: string;
+  /** The offer on an `identifier_too_long` failure, which starts a new conversation. */
+  runErrorNewChat: string;
+  /** The usage line under a finished turn. Tokens: `{input}`, `{output}`. */
+  usageBoth: string;
+  /** The usage line when the server sent only input tokens. Token: `{input}`. */
+  usageInput: string;
+  /** The usage line when the server sent only output tokens. Token: `{output}`. */
+  usageOutput: string;
   /**
    * Tool-result content (and card text) for a call that never produced a result
    * and that nobody refused: the run was stopped or failed first, the page
@@ -416,6 +430,13 @@ export const DEFAULT_UI_STRINGS: UiStrings = {
   thoughtFor: "Thought for {seconds}s",
   stopped: "⏹ Stopped",
   connectionLost: "Connection lost",
+  runErrorFailed: "The response failed. Try again in a moment.",
+  runErrorTimedOut: "The response took too long and was stopped.",
+  runErrorInterrupted: "The response was interrupted before it finished.",
+  runErrorNewChat: "Start a new conversation",
+  usageBoth: "{input} in · {output} out tokens",
+  usageInput: "{input} in tokens",
+  usageOutput: "{output} out tokens",
   callNotFinished:
     "Not finished: the run ended or moved on before this tool call returned a result.",
   declinedAction: "User declined the action.",

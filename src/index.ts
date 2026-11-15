@@ -47,6 +47,7 @@ export {
   type ExecuteTool,
   type InterruptResponse,
   type ResolveInterrupts,
+  type RunErrorInfo,
   type ToolExecution,
 } from "./core/agui_client.js";
 export { type AttachmentRef, messageAttachments } from "./core/attachment.js";

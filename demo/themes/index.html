@@ -836,6 +836,14 @@
             declined), <em>delegate this</em> (sub-agent error). Press Stop mid-run for
             interrupted. Needs <em>Tool cards</em> on <em>grouped</em>.
           </p>
+          <h3>Failed runs and usage</h3>
+          <p>
+            A run that ends in <code>RUN_ERROR</code> words its bubble by code: say
+            <em>time out</em>, <em>interrupted</em> or <em>crash</em>. <em>Too long</em> shows
+            the server's own message and a <code>run-error-offer</code> that starts a new
+            conversation; <em>refuse</em> answers the run POST with a 400. This chat sets
+            <code>show-usage</code>, so the scripted answers end with a muted token line.
+          </p>
           <div class="row">
             <label><input type="checkbox" id="cfg-status-parts" /> Style the status parts</label>
           </div>
@@ -897,6 +905,7 @@
           data-attachments-url="/attachments/"
           data-runs-url="/runs/"
           data-theme-toggle=""
+          show-usage
         ></ag-ui-chat>
       </div>
     </main>

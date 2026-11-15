@@ -1,6 +1,6 @@
 // An attachment chip, in the tray and in a sent message alike, the drop
-// outline, and the note a cancelled run leaves, which sits here only
-// because no rule moved in the split.
+// outline, and the note a cancelled run leaves and the usage line beside it,
+// which sit here only because no rule moved in the split.
 export const ATTACHMENT_CHIP_STYLES: string = `
 /* A chip carries its own text colour because it carries its own background.
    The same chip renders in two places with opposite inherited colours: the
@@ -107,7 +107,8 @@ export const ATTACHMENT_CHIP_STYLES: string = `
 }
 
 /* Muted "⏹ Stopped" line after a cancelled run — a note, not an error bubble. */
-.stopped-note {
+.stopped-note,
+.usage-line {
   align-self: flex-start;
   color: var(--_muted);
   font-size: 12px;

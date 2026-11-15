@@ -11,6 +11,7 @@ import {
   type Interrupt,
   type Message,
   type ResumeEntry,
+  type TokenUsage,
   type Tool,
 } from "@ag-ui/core";
 import { MAX_TOOL_ROUNDS, TOOL_OUTCOME } from "../constants.js";
@@ -212,7 +213,17 @@ export interface AgUiClientHandlers {
    * markup.
    */
   onSubAgentError(subagentRunId: string, message: string): void;
-  onError(message: string): void;
+  /**
+   * The run failed. `runError` is present when the failure was a `RUN_ERROR`
+   * event, carrying its `code` if the server sent one; a thrown error (a dropped
+   * stream, a non-2xx POST) passes only the message.
+   */
+  onError(message: string, runError?: RunErrorInfo): void;
+  /**
+   * A round finished carrying token `usage`, one entry per provider and model.
+   * Optional, so a host table written before it still type-checks.
+   */
+  onUsage?(usage: readonly TokenUsage[]): void;
   /**
    * Fired when the user cancelled the run ({@link AgUiClient.cancel}) — the
    * deliberate-stop sibling of `onError`. Partial assistant text already
@@ -226,6 +237,12 @@ export interface AgUiClientHandlers {
    * guarantee that the UI returns to rest.
    */
   onSettled(): void;
+}
+
+/** What {@link AgUiClientHandlers.onError} is told about a `RUN_ERROR` event. */
+export interface RunErrorInfo {
+  /** The event's machine-readable code; the protocol defines no vocabulary. */
+  readonly code?: string;
 }
 
 /**
@@ -934,6 +951,10 @@ export class AgUiClient {
         // `pendingInterrupts` afterwards, to stay independent of that field's
         // cross-run clearing semantics.
         runState.terminal = true;
+        const usage = params.event.usage;
+        if (usage !== undefined && usage.length > 0) {
+          h.onUsage?.(usage);
+        }
         if (params.outcome === "interrupt") {
           runState.interrupts = params.interrupts;
         }
@@ -950,7 +971,7 @@ export class AgUiClient {
         if (cancelled()) {
           return;
         }
-        h.onError(event.message);
+        h.onError(event.message, event.code === undefined ? {} : { code: event.code });
       },
       onRunFinalized() {
         runState.terminal = true;

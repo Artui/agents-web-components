@@ -1,4 +1,5 @@
-// The action row under a message: copy, retry, feedback and the rest.
+// The action row under a message: copy, retry, feedback and the rest, and the
+// new-conversation offer a failed run can put beneath it.
 // Guest: the whole coarse-pointer block near the end (the resize handle hidden,
 // the 44px touch-target tokens on :host, the 16px composer font floor).
 export const MESSAGE_ACTION_STYLES: string = `
@@ -18,6 +19,13 @@ export const MESSAGE_ACTION_STYLES: string = `
      belonging to whatever follows. Pulling back inside the gap is what makes
      them the message's own. */
   margin-top: -6px;
+}
+
+/* The offer borrows the suggestion chip's look; its own rule only keeps it at
+   its natural width at the start of the column, as the stopped note sits. */
+.run-error-offer {
+  align-self: flex-start;
+  margin-top: 4px;
 }
 
 /* The row's controls are icon-only, so the box is the whole target. Sized from
