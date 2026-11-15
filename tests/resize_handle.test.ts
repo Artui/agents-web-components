@@ -216,77 +216,69 @@ describe("what the placement forbids", () => {
 });
 
 describe("the keyboard", () => {
-  it("moves the edge the arrow names, in the direction it names", () => {
-    const h = harness({ x: "left" });
+  // The left grip going left grows the panel; the same key on the right grip
+  // shrinks it. That symmetry is the point of naming the edge. Up on the top
+  // grip grows the panel, the mirror of down on the bottom one.
+  it.each<[string, ResizeGrip, string, boolean, PanelRect]>([
+    [
+      "the arrow's own direction on a left grip",
+      { x: "left" },
+      "ArrowLeft",
+      false,
+      { left: 84, top: 100, right: 500, bottom: 600 },
+    ],
+    [
+      "the opposite grip on the same key",
+      { x: "right" },
+      "ArrowLeft",
+      false,
+      { left: 100, top: 100, right: 484, bottom: 600 },
+    ],
+    [
+      "a coarser step with shift",
+      { x: "right" },
+      "ArrowRight",
+      true,
+      { left: 100, top: 100, right: 564, bottom: 600 },
+    ],
+    [
+      "a top edge on the vertical arrows",
+      { y: "top" },
+      "ArrowUp",
+      false,
+      { left: 100, top: 84, right: 500, bottom: 600 },
+    ],
+    [
+      "a bottom edge down",
+      { y: "bottom" },
+      "ArrowDown",
+      false,
+      { left: 100, top: 100, right: 500, bottom: 616 },
+    ],
+    [
+      "a bottom edge up",
+      { y: "bottom" },
+      "ArrowUp",
+      false,
+      { left: 100, top: 100, right: 500, bottom: 584 },
+    ],
+  ])("moves %s", (_name, grip, name, shift, box) => {
+    const h = harness(grip);
 
-    key(h.handle, "ArrowLeft");
+    key(h.handle, name, shift);
 
-    // The left grip going left grows the panel; the same key on the right grip
-    // shrinks it. That symmetry is the point of naming the edge.
-    expect(h.committed).toEqual([{ left: 84, top: 100, right: 500, bottom: 600 }]);
+    expect(h.committed).toEqual([box]);
   });
 
-  it("shrinks from the opposite grip on the same key", () => {
-    const h = harness({ x: "right" });
+  // Ignored keys are left to the page, so an arrow across the grip's axis still scrolls.
+  it.each<[string, ResizeGrip, string]>([
+    ["an arrow across the axis a grip does not move", { x: "left" }, "ArrowUp"],
+    ["a sideways arrow on a grip that only moves a horizontal edge", { y: "bottom" }, "ArrowRight"],
+    ["keys that are not arrows", { x: "left" }, "Enter"],
+  ])("ignores %s", (_name, grip, name) => {
+    const h = harness(grip);
+    const event = new KeyboardEvent("keydown", { key: name, cancelable: true });
 
-    key(h.handle, "ArrowLeft");
-
-    expect(h.committed[0]?.right).toBe(484);
-  });
-
-  it("takes a coarser step with shift", () => {
-    const h = harness({ x: "right" });
-
-    key(h.handle, "ArrowRight", true);
-
-    expect(h.committed[0]?.right).toBe(564);
-  });
-
-  it("moves a top edge on the vertical arrows", () => {
-    const h = harness({ y: "top" });
-
-    key(h.handle, "ArrowUp");
-
-    // Up on the top grip grows the panel, the mirror of down on the bottom one.
-    expect(h.committed[0]?.top).toBe(84);
-    expect(h.committed[0]?.bottom).toBe(600);
-  });
-
-  it("moves a vertical edge on the vertical arrows", () => {
-    const h = harness({ y: "bottom" });
-
-    key(h.handle, "ArrowDown");
-    expect(h.committed[0]?.bottom).toBe(616);
-
-    key(h.handle, "ArrowUp");
-    expect(h.committed[1]?.bottom).toBe(584);
-  });
-
-  it("ignores an arrow across the axis a grip does not move", () => {
-    const h = harness({ x: "left" });
-
-    const event = new KeyboardEvent("keydown", { key: "ArrowUp", cancelable: true });
-    h.handle.dispatchEvent(event);
-
-    expect(h.applied).toEqual([]);
-    // And leaves the key to the page, so it still scrolls.
-    expect(event.defaultPrevented).toBe(false);
-  });
-
-  it("ignores a sideways arrow on a grip that only moves a horizontal edge", () => {
-    const h = harness({ y: "bottom" });
-
-    const event = new KeyboardEvent("keydown", { key: "ArrowRight", cancelable: true });
-    h.handle.dispatchEvent(event);
-
-    expect(h.applied).toEqual([]);
-    expect(event.defaultPrevented).toBe(false);
-  });
-
-  it("ignores keys that are not arrows", () => {
-    const h = harness({ x: "left" });
-
-    const event = new KeyboardEvent("keydown", { key: "Enter", cancelable: true });
     h.handle.dispatchEvent(event);
 
     expect(h.applied).toEqual([]);

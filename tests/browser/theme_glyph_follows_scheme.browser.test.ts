@@ -1,4 +1,5 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { cdp } from "vitest/browser";
 import { ELEMENT_TAG, ICON_MOON, ICON_SUN } from "../../src/constants.js";
 import type { AgUiChat } from "../../src/core/ag_ui_chat.js";
 import { defineChat } from "../../src/core/define_chat.js";
@@ -91,5 +92,56 @@ describe("the theme toggle's glyph follows a scheme set from outside", () => {
     document.body.appendChild(el);
     el.setAttribute("theme", "dark");
     expect(el.shadowRoot?.querySelector(".header-btn--theme")).toBeNull();
+  });
+});
+
+async function emulate(scheme: "light" | "dark"): Promise<void> {
+  await cdp().send("Emulation.setEmulatedMedia", {
+    features: [{ name: "prefers-color-scheme", value: scheme }],
+  });
+}
+
+function frames(): Promise<void> {
+  return new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(() => done())));
+}
+
+describe("the theme toggle's glyph follows the system scheme", () => {
+  beforeAll(() => {
+    defineChat();
+  });
+
+  afterEach(async () => {
+    document.body.replaceChildren();
+    await cdp().send("Emulation.setEmulatedMedia", { features: [] });
+  });
+
+  it("redraws under auto when prefers-color-scheme flips, either way", async () => {
+    await emulate("light");
+    const el = mount("auto");
+    expect(shown(el)).toBe(shape(ICON_MOON));
+    await emulate("dark");
+    await expect.poll(() => shown(el)).toBe(shape(ICON_SUN));
+    await emulate("light");
+    await expect.poll(() => shown(el)).toBe(shape(ICON_MOON));
+  });
+
+  it("follows the system again after a remove and re-insert", async () => {
+    await emulate("light");
+    const el = mount("soft auto");
+    el.remove();
+    document.body.appendChild(el);
+    await emulate("dark");
+    await expect.poll(() => shown(el)).toBe(shape(ICON_SUN));
+  });
+
+  it("stops listening once the element is removed", async () => {
+    await emulate("light");
+    const el = mount("auto");
+    const toggle = el.shadowRoot?.querySelector(".header-btn--theme");
+    const redraw = vi.spyOn(toggle as HTMLButtonElement, "replaceChildren");
+    el.remove();
+    await emulate("dark");
+    await frames();
+    expect(redraw).not.toHaveBeenCalled();
   });
 });

@@ -4242,7 +4242,12 @@ becomes `soft light`, and `auto` becomes the opposite of what the system shows, 
 choice. With no scheme word the toggle flips the scheme the panel is drawn in, so a host rule
 that sets the element's `color-scheme` (to follow the page's own dark mode) is flipped from,
 and the written word then holds against that rule. The toggle's glyph follows a `theme` the host
-writes later too, so a host's own picker and the toggle never disagree. Only the scheme is saved, too:
+writes later too, so a host's own picker and the toggle never disagree, and under `auto` it
+follows the system's `prefers-color-scheme` as it changes. One change it cannot see: a host rule
+that changes the element's `color-scheme` at runtime (a class swapped on your page, say) fires no
+event, so the glyph keeps the scheme it last drew until the next click or `theme` write. Write the
+scheme word into `theme` instead, or set `theme` again after your rule changes. Only the scheme
+is saved, too:
 on the next load it is put beside whatever theme name the markup carries, so `dark` chosen on a
 `soft` page restores as `classic dark` on a `classic` one. Off by default so it never competes with
 a host-supplied control.
