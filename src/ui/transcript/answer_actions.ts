@@ -14,6 +14,8 @@ export interface AnswerActionsHost {
   readonly strings: () => UiStrings;
   /** Retry the last turn, as the element's public `retryLastTurn` does. */
   readonly retry: () => void;
+  /** Whether Retry has a turn to re-run, which a started action leaves it without. */
+  readonly retryable: () => boolean;
   /** The element's current conversation thread. */
   readonly threadId: () => string;
   /** Follow the transcript's foot, as every site that adds to it does. */
@@ -117,16 +119,22 @@ export class AnswerActions {
           : {}),
       });
     }
-    if (enabled.has(MESSAGE_ACTIONS.RETRY)) {
+    if (enabled.has(MESSAGE_ACTIONS.RETRY) && this.#host.retryable()) {
       this.#moveRetryTo(messageActionBar(bubble, this.#host.strings()));
     }
     // The row is insertion too: without this a pinned transcript rests one row short of its foot.
     this.#host.follow();
   }
 
+  /** Take Retry off whichever row holds it, leaving it on none. */
+  withdrawRetry(): void {
+    this.#retryOwner?.querySelector(".message-action--retry")?.remove();
+    this.#retryOwner = null;
+  }
+
   /** Move the Retry button onto `bar`, taking it off whoever held it. */
   #moveRetryTo(bar: HTMLElement): void {
-    this.#retryOwner?.querySelector(".message-action--retry")?.remove();
+    this.withdrawRetry();
     const retry = messageActionButton("retry", this.#host.strings().retryMessage, ICON_RETRY);
     retry.addEventListener("click", () => {
       this.#host.retry();

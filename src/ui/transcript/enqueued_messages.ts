@@ -1,0 +1,77 @@
+/**
+ * Draw the user messages pydantic-ai's adapter reports a run took in while it
+ * was working (`RunContext.enqueue`), as user bubbles under one caption.
+ *
+ * `content` is `{ messages }`, AG-UI messages as the adapter dumps them. Only a
+ * user message's text is drawn, as text and never as HTML: a string `content`,
+ * or the `text` of each `{ type: "text" }` part. Anything else draws nothing,
+ * and so does a list with no user text, as an empty fragment (see
+ * {@link ActivityRenderer}) rather than an empty caption.
+ *
+ * The bubbles land inside the answer group the run is drawing, which is where
+ * they were delivered, so the wrapper is a column of its own: that is what
+ * keeps them right-aligned there.
+ */
+export function renderEnqueuedMessages(content: unknown, caption: string): Node {
+  const texts = userTexts(content);
+  if (texts.length === 0) {
+    return document.createDocumentFragment();
+  }
+  const wrapper = document.createElement("div");
+  wrapper.className = "enqueued-messages";
+  wrapper.setAttribute("part", "enqueued-messages");
+  for (const text of texts) {
+    const bubble = document.createElement("div");
+    bubble.className = "message message--user";
+    bubble.setAttribute("part", "message message-user");
+    bubble.textContent = text;
+    wrapper.append(bubble);
+  }
+  const note = document.createElement("div");
+  note.className = "enqueued-messages-note";
+  note.setAttribute("part", "enqueued-messages-note");
+  note.textContent = caption;
+  wrapper.append(note);
+  return wrapper;
+}
+
+function userTexts(content: unknown): string[] {
+  const messages = recordOf(content)?.["messages"];
+  if (!Array.isArray(messages)) {
+    return [];
+  }
+  const texts: string[] = [];
+  for (const message of messages) {
+    const record = recordOf(message);
+    if (record?.["role"] !== "user") {
+      continue;
+    }
+    const text = textOf(record["content"]);
+    if (text.trim() !== "") {
+      texts.push(text);
+    }
+  }
+  return texts;
+}
+
+function textOf(content: unknown): string {
+  if (typeof content === "string") {
+    return content;
+  }
+  if (!Array.isArray(content)) {
+    return "";
+  }
+  const parts: string[] = [];
+  for (const part of content) {
+    const record = recordOf(part);
+    const text = record?.["text"];
+    if (record?.["type"] === "text" && typeof text === "string") {
+      parts.push(text);
+    }
+  }
+  return parts.join("\n");
+}
+
+function recordOf(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : null;
+}

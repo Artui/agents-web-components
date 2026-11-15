@@ -30,13 +30,14 @@
  * of them would mostly pin events nothing in this package looks at. The corpus
  * covers the ones `AgUiClient`'s subscriber reads *fields* off, plus the two
  * activity payloads whose interior shape the server package owns (a chart spec
- * and a compaction summary). `RECORDED_EVENT_TYPES` states that cut so it
- * cannot drift silently.
+ * and a compaction summary), and the activities pydantic-ai's own AG-UI
+ * adapter sends, recorded from its event stream rather than from django-ag-ui.
+ * `RECORDED_EVENT_TYPES` states that cut so it cannot drift silently.
  */
 
 import { EventType } from "@ag-ui/core";
 import { EventSchemas } from "@ag-ui/core/schemas";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ELEMENT_TAG } from "../../src/constants.js";
 import type { AgUiChat } from "../../src/core/ag_ui_chat.js";
 import { defineChat } from "../../src/core/define_chat.js";
@@ -210,6 +211,163 @@ describe("an ordinary run, decoded from recorded bytes", () => {
     const answer = bubbles[bubbles.length - 1];
     expect(answer?.textContent).toContain("Orders are up on Tuesday.");
     expect(answer?.querySelector("strong")?.textContent).toBe("up");
+  });
+});
+
+describe("pydantic-ai's own adapter activities, decoded from its recorded bytes", () => {
+  // Literals, not the exported constant: these are the names on the wire.
+  const ADAPTER_TYPES = [
+    "pydantic_ai_enqueued_messages",
+    "mcp-apps",
+    "pydantic_ai_compaction",
+    "pydantic_ai_tool_availability_delta",
+    "pydantic_ai_model_settings_delta",
+    "pydantic_ai_capability_load_delta",
+  ];
+  const MODEL_RECORDS = ADAPTER_TYPES.slice(2);
+  const HOSTILE = '<img src="x" onerror="globalThis.hostileRan = true">';
+
+  /** The run's frames, an ACTIVITY_SNAPSHOT's content rewritten where `edit` says. */
+  function withContent(
+    activityType: string,
+    edit: (content: Record<string, unknown>) => void,
+  ): readonly string[] {
+    return corrupt(framesOf("adapterActivities"), "ACTIVITY_SNAPSHOT", (payload) => {
+      if (payload["activityType"] === activityType) {
+        edit(payload["content"] as Record<string, unknown>);
+      }
+    });
+  }
+
+  it("records every type the adapter sends, from its own stream", () => {
+    const sent = framesOf("adapterActivities")
+      .map(payloadOf)
+      .filter((payload) => payload["type"] === "ACTIVITY_SNAPSHOT")
+      .map((payload) => payload["activityType"]);
+    expect([...sent].sort()).toEqual([...ADAPTER_TYPES].sort());
+  });
+
+  it("leaves none of them unhandled, warns about none, and finishes the run", async () => {
+    const warn = vi.spyOn(console, "warn");
+    try {
+      const el = mount();
+      await replay(el, framesOf("adapterActivities"));
+
+      expect(el.unhandledActivityTypes.filter((type) => ADAPTER_TYPES.includes(type))).toEqual([]);
+      expect(warn).not.toHaveBeenCalled();
+      expect(el.running).toBe(false);
+      const answers = shadow(el).querySelectorAll(".message--assistant");
+      expect(answers[answers.length - 1]?.textContent).toContain("Twelve orders this week");
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("draws nothing at all for the four records meant for the model", async () => {
+    const full = mount();
+    await replay(full, framesOf("adapterActivities"));
+    const drawn = shadow(full).querySelector(".messages")?.innerHTML;
+
+    document.body.replaceChildren();
+    sessionStorage.clear();
+    const without = mount();
+    await replay(
+      without,
+      framesOf("adapterActivities").filter(
+        (frame) => !MODEL_RECORDS.includes(payloadOf(frame)["activityType"] as string),
+      ),
+    );
+
+    expect(drawn).toBe(shadow(without).querySelector(".messages")?.innerHTML);
+  });
+
+  it("draws the enqueued user text as a user bubble, right-aligned in the answer", async () => {
+    const el = mount({ "data-start-open": "" });
+    await replay(el, framesOf("adapterActivities"));
+
+    const group = shadow(el).querySelector<HTMLElement>(".answer:has(.enqueued-messages)");
+    const bubble = group?.querySelector<HTMLElement>(".enqueued-messages > .message--user");
+    // The adapter dumped the user prompt verbatim, markup and all: text, not HTML.
+    expect(bubble?.textContent).toBe("Compare with <b>last</b> week");
+    expect(bubble?.querySelector("b")).toBeNull();
+    expect(getComputedStyle(bubble as HTMLElement).backgroundColor).toBe(
+      getComputedStyle(
+        shadow(el).querySelector(".message--user:not(.enqueued-messages *)") as Element,
+      ).backgroundColor,
+    );
+    const outer = (group as HTMLElement).getBoundingClientRect();
+    const inner = (bubble as HTMLElement).getBoundingClientRect();
+    expect(inner.width).toBeGreaterThan(0);
+    expect(inner.width).toBeLessThan(outer.width);
+    expect(Math.abs(outer.right - inner.right)).toBeLessThan(1);
+    expect(text(el, ".enqueued-messages-note")).toBe(DEFAULT_UI_STRINGS.enqueuedMessages);
+  });
+
+  it("draws the MCP App placeholder naming the view's URI", async () => {
+    const el = mount();
+    await replay(el, framesOf("adapterActivities"));
+
+    expect(text(el, ".run-notice--mcp-app .run-notice-text")).toBe(
+      DEFAULT_UI_STRINGS.mcpAppUnsupported.replace("{uri}", "ui://sales/week.html"),
+    );
+  });
+
+  // The first user bubble that lives inside an answer group: each theme, with
+  // and without the well, has to draw it as it draws the user's own turn.
+  for (const theme of ["", "classic", "code", "soft", "ledger"]) {
+    for (const well of [false, true]) {
+      it(`draws it as the user's own bubble under theme "${theme}", well ${well}`, async () => {
+        const attrs: Record<string, string> = { "data-start-open": "", theme };
+        if (well) {
+          attrs["data-answer-well"] = "";
+        }
+        const el = mount(attrs);
+        await replay(el, framesOf("adapterActivities"));
+
+        const queued = shadow(el).querySelector(".enqueued-messages > .message--user");
+        const own = shadow(el).querySelector(".message--user:not(.enqueued-messages *)");
+        const [a, b] = [getComputedStyle(queued as Element), getComputedStyle(own as Element)];
+        for (const property of [
+          "backgroundColor",
+          "color",
+          "borderTopLeftRadius",
+          "borderBottomRightRadius",
+          "borderLeftWidth",
+          "fontWeight",
+          "paddingLeft",
+        ] as const) {
+          expect([property, a[property]]).toEqual([property, b[property]]);
+        }
+        const group = (queued as HTMLElement).closest(".answer") as HTMLElement;
+        const inner = (queued as HTMLElement).getBoundingClientRect();
+        const outer = group.getBoundingClientRect();
+        const padding = Number.parseFloat(getComputedStyle(group).paddingRight);
+        const border = Number.parseFloat(getComputedStyle(group).borderRightWidth);
+        expect(inner.width).toBeGreaterThan(0);
+        expect(Math.abs(outer.right - padding - border - inner.right)).toBeLessThan(1);
+      });
+    }
+  }
+
+  it("puts markup in either as text, never as elements", async () => {
+    const frames = corrupt(
+      withContent("mcp-apps", (content) => {
+        content["resourceUri"] = HOSTILE;
+      }),
+      "ACTIVITY_SNAPSHOT",
+      (payload) => {
+        if (payload["activityType"] === "pydantic_ai_enqueued_messages") {
+          payload["content"] = { messages: [{ id: "u1", role: "user", content: HOSTILE }] };
+        }
+      },
+    );
+    const el = mount();
+    await replay(el, frames);
+
+    expect(text(el, ".enqueued-messages .message--user")).toBe(HOSTILE);
+    expect(text(el, ".run-notice--mcp-app .run-notice-text")).toContain(HOSTILE);
+    expect(shadow(el).querySelector(".answer img")).toBeNull();
+    expect((globalThis as { hostileRan?: boolean }).hostileRan).toBeUndefined();
   });
 });
 

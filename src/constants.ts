@@ -582,6 +582,36 @@ export const ICON_FILE_TEXT = `<svg class="glyph" viewBox="0 0 24 24" aria-hidde
 export const CHART_ACTIVITY_TYPE = "chart";
 
 /**
+ * The `activityType`s pydantic-ai's own AG-UI adapter sends, which this element
+ * registers built-in renderers for (a host's registration still wins).
+ *
+ * Its names, not django-ag-ui's: {@link COMPACTION_ACTIVITY_TYPE} is the
+ * server package's notice and stays the drawn one, while the adapter's
+ * `pydantic_ai_compaction` carries the summary the model now reads instead of
+ * the turns, which says nothing a user needs and is registered as drawing
+ * nothing. So are the three deltas, which record what the model was shown or
+ * set to, for the model.
+ */
+export const PYDANTIC_AI_ACTIVITY_TYPE = {
+  /** Messages a run took in through `RunContext.enqueue`: `{ messages }`, AG-UI messages. */
+  ENQUEUED_MESSAGES: "pydantic_ai_enqueued_messages",
+  /** History condensed by the adapter's own compaction. Drawn as nothing. */
+  COMPACTION: "pydantic_ai_compaction",
+  /** Tools revealed to the model mid-run. Drawn as nothing. */
+  TOOL_AVAILABILITY_DELTA: "pydantic_ai_tool_availability_delta",
+  /** Model settings (the thinking effort) changed mid-run. Drawn as nothing. */
+  MODEL_SETTINGS_DELTA: "pydantic_ai_model_settings_delta",
+  /** Capabilities loaded mid-run. Drawn as nothing. */
+  CAPABILITY_LOAD_DELTA: "pydantic_ai_capability_load_delta",
+  /**
+   * An MCP App's view for one tool call (`{ resourceUri, toolInput, result,
+   * serverId?, serverHash? }`), the name the AG-UI MCP Apps middleware fixes.
+   * Drawn as a notice that the view cannot be shown here.
+   */
+  MCP_APPS: "mcp-apps",
+} as const;
+
+/**
  * The gutter a floating panel *rests* at, before anyone has touched it.
  *
  * It matches the default `--ag-ui-inset` and the stylesheet's

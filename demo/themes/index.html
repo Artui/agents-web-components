@@ -708,6 +708,16 @@
               thread, and <em>no run</em>, since a stored message carries none.
             </li>
             <li>
+              <strong>pydantic-ai adapter activities.</strong> Send <em>adapter</em>. Inside
+              the answer: a run notice that the app view <code>ui://sales/week.html</code>
+              cannot be shown, then a right-aligned user bubble reading
+              <em>Compare with &lt;b&gt;last&lt;/b&gt; week, and keep it short</em> (the tags
+              as text, not bold) with a small muted <em>Added during the run</em> under it,
+              then the answer. Nothing else: four more activities arrived and draw nothing.
+              The console logs <code>unhandledActivityTypes</code> after the run, and none
+              of the six names is in it.
+            </li>
+            <li>
               <strong>Header icons / Deutsch.</strong> Both check that the chrome is
               host-replaceable and that every label comes from the string table.
             </li>
@@ -841,7 +851,9 @@
             A run that ends in <code>RUN_ERROR</code> words its bubble by code: say
             <em>time out</em>, <em>interrupted</em> or <em>crash</em>. <em>Too long</em> shows
             the server's own message and a <code>run-error-offer</code> that starts a new
-            conversation; <em>refuse</em> answers the run POST with a 400. This chat sets
+            conversation; <em>refuse</em> answers the run POST with a 400. In the
+            <em>release form</em>, a release named <em>refuse</em> is refused once: its Retry
+            sends the same action and run id again, and the answer it gets has no Retry. This chat sets
             <code>show-usage</code>, so the scripted answers end with a muted token line.
           </p>
           <div class="row">

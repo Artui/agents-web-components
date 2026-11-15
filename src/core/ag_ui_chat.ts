@@ -87,8 +87,10 @@ import { Transcript } from "../ui/transcript/transcript.js";
 import { DEFAULT_UI_STRINGS, mergeUiStrings, type UiStrings } from "../ui/ui_strings.js";
 import type { ActivityRegistration } from "./activity_registration.js";
 import { ActivityRegistry } from "./activity_registry.js";
+import type { ActivityRenderContext } from "./activity_render_context.js";
 import type { ActivityRenderer } from "./activity_renderer.js";
-import { AgUiClient } from "./agui_client.js";
+import { adapterActivities } from "./adapter_activities.js";
+import { AgUiClient, type AgUiRunRequest } from "./agui_client.js";
 // biome-ignore lint/style/useImportType: the emitted declaration file copies this form
 import { type AttachmentRef } from "./attachment.js";
 import { ChatRegistration } from "./chat_registry.js";
@@ -536,6 +538,13 @@ export class AgUiChat extends HTMLElement {
     follow: () => this.#transcript.follow(),
   });
   /**
+   * The context providers {@link registerContext} added, in registration order.
+   * Replaced rather than changed in place, so a round reading it is not moved
+   * under by a provider that unregisters one, and each entry is a wrapper of
+   * its own, so registering one function twice is two registrations.
+   */
+  #contextProviders: readonly { readonly read: () => Context[] }[] = [];
+  /**
    * The AG-UI activities this element can draw, and the blocks it drew. A field
    * rather than built in the constructor, because the constructor registers the
    * built-in renderers through it.
@@ -553,6 +562,7 @@ export class AgUiChat extends HTMLElement {
     retry: () => {
       void this.retryLastTurn();
     },
+    retryable: () => this.#lastRun === null || this.#lastRun.request !== null,
     // Late-bound: the history is built in the constructor, after this field.
     threadId: () => this.#history.threadId,
     follow: () => this.#transcript.follow(),
@@ -844,6 +854,14 @@ export class AgUiChat extends HTMLElement {
    */
   #sending: object | null = null;
   /**
+   * The last {@link run} since the last other turn, which is what Retry answers
+   * for while it is set: `request` while nothing of it is stored, so Retry asks
+   * for it again, and `null` once its run started or was stopped, which leaves
+   * Retry nothing to re-run. `null` itself after a send, a continuation, or a
+   * change of conversation.
+   */
+  #lastRun: { request: AgUiRunRequest | null } | null = null;
+  /**
    * The hold the latest restore with no run to resume took, and what settles
    * once that restore has ended or been stopped; `null` when the latest
    * restore will resume a run. Only meaningful while `#sending` is that hold:
@@ -1052,6 +1070,9 @@ export class AgUiChat extends HTMLElement {
           void this.sendMessage(prompt);
         }),
     });
+    for (const registration of adapterActivities(() => this.#strings)) {
+      this.registerActivityRenderer(registration);
+    }
     this.#skillsMenu = new SkillsMenu((skill) => this.#skills.apply(skill));
     this.#skills = new SkillCatalog({
       element: this,
@@ -1123,7 +1144,11 @@ export class AgUiChat extends HTMLElement {
       continuationEnded: () => this.#flushQueued(),
       client: () => this.#client,
       ensureClient: () => this.#ensureClient(),
-      buildClient: (seed) => this.#buildClient(seed),
+      buildClient: (seed) => {
+        // A continuation is a turn of its own, after which Retry re-asks it.
+        this.#lastRun = null;
+        return this.#buildClient(seed);
+      },
       releaseClient: () => {
         this.#client = null;
       },
@@ -1362,6 +1387,28 @@ export class AgUiChat extends HTMLElement {
   /** Bind a piece of host page state to `read_<name>` / `set_<name>` tools. */
   registerPageState(binding: PageState): void {
     this.#tools.registerPageState(binding);
+  }
+
+  /**
+   * Add entries to every run's context, beside {@link getContext} rather than
+   * in place of it.
+   *
+   * Each round's context is what {@link getContext} returns, then what every
+   * registered provider returns, in registration order, then the place. Read
+   * fresh for every round, the conversation's own and a checkpoint
+   * continuation's alike, and filtered as {@link getContext}'s entries are
+   * while the place is withheld. Lets a piece of the host page (a surface an
+   * activity drew, a panel of its own) say what it holds without owning
+   * {@link getContext}, which one assignment would replace for everyone.
+   *
+   * Returns the function that unregisters it; calling that again does nothing.
+   */
+  registerContext(provider: () => Context[]): () => void {
+    const entry = { read: provider };
+    this.#contextProviders = [...this.#contextProviders, entry];
+    return () => {
+      this.#contextProviders = this.#contextProviders.filter((other) => other !== entry);
+    };
   }
 
   /** The AG-UI endpoint URL, read from the `endpoint` attribute. */
@@ -1958,11 +2005,15 @@ export class AgUiChat extends HTMLElement {
   }
 
   /**
-   * A round's context: the host's, then the place. A withheld place withholds
-   * the page map too, so it is filtered out of whatever the host returned.
+   * A round's context: the host's, then its registered providers', then the
+   * place. A withheld place withholds the page map too, so it is filtered out
+   * of whatever the host returned.
    */
   #roundContext(): Context[] {
-    const context = this.getContext();
+    const context = [
+      ...this.getContext(),
+      ...this.#contextProviders.flatMap((provider) => provider.read()),
+    ];
     const kept = this.#place.withheld
       ? context.filter((entry) => entry.description !== PAGE_MAP_CONTEXT)
       : context;
@@ -2742,6 +2793,7 @@ export class AgUiChat extends HTMLElement {
    */
   #resetConversation(): void {
     this.#client = null;
+    this.#lastRun = null;
     // Every path here has just cancelled the run, but a cancelled run ends
     // later: once its request closes, or once a host tool's handler returns.
     // Whatever it says then is about the conversation being cleared, so it must
@@ -2804,6 +2856,13 @@ export class AgUiChat extends HTMLElement {
    * go of the hold it checks. Rejects with the store's error when the store
    * refuses the save, and then the conversation is as it was.
    *
+   * **After {@link run} it answers for the action, not the turn before it.**
+   * A run refused before `RUN_STARTED` is asked for again with the same
+   * request -- `forwardedProps`, `runId` and turn -- and nothing truncated,
+   * since nothing of it was kept. One whose run started, or that was stopped,
+   * leaves nothing to re-run: this resolves `false` and changes nothing, until
+   * the next send or continuation, or a change of conversation.
+   *
    * Public because a host with its own message UI wants the same button, and
    * because the failed-run notice reaches it from outside the action row.
    *
@@ -2824,6 +2883,10 @@ export class AgUiChat extends HTMLElement {
     this.#sending = hold;
     try {
       const client = this.#ensureClient();
+      const last = this.#lastRun;
+      if (last !== null) {
+        return await this.#retryAction(client, last.request, hold);
+      }
       const kept = client.truncateToLastUser();
       if (kept === null) {
         return false;
@@ -2853,6 +2916,37 @@ export class AgUiChat extends HTMLElement {
       // because no run settles to send it.
       this.#releaseHold(hold);
     }
+  }
+
+  /**
+   * Retry's half for {@link run}: ask for `request` again, unchanged, when its
+   * run was refused before it started, and nothing when there is none.
+   *
+   * Nothing is truncated, since a refused action kept nothing: the conversation
+   * is redrawn as it stands, then the action's turn, as Retry redraws the turn
+   * it re-asks, and the same request goes out, its `runId` included.
+   */
+  async #retryAction(
+    client: AgUiClient,
+    request: AgUiRunRequest | null,
+    hold: object,
+  ): Promise<boolean> {
+    if (request === null) {
+      return false;
+    }
+    const { message } = request;
+    const turn: Message[] =
+      message === undefined ? [] : [{ id: message.id, role: "user", content: message.content }];
+    this.#clearTranscript();
+    for (const drawn of [...client.messages, ...turn]) {
+      this.#history.replay(drawn);
+      // A replay draws through host renderers, which can stop it as a send's save can.
+      if (this.#sending !== hold) {
+        return false;
+      }
+    }
+    await this.#runAction(client, request);
+    return true;
   }
 
   /**
@@ -3323,6 +3417,12 @@ export class AgUiChat extends HTMLElement {
     this.#renderQueued();
     this.#decision.abort();
     this.#client?.cancel();
+    // A stopped action is not asked for again: the user stopped it, and what
+    // its run stored, if it started, is not a turn Retry could re-run.
+    if (this.#lastRun !== null) {
+      this.#lastRun.request = null;
+      this.#actions.withdrawRetry();
+    }
     // A send whose run has not started is ended here too, because nothing else
     // can reach it: the cancel above lands on a client that has not been asked
     // for the run yet, and a client forgets a Stop when it is next asked for one.
@@ -3637,7 +3737,77 @@ export class AgUiChat extends HTMLElement {
    * is what is sent.
    */
   async sendMessage(content: string, attachments: readonly AttachmentRef[] = []): Promise<boolean> {
-    if (content === "" && attachments.length === 0) {
+    return this.#startRun({ content, attachments }, (client) => {
+      this.#lastRun = null;
+      return client.send(content, attachments);
+    });
+  }
+
+  /**
+   * Start a run for an action the server reads from `forwardedProps`, with or
+   * without a user turn to show for it.
+   *
+   * `forwardedProps` is sent as the first request's
+   * `RunAgentInput.forwardedProps`, which is how a host tells the server
+   * something that is not a typed turn: what was picked on a surface an
+   * activity drew, say. `runId`, when given, is sent unchanged as that
+   * request's `runId`, so a caller can name the run and what it derives from
+   * it. Only the first request carries either; the rounds a frontend tool or
+   * an approval starts after it do not, since the server would otherwise act
+   * on the action again for each of them.
+   *
+   * `message` is the user turn the server builds from the props and stores,
+   * under its `id`. It is drawn as {@link sendMessage} draws a turn, as the
+   * user's bubble announced by {@link SUBMIT_EVENT}, but it is not in the first
+   * request's messages, which would put it in the conversation twice. It joins
+   * this element's copy of the conversation when that request's run starts,
+   * after the history it posted and before the reply, so every later request
+   * posts it and the store saves it; a run refused before it starts keeps
+   * nothing. Without `message`, nothing is drawn or announced. A `message`
+   * with empty content is refused, as an empty {@link sendMessage} is.
+   *
+   * Resolves as {@link sendMessage} does, and refuses or waits by the same
+   * rules: `false` while a run, a send or a picked checkpoint's continuation is
+   * in flight and with no `endpoint`; behind a restore it waits, then runs;
+   * `true` once the run has been handed to the client.
+   *
+   * Retry answers for it as {@link retryLastTurn} says: the same request again
+   * while its run has not started, and no Retry once it has.
+   */
+  run(request: AgUiRunRequest): Promise<boolean> {
+    const { message } = request;
+    return this.#startRun(
+      message === undefined ? null : { content: message.content, attachments: [] },
+      (client) => this.#runAction(client, request),
+    );
+  }
+
+  /**
+   * Hand `request` to the client, as the action Retry answers for until its
+   * run starts, when Retry is withdrawn: the server holds the action from then.
+   */
+  #runAction(client: AgUiClient, request: AgUiRunRequest): Promise<void> {
+    const last: { request: AgUiRunRequest | null } = { request };
+    this.#lastRun = last;
+    return client.run(request, () => {
+      // Only while it is still the last one: a Stop or a new conversation since
+      // has said what Retry answers for.
+      if (this.#lastRun === last) {
+        last.request = null;
+        this.#actions.withdrawRetry();
+      }
+    });
+  }
+
+  /**
+   * The one send behind {@link sendMessage} and {@link run}: the turn it draws,
+   * if any, and how it starts the client's run.
+   */
+  async #startRun(
+    turn: { readonly content: string; readonly attachments: readonly AttachmentRef[] } | null,
+    start: (client: AgUiClient) => Promise<void>,
+  ): Promise<boolean> {
+    if (turn !== null && turn.content === "" && turn.attachments.length === 0) {
       return false;
     }
     const restore = this.#restoreHold;
@@ -3658,7 +3828,7 @@ export class AgUiChat extends HTMLElement {
         return false;
       }
       this.#sending = null;
-      return this.sendMessage(content, attachments);
+      return this.#startRun(turn, start);
     }
     if (this.#busy()) {
       return false;
@@ -3672,13 +3842,16 @@ export class AgUiChat extends HTMLElement {
       // the user was doing, and snaps. Armed before the bubble lands so both
       // writes reach the same style recalculation, which is what makes the
       // change a transition rather than a jump.
-      if (this.#transcript.isEmpty()) {
-        this.setAttribute("data-composer-settling", "");
+      // A run with no turn draws nothing, and has nothing to travel.
+      if (turn !== null) {
+        if (this.#transcript.isEmpty()) {
+          this.setAttribute("data-composer-settling", "");
+        }
+        // Taken before the announcement, because its listeners run here: a
+        // host's own send from one is refused as overlapping this one, as it
+        // would be from any later moment of it.
+        this.#announceTurn(turn.content, turn.attachments);
       }
-      // Taken before the announcement, because its listeners run here: a host's
-      // own send from one is refused as overlapping this one, as it would be
-      // from any later moment of it.
-      this.#announceTurn(content, attachments);
       // A listener can also have stopped it -- New chat, a thread switch, a
       // change of principal, moving the element. All of them reach the Stop,
       // which let go of this send, and the turn would otherwise go out into the
@@ -3689,7 +3862,7 @@ export class AgUiChat extends HTMLElement {
       // Read where the request is made, which says why nothing was sent when
       // there is no endpoint to send to.
       const connected = this.endpoint !== "";
-      await this.#client_send(content, attachments);
+      await this.#client_send(start);
       return connected;
     } finally {
       // Still held here only if its run never started: no endpoint, or a
@@ -3704,9 +3877,10 @@ export class AgUiChat extends HTMLElement {
   /**
    * Put a turn the user sent on screen, and tell the host it was sent.
    *
-   * The half of a send that does not depend on where it goes, so both senders
-   * take it from here: {@link sendMessage}, and a checkpoint continuation, which
-   * posts to the resume or fork endpoint on a client of its own.
+   * The half of a send that does not depend on where it goes, so every sender
+   * takes it from here: {@link sendMessage}, {@link run} with a message, and a
+   * checkpoint continuation, which posts to the resume or fork endpoint on a
+   * client of its own.
    *
    * Arming the composer's travel stays with {@link sendMessage}: continuing a
    * run is a change of context, and docks at once.
@@ -3736,17 +3910,17 @@ export class AgUiChat extends HTMLElement {
   }
 
   /**
-   * Hand the message to the client, or say why it is going nowhere.
+   * Start the client's run, or say why nothing is going anywhere.
    *
-   * With no `endpoint`, the bubble and {@link SUBMIT_EVENT} have already
+   * With no `endpoint`, any bubble and {@link SUBMIT_EVENT} have already
    * happened, so the send looks made. The console tells the developer which
    * attribute is missing and the transcript tells the reader, on every
    * attempt: a once-only report is silence for each one after.
    */
-  async #client_send(content: string, attachments: readonly AttachmentRef[]): Promise<void> {
+  async #client_send(start: (client: AgUiClient) => Promise<void>): Promise<void> {
     if (this.endpoint === "") {
       console.error(
-        "<ag-ui-chat>: no endpoint is set, so this message was not sent and no " +
+        "<ag-ui-chat>: no endpoint is set, so nothing was sent and no " +
           "request was made. Point the element at your AG-UI mount with the " +
           'endpoint attribute (endpoint="/agent/"), or assign chat.endpoint ' +
           "before sending.",
@@ -3754,7 +3928,7 @@ export class AgUiChat extends HTMLElement {
       this.#transcript.appendNotice("⚠", this.#strings.notConnected, "not-connected");
       return;
     }
-    await this.#ensureClient().send(content, attachments);
+    await start(this.#ensureClient());
   }
 
   #ensureClient(): AgUiClient {
@@ -3929,8 +4103,13 @@ export class AgUiChat extends HTMLElement {
    * ```
    *
    * Registering a type twice replaces the earlier renderer, so a host can
-   * override a built-in -- `chart` and `compaction` are registrations like any
-   * other, not privileged branches.
+   * override a built-in -- `chart`, `compaction`, `suggestions` and the types
+   * pydantic-ai's AG-UI adapter sends are registrations like any other, not
+   * privileged branches.
+   *
+   * `render` is also handed an {@link ActivityRenderContext}: the message id,
+   * the node it drew for that id last (return it, updated, to keep it in place),
+   * and whether the draw is live or a replay, which must draw an inert surface.
    *
    * ⚠ `render` runs again on every thread load. See {@link ActivityRenderer}
    * for what that requires of it.

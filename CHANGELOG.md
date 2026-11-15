@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-11-15
+
+### Added
+
+- **The activity types pydantic-ai's own AG-UI adapter sends are drawn, or deliberately not,
+  out of the box.** `pydantic_ai_enqueued_messages` (messages a run took in through
+  `RunContext.enqueue`) draws each user message's text as a user bubble, as text and never as
+  HTML, captioned "Added during the run" (`enqueuedMessages`; parts `enqueued-messages`,
+  `enqueued-messages-note`). `mcp-apps` draws a run notice naming the app view's `resourceUri`,
+  which this element cannot show yet (`mcpAppUnsupported`, token `{uri}`; part
+  `run-notice-mcp-app`). `pydantic_ai_compaction` and the three deltas
+  (`pydantic_ai_tool_availability_delta`, `pydantic_ai_model_settings_delta`,
+  `pydantic_ai_capability_load_delta`) draw nothing and log nothing. None of the six shows in
+  `unhandledActivityTypes` any more, so that list keeps meaning "a name nobody here knows".
+  django-ag-ui's own `compaction` notice is unchanged. A host that registered its own renderer
+  for any of them keeps it, whether it registered before or after the element connected. No
+  opt-in.
+- **An activity renderer can say "nothing to draw, by design".** Returning an empty
+  `DocumentFragment` draws nothing, logs nothing, keeps the type out of `unhandledActivityTypes`
+  and takes away whatever that message id drew before. `null` still means the content could not
+  be drawn, and still warns. A host opts in by returning one.
+- **An activity renderer is told what it drew last, and whether the draw is live.** `render`
+  takes a second argument, an `ActivityRenderContext` (`{ messageId, previous, live }`, exported
+  from the package root). Returning `previous`, updated in place, keeps the node where it is
+  across a redraw of the same message id, so a field the user is typing into keeps its value and
+  its focus; returning a new node replaces it, and `null` removes it, as before. `live` is `true`
+  for a draw from the run in flight and `false` for one replayed from a stored conversation, and a
+  surface drawn with `live: false` must be inert, since acting on it would re-send a stale action
+  on every thread load. One-argument renderers, the built-in chart among them, draw exactly as
+  before. A host opts in by reading the second argument.
+- **`chat.run({ forwardedProps, runId?, message? })` starts a run for an action.** The first
+  request carries `forwardedProps` as `RunAgentInput.forwardedProps` and `runId`, when given,
+  unchanged; the frontend-tool and approval rounds after it carry neither. `message`
+  (`{ id, content }`) is the user turn the server builds from the props: it is drawn and announced
+  by `ag-ui-submit`, is not in the first request's messages, and joins the conversation under its
+  id when that request's `RUN_STARTED` arrives, after the posted history and before the reply, so
+  later requests post it and the store saves it. It refuses, waits behind a restore and resolves
+  as `sendMessage` does. Retry answers for the action: refused before `RUN_STARTED`, Retry and
+  `retryLastTurn()` send the same request again, `forwardedProps` and `runId` included, with no
+  second bubble; once `RUN_STARTED` arrives, or after a Stop, Retry is withdrawn and
+  `retryLastTurn()` resolves `false` rather than truncating to the turn before, until the next send
+  or continuation. `AgUiClient.run(request, onStarted?)`, whose callback hears the first round's
+  `RUN_STARTED`, and the `AgUiRunRequest` type are the client half. A host opts in by calling it.
+- **`chat.registerContext(provider)` adds entries to every run's context** after what
+  `getContext` returns, in registration order, for the conversation's runs and checkpoint
+  continuations alike; it returns the function that removes them. A host opts in by calling it;
+  `getContext` is unchanged.
+
+### Fixed
+
+- **An activity renderer that returns a non-empty `DocumentFragment` can now be redrawn under
+  the same message id.** The registry kept the fragment, which is empty once appended, so the
+  next draw threw `previous.replaceWith is not a function`. It now keeps a wrapper element
+  (`display: contents`, so layout is unchanged) holding the fragment's children, and that wrapper
+  is `previous` on the next draw. A fragment draw leaves one extra element in the transcript. No
+  opt-in.
+
 ## [0.2.1] — 2026-11-15
 
 ### Fixed
@@ -138,7 +195,8 @@ move page walks a host over. Each entry below says whether a host opts in.
   kept offering the moon under `theme="dark"`. Only the toggle's own click redrew it before. A host
   opts in to nothing.
 
-[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/Artui/agents-web-components/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/Artui/agents-web-components/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Artui/agents-web-components/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/Artui/agents-web-components/compare/v0.1.1...v0.1.2

@@ -67,31 +67,51 @@ export class ActivityRegistry {
    * which is why the renderer contract has to be pure: the same content is
    * drawn again on every thread load.
    *
+   * `live` is whether it comes from the current run's stream rather than a
+   * replay, which the renderer is told so a replayed surface can be drawn inert.
+   *
    * An unregistered type draws nothing and says nothing. That is the protocol's
    * own answer -- a client that does not know a name ignores the event -- and a
    * warning here would fire on every well-behaved forward-compatible server,
    * while a placeholder would put the protocol's growth in the user's face.
    * {@link unhandledTypes} is the way to find out what arrived.
    */
-  draw(messageId: string, activityType: string, content: unknown): void {
+  draw(messageId: string, activityType: string, content: unknown, live: boolean): void {
     const registration = this.#activityRenderers.get(activityType);
     if (registration === undefined) {
       this.#unhandledActivityTypes.add(activityType);
       return;
     }
-    const node = renderOrWarn(() => registration.render(content), `activity ${activityType}`);
-    if (node === null) {
+    const previous = this.#activityBlocks.get(messageId) ?? null;
+    const rendered = renderOrWarn(
+      () => registration.render(content, { messageId, previous, live }),
+      `activity ${activityType}`,
+    );
+    if (rendered === null) {
       this.#remove(messageId, activityType, registration.removedNotice, content);
       return;
     }
-    const existing = this.#activityBlocks.get(messageId);
-    if (existing === undefined) {
+    if (drawsNothing(rendered)) {
+      // Nothing to draw, by design: no group is opened for it and nothing is
+      // said, and whatever this id drew before goes, as the content now says.
+      this.#activityBlocks.get(messageId)?.remove();
+      this.#activityBlocks.delete(messageId);
+      return;
+    }
+    const node = rendered.nodeType === Node.DOCUMENT_FRAGMENT_NODE ? wrap(rendered) : rendered;
+    if (node === previous) {
+      // Updated in place by the renderer, so it stays where it is: moving it,
+      // even to its own position, would take the focus out of a field in it.
+      this.#host.afterTranscriptGrew();
+      return;
+    }
+    if (previous === null) {
       this.#host.ensureGroup().appendChild(node as HTMLElement);
     } else {
       // Replaced rather than appended: a server redrawing under the same id
       // means *this one changed*, and a second copy below the first would read
       // as two measurements instead of one that moved.
-      existing.replaceWith(node);
+      previous.replaceWith(node);
     }
     this.#activityBlocks.set(messageId, node as HTMLElement);
     this.#host.afterTranscriptGrew();
@@ -130,4 +150,20 @@ export class ActivityRegistry {
       this.#host.appendNotice("\u{1F4C9}", notice, "chart-undrawable");
     }
   }
+}
+
+/**
+ * A fragment is empty once appended, so what is on screen is its children in
+ * one box that takes no part in layout, which `previous` and `replaceWith` can hold.
+ */
+function wrap(fragment: Node): HTMLElement {
+  const box = document.createElement("div");
+  box.style.display = "contents";
+  box.append(fragment);
+  return box;
+}
+
+/** Whether a renderer returned an empty fragment: see {@link ActivityRenderer}. */
+function drawsNothing(node: Node): boolean {
+  return node.nodeType === Node.DOCUMENT_FRAGMENT_NODE && !node.hasChildNodes();
 }

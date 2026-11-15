@@ -128,6 +128,10 @@ export interface UiStrings {
   historyCompacted: string;
   /** Notice shown when the agent loads an agent skill. Token: `{name}`. */
   usingSkill: string;
+  /** Caption under user messages delivered into a run while it was working. */
+  enqueuedMessages: string;
+  /** Notice in place of an MCP App's view, which this element cannot show. Token: `{uri}`. */
+  mcpAppUnsupported: string;
   /** Notice shown on mount when the previous run never produced a response. */
   runInterrupted: string;
   /** Tool-result content (and card text) when the page moved mid-run. */
@@ -448,6 +452,8 @@ export const DEFAULT_UI_STRINGS: UiStrings = {
   chartUndrawable: "A chart could not be drawn from the data sent, so it was removed.",
   historyCompacted: "Earlier turns condensed to fit the context window ({count} removed)",
   usingSkill: "Using skill {name}",
+  enqueuedMessages: "Added during the run",
+  mcpAppUnsupported: "An app view can't be shown here: {uri}",
   runInterrupted: "The previous response didn’t finish — the page changed before it arrived.",
   pageMoved:
     "The page changed since you last looked at it. Call read_page to see the current page, then retry.",

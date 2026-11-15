@@ -252,6 +252,28 @@ export interface RunErrorInfo {
 }
 
 /**
+ * A run started for a host action rather than a typed turn: what
+ * {@link AgUiClient.run} and `AgUiChat.run` take.
+ */
+export interface AgUiRunRequest {
+  /** Sent as the first request's `RunAgentInput.forwardedProps`, and on no later round. */
+  readonly forwardedProps: Readonly<Record<string, unknown>>;
+  /** Sent as the first request's `RunAgentInput.runId`; later rounds mint their own. */
+  readonly runId?: string;
+  /**
+   * The user turn the server builds from `forwardedProps` and stores. Not sent
+   * with the first request; kept in the history from its `RUN_STARTED` on.
+   */
+  readonly message?: { readonly id: string; readonly content: string };
+}
+
+/** A {@link AgUiClient.run} request, and who hears that its first round started. */
+interface Action {
+  readonly request: AgUiRunRequest;
+  readonly onStarted: (() => void) | undefined;
+}
+
+/**
  * Provider of the per-run frontend tool catalog and context. Both are read
  * fresh on every {@link AgUiClient.send} so the catalog reflects the current
  * page state.
@@ -457,6 +479,32 @@ export class AgUiClient {
   }
 
   /**
+   * Run the agent on the conversation as it stands, for an action the server
+   * reads from `request.forwardedProps` rather than from a new user message.
+   *
+   * The first request carries `forwardedProps`, and `runId` when given; the
+   * frontend-tool and interrupt rounds that follow carry neither, since the
+   * server would otherwise build the action's turn again for each of them.
+   *
+   * `request.message` is that turn as the server stores it. It is not in the
+   * first request's messages, which would put it in the conversation twice,
+   * but it joins the history, as a user message under its id, when the first
+   * round's `RUN_STARTED` arrives: after the history that request posted and
+   * before the reply, where the server put it, and so in every request and save
+   * from then on. A run refused before `RUN_STARTED` keeps nothing, as the
+   * server stored nothing.
+   *
+   * `onStarted` is called when that first round's `RUN_STARTED` arrives, before
+   * any of its reply is handed on: from then on the server holds the action, and
+   * asking for it again would be a second action rather than a retry of this one.
+   */
+  async run(request: AgUiRunRequest, onStarted?: () => void): Promise<void> {
+    // A new interaction, as in send(); no host code runs between here and the loop.
+    this.#cancelled = false;
+    await this.#run({ request, onStarted });
+  }
+
+  /**
    * Drop everything after the most recent user message, so the same question
    * can be asked again.
    *
@@ -540,9 +588,9 @@ export class AgUiClient {
     this.#agent.abortRun();
   }
 
-  async #run(): Promise<void> {
+  async #run(action?: Action): Promise<void> {
     try {
-      await this.#runLoop();
+      await this.#runLoop(action);
       // `@ag-ui/client` filters abort errors inside `runAgent` (it resolves
       // rather than rejects on a cancelled fetch), so a cancelled run usually
       // ends here, not in the catch.
@@ -685,7 +733,7 @@ export class AgUiClient {
     this.#onPersist(this.#agent.messages);
   }
 
-  async #runLoop(): Promise<void> {
+  async #runLoop(action?: Action): Promise<void> {
     // Carries resolved approval answers into the next run when a round finished
     // on a server-side-tool interrupt. Distinct from the public resume(), which
     // continues an unfinished frontend-tool round after a page load; this stays
@@ -715,6 +763,14 @@ export class AgUiClient {
       if (resume !== undefined) {
         params.resume = resume;
       }
+      // Only the first round answers the action; the rest are this client's.
+      const first = round === 0 ? action?.request : undefined;
+      if (first !== undefined) {
+        params.forwardedProps = first.forwardedProps;
+        if (first.runId !== undefined) {
+          params.runId = first.runId;
+        }
+      }
       this.#answerUnansweredCalls(resuming);
       // Everything above since the check at the top is host code -- the tool
       // and context providers, and the store saving the answers just made -- and
@@ -725,7 +781,11 @@ export class AgUiClient {
       if (this.#cancelled) {
         return;
       }
-      await this.#agent.runAgent(params, this.#buildSubscriber(pending, runState));
+      const kept = first?.message;
+      const turn: Message | undefined =
+        kept === undefined ? undefined : { id: kept.id, role: "user", content: kept.content };
+      const started = round === 0 ? action?.onStarted : undefined;
+      await this.#agent.runAgent(params, this.#buildSubscriber(pending, runState, turn, started));
       resume = undefined;
       resuming = new Set();
       this.#persist();
@@ -815,7 +875,12 @@ export class AgUiClient {
     }
   }
 
-  #buildSubscriber(pending: AgUiToolCall[], runState: RunState): AgentSubscriber {
+  #buildSubscriber(
+    pending: AgUiToolCall[],
+    runState: RunState,
+    turn: Message | undefined,
+    started: (() => void) | undefined,
+  ): AgentSubscriber {
     const h = this.#handlers;
     const closed = this.#closedMessageIds;
     // Read at event time, not captured now: the flag flips mid-run, and the
@@ -836,8 +901,12 @@ export class AgUiClient {
       onRunInitialized() {
         h.onRunStart();
       },
-      onRunStartedEvent({ event }) {
+      onRunStartedEvent({ event, messages }) {
         runId = event.runId;
+        started?.();
+        // The action's turn, kept where the server stored it: after the history
+        // this request posted, before the reply that follows.
+        return turn === undefined ? undefined : { messages: [...messages, turn] };
       },
       onTextMessageStartEvent({ event }) {
         // A reused message id merges two answers into one persisted transcript

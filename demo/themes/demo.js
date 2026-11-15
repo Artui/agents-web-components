@@ -33,6 +33,8 @@ const DE = {
   toolDone: "✓ fertig",
   confirm: "Bestätigen",
   cancel: "Abbrechen",
+  enqueuedMessages: "Während des Laufs hinzugefügt",
+  mcpAppUnsupported: "Diese App-Ansicht kann hier nicht angezeigt werden: {uri}",
 };
 
 // `data-strings` is read once while connecting, so it has to be on the element
@@ -55,9 +57,53 @@ if (ratings) {
 
 defineChat();
 
+// What arrived with nobody to draw it, after every run: the adapter scenario
+// (send "adapter") should leave none of pydantic-ai's names here.
+chat.addEventListener("ag-ui-run-finished", () => {
+  console.info("unhandledActivityTypes", chat.unhandledActivityTypes);
+});
+
 // Charts, both routes. Opt-in by construction: nothing draws one unless a host
 // asks, which is the point of the call rather than an accident of the demo.
 chat.enableCharts(["tool", "activity"]);
+
+// A surface the server pushes and redraws: type into it while the second
+// snapshot is on its way, and the field keeps its value and focus, because the
+// renderer updates the node it is given and returns it. Replayed from history
+// (reload, or pick the thread again) it is drawn inert. Its button starts a
+// run that forwards the answer rather than sending it as a message.
+chat.registerActivityRenderer({
+  type: "release_form",
+  render: (content, { previous, live }) => {
+    const form = previous ?? document.createElement("form");
+    if (previous === null) {
+      form.style.cssText = "display:grid;gap:6px;padding:8px;border:1px solid currentColor;border-radius:8px";
+      const label = document.createElement("span");
+      const input = document.createElement("input");
+      input.placeholder = "Release name";
+      const button = document.createElement("button");
+      button.textContent = "Submit";
+      form.append(label, input, button);
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        // The turn's id derives from the run id, which a Retry of a refused run sends again.
+        const runId = crypto.randomUUID();
+        void chat.run({
+          forwardedProps: { action: "submit_release", name: input.value },
+          runId,
+          message: { id: `${runId}-turn`, content: `Release name: ${input.value}` },
+        });
+      });
+    }
+    form.querySelector("span").textContent = `${content.step}${live ? "" : " (from history)"}`;
+    for (const control of form.querySelectorAll("input, button")) {
+      control.disabled = !live;
+    }
+    return form;
+  },
+});
+// Every run says which surface is open, after whatever getContext returns.
+chat.registerContext(() => [{ description: "demo_surface", value: "release_form" }]);
 
 // ── Frontend tools (driven by the mock agent) ──────────────────────────────
 chat.registerTool({

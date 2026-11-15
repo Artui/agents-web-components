@@ -21,7 +21,11 @@ repository, so run it with *that* project's interpreter rather than a bare
 
     <django-ag-ui checkout>/.venv/bin/python scripts/record_wire_fixture.py
 
-Any interpreter with ``ag-ui-protocol`` and ``django-ag-ui`` importable will do.
+Any interpreter with ``ag-ui-protocol`` and ``django-ag-ui`` importable will do,
+as long as its ``django-ag-ui`` and ``pydantic-ai-slim`` are the released ones the
+fixture should speak for: the ``adapterActivities`` run is written by
+pydantic-ai's own ``AGUIEventStream``, so its frames follow the installed
+adapter, and a stale checkout's interpreter fails at import.
 The output is checked in, so this is a regeneration tool rather than a build
 step: re-run it after a protocol bump, review the diff, and let the browser
 suite say whether the client still reads what the server now writes.
@@ -61,13 +65,17 @@ settings.configure(
 django.setup()
 
 import asyncio  # noqa: E402
+import uuid  # noqa: E402
+from collections.abc import AsyncIterator  # noqa: E402
 from types import SimpleNamespace  # noqa: E402
+from unittest import mock  # noqa: E402
 
 from django.core.management import call_command  # noqa: E402
 from django.test import RequestFactory  # noqa: E402
 
 from ag_ui.core import (  # noqa: E402
     ActivitySnapshotEvent,
+    RunAgentInput,
     Interrupt,
     ReasoningEndEvent,
     ReasoningMessageContentEvent,
@@ -104,8 +112,28 @@ from django_spec_agents.contrib.store.default_conversation_store import (  # noq
     DefaultConversationStore,
 )
 from django_spec_agents.registry.tool_registry import ToolRegistry  # noqa: E402
-from pydantic_ai.messages import ModelResponse  # noqa: E402
+from pydantic_ai.messages import (  # noqa: E402
+    CapabilityLoadDeltaEvent,
+    CapabilityLoadDeltaPart,
+    CompactionPart,
+    EnqueuedMessagesEvent,
+    FunctionToolCallEvent,
+    FunctionToolResultEvent,
+    ModelRequest,
+    ModelResponse,
+    ModelSettingsDeltaEvent,
+    ModelSettingsDeltaPart,
+    PartEndEvent,
+    PartStartEvent,
+    TextPart,
+    ToolAvailabilityDeltaEvent,
+    ToolAvailabilityDeltaPart,
+    ToolCallPart,
+    ToolReturnPart,
+    UserPromptPart,
+)
 from pydantic_ai.models.test import TestModel  # noqa: E402
+from pydantic_ai.ui.ag_ui import AGUIEventStream  # noqa: E402
 from pydantic_ai.ui.ag_ui._lifecycle_1_0 import token_usage_from_messages  # noqa: E402
 from pydantic_ai.usage import RequestUsage  # noqa: E402
 
@@ -313,6 +341,87 @@ def _usage_run() -> list[Any]:
     ]
 
 
+def _adapter_activities_run(stamp: Any) -> list[str]:
+    """A run whose frames come from pydantic-ai's own ``AGUIEventStream``, fed native events.
+
+    Every activity type that adapter sends appears here once: the three deltas,
+    its compaction, a message enqueued into the run, and the MCP App view a tool
+    result names. The stream is fed what an agent run yields and encodes with
+    its own encoder, so the frames are the adapter's and not this script's; it
+    mints its ids with ``uuid4``, which is swapped for a counter so a
+    regeneration diff shows only what changed.
+    """
+    call = ToolCallPart(
+        tool_name="show_sales_app", args={"week": "current"}, tool_call_id="call-app"
+    )
+    app = {
+        "resource_uri": "ui://sales/week.html",
+        "tool_input": {"week": "current"},
+        "result": {
+            "content": [{"type": "text", "text": "12 orders this week"}],
+            "structuredContent": {"orders": 12},
+            "isError": False,
+        },
+        "toolset_id": "sales",
+    }
+    answer = TextPart(content="Twelve orders this week, last week's too.")
+
+    async def native() -> AsyncIterator[Any]:
+        yield PartStartEvent(index=0, part=call)
+        yield PartEndEvent(index=0, part=call)
+        yield FunctionToolCallEvent(part=call)
+        yield CapabilityLoadDeltaEvent(part=CapabilityLoadDeltaPart(loaded=["sales_reports"]))
+        yield ToolAvailabilityDeltaEvent(
+            part=ToolAvailabilityDeltaPart(tools_added=["compare_weeks"])
+        )
+        yield ModelSettingsDeltaEvent(part=ModelSettingsDeltaPart(settings={"thinking": "high"}))
+        yield FunctionToolResultEvent(
+            part=ToolReturnPart(
+                tool_name="show_sales_app",
+                content="12 orders this week",
+                tool_call_id="call-app",
+                metadata={"mcp_app": app},
+            )
+        )
+        yield EnqueuedMessagesEvent(
+            enqueue_id="enqueued-recorded",
+            messages=(
+                ModelRequest(parts=[UserPromptPart(content="Compare with <b>last</b> week")]),
+            ),
+        )
+        yield PartStartEvent(index=0, part=CompactionPart(content="Earlier turns, summarised."))
+        yield PartStartEvent(index=1, part=answer)
+        yield PartEndEvent(index=1, part=answer)
+
+    run_input = RunAgentInput(
+        thread_id=THREAD_ID,
+        run_id="run-adapter-activities",
+        state={},
+        messages=[],
+        tools=[],
+        context=[],
+        forwarded_props={},
+        protocol_version="1.0",
+    )
+    stream = AGUIEventStream(run_input)
+    counter = iter(range(1, 1_000))
+
+    def next_id() -> uuid.UUID:
+        return uuid.UUID(int=next(counter))
+
+    async def frames() -> list[str]:
+        return [
+            stream.encode_event(stamp(event)) async for event in stream.transform_stream(native())
+        ]
+
+    with (
+        mock.patch("pydantic_ai.ui._event_stream.uuid4", next_id),
+        mock.patch("pydantic_ai.ui.ag_ui._event_stream.uuid4", next_id),
+        mock.patch("pydantic_ai.ui.ag_ui._adapter.uuid", SimpleNamespace(uuid4=next_id)),
+    ):
+        return asyncio.run(frames())
+
+
 def _identifier_too_long_run() -> list[Any]:
     """A run refused for an over-long id: the code is the one the server derives from the error."""
     error = IdentifierTooLongError(
@@ -371,15 +480,19 @@ def main() -> None:
         "recordedBy": Path(__file__).name,
         "contentType": encoder.get_content_type(),
         "runs": {
-            name: [encoder.encode(_stamp(event)) for event in events]
-            for name, events in runs.items()
+            **{
+                name: [encoder.encode(_stamp(event)) for event in events]
+                for name, events in runs.items()
+            },
+            "adapterActivities": _adapter_activities_run(_stamp),
         },
         "refusals": {"identifierTooLongPreflight": _identifier_too_long_preflight()},
     }
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text(json.dumps(document, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     frames = sum(len(body) for body in document["runs"].values())
-    print(f"wrote {frames} frames across {len(runs)} runs and one refusal to {OUTPUT.name}")
+    count = len(document["runs"])
+    print(f"wrote {frames} frames across {count} runs and one refusal to {OUTPUT.name}")
 
 
 def _stamp(event: Any) -> Any:

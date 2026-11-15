@@ -1640,4 +1640,88 @@ describe("over the real HttpAgent", () => {
     expect(messages.flatMap((m) => Object.keys(m))).not.toContain("outcome");
     expect(warnings()).toEqual([]);
   });
+
+  describe("forwardedProps", () => {
+    /** A round that calls the frontend tool `pick`, so the client runs another. */
+    const callsPick = run(
+      { type: "TOOL_CALL_START", toolCallId: "tc1", toolCallName: "pick" },
+      { type: "TOOL_CALL_ARGS", toolCallId: "tc1", delta: "{}" },
+      { type: "TOOL_CALL_END", toolCallId: "tc1" },
+    );
+
+    /** The last save the client made, read after the run settles. */
+    let saved: readonly Message[] = [];
+
+    function client(): AgUiClient {
+      saved = [];
+      return new AgUiClient({
+        agent: createHttpAgent({ endpoint: "/agent/" }),
+        handlers: recordingHandlers(),
+        executeTool: async () => ({ content: "picked" }),
+        onPersist: (messages) => {
+          saved = messages;
+        },
+      });
+    }
+
+    const TURN = { id: "turn-1", content: "Approve it" };
+
+    it("sends what a plain send puts there when none are given", async () => {
+      const bodies = stubFetch();
+
+      await client().send("hi");
+
+      expect(bodies[0]?.["forwardedProps"]).toEqual({});
+    });
+
+    it("tells the caller its first round started, once for all its rounds", async () => {
+      const bodies = stubFetch(callsPick);
+      const onStarted = vi.fn();
+
+      await client().run({ forwardedProps: { action: "approve" } }, onStarted);
+
+      expect(bodies).toHaveLength(2);
+      expect(onStarted).toHaveBeenCalledTimes(1);
+    });
+
+    it("rides on the first round of a run with its run id, and keeps the turn from then on", async () => {
+      const bodies = stubFetch(callsPick);
+
+      await client().run({
+        forwardedProps: { action: "approve", surface: "s1" },
+        runId: "action-run-1",
+        message: TURN,
+      });
+
+      expect(bodies).toHaveLength(2);
+      expect(bodies[0]?.["forwardedProps"]).toEqual({ action: "approve", surface: "s1" });
+      expect(bodies[0]?.["runId"]).toBe("action-run-1");
+      expect(sent(bodies[0])).toEqual([]);
+      // The follow-up round a frontend tool started is not a second action,
+      // but it does post the turn the server stored for the first.
+      expect(bodies[1]?.["forwardedProps"]).toEqual({});
+      expect(bodies[1]?.["runId"]).not.toBe("action-run-1");
+      expect(sent(bodies[1]).map((m) => [m["role"], m["id"]])).toEqual([
+        ["user", "turn-1"],
+        ["assistant", expect.any(String)],
+        ["tool", expect.any(String)],
+      ]);
+      expect(sent(bodies[1])[0]?.["content"]).toBe("Approve it");
+      expect(saved.map((m) => m.role)).toEqual(["user", "assistant", "tool"]);
+      expect(saved[0]).toEqual({ id: "turn-1", role: "user", content: "Approve it" });
+    });
+
+    it("keeps no turn for a run refused before it started", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(() => Promise.resolve(new Response("refused", { status: 400 }))),
+      );
+      const agent = client();
+
+      await agent.run({ forwardedProps: { action: "approve" }, message: TURN });
+
+      expect(agent.messages).toEqual([]);
+      expect(saved).toEqual([]);
+    });
+  });
 });

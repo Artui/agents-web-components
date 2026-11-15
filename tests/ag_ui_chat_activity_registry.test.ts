@@ -16,6 +16,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CHART_ACTIVITY_TYPE, COMPACTION_ACTIVITY_TYPE, ELEMENT_TAG } from "../src/constants.js";
+import type { ActivityRenderContext } from "../src/core/activity_render_context.js";
+import type { ActivityRenderer } from "../src/core/activity_renderer.js";
 import type { AgUiChat } from "../src/core/ag_ui_chat.js";
 import { defineChat } from "../src/core/define_chat.js";
 import { type Emit, makeFakeAgent } from "./helpers/fake_agent.js";
@@ -248,5 +250,97 @@ describe("an activity nobody registered", () => {
     await send(el, "hi");
 
     expect(el.unhandledActivityTypes).toContain(CHART_ACTIVITY_TYPE);
+  });
+});
+
+describe("the context a renderer is drawn in", () => {
+  beforeEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  /** A renderer that records the context of every draw. */
+  function recording(seen: (ActivityRenderContext | undefined)[]): ActivityRenderer {
+    return (content, context) => {
+      seen.push(context === undefined ? undefined : { ...context });
+      return tagged(String((content as { status: string }).status));
+    };
+  }
+
+  it("names the message and says the draw is live when the run streams it", async () => {
+    const seen: (ActivityRenderContext | undefined)[] = [];
+    const el = mount((emit) => {
+      emit.activity("build_status", { status: "running" }, "b1");
+      emit.activityReplace("build_status", { status: "green" }, "b1");
+    });
+    el.registerActivityRenderer({ type: "build_status", render: recording(seen) });
+
+    await send(el, "hi");
+
+    const drawn = shadow(el).querySelectorAll(".host-activity");
+    expect(seen.map((context) => context?.live)).toEqual([true, true]);
+    expect(seen.map((context) => context?.messageId)).toEqual(["b1", "b1"]);
+    expect(seen[0]?.previous).toBeNull();
+    // The second draw is handed what the first returned, which it replaced.
+    expect(seen[1]?.previous).not.toBeNull();
+    expect(seen[1]?.previous).not.toBe(drawn[0]);
+  });
+
+  it("says the draw is not live when a stored conversation is put back", async () => {
+    const seen: (ActivityRenderContext | undefined)[] = [];
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("endpoint", "/agent/");
+    el.registerActivityRenderer({ type: "build_status", render: recording(seen) });
+    el.conversationStore = {
+      threadId: () => "t1",
+      setActiveThread: () => {},
+      saveMessages: () => {},
+      loadMessages: () =>
+        Promise.resolve([
+          { id: "u1", role: "user", content: "how is the build" },
+          { id: "b1", role: "activity", activityType: "build_status", content: { status: "red" } },
+        ]),
+      listThreads: () => Promise.resolve([]),
+      clear: () => {},
+      saveCheckpoint: () => {},
+      loadCheckpoint: () => null,
+      renameThread: () => {},
+    } as never;
+    document.body.appendChild(el);
+
+    await flush();
+    await flush();
+
+    expect(shadow(el).querySelector(".host-activity")?.textContent).toBe("red");
+    expect(seen).toEqual([{ messageId: "b1", previous: null, live: false }]);
+  });
+
+  it("still replaces the node of a one-argument renderer, and of the built-in chart", async () => {
+    const chart = { kind: "bar", labels: ["Mon"], series: [{ label: "new", points: [1] }] };
+    const el = mount((emit) => {
+      emit.activity("build_status", { status: "running" }, "b1");
+      emit.activity(CHART_ACTIVITY_TYPE, chart, "c1");
+      emit.activityReplace("build_status", { status: "green" }, "b1");
+      emit.activityReplace(CHART_ACTIVITY_TYPE, { ...chart, title: "revised" }, "c1");
+    });
+    el.enableCharts(["activity"]);
+    const drawn: Node[] = [];
+    el.registerActivityRenderer({
+      type: "build_status",
+      render: (content) => {
+        const node = tagged(`Build ${(content as { status: string }).status}`);
+        drawn.push(node);
+        return node;
+      },
+    });
+
+    await send(el, "hi");
+
+    const blocks = shadow(el).querySelectorAll(".host-activity");
+    expect([...blocks].map((node) => node.textContent)).toEqual(["Build green"]);
+    expect(blocks[0]).toBe(drawn[1]);
+    expect(drawn[0]?.isConnected).toBe(false);
+    const charts = shadow(el).querySelectorAll(".chart-block");
+    expect(charts).toHaveLength(1);
+    expect(charts[0]?.textContent).toContain("revised");
   });
 });

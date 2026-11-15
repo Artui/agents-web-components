@@ -331,8 +331,8 @@ Code blocks in an agent's answer carry a **copy button**, revealed on hover or
 keyboard focus and styleable via the `code-copy` part. Override its labels with
 the `copyCode` / `copied` / `copyFailed` strings.
 
-**Methods**: `registerTool`, `registerPageState`, `registerActivityRenderer`, `setSkills`,
-`sendMessage`, `attachFile`, `appendMessage`, `retryLastTurn`, `quote`, `offerQuoteInPage`,
+**Methods**: `registerTool`, `registerPageState`, `registerActivityRenderer`, `registerContext`,
+`setSkills`, `sendMessage`, `run`, `attachFile`, `appendMessage`, `retryLastTurn`, `quote`, `offerQuoteInPage`,
 `enableCharts`, `newChat`, `setCollapsed`, `toggleCollapsed`, `setMaximized`, `toggleMaximized`,
 `describeSurface`, `moveTo`, `resetSize`, `toggleTheme`, `openThreads`, `closeThreads`, `switchThread`, `deleteThread`,
 `openCheckpoints`, `closeCheckpoints`, `toggleCheckpoints`, `refreshPlace` and `reload`.
@@ -412,6 +412,63 @@ chat.addEventListener("ag-ui-attachments", (e) => {
 });
 chat.attachFile(fileInput.files[0]);
 ```
+
+### Starting a run with forwarded props
+
+`run({ forwardedProps, runId?, message? })` starts a run for an action the server reads from
+`RunAgentInput.forwardedProps` rather than from a typed turn, such as what the user picked on a
+surface an activity drew.
+
+```js
+await chat.run({
+  forwardedProps: { action: "approve", surface: "s1" },
+  runId: actionRunId,
+  message: { id: `${actionRunId}-turn`, content: "Approve the refund" },
+});
+```
+
+- **Only the first request carries `forwardedProps` and `runId`.** `runId` reaches the wire
+  unchanged, so you can derive ids from it. The rounds a frontend tool or an approval starts
+  afterwards send `{}` and a run id of their own, because a server that acts on the props would
+  otherwise act again for every round.
+- **`message` is the turn the server stores, under your `id`.** It is drawn as the user's bubble
+  and announced by `ag-ui-submit`, as a `sendMessage` turn is, but it is not in the first
+  request's `messages`, which would put it in the conversation twice. When that request's
+  `RUN_STARTED` arrives, the turn joins the element's copy of the conversation, after the history
+  that request posted and before the reply. From then on every request posts it, the follow-up
+  rounds of the same run included, and the store saves it, so a reload draws it again. A run
+  refused before `RUN_STARTED` keeps nothing. Without `message`, nothing is drawn or announced.
+  A `message` with empty content is refused.
+- **It refuses and waits as `sendMessage` does.** It resolves `false` while a run, a send or a
+  picked checkpoint's continuation is in flight, and with no `endpoint`. Behind a restore it waits,
+  then runs. It resolves `true` once the run is handed to the client.
+- **Retry asks for a refused action again, unchanged.** When the first request is refused before
+  `RUN_STARTED`, the failed bubble's Retry (and `retryLastTurn()`) sends the same `forwardedProps`,
+  the same `runId` and no `message` in `messages`, and redraws the turn once rather than adding a
+  second bubble. Once `RUN_STARTED` arrives the server holds the action, so Retry is withdrawn,
+  from the earlier answer too, and `retryLastTurn()` resolves `false` without touching the
+  conversation; so it does after a Stop. The next `sendMessage` or checkpoint continuation brings
+  Retry back, and New chat, a thread switch or a reload forgets the action: a restored
+  conversation's Retry re-asks its last user turn, the action's included, as a sent one.
+
+### Adding to every run's context
+
+`registerContext(provider)` adds entries to every run's context beside `getContext` rather than
+in place of it, and returns the function that removes them again:
+
+```js
+const unregister = chat.registerContext(() => [
+  { description: "open_surface", value: JSON.stringify(surface.state) },
+]);
+// later
+unregister();
+```
+
+Each round's context is what `getContext` returns, then each registered provider's entries in
+registration order, then the place. Providers are read fresh for every round, a checkpoint
+continuation's included, and are filtered like `getContext`'s while the place is withheld. Use it
+when a piece of your page has something to say for as long as it is on screen, without taking
+`getContext` over from whatever else set it.
 
 A self-contained live playground lives in [`demo/`](demo/) — run `make demo` to serve it against a
 mock AG-UI server.
@@ -1880,25 +1937,86 @@ chat.registerActivityRenderer({
     const el = document.createElement("div");
     el.className = "build";
     el.textContent = `Build ${content.status}`;
-    return el;   // return null for content not worth drawing
+    return el;   // null: could not be drawn; an empty fragment: nothing to draw
   },
 });
 ```
 
 **`render` runs again on every thread load**, so it carries the same contract as
-a client tool's `render`: a pure function of `content`, deterministic, and free
-of effects outside the node it returns. Activities are materialised into
+a client tool's `render`: a pure function of `content` and the context it is
+drawn in (below), deterministic, and free of effects outside the node it returns. Activities are materialised into
 `role: "activity"` messages and persisted with the transcript, so a renderer that
 writes to the page instead of returning DOM fires again on every restore.
 
 The component places what you return, keyed by the activity's `messageId`, so a
 server repeating an id **replaces** your node rather than adding a second one —
-the same in-place update charts get. Returning `null` removes whatever was there:
-live and reload should agree, and the stored content is the version that could
-not be drawn.
+the same in-place update charts get, unless `render` hands back the node it was
+given (below). Returning `null` removes whatever was there, with a console
+warning: live and reload should agree, and the stored content is the version
+that could not be drawn.
 
-`chart` and `compaction` are registrations exactly like yours, not privileged
-branches, so registering either name **replaces the built-in**.
+Content that is fine and has nothing to show — a record meant for the model, a
+list with nothing in it for the user — returns an **empty `DocumentFragment`**
+instead: nothing is drawn, nothing is logged, the type is not reported as
+unhandled, and anything drawn under that `messageId` before is taken away. A
+renderer that always returns one is how a type is known and deliberately drawn
+as nothing.
+
+`chart`, `compaction`, `suggestions` and the types below are registrations
+exactly like yours, not privileged branches, so registering any of those names
+**replaces the built-in**, before or after the element connects.
+
+### Built in: what pydantic-ai's AG-UI adapter sends
+
+pydantic-ai's own AG-UI adapter sends activities of its own, and each has a
+built-in renderer, so none of them shows in `unhandledActivityTypes`.
+
+| `activityType` | Drawn as |
+| --- | --- |
+| `pydantic_ai_enqueued_messages` | Each user message's text as a user bubble (`message-user`), as text and never as HTML, in an `enqueued-messages` column with an `enqueued-messages-note` caption (string `enqueuedMessages`). Messages the run took in while it was working, through `RunContext.enqueue`. Other roles draw nothing. |
+| `mcp-apps` | A run notice (`run-notice-mcp-app`) that the app view cannot be shown here, naming its `resourceUri` (string `mcpAppUnsupported`, token `{uri}`). |
+| `pydantic_ai_compaction`, `pydantic_ai_tool_availability_delta`, `pydantic_ai_model_settings_delta`, `pydantic_ai_capability_load_delta` | Nothing: records the adapter keeps for the model. |
+
+`compaction`, django-ag-ui's own notice, is separate and stays drawn. The
+adapter's enqueued messages are drawn only: `@ag-ui/client` does not send
+activities back to the server, so a later run does not see them as turns.
+
+### Updating a surface in place, and drawing it inert on replay
+
+`render` takes a second argument, an `ActivityRenderContext`:
+`{ messageId, previous, live }`. A one-argument renderer ignores it and keeps
+working as before.
+
+- **`previous`** is the node your renderer returned for this `messageId` last
+  (`null` on the first draw). Update it and **return it**, and the component
+  leaves it where it is instead of replacing it, so a field the user is typing
+  into keeps its value and its focus when the server redraws the activity.
+  Returning a new node replaces the old one, as before.
+- **`live`** is `true` when the draw comes from the run in flight and `false`
+  when a stored conversation is put back (a reload, a thread picked from the
+  drawer, a Retry redrawing what came before it). **A surface drawn with
+  `live: false` must be inert**: no button that acts, every input disabled. A
+  restored surface is redrawn on every thread load, and acting on it would
+  send an action from a turn the conversation has moved past.
+
+```js
+chat.registerActivityRenderer({
+  type: "approval_form",
+  render: (content, { previous, live }) => {
+    const form = previous ?? document.createElement("form");
+    if (previous === null) {
+      form.append(document.createElement("input"), document.createElement("button"));
+      form.querySelector("button").textContent = "Approve";
+      form.onsubmit = (event) => {
+        event.preventDefault();
+        void chat.run({ forwardedProps: { action: "approve", note: form.elements[0].value } });
+      };
+    }
+    for (const control of form.elements) control.disabled = !live;
+    return form;
+  },
+});
+```
 
 ### Which carrier should the server use?
 
@@ -1922,7 +2040,7 @@ protocol's own answer, and warning would fire on every forward-compatible
 server. But silence is hard to debug, so the names are readable:
 
 ```js
-chat.unhandledActivityTypes; // ["pydantic_ai_thinking", …]
+chat.unhandledActivityTypes; // ["build_status", …]
 ```
 
 Note `"chart"` appears there until you call `enableCharts(["activity"])`, which
@@ -2393,7 +2511,10 @@ message's own text.
 
 - **Retry** re-asks the question. History is truncated to the most recent user
   message inclusive and the run repeats, so the agent answers what it was asked
-  rather than being told its last answer was wrong.
+  rather than being told its last answer was wrong. After `chat.run`, Retry
+  answers for the action instead: it asks for a refused one again, unchanged, and
+  is not offered once the action's run started (see *Starting a run with
+  forwarded props*).
 - **Copy** puts the message's text on the clipboard, and says so on the button.
   A refused clipboard permission is reported there too, rather than thrown.
 - **Thumbs up / down** fire `ag-ui-feedback` (wired below) and **store nothing**.
@@ -3349,6 +3470,7 @@ paths.
 | Export | Kind | Summary |
 | --- | --- | --- |
 | `AgUiClient` | class | Orchestration layer over an AG-UI `AbstractAgent`. |
+| `AgUiRunRequest` | type | What `run` takes, on the element and on `AgUiClient` (`{ forwardedProps, runId?, message? }`). |
 | `AgUiClientConfig` / `AgUiClientHandlers` / `AgUiRunInputs` | type | Client config, lifecycle handlers, per-run input providers. |
 | `AgUiToolCall` / `ToolExecution` / `ExecuteTool` | type | Tool-call shape, execution result, executor signature. |
 | `AgUiMessageIds` | type | Which message `AgUiClientHandlers.onTextEnd` completed: its `messageId`, and the `runId` its `RUN_STARTED` named. |
@@ -3407,7 +3529,8 @@ paths.
 | `attachMessageActions` | function | Give a finished bubble its action row (copy, and feedback when a handler is passed). |
 | `messageActionBar` | function | The empty action row for a bubble, created if it has none — the shared shell both callers use. |
 | `MessageActionsOptions` | type | What `attachMessageActions` takes: `strings`, a `text` source, an optional `html` source for the rich clipboard flavour, an optional `onFeedback`. |
-| `ActivityRenderer` | type | Draws one activity from its `content`. Pure: it runs again on every restore. |
+| `ActivityRenderer` | type | Draws one activity from its `content` and an `ActivityRenderContext`. Pure: it runs again on every restore. |
+| `ActivityRenderContext` | type | What a renderer is told besides the content (`{ messageId, previous, live }`): the node it drew last for that id, and whether the draw is live. |
 | `ActivityRegistration` | type | What `registerActivityRenderer` takes: `type`, `render`, and an optional `removedNotice`. |
 
 ### Durability
@@ -4050,12 +4173,12 @@ component sets, so a new one cannot ship undocumented.
 | Shell | `panel`, `header`, `title`, `icon`, `header-controls`, `messages`, `empty`, `greeting`, `pending`, `stopped`, `usage-line`, `jump-latest`, and one per resize grip: `resize-handle` plus `resize-handle-top`, `resize-handle-bottom`, `resize-handle-left`, `resize-handle-right`, `resize-handle-top-left`, `resize-handle-top-right`, `resize-handle-bottom-left`, `resize-handle-bottom-right` |
 | Header buttons | `header-button` on each, plus `history-button`, `checkpoints-button`, `new-button`, `maximize-button`, `collapse-button`, `theme-toggle` |
 | Collapsed widget | `launcher`, `launcher-icon`, `launcher-badge`, `rail-label`, `bar` (the [bottom bar](#collapsing-to-a-bottom-bar)'s wrapper, around the launcher), `bar-place` (the place beside the bar's title; its text carries `place-label` and `place-detail`), `bar-history` |
-| Answers | `answer` (the per-turn group), `message` (plus `message-user`, `message-assistant`), `code-copy` |
+| Answers | `answer` (the per-turn group), `message` (plus `message-user`, `message-assistant`), `code-copy`, `enqueued-messages` and `enqueued-messages-note` (user messages a run took in mid-turn) |
 | Reasoning | `thoughts`, `thoughts-toggle`, `thoughts-body`, `thoughts-label` |
 | Follow-up suggestions | `suggestions`, `suggestion-chip` |
 | Message actions | `run-error-offer` (the new-conversation offer under a failed run), `message-actions`, `message-action` (plus `message-action-retry`, `message-action-copy`, `message-action-up`, `message-action-down`), and the icon holder inside each: `message-action-icon` (plus `message-action-icon-retry`, `message-action-icon-copy`, `message-action-icon-up`, `message-action-icon-down`) |
 | Queued messages | `queued`, `queued-chip` |
-| Run notices | `run-notice` (plus `run-notice-interrupted`, `run-notice-attachment-pending`, `run-notice-compaction`, `run-notice-skill`, `run-notice-history-replaced`, `run-notice-chart-undrawable`, `run-notice-surface`, `run-notice-not-connected`), `run-notice-icon`, `run-notice-text`, `run-notice-undo` |
+| Run notices | `run-notice` (plus `run-notice-interrupted`, `run-notice-attachment-pending`, `run-notice-compaction`, `run-notice-skill`, `run-notice-history-replaced`, `run-notice-chart-undrawable`, `run-notice-surface`, `run-notice-not-connected`, `run-notice-mcp-app`), `run-notice-icon`, `run-notice-text`, `run-notice-undo` |
 | Tool cards | `tool-card` (plus one status modifier: `tool-card-pending`, `tool-card-deferred`, `tool-card-done`, `tool-card-error`, `tool-card-declined`, `tool-card-interrupted`), `tool-card-head`, `tool-card-icon`, `tool-card-name`, `tool-card-status` (plus `tool-card-status-pending`, `tool-card-status-deferred`, `tool-card-status-done`, `tool-card-status-error`, `tool-card-status-declined`, `tool-card-status-interrupted`), `tool-card-decision`, `tool-card-toggle`, `tool-card-body`, `tool-card-section` (plus `tool-card-args-section`, `tool-card-result-section`), `tool-card-section-label` (plus `tool-card-args-label`, `tool-card-result-label`), `tool-card-args`, `tool-card-result`, `tool-card-approval`, `tool-card-subagent`, `tool-card-repeat` |
 | Tool-step group | `tool-group` (plus one state modifier: `tool-group-waiting`, `tool-group-running`, `tool-group-done`, `tool-group-error`), `tool-group-head`, `tool-group-icon`, `tool-group-label`, `tool-group-meta`, `tool-group-list` |
 | Delegated sub-agents | `subagent`, `subagent-row`, `subagent-icon`, `subagent-status`, `subagent-steps`, `subagent-step`, `subagent-step-icon`, `subagent-step-name` |
