@@ -4019,8 +4019,8 @@ export class AgUiChat extends HTMLElement {
    *
    * Registering a type twice replaces the earlier renderer, so a host can
    * override a built-in -- `chart`, `compaction`, `suggestions` and the types
-   * pydantic-ai's adapter sends (`PYDANTIC_AI_ACTIVITY_TYPE`) are
-   * registrations like any other, not privileged branches.
+   * pydantic-ai's AG-UI adapter sends are registrations like any other, not
+   * privileged branches.
    *
    * `render` is also handed an {@link ActivityRenderContext}: the message id,
    * the node it drew for that id last (return it, updated, to keep it in place),

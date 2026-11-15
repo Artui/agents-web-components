@@ -102,7 +102,7 @@ export const MESSAGE_STYLES: string = `
 
 .enqueued-messages-note {
   color: var(--_muted);
-  font-size: 0.75em;
+  font-size: 0.8em;
 }
 
 .message--assistant {

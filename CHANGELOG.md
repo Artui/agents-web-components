@@ -19,9 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`pydantic_ai_tool_availability_delta`, `pydantic_ai_model_settings_delta`,
   `pydantic_ai_capability_load_delta`) draw nothing and log nothing. None of the six shows in
   `unhandledActivityTypes` any more, so that list keeps meaning "a name nobody here knows".
-  django-ag-ui's own `compaction` notice is unchanged. The names are exported as
-  `PYDANTIC_AI_ACTIVITY_TYPE`. A host that registered its own renderer for any of them keeps it,
-  whether it registered before or after the element connected. No opt-in.
+  django-ag-ui's own `compaction` notice is unchanged. A host that registered its own renderer
+  for any of them keeps it, whether it registered before or after the element connected. No
+  opt-in.
 - **An activity renderer can say "nothing to draw, by design".** Returning an empty
   `DocumentFragment` draws nothing, logs nothing, keeps the type out of `unhandledActivityTypes`
   and takes away whatever that message id drew before. `null` still means the content could not

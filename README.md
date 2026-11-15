@@ -1961,8 +1961,7 @@ exactly like yours, not privileged branches, so registering any of those names
 ### Built in: what pydantic-ai's AG-UI adapter sends
 
 pydantic-ai's own AG-UI adapter sends activities of its own, and each has a
-built-in renderer, so none of them shows in `unhandledActivityTypes`. Their
-names are exported as `PYDANTIC_AI_ACTIVITY_TYPE`.
+built-in renderer, so none of them shows in `unhandledActivityTypes`.
 
 | `activityType` | Drawn as |
 | --- | --- |
@@ -3615,7 +3614,6 @@ paths.
 | `INVALIDATE_EVENT` | The resource-invalidation CustomEvent name (`ag-ui-invalidate`). |
 | `FEEDBACK_EVENT` | The message-rating CustomEvent name (`ag-ui-feedback`). |
 | `SUGGESTIONS_ACTIVITY_TYPE` | The `activity_type` carrying follow-up prompts (`suggestions`). |
-| `PYDANTIC_AI_ACTIVITY_TYPE` | The `activity_type`s pydantic-ai's AG-UI adapter sends, each with a built-in renderer (`ENQUEUED_MESSAGES`, `MCP_APPS`, `COMPACTION`, and the three deltas). See [Built in: what pydantic-ai's AG-UI adapter sends](#built-in-what-pydantic-ais-ag-ui-adapter-sends). |
 | `MAX_SUGGESTIONS` | Most prompts one push draws (4). Mirrors the server's cap. |
 | `MAX_SUGGESTION_CHARS` | Longest one prompt may be (120). Mirrors the server's cap. |
 | `INVALIDATE_CUSTOM_NAME` | The AG-UI `CUSTOM` `name` that carries one (`ag_ui.invalidate`). |

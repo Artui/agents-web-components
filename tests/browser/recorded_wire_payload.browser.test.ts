@@ -312,6 +312,43 @@ describe("pydantic-ai's own adapter activities, decoded from its recorded bytes"
     );
   });
 
+  // The first user bubble that lives inside an answer group: each theme, with
+  // and without the well, has to draw it as it draws the user's own turn.
+  for (const theme of ["", "classic", "code", "soft", "ledger"]) {
+    for (const well of [false, true]) {
+      it(`draws it as the user's own bubble under theme "${theme}", well ${well}`, async () => {
+        const attrs: Record<string, string> = { "data-start-open": "", theme };
+        if (well) {
+          attrs["data-answer-well"] = "";
+        }
+        const el = mount(attrs);
+        await replay(el, framesOf("adapterActivities"));
+
+        const queued = shadow(el).querySelector(".enqueued-messages > .message--user");
+        const own = shadow(el).querySelector(".message--user:not(.enqueued-messages *)");
+        const [a, b] = [getComputedStyle(queued as Element), getComputedStyle(own as Element)];
+        for (const property of [
+          "backgroundColor",
+          "color",
+          "borderTopLeftRadius",
+          "borderBottomRightRadius",
+          "borderLeftWidth",
+          "fontWeight",
+          "paddingLeft",
+        ] as const) {
+          expect([property, a[property]]).toEqual([property, b[property]]);
+        }
+        const group = (queued as HTMLElement).closest(".answer") as HTMLElement;
+        const inner = (queued as HTMLElement).getBoundingClientRect();
+        const outer = group.getBoundingClientRect();
+        const padding = Number.parseFloat(getComputedStyle(group).paddingRight);
+        const border = Number.parseFloat(getComputedStyle(group).borderRightWidth);
+        expect(inner.width).toBeGreaterThan(0);
+        expect(Math.abs(outer.right - padding - border - inner.right)).toBeLessThan(1);
+      });
+    }
+  }
+
   it("puts markup in either as text, never as elements", async () => {
     const frames = corrupt(
       withContent("mcp-apps", (content) => {
