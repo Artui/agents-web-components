@@ -26,8 +26,16 @@ import type { ActivityRenderContext } from "./activity_render_context.js";
  * load, so a control on it that sends something would re-send an action from a
  * turn the conversation has moved past.
  *
- * Return `null` for content that says nothing worth drawing. Anything already
- * drawn under that message id is then removed: live and reload should agree,
- * and the stored content is the version that could not be drawn.
+ * Return `null` for content that could not be drawn. Anything already drawn
+ * under that message id is then removed, with a console warning: live and
+ * reload should agree, and the stored content is the version that could not be
+ * drawn.
+ *
+ * Return an empty `DocumentFragment` for content that is fine and has nothing
+ * to show, by design (a record meant for the model, a message list with no user
+ * text). Nothing is drawn, nothing is logged, the type is not reported in
+ * `unhandledActivityTypes`, and anything drawn under that message id before is
+ * removed. A registration whose renderer always does this is how a type is
+ * known and deliberately drawn as nothing.
  */
 export type ActivityRenderer = (content: unknown, context: ActivityRenderContext) => Node | null;

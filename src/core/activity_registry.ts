@@ -91,6 +91,13 @@ export class ActivityRegistry {
       this.#remove(messageId, activityType, registration.removedNotice, content);
       return;
     }
+    if (drawsNothing(node)) {
+      // Nothing to draw, by design: no group is opened for it and nothing is
+      // said, and whatever this id drew before goes, as the content now says.
+      this.#activityBlocks.get(messageId)?.remove();
+      this.#activityBlocks.delete(messageId);
+      return;
+    }
     if (node === previous) {
       // Updated in place by the renderer, so it stays where it is: moving it,
       // even to its own position, would take the focus out of a field in it.
@@ -142,4 +149,9 @@ export class ActivityRegistry {
       this.#host.appendNotice("\u{1F4C9}", notice, "chart-undrawable");
     }
   }
+}
+
+/** Whether a renderer returned an empty fragment: see {@link ActivityRenderer}. */
+function drawsNothing(node: Node): boolean {
+  return node.nodeType === Node.DOCUMENT_FRAGMENT_NODE && !node.hasChildNodes();
 }

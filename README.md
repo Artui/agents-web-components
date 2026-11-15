@@ -1929,7 +1929,7 @@ chat.registerActivityRenderer({
     const el = document.createElement("div");
     el.className = "build";
     el.textContent = `Build ${content.status}`;
-    return el;   // return null for content not worth drawing
+    return el;   // null: could not be drawn; an empty fragment: nothing to draw
   },
 });
 ```
@@ -1943,12 +1943,36 @@ writes to the page instead of returning DOM fires again on every restore.
 The component places what you return, keyed by the activity's `messageId`, so a
 server repeating an id **replaces** your node rather than adding a second one —
 the same in-place update charts get, unless `render` hands back the node it was
-given (below). Returning `null` removes whatever was there:
-live and reload should agree, and the stored content is the version that could
-not be drawn.
+given (below). Returning `null` removes whatever was there, with a console
+warning: live and reload should agree, and the stored content is the version
+that could not be drawn.
 
-`chart` and `compaction` are registrations exactly like yours, not privileged
-branches, so registering either name **replaces the built-in**.
+Content that is fine and has nothing to show — a record meant for the model, a
+list with nothing in it for the user — returns an **empty `DocumentFragment`**
+instead: nothing is drawn, nothing is logged, the type is not reported as
+unhandled, and anything drawn under that `messageId` before is taken away. A
+renderer that always returns one is how a type is known and deliberately drawn
+as nothing.
+
+`chart`, `compaction`, `suggestions` and the types below are registrations
+exactly like yours, not privileged branches, so registering any of those names
+**replaces the built-in**, before or after the element connects.
+
+### Built in: what pydantic-ai's AG-UI adapter sends
+
+pydantic-ai's own AG-UI adapter sends activities of its own, and each has a
+built-in renderer, so none of them shows in `unhandledActivityTypes`. Their
+names are exported as `PYDANTIC_AI_ACTIVITY_TYPE`.
+
+| `activityType` | Drawn as |
+| --- | --- |
+| `pydantic_ai_enqueued_messages` | Each user message's text as a user bubble (`message-user`), as text and never as HTML, in an `enqueued-messages` column with an `enqueued-messages-note` caption (string `enqueuedMessages`). Messages the run took in while it was working, through `RunContext.enqueue`. Other roles draw nothing. |
+| `mcp-apps` | A run notice (`run-notice-mcp-app`) that the app view cannot be shown here, naming its `resourceUri` (string `mcpAppUnsupported`, token `{uri}`). |
+| `pydantic_ai_compaction`, `pydantic_ai_tool_availability_delta`, `pydantic_ai_model_settings_delta`, `pydantic_ai_capability_load_delta` | Nothing: records the adapter keeps for the model. |
+
+`compaction`, django-ag-ui's own notice, is separate and stays drawn. The
+adapter's enqueued messages are drawn only: `@ag-ui/client` does not send
+activities back to the server, so a later run does not see them as turns.
 
 ### Updating a surface in place, and drawing it inert on replay
 
@@ -2009,7 +2033,7 @@ protocol's own answer, and warning would fire on every forward-compatible
 server. But silence is hard to debug, so the names are readable:
 
 ```js
-chat.unhandledActivityTypes; // ["pydantic_ai_thinking", …]
+chat.unhandledActivityTypes; // ["build_status", …]
 ```
 
 Note `"chart"` appears there until you call `enableCharts(["activity"])`, which
@@ -3591,6 +3615,7 @@ paths.
 | `INVALIDATE_EVENT` | The resource-invalidation CustomEvent name (`ag-ui-invalidate`). |
 | `FEEDBACK_EVENT` | The message-rating CustomEvent name (`ag-ui-feedback`). |
 | `SUGGESTIONS_ACTIVITY_TYPE` | The `activity_type` carrying follow-up prompts (`suggestions`). |
+| `PYDANTIC_AI_ACTIVITY_TYPE` | The `activity_type`s pydantic-ai's AG-UI adapter sends, each with a built-in renderer (`ENQUEUED_MESSAGES`, `MCP_APPS`, `COMPACTION`, and the three deltas). See [Built in: what pydantic-ai's AG-UI adapter sends](#built-in-what-pydantic-ais-ag-ui-adapter-sends). |
 | `MAX_SUGGESTIONS` | Most prompts one push draws (4). Mirrors the server's cap. |
 | `MAX_SUGGESTION_CHARS` | Longest one prompt may be (120). Mirrors the server's cap. |
 | `INVALIDATE_CUSTOM_NAME` | The AG-UI `CUSTOM` `name` that carries one (`ag_ui.invalidate`). |
@@ -4139,12 +4164,12 @@ component sets, so a new one cannot ship undocumented.
 | Shell | `panel`, `header`, `title`, `icon`, `header-controls`, `messages`, `empty`, `greeting`, `pending`, `stopped`, `usage-line`, `jump-latest`, and one per resize grip: `resize-handle` plus `resize-handle-top`, `resize-handle-bottom`, `resize-handle-left`, `resize-handle-right`, `resize-handle-top-left`, `resize-handle-top-right`, `resize-handle-bottom-left`, `resize-handle-bottom-right` |
 | Header buttons | `header-button` on each, plus `history-button`, `checkpoints-button`, `new-button`, `maximize-button`, `collapse-button`, `theme-toggle` |
 | Collapsed widget | `launcher`, `launcher-icon`, `launcher-badge`, `rail-label`, `bar` (the [bottom bar](#collapsing-to-a-bottom-bar)'s wrapper, around the launcher), `bar-place` (the place beside the bar's title; its text carries `place-label` and `place-detail`), `bar-history` |
-| Answers | `answer` (the per-turn group), `message` (plus `message-user`, `message-assistant`), `code-copy` |
+| Answers | `answer` (the per-turn group), `message` (plus `message-user`, `message-assistant`), `code-copy`, `enqueued-messages` and `enqueued-messages-note` (user messages a run took in mid-turn) |
 | Reasoning | `thoughts`, `thoughts-toggle`, `thoughts-body`, `thoughts-label` |
 | Follow-up suggestions | `suggestions`, `suggestion-chip` |
 | Message actions | `run-error-offer` (the new-conversation offer under a failed run), `message-actions`, `message-action` (plus `message-action-retry`, `message-action-copy`, `message-action-up`, `message-action-down`), and the icon holder inside each: `message-action-icon` (plus `message-action-icon-retry`, `message-action-icon-copy`, `message-action-icon-up`, `message-action-icon-down`) |
 | Queued messages | `queued`, `queued-chip` |
-| Run notices | `run-notice` (plus `run-notice-interrupted`, `run-notice-attachment-pending`, `run-notice-compaction`, `run-notice-skill`, `run-notice-history-replaced`, `run-notice-chart-undrawable`, `run-notice-surface`, `run-notice-not-connected`), `run-notice-icon`, `run-notice-text`, `run-notice-undo` |
+| Run notices | `run-notice` (plus `run-notice-interrupted`, `run-notice-attachment-pending`, `run-notice-compaction`, `run-notice-skill`, `run-notice-history-replaced`, `run-notice-chart-undrawable`, `run-notice-surface`, `run-notice-not-connected`, `run-notice-mcp-app`), `run-notice-icon`, `run-notice-text`, `run-notice-undo` |
 | Tool cards | `tool-card` (plus one status modifier: `tool-card-pending`, `tool-card-deferred`, `tool-card-done`, `tool-card-error`, `tool-card-declined`, `tool-card-interrupted`), `tool-card-head`, `tool-card-icon`, `tool-card-name`, `tool-card-status` (plus `tool-card-status-pending`, `tool-card-status-deferred`, `tool-card-status-done`, `tool-card-status-error`, `tool-card-status-declined`, `tool-card-status-interrupted`), `tool-card-decision`, `tool-card-toggle`, `tool-card-body`, `tool-card-section` (plus `tool-card-args-section`, `tool-card-result-section`), `tool-card-section-label` (plus `tool-card-args-label`, `tool-card-result-label`), `tool-card-args`, `tool-card-result`, `tool-card-approval`, `tool-card-subagent`, `tool-card-repeat` |
 | Tool-step group | `tool-group` (plus one state modifier: `tool-group-waiting`, `tool-group-running`, `tool-group-done`, `tool-group-error`), `tool-group-head`, `tool-group-icon`, `tool-group-label`, `tool-group-meta`, `tool-group-list` |
 | Delegated sub-agents | `subagent`, `subagent-row`, `subagent-icon`, `subagent-status`, `subagent-steps`, `subagent-step`, `subagent-step-icon`, `subagent-step-name` |

@@ -83,6 +83,28 @@ export const MESSAGE_STYLES: string = `
   border-bottom-right-radius: 4px;
 }
 
+/* User messages a run took in while it was working, drawn inside the answer
+   group they were delivered into. A column of its own, stretched to the group,
+   because the user bubble right-aligns by align-self, which only a flex
+   container honours. */
+.enqueued-messages {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  align-self: stretch;
+  gap: calc(var(--_space) / 2);
+  min-width: 0;
+}
+
+.enqueued-messages[hidden] {
+  display: none;
+}
+
+.enqueued-messages-note {
+  color: var(--_muted);
+  font-size: 0.75em;
+}
+
 .message--assistant {
   align-self: flex-start;
   background: var(--_assistant-bg);

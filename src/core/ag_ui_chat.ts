@@ -89,6 +89,7 @@ import type { ActivityRegistration } from "./activity_registration.js";
 import { ActivityRegistry } from "./activity_registry.js";
 import type { ActivityRenderContext } from "./activity_render_context.js";
 import type { ActivityRenderer } from "./activity_renderer.js";
+import { adapterActivities } from "./adapter_activities.js";
 import { AgUiClient, type AgUiRunRequest } from "./agui_client.js";
 // biome-ignore lint/style/useImportType: the emitted declaration file copies this form
 import { type AttachmentRef } from "./attachment.js";
@@ -1060,6 +1061,9 @@ export class AgUiChat extends HTMLElement {
           void this.sendMessage(prompt);
         }),
     });
+    for (const registration of adapterActivities(() => this.#strings)) {
+      this.registerActivityRenderer(registration);
+    }
     this.#skillsMenu = new SkillsMenu((skill) => this.#skills.apply(skill));
     this.#skills = new SkillCatalog({
       element: this,
@@ -4014,8 +4018,9 @@ export class AgUiChat extends HTMLElement {
    * ```
    *
    * Registering a type twice replaces the earlier renderer, so a host can
-   * override a built-in -- `chart` and `compaction` are registrations like any
-   * other, not privileged branches.
+   * override a built-in -- `chart`, `compaction`, `suggestions` and the types
+   * pydantic-ai's adapter sends (`PYDANTIC_AI_ACTIVITY_TYPE`) are
+   * registrations like any other, not privileged branches.
    *
    * `render` is also handed an {@link ActivityRenderContext}: the message id,
    * the node it drew for that id last (return it, updated, to keep it in place),

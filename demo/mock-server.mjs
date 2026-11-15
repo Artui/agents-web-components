@@ -466,6 +466,35 @@ async function handleAgent(res, body) {
       "The browser only ever sent the token — ",
       "the prompt behind it lives here.",
     ]);
+  } else if (/\badapter\b/i.test(prompt)) {
+    // The activities pydantic-ai's own AG-UI adapter sends, in the shapes it
+    // sends them. Four are records for the model and draw nothing; the
+    // enqueued message is a user bubble inside this answer, captioned; the MCP
+    // App is a notice naming its view. None of them lands in
+    // unhandledActivityTypes, which the page logs after the run.
+    const parent = id("msg");
+    const callId = id("call");
+    emitToolCall(res, callId, "show_sales_app", { week: "current" }, parent);
+    emit(res, { type: "ACTIVITY_SNAPSHOT", messageId: id("m"), activityType: "pydantic_ai_capability_load_delta", content: { loaded: ["sales_reports"], tool_call_id: null } });
+    emit(res, { type: "ACTIVITY_SNAPSHOT", messageId: id("m"), activityType: "pydantic_ai_tool_availability_delta", content: { added: ["compare_weeks"], tool_call_id: null } });
+    emit(res, { type: "ACTIVITY_SNAPSHOT", messageId: id("m"), activityType: "pydantic_ai_model_settings_delta", content: { settings: { thinking: "high" }, top_level: false } });
+    await sleep(500);
+    emitToolResult(res, callId, "12 orders this week");
+    emit(res, {
+      type: "ACTIVITY_SNAPSHOT",
+      messageId: id("m"),
+      activityType: "mcp-apps",
+      content: { resourceUri: "ui://sales/week.html", toolInput: { week: "current" }, result: { content: [{ type: "text", text: "12 orders this week" }] }, serverId: "sales", serverHash: "sales" },
+    });
+    await sleep(500);
+    emit(res, {
+      type: "ACTIVITY_SNAPSHOT",
+      messageId: id("m"),
+      activityType: "pydantic_ai_enqueued_messages",
+      content: { messages: [{ id: id("u"), role: "user", content: "Compare with <b>last</b> week, and keep it short" }] },
+    });
+    emit(res, { type: "ACTIVITY_SNAPSHOT", messageId: id("m"), activityType: "pydantic_ai_compaction", content: { content: "Earlier turns, summarised." } });
+    await streamText(res, id("msg"), ["Twelve orders this week, ", "the same as last week."]);
   } else if (/\bask\b/i.test(prompt)) {
     // Drives the built-in ask_user frontend tool, so the question card is
     // reachable without a real agent.

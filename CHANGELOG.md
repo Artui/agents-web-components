@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The activity types pydantic-ai's own AG-UI adapter sends are drawn, or deliberately not,
+  out of the box.** `pydantic_ai_enqueued_messages` (messages a run took in through
+  `RunContext.enqueue`) draws each user message's text as a user bubble, as text and never as
+  HTML, captioned "Added during the run" (`enqueuedMessages`; parts `enqueued-messages`,
+  `enqueued-messages-note`). `mcp-apps` draws a run notice naming the app view's `resourceUri`,
+  which this element cannot show yet (`mcpAppUnsupported`, token `{uri}`; part
+  `run-notice-mcp-app`). `pydantic_ai_compaction` and the three deltas
+  (`pydantic_ai_tool_availability_delta`, `pydantic_ai_model_settings_delta`,
+  `pydantic_ai_capability_load_delta`) draw nothing and log nothing. None of the six shows in
+  `unhandledActivityTypes` any more, so that list keeps meaning "a name nobody here knows".
+  django-ag-ui's own `compaction` notice is unchanged. The names are exported as
+  `PYDANTIC_AI_ACTIVITY_TYPE`. A host that registered its own renderer for any of them keeps it,
+  whether it registered before or after the element connected. No opt-in.
+- **An activity renderer can say "nothing to draw, by design".** Returning an empty
+  `DocumentFragment` draws nothing, logs nothing, keeps the type out of `unhandledActivityTypes`
+  and takes away whatever that message id drew before. `null` still means the content could not
+  be drawn, and still warns. A host opts in by returning one.
 - **An activity renderer is told what it drew last, and whether the draw is live.** `render`
   takes a second argument, an `ActivityRenderContext` (`{ messageId, previous, live }`, exported
   from the package root). Returning `previous`, updated in place, keeps the node where it is

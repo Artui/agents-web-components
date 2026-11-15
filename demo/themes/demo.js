@@ -33,6 +33,8 @@ const DE = {
   toolDone: "✓ fertig",
   confirm: "Bestätigen",
   cancel: "Abbrechen",
+  enqueuedMessages: "Während des Laufs hinzugefügt",
+  mcpAppUnsupported: "Diese App-Ansicht kann hier nicht angezeigt werden: {uri}",
 };
 
 // `data-strings` is read once while connecting, so it has to be on the element
@@ -54,6 +56,12 @@ if (ratings) {
 }
 
 defineChat();
+
+// What arrived with nobody to draw it, after every run: the adapter scenario
+// (send "adapter") should leave none of pydantic-ai's names here.
+chat.addEventListener("ag-ui-run-finished", () => {
+  console.info("unhandledActivityTypes", chat.unhandledActivityTypes);
+});
 
 // Charts, both routes. Opt-in by construction: nothing draws one unless a host
 // asks, which is the point of the call rather than an accident of the demo.

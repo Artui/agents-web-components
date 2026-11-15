@@ -60,6 +60,25 @@
     "identifierTooLong": [
       "data: {\"type\":\"RUN_STARTED\",\"timestamp\":1700000000000,\"threadId\":\"thread-recorded\",\"runId\":\"run-too-long\"}\n\n",
       "data: {\"type\":\"RUN_ERROR\",\"timestamp\":1700000000000,\"message\":\"thread_id is 300 characters, over its 255-character limit\",\"code\":\"identifier_too_long\"}\n\n"
+    ],
+    "adapterActivities": [
+      "data: {\"type\":\"RUN_STARTED\",\"timestamp\":1700000000000,\"threadId\":\"thread-recorded\",\"runId\":\"run-adapter-activities\",\"protocolVersion\":\"1.0\"}\n\n",
+      "data: {\"type\":\"TEXT_MESSAGE_START\",\"timestamp\":1700000000000,\"messageId\":\"00000000-0000-0000-0000-000000000001\",\"role\":\"assistant\"}\n\n",
+      "data: {\"type\":\"TEXT_MESSAGE_END\",\"timestamp\":1700000000000,\"messageId\":\"00000000-0000-0000-0000-000000000001\"}\n\n",
+      "data: {\"type\":\"TOOL_CALL_START\",\"timestamp\":1700000000000,\"toolCallId\":\"call-app\",\"toolCallName\":\"show_sales_app\",\"parentMessageId\":\"00000000-0000-0000-0000-000000000001\"}\n\n",
+      "data: {\"type\":\"TOOL_CALL_ARGS\",\"timestamp\":1700000000000,\"toolCallId\":\"call-app\",\"delta\":\"{\\\"week\\\":\\\"current\\\"}\"}\n\n",
+      "data: {\"type\":\"TOOL_CALL_END\",\"timestamp\":1700000000000,\"toolCallId\":\"call-app\"}\n\n",
+      "data: {\"type\":\"ACTIVITY_SNAPSHOT\",\"timestamp\":1700000000000,\"messageId\":\"00000000-0000-0000-0000-000000000002\",\"activityType\":\"pydantic_ai_capability_load_delta\",\"content\":{\"loaded\":[\"sales_reports\"],\"tool_call_id\":null}}\n\n",
+      "data: {\"type\":\"ACTIVITY_SNAPSHOT\",\"timestamp\":1700000000000,\"messageId\":\"00000000-0000-0000-0000-000000000003\",\"activityType\":\"pydantic_ai_tool_availability_delta\",\"content\":{\"added\":[\"compare_weeks\"],\"tool_call_id\":null}}\n\n",
+      "data: {\"type\":\"ACTIVITY_SNAPSHOT\",\"timestamp\":1700000000000,\"messageId\":\"00000000-0000-0000-0000-000000000004\",\"activityType\":\"pydantic_ai_model_settings_delta\",\"content\":{\"settings\":{\"thinking\":\"high\"},\"top_level\":false}}\n\n",
+      "data: {\"type\":\"TOOL_CALL_RESULT\",\"timestamp\":1700000000000,\"messageId\":\"00000000-0000-0000-0000-000000000005\",\"toolCallId\":\"call-app\",\"content\":\"12 orders this week\",\"role\":\"tool\"}\n\n",
+      "data: {\"type\":\"ACTIVITY_SNAPSHOT\",\"timestamp\":1700000000000,\"messageId\":\"00000000-0000-0000-0000-000000000006\",\"activityType\":\"mcp-apps\",\"content\":{\"resourceUri\":\"ui://sales/week.html\",\"toolInput\":{\"week\":\"current\"},\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"12 orders this week\"}],\"structuredContent\":{\"orders\":12},\"isError\":false},\"serverId\":\"sales\",\"serverHash\":\"sales\"}}\n\n",
+      "data: {\"type\":\"ACTIVITY_SNAPSHOT\",\"timestamp\":1700000000000,\"messageId\":\"enqueued-recorded\",\"activityType\":\"pydantic_ai_enqueued_messages\",\"content\":{\"messages\":[{\"id\":\"00000000-0000-0000-0000-000000000007\",\"role\":\"user\",\"content\":\"Compare with <b>last</b> week\"}]}}\n\n",
+      "data: {\"type\":\"ACTIVITY_SNAPSHOT\",\"timestamp\":1700000000000,\"messageId\":\"00000000-0000-0000-0000-00000000000a\",\"activityType\":\"pydantic_ai_compaction\",\"content\":{\"content\":\"Earlier turns, summarised.\"}}\n\n",
+      "data: {\"type\":\"TEXT_MESSAGE_START\",\"timestamp\":1700000000000,\"messageId\":\"00000000-0000-0000-0000-00000000000b\",\"role\":\"assistant\"}\n\n",
+      "data: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"timestamp\":1700000000000,\"messageId\":\"00000000-0000-0000-0000-00000000000b\",\"delta\":\"Twelve orders this week, last week's too.\"}\n\n",
+      "data: {\"type\":\"TEXT_MESSAGE_END\",\"timestamp\":1700000000000,\"messageId\":\"00000000-0000-0000-0000-00000000000b\"}\n\n",
+      "data: {\"type\":\"RUN_FINISHED\",\"timestamp\":1700000000000,\"threadId\":\"thread-recorded\",\"runId\":\"run-adapter-activities\",\"outcome\":{\"type\":\"success\"}}\n\n"
     ]
   },
   "refusals": {
