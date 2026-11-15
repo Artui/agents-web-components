@@ -44,8 +44,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   by `ag-ui-submit`, is not in the first request's messages, and joins the conversation under its
   id when that request's `RUN_STARTED` arrives, after the posted history and before the reply, so
   later requests post it and the store saves it. It refuses, waits behind a restore and resolves
-  as `sendMessage` does. `AgUiClient.run(request)` and the `AgUiRunRequest` type are the client
-  half. A host opts in by calling it.
+  as `sendMessage` does. Retry answers for the action: refused before `RUN_STARTED`, Retry and
+  `retryLastTurn()` send the same request again, `forwardedProps` and `runId` included, with no
+  second bubble; once `RUN_STARTED` arrives, or after a Stop, Retry is withdrawn and
+  `retryLastTurn()` resolves `false` rather than truncating to the turn before, until the next send
+  or continuation. `AgUiClient.run(request, onStarted?)`, whose callback hears the first round's
+  `RUN_STARTED`, and the `AgUiRunRequest` type are the client half. A host opts in by calling it.
 - **`chat.registerContext(provider)` adds entries to every run's context** after what
   `getContext` returns, in registration order, for the conversation's runs and checkpoint
   continuations alike; it returns the function that removes them. A host opts in by calling it;

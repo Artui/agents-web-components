@@ -86,9 +86,12 @@ chat.registerActivityRenderer({
       form.append(label, input, button);
       form.addEventListener("submit", (event) => {
         event.preventDefault();
+        // The turn's id derives from the run id, which a Retry of a refused run sends again.
+        const runId = crypto.randomUUID();
         void chat.run({
           forwardedProps: { action: "submit_release", name: input.value },
-          message: { id: crypto.randomUUID(), content: `Release name: ${input.value}` },
+          runId,
+          message: { id: `${runId}-turn`, content: `Release name: ${input.value}` },
         });
       });
     }

@@ -851,7 +851,9 @@
             A run that ends in <code>RUN_ERROR</code> words its bubble by code: say
             <em>time out</em>, <em>interrupted</em> or <em>crash</em>. <em>Too long</em> shows
             the server's own message and a <code>run-error-offer</code> that starts a new
-            conversation; <em>refuse</em> answers the run POST with a 400. This chat sets
+            conversation; <em>refuse</em> answers the run POST with a 400. In the
+            <em>release form</em>, a release named <em>refuse</em> is refused once: its Retry
+            sends the same action and run id again, and the answer it gets has no Retry. This chat sets
             <code>show-usage</code>, so the scripted answers end with a muted token line.
           </p>
           <div class="row">

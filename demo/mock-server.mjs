@@ -138,6 +138,9 @@ function lastUserText(messages) {
   return typeof last?.content === "string" ? last.content.trim() : "";
 }
 
+/** Action run ids refused once, so the Retry that sends the same run id goes through. */
+const REFUSED_ACTIONS = new Set();
+
 /** Prompts that end the run in RUN_ERROR, and the code each sends. */
 const RUN_ERROR_PROMPTS = [
   [/\btime ?out\b/i, "timed_out"],
@@ -161,6 +164,15 @@ async function handleAgent(res, body) {
   if (/\brefuse\b/i.test(prompt)) {
     res.writeHead(400, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ detail: "thread_id is longer than the 255 characters allowed" }));
+    return;
+  }
+
+  // A release named "refuse" is refused before streaming the first time its run id is seen, as
+  // django-ag-ui refuses one; Retry sends the same run id, and that request goes through.
+  if (input.forwardedProps?.name === "refuse" && !REFUSED_ACTIONS.has(runId)) {
+    REFUSED_ACTIONS.add(runId);
+    res.writeHead(409, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ detail: "Refused once; Retry sends the same action again." }));
     return;
   }
 

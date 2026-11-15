@@ -1674,6 +1674,16 @@ describe("over the real HttpAgent", () => {
       expect(bodies[0]?.["forwardedProps"]).toEqual({});
     });
 
+    it("tells the caller its first round started, once for all its rounds", async () => {
+      const bodies = stubFetch(callsPick);
+      const onStarted = vi.fn();
+
+      await client().run({ forwardedProps: { action: "approve" } }, onStarted);
+
+      expect(bodies).toHaveLength(2);
+      expect(onStarted).toHaveBeenCalledTimes(1);
+    });
+
     it("rides on the first round of a run with its run id, and keeps the turn from then on", async () => {
       const bodies = stubFetch(callsPick);
 

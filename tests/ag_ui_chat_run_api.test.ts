@@ -445,3 +445,306 @@ describe("AgUiChat.registerContext", () => {
     ]);
   });
 });
+
+describe("Retry after AgUiChat.run", () => {
+  /** Refuse the next `count` run requests before any stream, as a 409 does, recording each. */
+  function refuseNext(bodies: Body[], count: number): void {
+    const answer = globalThis.fetch;
+    let left = count;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (init?.body === undefined || left === 0) {
+          return answer(url, init);
+        }
+        left -= 1;
+        bodies.push(JSON.parse(String(init.body)) as Body);
+        return new Response("refused", { status: 409 });
+      }),
+    );
+  }
+
+  function retries(el: AgUiChat): number {
+    return shadow(el).querySelectorAll(".message-action--retry").length;
+  }
+
+  function failed(el: AgUiChat): number {
+    return shadow(el).querySelectorAll(".message--failed").length;
+  }
+
+  /** An exchange, then an action the server refuses before RUN_STARTED. */
+  async function refusedAction(
+    count = 1,
+  ): Promise<{ el: AgUiChat; bodies: Body[]; heard: string[] }> {
+    const bodies = stubEndpoint();
+    const el = mount();
+    const heard = submits(el);
+    await el.sendMessage("earlier");
+    await settle();
+    refuseNext(bodies, count);
+    await el.run({ forwardedProps: { action: "approve" }, runId: "action-1", message: TURN });
+    await settle();
+    return { el, bodies, heard };
+  }
+
+  /** An exchange, then an action whose run started and answered. */
+  async function startedAction(message?: typeof TURN): Promise<{ el: AgUiChat; bodies: Body[] }> {
+    const bodies = stubEndpoint();
+    const el = mount();
+    await el.sendMessage("earlier");
+    await settle();
+    await el.run({ forwardedProps: { action: "approve" }, ...(message ? { message } : {}) });
+    await settle();
+    return { el, bodies };
+  }
+
+  it("asks for a refused action again, unchanged, and keeps the turn before it", async () => {
+    const { el, bodies, heard } = await refusedAction();
+    expect(failed(el)).toBe(1);
+    expect(
+      shadow(el).querySelector(".message--failed + .message-actions .message-action--retry"),
+    ).not.toBeNull();
+    const refused = bodies.at(-1);
+
+    await expect(el.retryLastTurn()).resolves.toBe(true);
+    await settle();
+
+    const retried = bodies.at(-1);
+    expect(bodies).toHaveLength(3);
+    expect(retried?.["runId"]).toBe("action-1");
+    expect(retried?.["forwardedProps"]).toEqual({ action: "approve" });
+    // The same history as the refused request: nothing truncated, no turn added.
+    expect(turns(retried)).toEqual(turns(refused));
+    expect(turns(retried)).toEqual([
+      ["user", "earlier"],
+      ["assistant", "answer 1"],
+    ]);
+    // The turn is drawn once, and the host heard it once.
+    expect(userBubbles(el)).toEqual(["earlier", "Approve it"]);
+    expect(heard).toEqual(["earlier", "Approve it"]);
+    expect(failed(el)).toBe(0);
+    expect(shadow(el).textContent).toContain("answer 1");
+    expect(shadow(el).textContent).toContain("answer 3");
+    // Its run started, so the reply it drew offers no Retry.
+    expect(retries(el)).toBe(0);
+  });
+
+  it("offers Retry again when the action is refused a second time, for the same run", async () => {
+    const { el, bodies } = await refusedAction(2);
+    await el.retryLastTurn();
+    await settle();
+    expect(failed(el)).toBe(1);
+    expect(retries(el)).toBe(1);
+
+    await expect(el.retryLastTurn()).resolves.toBe(true);
+    await settle();
+
+    expect(bodies.slice(1).map((body) => body["runId"])).toEqual([
+      "action-1",
+      "action-1",
+      "action-1",
+    ]);
+    expect(userBubbles(el)).toEqual(["earlier", "Approve it"]);
+    expect(shadow(el).textContent).toContain("answer 4");
+  });
+
+  it("asks for a refused action with no message again, drawing no turn", async () => {
+    const bodies = stubEndpoint();
+    const el = mount();
+    await el.sendMessage("earlier");
+    await settle();
+    refuseNext(bodies, 1);
+    await el.run({ forwardedProps: { action: "approve" } });
+    await settle();
+
+    await expect(el.retryLastTurn()).resolves.toBe(true);
+    await settle();
+
+    expect(bodies).toHaveLength(3);
+    expect(bodies.at(-1)?.["forwardedProps"]).toEqual({ action: "approve" });
+    expect(turns(bodies.at(-1))).toEqual(turns(bodies.at(-2)));
+    expect(userBubbles(el)).toEqual(["earlier"]);
+    expect(failed(el)).toBe(0);
+  });
+
+  it("asks for nothing once a renderer its redraw goes through has stopped it", async () => {
+    // The activity sits ahead of the answer and the turn, so the check after
+    // each redrawn message is what keeps them, and the request, out of the new chat.
+    const bodies = stubEndpoint([
+      { type: "ACTIVITY_SNAPSHOT", messageId: "act1", activityType: "probe", content: {} },
+    ]);
+    const el = mount();
+    let armed = false;
+    el.registerActivityRenderer({
+      type: "probe",
+      render: () => {
+        if (armed) {
+          armed = false;
+          el.newChat();
+        }
+        return document.createElement("div");
+      },
+    });
+    await el.sendMessage("earlier");
+    await settle();
+    refuseNext(bodies, 1);
+    await el.run({ forwardedProps: { action: "approve" }, message: TURN });
+    await settle();
+
+    armed = true;
+    await expect(el.retryLastTurn()).resolves.toBe(false);
+    await settle();
+
+    expect(bodies).toHaveLength(2);
+    expect(userBubbles(el)).toEqual([]);
+  });
+
+  it("withdraws Retry once the action's run starts, and refuses to re-run it", async () => {
+    const { el, bodies } = await startedAction();
+    expect(retries(el)).toBe(0);
+
+    await expect(el.retryLastTurn()).resolves.toBe(false);
+    await settle();
+
+    expect(bodies).toHaveLength(2);
+    expect(shadow(el).textContent).toContain("answer 1");
+    expect(shadow(el).textContent).toContain("answer 2");
+  });
+
+  it("offers no Retry on a failure after the action's run started", async () => {
+    const bodies = stubEndpoint();
+    const el = mount();
+    await el.sendMessage("earlier");
+    await settle();
+    const answer = globalThis.fetch;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (init?.body === undefined) {
+          return answer(url, init);
+        }
+        bodies.push(JSON.parse(String(init.body)) as Body);
+        const events = [
+          { type: "RUN_STARTED", threadId: "t1", runId: "run-2" },
+          { type: "RUN_ERROR", message: "the model fell over" },
+        ];
+        return new Response(events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join(""), {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        });
+      }),
+    );
+    await el.run({ forwardedProps: { action: "approve" } });
+    await settle();
+
+    expect(failed(el)).toBe(1);
+    expect(retries(el)).toBe(0);
+    await expect(el.retryLastTurn()).resolves.toBe(false);
+    expect(bodies).toHaveLength(2);
+  });
+
+  it("brings ordinary Retry back with the next send", async () => {
+    const { el, bodies } = await startedAction();
+    await el.sendMessage("next");
+    await settle();
+    expect(retries(el)).toBe(1);
+
+    await expect(el.retryLastTurn()).resolves.toBe(true);
+    await settle();
+
+    expect(bodies).toHaveLength(4);
+    expect(bodies.at(-1)?.["forwardedProps"]).toEqual({});
+    expect(turns(bodies.at(-1)).at(-1)).toEqual(["user", "next"]);
+  });
+
+  it("withdraws Retry when the action is stopped before its run starts, and does not ask again", async () => {
+    const bodies = stubEndpoint();
+    const el = mount();
+    await el.sendMessage("earlier");
+    await settle();
+    expect(retries(el)).toBe(1);
+    const answer = globalThis.fetch;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string, init?: RequestInit) => {
+        if (init?.body === undefined) {
+          return answer(url, init);
+        }
+        bodies.push(JSON.parse(String(init.body)) as Body);
+        return new Promise<Response>((_resolve, reject) => {
+          init.signal?.addEventListener("abort", () => {
+            reject(new DOMException("aborted", "AbortError"));
+          });
+        });
+      }),
+    );
+    const action = el.run({ forwardedProps: { action: "approve" }, message: TURN });
+    await settle();
+    (shadow(el).querySelector(".send") as HTMLButtonElement).click();
+    await action;
+    await settle();
+    vi.stubGlobal("fetch", answer);
+
+    expect(retries(el)).toBe(0);
+    await expect(el.retryLastTurn()).resolves.toBe(false);
+    await settle();
+    expect(bodies).toHaveLength(2);
+  });
+
+  it("forgets the action with the conversation, so a reload retries the stored turn", async () => {
+    const { el, bodies } = await startedAction(TURN);
+    expect(retries(el)).toBe(0);
+
+    await el.reload();
+    await settle();
+
+    // Restored history carries no request: Retry re-asks the stored turn as a sent one.
+    expect(retries(el)).toBe(1);
+    await expect(el.retryLastTurn()).resolves.toBe(true);
+    await settle();
+    expect(bodies.at(-1)?.["forwardedProps"]).toEqual({});
+    expect(ids(bodies.at(-1))).toEqual([
+      ["user", "earlier"],
+      ["assistant", "answer 1"],
+      ["user", "Approve it", "turn-1"],
+    ]);
+  });
+
+  it("ignores a run that starts after its conversation was replaced", async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let runs = 0;
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("endpoint", "/agent/");
+    el.agentFactory = () =>
+      makeFakeAgent({
+        script: async (emit) => {
+          runs += 1;
+          emit.runStart();
+          if (runs === 1) {
+            await gate;
+            emit.runStarted("late");
+            return;
+          }
+          emit.runStarted("fresh");
+          emit.text("fresh answer");
+          emit.textEnd("fresh answer");
+        },
+      }).agent;
+    document.body.appendChild(el);
+    const action = el.run({ forwardedProps: { action: "approve" } });
+    await settle();
+    el.newChat();
+    await el.sendMessage("fresh");
+    await settle();
+    expect(retries(el)).toBe(1);
+
+    release();
+    await action;
+    await settle();
+
+    expect(retries(el)).toBe(1);
+  });
+});

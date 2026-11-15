@@ -578,6 +578,39 @@ describe("the two overlapping surfaces", () => {
   });
 });
 
+describe("a continuation after an action", () => {
+  it("brings Retry back, as a send after the action does", async () => {
+    let runs = 0;
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("endpoint", "/agent/");
+    el.setAttribute("data-runs-url", "/agent/runs/");
+    el.agentFactory = () =>
+      makeFakeAgent({
+        script: (emit) => {
+          runs += 1;
+          emit.runStart();
+          emit.runStarted(`run-${runs}`);
+          emit.text(`answer ${runs}`);
+          emit.textEnd(`answer ${runs}`);
+        },
+      }).agent;
+    document.body.appendChild(el);
+    await el.run({ forwardedProps: { action: "approve" } });
+    await flush();
+    expect(shadow(el).querySelectorAll(".message-action--retry")).toHaveLength(0);
+
+    stubRuns([row()]);
+    (shadow(el).querySelector(".header-btn--checkpoints") as HTMLButtonElement).click();
+    await flush();
+    (shadow(el).querySelector("textarea") as HTMLTextAreaElement).value = "go on";
+    (shadow(el).querySelector(".checkpoint-resume") as HTMLButtonElement).click();
+    await flush();
+
+    expect(shadow(el).textContent).toContain("answer 2");
+    expect(shadow(el).querySelectorAll(".message-action--retry")).toHaveLength(1);
+  });
+});
+
 describe("a continuation is the run in flight", () => {
   /**
    * Continue a run whose stream is held open until the test releases it.

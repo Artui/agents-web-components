@@ -562,6 +562,7 @@ export class AgUiChat extends HTMLElement {
     retry: () => {
       void this.retryLastTurn();
     },
+    retryable: () => this.#lastRun === null || this.#lastRun.request !== null,
     // Late-bound: the history is built in the constructor, after this field.
     threadId: () => this.#history.threadId,
     follow: () => this.#transcript.follow(),
@@ -853,6 +854,14 @@ export class AgUiChat extends HTMLElement {
    */
   #sending: object | null = null;
   /**
+   * The last {@link run} since the last other turn, which is what Retry answers
+   * for while it is set: `request` while nothing of it is stored, so Retry asks
+   * for it again, and `null` once its run started or was stopped, which leaves
+   * Retry nothing to re-run. `null` itself after a send, a continuation, or a
+   * change of conversation.
+   */
+  #lastRun: { request: AgUiRunRequest | null } | null = null;
+  /**
    * The hold the latest restore with no run to resume took, and what settles
    * once that restore has ended or been stopped; `null` when the latest
    * restore will resume a run. Only meaningful while `#sending` is that hold:
@@ -1135,7 +1144,11 @@ export class AgUiChat extends HTMLElement {
       continuationEnded: () => this.#flushQueued(),
       client: () => this.#client,
       ensureClient: () => this.#ensureClient(),
-      buildClient: (seed) => this.#buildClient(seed),
+      buildClient: (seed) => {
+        // A continuation is a turn of its own, after which Retry re-asks it.
+        this.#lastRun = null;
+        return this.#buildClient(seed);
+      },
       releaseClient: () => {
         this.#client = null;
       },
@@ -2780,6 +2793,7 @@ export class AgUiChat extends HTMLElement {
    */
   #resetConversation(): void {
     this.#client = null;
+    this.#lastRun = null;
     // Every path here has just cancelled the run, but a cancelled run ends
     // later: once its request closes, or once a host tool's handler returns.
     // Whatever it says then is about the conversation being cleared, so it must
@@ -2842,6 +2856,13 @@ export class AgUiChat extends HTMLElement {
    * go of the hold it checks. Rejects with the store's error when the store
    * refuses the save, and then the conversation is as it was.
    *
+   * **After {@link run} it answers for the action, not the turn before it.**
+   * A run refused before `RUN_STARTED` is asked for again with the same
+   * request -- `forwardedProps`, `runId` and turn -- and nothing truncated,
+   * since nothing of it was kept. One whose run started, or that was stopped,
+   * leaves nothing to re-run: this resolves `false` and changes nothing, until
+   * the next send or continuation, or a change of conversation.
+   *
    * Public because a host with its own message UI wants the same button, and
    * because the failed-run notice reaches it from outside the action row.
    *
@@ -2862,6 +2883,10 @@ export class AgUiChat extends HTMLElement {
     this.#sending = hold;
     try {
       const client = this.#ensureClient();
+      const last = this.#lastRun;
+      if (last !== null) {
+        return await this.#retryAction(client, last.request, hold);
+      }
       const kept = client.truncateToLastUser();
       if (kept === null) {
         return false;
@@ -2891,6 +2916,37 @@ export class AgUiChat extends HTMLElement {
       // because no run settles to send it.
       this.#releaseHold(hold);
     }
+  }
+
+  /**
+   * Retry's half for {@link run}: ask for `request` again, unchanged, when its
+   * run was refused before it started, and nothing when there is none.
+   *
+   * Nothing is truncated, since a refused action kept nothing: the conversation
+   * is redrawn as it stands, then the action's turn, as Retry redraws the turn
+   * it re-asks, and the same request goes out, its `runId` included.
+   */
+  async #retryAction(
+    client: AgUiClient,
+    request: AgUiRunRequest | null,
+    hold: object,
+  ): Promise<boolean> {
+    if (request === null) {
+      return false;
+    }
+    const { message } = request;
+    const turn: Message[] =
+      message === undefined ? [] : [{ id: message.id, role: "user", content: message.content }];
+    this.#clearTranscript();
+    for (const drawn of [...client.messages, ...turn]) {
+      this.#history.replay(drawn);
+      // A replay draws through host renderers, which can stop it as a send's save can.
+      if (this.#sending !== hold) {
+        return false;
+      }
+    }
+    await this.#runAction(client, request);
+    return true;
   }
 
   /**
@@ -3361,6 +3417,12 @@ export class AgUiChat extends HTMLElement {
     this.#renderQueued();
     this.#decision.abort();
     this.#client?.cancel();
+    // A stopped action is not asked for again: the user stopped it, and what
+    // its run stored, if it started, is not a turn Retry could re-run.
+    if (this.#lastRun !== null) {
+      this.#lastRun.request = null;
+      this.#actions.withdrawRetry();
+    }
     // A send whose run has not started is ended here too, because nothing else
     // can reach it: the cancel above lands on a client that has not been asked
     // for the run yet, and a client forgets a Stop when it is next asked for one.
@@ -3675,7 +3737,10 @@ export class AgUiChat extends HTMLElement {
    * is what is sent.
    */
   async sendMessage(content: string, attachments: readonly AttachmentRef[] = []): Promise<boolean> {
-    return this.#startRun({ content, attachments }, (client) => client.send(content, attachments));
+    return this.#startRun({ content, attachments }, (client) => {
+      this.#lastRun = null;
+      return client.send(content, attachments);
+    });
   }
 
   /**
@@ -3705,13 +3770,33 @@ export class AgUiChat extends HTMLElement {
    * rules: `false` while a run, a send or a picked checkpoint's continuation is
    * in flight and with no `endpoint`; behind a restore it waits, then runs;
    * `true` once the run has been handed to the client.
+   *
+   * Retry answers for it as {@link retryLastTurn} says: the same request again
+   * while its run has not started, and no Retry once it has.
    */
   run(request: AgUiRunRequest): Promise<boolean> {
     const { message } = request;
     return this.#startRun(
       message === undefined ? null : { content: message.content, attachments: [] },
-      (client) => client.run(request),
+      (client) => this.#runAction(client, request),
     );
+  }
+
+  /**
+   * Hand `request` to the client, as the action Retry answers for until its
+   * run starts, when Retry is withdrawn: the server holds the action from then.
+   */
+  #runAction(client: AgUiClient, request: AgUiRunRequest): Promise<void> {
+    const last: { request: AgUiRunRequest | null } = { request };
+    this.#lastRun = last;
+    return client.run(request, () => {
+      // Only while it is still the last one: a Stop or a new conversation since
+      // has said what Retry answers for.
+      if (this.#lastRun === last) {
+        last.request = null;
+        this.#actions.withdrawRetry();
+      }
+    });
   }
 
   /**

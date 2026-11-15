@@ -442,6 +442,14 @@ await chat.run({
 - **It refuses and waits as `sendMessage` does.** It resolves `false` while a run, a send or a
   picked checkpoint's continuation is in flight, and with no `endpoint`. Behind a restore it waits,
   then runs. It resolves `true` once the run is handed to the client.
+- **Retry asks for a refused action again, unchanged.** When the first request is refused before
+  `RUN_STARTED`, the failed bubble's Retry (and `retryLastTurn()`) sends the same `forwardedProps`,
+  the same `runId` and no `message` in `messages`, and redraws the turn once rather than adding a
+  second bubble. Once `RUN_STARTED` arrives the server holds the action, so Retry is withdrawn,
+  from the earlier answer too, and `retryLastTurn()` resolves `false` without touching the
+  conversation; so it does after a Stop. The next `sendMessage` or checkpoint continuation brings
+  Retry back, and New chat, a thread switch or a reload forgets the action: a restored
+  conversation's Retry re-asks its last user turn, the action's included, as a sent one.
 
 ### Adding to every run's context
 
@@ -2503,7 +2511,10 @@ message's own text.
 
 - **Retry** re-asks the question. History is truncated to the most recent user
   message inclusive and the run repeats, so the agent answers what it was asked
-  rather than being told its last answer was wrong.
+  rather than being told its last answer was wrong. After `chat.run`, Retry
+  answers for the action instead: it asks for a refused one again, unchanged, and
+  is not offered once the action's run started (see *Starting a run with
+  forwarded props*).
 - **Copy** puts the message's text on the clipboard, and says so on the button.
   A refused clipboard permission is reported there too, rather than thrown.
 - **Thumbs up / down** fire `ag-ui-feedback` (wired below) and **store nothing**.

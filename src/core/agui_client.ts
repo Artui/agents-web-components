@@ -267,6 +267,12 @@ export interface AgUiRunRequest {
   readonly message?: { readonly id: string; readonly content: string };
 }
 
+/** A {@link AgUiClient.run} request, and who hears that its first round started. */
+interface Action {
+  readonly request: AgUiRunRequest;
+  readonly onStarted: (() => void) | undefined;
+}
+
 /**
  * Provider of the per-run frontend tool catalog and context. Both are read
  * fresh on every {@link AgUiClient.send} so the catalog reflects the current
@@ -487,11 +493,15 @@ export class AgUiClient {
    * before the reply, where the server put it, and so in every request and save
    * from then on. A run refused before `RUN_STARTED` keeps nothing, as the
    * server stored nothing.
+   *
+   * `onStarted` is called when that first round's `RUN_STARTED` arrives, before
+   * any of its reply is handed on: from then on the server holds the action, and
+   * asking for it again would be a second action rather than a retry of this one.
    */
-  async run(request: AgUiRunRequest): Promise<void> {
+  async run(request: AgUiRunRequest, onStarted?: () => void): Promise<void> {
     // A new interaction, as in send(); no host code runs between here and the loop.
     this.#cancelled = false;
-    await this.#run(request);
+    await this.#run({ request, onStarted });
   }
 
   /**
@@ -578,9 +588,9 @@ export class AgUiClient {
     this.#agent.abortRun();
   }
 
-  async #run(request?: AgUiRunRequest): Promise<void> {
+  async #run(action?: Action): Promise<void> {
     try {
-      await this.#runLoop(request);
+      await this.#runLoop(action);
       // `@ag-ui/client` filters abort errors inside `runAgent` (it resolves
       // rather than rejects on a cancelled fetch), so a cancelled run usually
       // ends here, not in the catch.
@@ -723,7 +733,7 @@ export class AgUiClient {
     this.#onPersist(this.#agent.messages);
   }
 
-  async #runLoop(request?: AgUiRunRequest): Promise<void> {
+  async #runLoop(action?: Action): Promise<void> {
     // Carries resolved approval answers into the next run when a round finished
     // on a server-side-tool interrupt. Distinct from the public resume(), which
     // continues an unfinished frontend-tool round after a page load; this stays
@@ -754,7 +764,7 @@ export class AgUiClient {
         params.resume = resume;
       }
       // Only the first round answers the action; the rest are this client's.
-      const first = round === 0 ? request : undefined;
+      const first = round === 0 ? action?.request : undefined;
       if (first !== undefined) {
         params.forwardedProps = first.forwardedProps;
         if (first.runId !== undefined) {
@@ -774,7 +784,8 @@ export class AgUiClient {
       const kept = first?.message;
       const turn: Message | undefined =
         kept === undefined ? undefined : { id: kept.id, role: "user", content: kept.content };
-      await this.#agent.runAgent(params, this.#buildSubscriber(pending, runState, turn));
+      const started = round === 0 ? action?.onStarted : undefined;
+      await this.#agent.runAgent(params, this.#buildSubscriber(pending, runState, turn, started));
       resume = undefined;
       resuming = new Set();
       this.#persist();
@@ -868,6 +879,7 @@ export class AgUiClient {
     pending: AgUiToolCall[],
     runState: RunState,
     turn: Message | undefined,
+    started: (() => void) | undefined,
   ): AgentSubscriber {
     const h = this.#handlers;
     const closed = this.#closedMessageIds;
@@ -891,6 +903,7 @@ export class AgUiClient {
       },
       onRunStartedEvent({ event, messages }) {
         runId = event.runId;
+        started?.();
         // The action's turn, kept where the server stored it: after the history
         // this request posted, before the reply that follows.
         return turn === undefined ? undefined : { messages: [...messages, turn] };
