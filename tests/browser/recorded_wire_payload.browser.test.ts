@@ -88,9 +88,12 @@ const RECORDED_EVENT_TYPES: readonly string[] = [
  * `HttpAgent` it builds in production, or this test proves nothing about the
  * path production takes.
  */
-function mount(): AgUiChat {
+function mount(attrs: Record<string, string> = {}): AgUiChat {
   const el = document.createElement(ELEMENT_TAG) as AgUiChat;
   el.setAttribute("endpoint", ENDPOINT);
+  for (const [key, value] of Object.entries(attrs)) {
+    el.setAttribute(key, value);
+  }
   document.body.appendChild(el);
   return el;
 }
@@ -218,6 +221,41 @@ describe("a run the server aborts, decoded from recorded bytes", () => {
     const failed = bubbles[bubbles.length - 1]?.textContent;
     expect(failed).toContain(DEFAULT_UI_STRINGS.runErrorFailed);
     expect(failed).not.toContain("The upstream model timed out");
+  });
+});
+
+describe("a run refused for an over-long identifier, decoded from recorded bytes", () => {
+  it("shows the server's own message and offers a new conversation", async () => {
+    const el = mount();
+    await replay(el, framesOf("identifierTooLong"));
+
+    const bubbles = shadow(el).querySelectorAll(".message");
+    const failed = bubbles[bubbles.length - 1]?.textContent;
+    expect(failed).toContain("thread_id is 300 characters, over its 255-character limit");
+    expect(failed).not.toContain(DEFAULT_UI_STRINGS.runErrorFailed);
+    expect(text(el, ".run-error-offer")).toBe(DEFAULT_UI_STRINGS.runErrorNewChat);
+  });
+
+  it("offers nothing after a failure whose code is not identifier_too_long", async () => {
+    const el = mount();
+    await replay(el, framesOf("failed"));
+    expect(shadow(el).querySelector(".run-error-offer")).toBeNull();
+  });
+});
+
+describe("a run that reports its token usage, decoded from recorded bytes", () => {
+  it("draws the usage line from RUN_FINISHED.usage when show-usage is set", async () => {
+    // `HttpAgent` strips keys its schema does not declare, so a line here means
+    // the real client carried `usage` through to the subscriber.
+    const el = mount({ "show-usage": "" });
+    await replay(el, framesOf("usage"));
+    expect(text(el, ".usage-line")).toBe("1,234 in · 567 out tokens");
+  });
+
+  it("draws nothing without show-usage", async () => {
+    const el = mount();
+    await replay(el, framesOf("usage"));
+    expect(shadow(el).querySelector(".usage-line")).toBeNull();
   });
 });
 

@@ -49,6 +49,17 @@
       "data: {\"type\":\"TOOL_CALL_ARGS\",\"timestamp\":1700000000000,\"toolCallId\":\"call-2\",\"delta\":\"{\\\"order_id\\\": 41}\"}\n\n",
       "data: {\"type\":\"TOOL_CALL_END\",\"timestamp\":1700000000000,\"toolCallId\":\"call-2\"}\n\n",
       "data: {\"type\":\"RUN_FINISHED\",\"timestamp\":1700000000000,\"threadId\":\"thread-recorded\",\"runId\":\"run-deferred\",\"outcome\":{\"type\":\"interrupt\",\"interrupts\":[{\"id\":\"interrupt-1\",\"reason\":\"approval_required\",\"message\":\"Delete order 41?\",\"toolCallId\":\"call-2\"}]}}\n\n"
+    ],
+    "usage": [
+      "data: {\"type\":\"RUN_STARTED\",\"timestamp\":1700000000000,\"threadId\":\"thread-recorded\",\"runId\":\"run-usage\"}\n\n",
+      "data: {\"type\":\"TEXT_MESSAGE_START\",\"timestamp\":1700000000000,\"messageId\":\"assistant-5\"}\n\n",
+      "data: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"timestamp\":1700000000000,\"messageId\":\"assistant-5\",\"delta\":\"Done.\"}\n\n",
+      "data: {\"type\":\"TEXT_MESSAGE_END\",\"timestamp\":1700000000000,\"messageId\":\"assistant-5\"}\n\n",
+      "data: {\"type\":\"RUN_FINISHED\",\"timestamp\":1700000000000,\"threadId\":\"thread-recorded\",\"runId\":\"run-usage\",\"outcome\":{\"type\":\"success\"},\"usage\":[{\"provider\":\"provider-a\",\"model\":\"model-a\",\"inputTokens\":1000,\"outputTokens\":500,\"totalTokens\":1500},{\"provider\":\"provider-b\",\"model\":\"model-b\",\"inputTokens\":234,\"outputTokens\":67,\"totalTokens\":301}]}\n\n"
+    ],
+    "identifierTooLong": [
+      "data: {\"type\":\"RUN_STARTED\",\"timestamp\":1700000000000,\"threadId\":\"thread-recorded\",\"runId\":\"run-too-long\"}\n\n",
+      "data: {\"type\":\"RUN_ERROR\",\"timestamp\":1700000000000,\"message\":\"thread_id is 300 characters, over its 255-character limit\",\"code\":\"identifier_too_long\"}\n\n"
     ]
   }
 }
