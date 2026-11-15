@@ -11,14 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **A failed run's bubble says what happened, by the `RUN_ERROR` event's `code`.** `timed_out`
   and `interrupted` each get their own sentence (`runErrorTimedOut`, `runErrorInterrupted` in the
-  strings table); `error`, a code this release does not know, and an event with no code show
-  `runErrorFailed`. `identifier_too_long` shows the server's own message, which names the field
+  strings table); `error` and a code this release does not know show `runErrorFailed`; an event
+  with no code (any other AG-UI server, or django-ag-ui before 0.76.0) keeps showing the server's
+  message, as before. `identifier_too_long` shows the server's own message, which names the field
   and the limit, and an offer under the action row (`runErrorNewChat`, part `run-error-offer`)
   that starts a new conversation as New chat does, since a new conversation's fresh ids are what
   recover from it. A run POST answered with a non-2xx status still shows the client's own
   `HTTP <status>: <body>` text, now pinned by a test. Every host opts in to nothing; a host that
   showed the server's words on purpose (django-ag-ui's `tool_failure.include_detail`) now sees the
-  strings instead, and a server that sends no code shows `runErrorFailed` where its message was.
+  strings for a coded failure instead.
   `AgUiClientHandlers.onError` gains an optional second argument, `RunErrorInfo`, present for a
   `RUN_ERROR` and carrying its code; a host table written for the one-argument form still fits.
 - **An opt-in token-usage line under a finished turn: `show-usage`.** With the attribute set and

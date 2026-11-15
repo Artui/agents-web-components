@@ -91,7 +91,7 @@ export interface UiStrings {
   stopped: string;
   /** Error shown when the stream drops without a terminal AG-UI event. */
   connectionLost: string;
-  /** A failed run's bubble when the server sent no code, or one not below. */
+  /** A failed run's bubble for the server's `error` code, or a code not below. */
   runErrorFailed: string;
   /** A failed run's bubble for the server's `timed_out` code. */
   runErrorTimedOut: string;

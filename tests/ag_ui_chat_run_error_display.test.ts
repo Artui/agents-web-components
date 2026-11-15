@@ -95,14 +95,15 @@ describe("a RUN_ERROR's bubble", () => {
     expect(offer(el)).toBeNull();
   });
 
-  it("shows the generic string when the server sent no code", async () => {
-    stubRuns(failingRun("Traceback (most recent call last)"));
+  it("keeps the server's message when it sent no code, with no offer", async () => {
+    stubRuns(failingRun("The upstream model is overloaded"));
     const el = mountReal();
 
     await el.sendMessage("go");
     await settle();
 
-    expect(failedText(el)).toBe(`⚠️ ${DEFAULT_UI_STRINGS.runErrorFailed}`);
+    expect(failedText(el)).toBe("⚠️ The upstream model is overloaded");
+    expect(offer(el)).toBeNull();
   });
 
   it("shows a host's own string for a code", async () => {

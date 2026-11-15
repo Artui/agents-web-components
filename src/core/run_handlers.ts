@@ -491,17 +491,18 @@ export class RunHandlers {
   }
 
   /**
-   * The failed bubble's words: a known `RUN_ERROR` code's string, the server's
-   * own message for an over-long identifier (it names the field and the limit),
-   * and the generic string for any other `RUN_ERROR`. A thrown error keeps its
-   * message, which is the only account of it there is.
+   * The failed bubble's words: a known `RUN_ERROR` code's string, the generic
+   * string for an unknown code, and the server's own message for an over-long
+   * identifier (it names the field and the limit), for a `RUN_ERROR` with no
+   * code (a server that never promised a code) and for a thrown error.
    */
   #errorText(message: string, runError: RunErrorInfo | undefined): string {
-    if (runError === undefined || runError.code === IDENTIFIER_TOO_LONG) {
+    const code = runError?.code;
+    if (code === undefined || code === IDENTIFIER_TOO_LONG) {
       return message;
     }
     const strings = this.#host.strings();
-    switch (runError.code) {
+    switch (code) {
       case "timed_out":
         return strings.runErrorTimedOut;
       case "interrupted":

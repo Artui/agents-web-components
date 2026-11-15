@@ -757,10 +757,12 @@ A run that ends in `RUN_ERROR` draws a failed bubble with Retry. Its words come 
 | `timed_out` | `runErrorTimedOut` |
 | `interrupted` | `runErrorInterrupted` |
 | `identifier_too_long` | The server's own message, which names the field and the limit, and an offer (`runErrorNewChat`, part `run-error-offer`) that starts a new conversation, as New chat does |
-| `error`, any other code, or none | `runErrorFailed` |
+| `error`, or any other code | `runErrorFailed` |
+| none | The server's message, as before codes existed |
 
-The server's message is otherwise not shown: django-ag-ui redacts it unless told not to, and a
-code is the part a client can put words to. A run that fails before any event arrives (the
+Where a code is known, the server's message is not shown: django-ag-ui redacts it unless told not
+to, and a code is the part a client can put words to. A server that sends no code never promised
+that, so its message is kept. A run that fails before any event arrives (the
 stream drops, or the run POST answers with a non-2xx status) shows the client's own error text,
 for example `HTTP 400: {"detail": ...}`, with no offer.
 
