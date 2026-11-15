@@ -750,7 +750,8 @@ transcript or the Stop button of the conversation that replaced it.
 ### When a run fails, and what it cost
 
 A run that ends in `RUN_ERROR` draws a failed bubble with Retry. Its words come from the event's
-`code`, each a key of the strings table:
+`code` (the server's, or `abort`, which `@ag-ui/client` sets when something other than Stop cuts
+the connection), each a key of the strings table:
 
 | `code` | The bubble says |
 | --- | --- |
@@ -769,7 +770,8 @@ for example `HTTP 400: {"detail": ...}`, with no offer.
 With `show-usage` set, a finished turn ends with a muted line such as `1,234 in · 567 out
 tokens` (part `usage-line`), the sums of `inputTokens` and `outputTokens` over every usage entry
 of every round in the turn. A side no entry carried is left out (`usageInput`, `usageOutput`);
-a turn with no usage, a failed turn and a stopped one draw nothing. The line is not stored, so a
+a turn with no usage, a failed turn and one you stop draw nothing. A `RUN_FINISHED` whose
+outcome is `cancelled` (a server-side stop) is still read as a finish today, and draws the line. The line is not stored, so a
 conversation restored from history has none. The digits are grouped with commas whatever the
 locale; the three templates take `{input}` and `{output}`.
 

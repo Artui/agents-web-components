@@ -75,6 +75,40 @@ async function turn(el: AgUiChat): Promise<void> {
   await settle();
 }
 
+/** A run that pauses on a server-side approval, its RUN_FINISHED carrying `usage`. */
+function awaitingApproval(usage: readonly Event[]): Event[] {
+  return [
+    { type: "RUN_STARTED", threadId: "t1", runId: "r1" },
+    { type: "TOOL_CALL_START", toolCallId: "call-2", toolCallName: "delete_order" },
+    { type: "TOOL_CALL_ARGS", toolCallId: "call-2", delta: "{}" },
+    { type: "TOOL_CALL_END", toolCallId: "call-2" },
+    {
+      type: "RUN_FINISHED",
+      threadId: "t1",
+      runId: "r1",
+      usage,
+      outcome: {
+        type: "interrupt",
+        interrupts: [
+          {
+            id: "interrupt-1",
+            reason: "approval_required",
+            message: "Delete?",
+            toolCallId: "call-2",
+          },
+        ],
+      },
+    },
+  ];
+}
+
+/** Send without awaiting the turn, which an open approval card holds open. */
+async function startTurn(el: AgUiChat): Promise<void> {
+  void el.sendMessage("go");
+  await settle();
+  expect(shadow(el).querySelector(".approval")).not.toBeNull();
+}
+
 describe("the usage line", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
@@ -160,6 +194,76 @@ describe("the usage line", () => {
     await turn(el);
 
     expect(lines(el)).toEqual([]);
+  });
+
+  it("draws nothing when a later round fails after one that carried usage", async () => {
+    stubRuns(
+      [
+        { type: "RUN_STARTED", threadId: "t1", runId: "r1" },
+        { type: "TOOL_CALL_START", toolCallId: "c1", toolCallName: "read_page" },
+        { type: "TOOL_CALL_ARGS", toolCallId: "c1", delta: "{}" },
+        { type: "TOOL_CALL_END", toolCallId: "c1" },
+        { type: "RUN_FINISHED", threadId: "t1", runId: "r1", usage: [{ inputTokens: 100 }] },
+      ],
+      [
+        { type: "RUN_STARTED", threadId: "t1", runId: "r2" },
+        { type: "RUN_ERROR", message: "boom", code: "error" },
+      ],
+    );
+    const el = mountReal();
+    el.registerTool({
+      name: "read_page",
+      description: "Read the page",
+      parameters: { type: "object" },
+      handler: () => "the page",
+    });
+
+    await turn(el);
+
+    expect(shadow(el).querySelector(".message--failed")).not.toBeNull();
+    expect(lines(el)).toEqual([]);
+  });
+
+  it("waits out an approval, then draws one line summing both runs", async () => {
+    stubRuns(
+      awaitingApproval([{ inputTokens: 100 }]),
+      answered(2, { usage: [{ inputTokens: 50, outputTokens: 5 }] }),
+    );
+    const el = mountReal();
+
+    await startTurn(el);
+    expect(lines(el)).toEqual([]);
+    shadow(el).querySelector<HTMLButtonElement>(".approval-btn--approve")?.click();
+    await settle();
+
+    expect(lines(el)).toEqual(["150 in · 5 out tokens"]);
+  });
+
+  it("draws nothing when Stop ends a turn that already carried usage", async () => {
+    stubRuns(awaitingApproval([{ inputTokens: 100, outputTokens: 1 }]));
+    const el = mountReal();
+
+    await startTurn(el);
+    shadow(el).querySelector<HTMLButtonElement>(".send")?.click();
+    await settle();
+
+    expect(shadow(el).querySelector(".stopped-note")).not.toBeNull();
+    expect(lines(el)).toEqual([]);
+  });
+
+  it("leaves a turn New chat cut off out of the next turn's count", async () => {
+    stubRuns(
+      awaitingApproval([{ inputTokens: 100, outputTokens: 1 }]),
+      answered(2, { usage: [{ inputTokens: 7, outputTokens: 8 }] }),
+    );
+    const el = mountReal();
+
+    await startTurn(el);
+    el.newChat();
+    await settle();
+    await turn(el);
+
+    expect(lines(el)).toEqual(["7 in · 8 out tokens"]);
   });
 
   it("adds up the rounds of one turn into one line", async () => {

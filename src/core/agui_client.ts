@@ -952,7 +952,7 @@ export class AgUiClient {
         // cross-run clearing semantics.
         runState.terminal = true;
         const usage = params.event.usage;
-        if (usage !== undefined && usage.length > 0) {
+        if (usage !== undefined) {
           h.onUsage?.(usage);
         }
         if (params.outcome === "interrupt") {
