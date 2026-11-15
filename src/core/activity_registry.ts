@@ -83,21 +83,22 @@ export class ActivityRegistry {
       return;
     }
     const previous = this.#activityBlocks.get(messageId) ?? null;
-    const node = renderOrWarn(
+    const rendered = renderOrWarn(
       () => registration.render(content, { messageId, previous, live }),
       `activity ${activityType}`,
     );
-    if (node === null) {
+    if (rendered === null) {
       this.#remove(messageId, activityType, registration.removedNotice, content);
       return;
     }
-    if (drawsNothing(node)) {
+    if (drawsNothing(rendered)) {
       // Nothing to draw, by design: no group is opened for it and nothing is
       // said, and whatever this id drew before goes, as the content now says.
       this.#activityBlocks.get(messageId)?.remove();
       this.#activityBlocks.delete(messageId);
       return;
     }
+    const node = rendered.nodeType === Node.DOCUMENT_FRAGMENT_NODE ? wrap(rendered) : rendered;
     if (node === previous) {
       // Updated in place by the renderer, so it stays where it is: moving it,
       // even to its own position, would take the focus out of a field in it.
@@ -149,6 +150,17 @@ export class ActivityRegistry {
       this.#host.appendNotice("\u{1F4C9}", notice, "chart-undrawable");
     }
   }
+}
+
+/**
+ * A fragment is empty once appended, so what is on screen is its children in
+ * one box that takes no part in layout, which `previous` and `replaceWith` can hold.
+ */
+function wrap(fragment: Node): HTMLElement {
+  const box = document.createElement("div");
+  box.style.display = "contents";
+  box.append(fragment);
+  return box;
 }
 
 /** Whether a renderer returned an empty fragment: see {@link ActivityRenderer}. */

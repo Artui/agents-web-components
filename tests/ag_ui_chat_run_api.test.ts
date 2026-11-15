@@ -1,6 +1,6 @@
 import type { Context, Message } from "@ag-ui/core";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { ELEMENT_TAG, SUBMIT_EVENT } from "../src/constants.js";
+import { ELEMENT_TAG, PAGE_MAP_CONTEXT, SUBMIT_EVENT } from "../src/constants.js";
 import type { AgUiChat } from "../src/core/ag_ui_chat.js";
 import type { ClientConversationStore } from "../src/core/conversation_store.js";
 import { defineChat } from "../src/core/define_chat.js";
@@ -346,6 +346,60 @@ describe("AgUiChat.registerContext", () => {
     await settle();
 
     expect(bodies[0]?.["context"]).toEqual([HOST, FIRST, SECOND]);
+  });
+
+  it("filters a provider's page map out while the place is withheld", async () => {
+    const bodies = stubEndpoint();
+    const el = mount((chat) => {
+      chat.getPlace = () => ({ label: "Order #4821", detail: "Orders", href: "/orders/4821/" });
+    });
+    el.registerContext(() => [FIRST, { description: PAGE_MAP_CONTEXT, value: "{}" }]);
+    (shadow(el).querySelector(".place-toggle") as HTMLElement).click();
+
+    await el.sendMessage("hi");
+    await settle();
+
+    const sent = (bodies[0]?.["context"] ?? []) as Context[];
+    expect(sent.map((entry) => entry.description)).not.toContain(PAGE_MAP_CONTEXT);
+    expect(sent).toContainEqual(FIRST);
+  });
+
+  it("adds a provider's entries to a checkpoint continuation too", async () => {
+    const bodies = stubEndpoint();
+    const live = globalThis.fetch;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) =>
+        init?.body === undefined
+          ? new Response(
+              JSON.stringify({
+                runs: [
+                  {
+                    run_id: "r1",
+                    thread_id: "t1",
+                    parent_run_id: null,
+                    started_at: "2026-07-27T12:00:00+00:00",
+                    continuable: true,
+                  },
+                ],
+              }),
+              { status: 200, headers: { "Content-Type": "application/json" } },
+            )
+          : live(url, init),
+      ),
+    );
+    const el = mount((chat) => {
+      chat.setAttribute("data-runs-url", "/agent/runs/");
+    });
+    el.registerContext(() => [FIRST]);
+    (shadow(el).querySelector(".header-btn--checkpoints") as HTMLButtonElement).click();
+    await settle();
+    (shadow(el).querySelector("textarea") as HTMLTextAreaElement).value = "go on";
+    (shadow(el).querySelector(".checkpoint-resume") as HTMLButtonElement).click();
+    await settle();
+
+    expect(bodies).toHaveLength(1);
+    expect(bodies[0]?.["context"]).toEqual([FIRST]);
   });
 
   it("drops a provider's entries once it is unregistered, and only its own", async () => {

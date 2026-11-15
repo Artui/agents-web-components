@@ -9,7 +9,9 @@ export interface ActivityRenderContext {
   /**
    * The node this renderer returned for {@link messageId} last, still on
    * screen, or `null` on the first draw. Returning it, updated in place, keeps
-   * it where it is: focus, a typed value and a scroll position survive.
+   * it where it is: focus, a typed value and a scroll position survive. When
+   * it returned a non-empty `DocumentFragment`, this is the element the
+   * element wrapped the fragment's children in, which is what is on screen.
    */
   readonly previous: Node | null;
   /**

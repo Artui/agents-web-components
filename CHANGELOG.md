@@ -51,6 +51,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   continuations alike; it returns the function that removes them. A host opts in by calling it;
   `getContext` is unchanged.
 
+### Fixed
+
+- **An activity renderer that returns a non-empty `DocumentFragment` can now be redrawn under
+  the same message id.** The registry kept the fragment, which is empty once appended, so the
+  next draw threw `previous.replaceWith is not a function`. It now keeps a wrapper element
+  (`display: contents`, so layout is unchanged) holding the fragment's children, and that wrapper
+  is `previous` on the next draw. A fragment draw leaves one extra element in the transcript. No
+  opt-in.
+
 ## [0.2.1] — 2026-11-15
 
 ### Fixed

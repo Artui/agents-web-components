@@ -115,4 +115,57 @@ describe("a renderer that returns an empty fragment", () => {
     registry.draw("f1", "full", {}, true);
     expect(h.group.querySelectorAll(".drawn")).toHaveLength(1);
   });
+
+  it("replaces a redrawn fragment, handing the renderer what is on screen as previous", () => {
+    const h = host();
+    document.body.append(h.group);
+    const registry = new ActivityRegistry(h);
+    const seen: (boolean | null)[] = [];
+    let text = "first";
+    registry.register({
+      type: "full",
+      render: (_content, context) => {
+        seen.push(context.previous === null ? null : context.previous.isConnected);
+        const fragment = document.createDocumentFragment();
+        const one = drawn();
+        one.textContent = `${text} a`;
+        const two = drawn();
+        two.textContent = `${text} b`;
+        fragment.append(one, two);
+        return fragment;
+      },
+    });
+
+    registry.draw("f1", "full", {}, true);
+    text = "second";
+    expect(() => registry.draw("f1", "full", {}, true)).not.toThrow();
+
+    expect(seen).toEqual([null, true]);
+    expect([...h.group.querySelectorAll(".drawn")].map((n) => n.textContent)).toEqual([
+      "second a",
+      "second b",
+    ]);
+  });
+
+  it("takes away a fragment's content when the same id then draws nothing", () => {
+    const h = host();
+    const registry = new ActivityRegistry(h);
+    let quiet = false;
+    registry.register({
+      type: "sometimes",
+      render: () => {
+        const fragment = document.createDocumentFragment();
+        if (!quiet) {
+          fragment.append(drawn());
+        }
+        return fragment;
+      },
+    });
+    registry.draw("s1", "sometimes", {}, true);
+    quiet = true;
+    registry.draw("s1", "sometimes", {}, true);
+
+    expect(h.group.querySelectorAll(".drawn")).toHaveLength(0);
+    expect(h.group.children).toHaveLength(0);
+  });
 });
