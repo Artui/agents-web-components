@@ -55,7 +55,7 @@
       "data: {\"type\":\"TEXT_MESSAGE_START\",\"timestamp\":1700000000000,\"messageId\":\"assistant-5\"}\n\n",
       "data: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"timestamp\":1700000000000,\"messageId\":\"assistant-5\",\"delta\":\"Done.\"}\n\n",
       "data: {\"type\":\"TEXT_MESSAGE_END\",\"timestamp\":1700000000000,\"messageId\":\"assistant-5\"}\n\n",
-      "data: {\"type\":\"RUN_FINISHED\",\"timestamp\":1700000000000,\"threadId\":\"thread-recorded\",\"runId\":\"run-usage\",\"outcome\":{\"type\":\"success\"},\"usage\":[{\"inputTokens\":1234,\"outputTokens\":567}]}\n\n"
+      "data: {\"type\":\"RUN_FINISHED\",\"timestamp\":1700000000000,\"threadId\":\"thread-recorded\",\"runId\":\"run-usage\",\"outcome\":{\"type\":\"success\"},\"usage\":[{\"provider\":\"provider-a\",\"model\":\"model-a\",\"inputTokens\":1000,\"outputTokens\":500,\"totalTokens\":1500},{\"provider\":\"provider-b\",\"model\":\"model-b\",\"inputTokens\":234,\"outputTokens\":67,\"totalTokens\":301}]}\n\n"
     ],
     "identifierTooLong": [
       "data: {\"type\":\"RUN_STARTED\",\"timestamp\":1700000000000,\"threadId\":\"thread-recorded\",\"runId\":\"run-too-long\"}\n\n",

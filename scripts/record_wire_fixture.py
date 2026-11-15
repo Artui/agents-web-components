@@ -64,7 +64,6 @@ from ag_ui.core import (  # noqa: E402
     TextMessageContentEvent,
     TextMessageEndEvent,
     TextMessageStartEvent,
-    TokenUsage,
     ToolCallArgsEvent,
     ToolCallEndEvent,
     ToolCallResultEvent,
@@ -81,6 +80,9 @@ from django_ag_ui.agent.types.chart_series import ChartSeries  # noqa: E402
 from django_ag_ui.agent.types.chart_spec import ChartSpec  # noqa: E402
 from django_ag_ui.agent.utils import run_error_code  # noqa: E402
 from django_spec_agents import IdentifierTooLongError  # noqa: E402
+from pydantic_ai.messages import ModelResponse  # noqa: E402
+from pydantic_ai.ui.ag_ui._lifecycle_1_0 import token_usage_from_messages  # noqa: E402
+from pydantic_ai.usage import RequestUsage  # noqa: E402
 
 OUTPUT = Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "recorded_ag_ui_runs.json"
 
@@ -258,6 +260,20 @@ def _deferred_run() -> list[Any]:
 
 def _usage_run() -> list[Any]:
     """An answered run whose RUN_FINISHED carries the server's ``usage`` list (``include_usage`` on)."""
+    responses = [
+        ModelResponse(
+            parts=[],
+            usage=RequestUsage(input_tokens=1000, output_tokens=500),
+            model_name="model-a",
+            provider_name="provider-a",
+        ),
+        ModelResponse(
+            parts=[],
+            usage=RequestUsage(input_tokens=234, output_tokens=67),
+            model_name="model-b",
+            provider_name="provider-b",
+        ),
+    ]
     return [
         RunStartedEvent(thread_id=THREAD_ID, run_id="run-usage"),
         TextMessageStartEvent(message_id="assistant-5"),
@@ -267,7 +283,7 @@ def _usage_run() -> list[Any]:
             thread_id=THREAD_ID,
             run_id="run-usage",
             outcome=RunFinishedSuccessOutcome(),
-            usage=[TokenUsage(input_tokens=1234, output_tokens=567)],
+            usage=token_usage_from_messages(responses),
         ),
     ]
 
