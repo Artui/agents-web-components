@@ -138,6 +138,14 @@ function lastUserText(messages) {
   return typeof last?.content === "string" ? last.content.trim() : "";
 }
 
+/** Prompts that end the run in RUN_ERROR, and the code each sends. */
+const RUN_ERROR_PROMPTS = [
+  [/\btime ?out\b/i, "timed_out"],
+  [/\binterrupted\b/i, "interrupted"],
+  [/\btoo long\b/i, "identifier_too_long"],
+  [/\bcrash\b/i, "error"],
+];
+
 /**
  * The scripted agent.
  *
@@ -147,6 +155,14 @@ function lastUserText(messages) {
 async function handleAgent(res, body) {
   const input = JSON.parse(body);
   const { threadId, runId, messages } = input;
+  const prompt = lastUserText(messages);
+
+  // A run POST the server refuses before streaming, as a 400 with a JSON body.
+  if (/\brefuse\b/i.test(prompt)) {
+    res.writeHead(400, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ detail: "thread_id is longer than the 255 characters allowed" }));
+    return;
+  }
 
   res.writeHead(200, {
     "Content-Type": "text/event-stream",
@@ -155,7 +171,19 @@ async function handleAgent(res, body) {
   });
   emit(res, { type: "RUN_STARTED", threadId, runId });
 
-  const prompt = lastUserText(messages);
+  // A RUN_ERROR with each code django-ag-ui sends; the bubble words each one.
+  const code = RUN_ERROR_PROMPTS.find(([pattern]) => pattern.test(prompt))?.[1];
+  if (code !== undefined) {
+    await streamText(res, id("msg"), ["Working on it…"]);
+    const message =
+      code === "identifier_too_long"
+        ? "thread_id is 300 characters long; at most 255 are allowed."
+        : "The run failed. The failure has been recorded.";
+    emit(res, { type: "RUN_ERROR", message, code });
+    res.end();
+    return;
+  }
+
   // Answers to a previous round's approval interrupts. Every answered call gets
   // a result, as it does from django-ag-ui: an approved one its tool's return,
   // a denied one the denial, marked as such.
@@ -475,7 +503,13 @@ async function handleAgent(res, body) {
     emitToolCall(res, id("call"), "click_save", {}, parent);
   }
 
-  emit(res, { type: "RUN_FINISHED", threadId, runId });
+  // Usage as django-ag-ui's include_usage sends it; drawn under show-usage.
+  emit(res, {
+    type: "RUN_FINISHED",
+    threadId,
+    runId,
+    usage: [{ provider: "demo", model: "mock", inputTokens: 1234, outputTokens: 567 }],
+  });
   res.end();
 }
 

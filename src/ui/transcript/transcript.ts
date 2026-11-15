@@ -336,6 +336,16 @@ export class Transcript {
     this.follow();
   }
 
+  /** The muted token-usage line under a finished turn. */
+  appendUsageLine(text: string): void {
+    const line = document.createElement("div");
+    line.className = "usage-line";
+    line.setAttribute("part", "usage-line");
+    line.textContent = text;
+    this.ensureGroup().appendChild(line);
+    this.follow();
+  }
+
   /**
    * Show a "thinking" indicator while the agent is being awaited — both the
    * silent stretch before the first token and the gap after a tool result

@@ -45,6 +45,7 @@ This package is the successor of `@artooi/ag-ui-web-component`. Coming from it? 
 - [Core concepts](#core-concepts)
   - [The run loop and the AG-UI client](#the-run-loop-and-the-ag-ui-client)
   - [Stopping a run](#stopping-a-run)
+  - [When a run fails, and what it cost](#when-a-run-fails-and-what-it-cost)
   - [Registering tools](#registering-tools)
   - [Inline confirmation (`x-destructive` / `x-confirm` / `confirmPredicate`)](#inline-confirmation-x-destructive--x-confirm--confirmpredicate)
   - [DOM-driver and animation primitives](#dom-driver-and-animation-primitives)
@@ -227,6 +228,7 @@ another origin, add `credentials="include"` too; see
 | `data-paste-attach` | — | When to turn a long text paste into an attachment instead of composer text: absent for the 5000-character default, `off` to never, or a positive number of characters. Only acts where `data-attachments-url` (or a custom `uploadHandler`) gives it somewhere to go. |
 | `data-starters` | — | JSON array of prompts offered on an empty transcript, e.g. `'["Summarise this page"]'`. Fallback content for `slot="empty"`, so slotting your own replaces them. Shares the four-prompt and 120-character limits with the suggestion chips a run pushes. Read once at connect. |
 | `data-start-open` | — | Mount the panel open on a first visit. The corner placements otherwise rest at their launcher, the way every corner chat does; a stored choice wins over both. The placements that place themselves are unaffected. |
+| `show-usage` | — | Present (bare, or any value but `"false"`) to draw a muted token-usage line under each finished turn, from the usage `RUN_FINISHED` carries (django-ag-ui's `include_usage`). Read when the turn settles. See [When a run fails, and what it cost](#when-a-run-fails-and-what-it-cost). |
 | `theme` | — | Styling: an optional theme name (`quiet` (default) / `soft` / `ledger` / `classic`, or a word of your own) and an optional scheme (`light` (default) / `dark` / `auto`), in any order, e.g. `soft dark`. Live: the [header theme toggle](#theme-toggle)'s glyph follows a scheme written after connect. See [Themes](#themes). |
 | `density` | — | CSS-only: `comfortable` (default) / `compact`. |
 | `placement` | — | CSS-only: `floating` (default) / `sidebar` / `page` / `embedded` / `full`. `full` fills the viewport at every width, inside the safe-area insets; the `--ag-ui-inset`, size and `--ag-ui-panel-radius` tokens still apply. |
@@ -744,6 +746,35 @@ A cancelled run ends a moment later, once its request has closed or a running to
 returned. What it does then stays with the conversation it belonged to: its truncated exchange is
 saved to that thread, `ag-ui-run-finished` still reports the tools it ran, and nothing reaches the
 transcript or the Stop button of the conversation that replaced it.
+
+### When a run fails, and what it cost
+
+A run that ends in `RUN_ERROR` draws a failed bubble with Retry. Its words come from the event's
+`code` (the server's, or `abort`, which `@ag-ui/client` sets when something other than Stop cuts
+the connection), each a key of the strings table:
+
+| `code` | The bubble says |
+| --- | --- |
+| `timed_out` | `runErrorTimedOut` |
+| `interrupted` | `runErrorInterrupted` |
+| `identifier_too_long` | The server's own message, which names the field and the limit, and an offer (`runErrorNewChat`, part `run-error-offer`) that starts a new conversation, as New chat does |
+| `error`, or any other code | `runErrorFailed` |
+| none | The server's message, as before codes existed |
+
+Where a code is known, the server's message is not shown: django-ag-ui redacts it unless told not
+to, and a code is the part a client can put words to. A server that sends no code never promised
+that, so its message is kept. A run that fails before any event arrives (the
+stream drops, or the run POST answers with a non-2xx status) shows the client's own error text,
+for example `HTTP 400: {"detail": ...}`, with no offer.
+
+With `show-usage` set, a finished turn ends with a muted line such as `1,234 in · 567 out
+tokens` (part `usage-line`), the sums of `inputTokens` and `outputTokens` over every usage entry
+of every round in the turn. A side no entry carried is left out (`usageInput`, `usageOutput`);
+a turn with no usage, a failed turn and one you stop draw nothing. A `RUN_FINISHED` whose
+outcome is `cancelled` (a server-side stop) is still read as a finish today, and draws the
+line. The line is not stored, so a conversation restored from history has none. The digits
+are grouped with commas whatever the locale; the three templates take `{input}` and
+`{output}`.
 
 ### Registering tools
 
@@ -3299,6 +3330,7 @@ paths.
 | `ToolOutcome` | type | The `TOOL_OUTCOME` values as a union. |
 | `toolStatusFromOutcome` | function | Map a wire outcome to the card status it settles into; anything absent or unrecognised is a success. |
 | `ConnectionLostError` | class | Raised (→ `onError`) when a run's stream closes with no terminal AG-UI event. |
+| `RunErrorInfo` | type | The second argument `AgUiClientHandlers.onError` gets for a `RUN_ERROR`: its `code`, when the server sent one. |
 | `createHttpAgent(options)` | function | Default agent factory (wraps `HttpAgent`). |
 | `AgentFactory` / `HttpAgentOptions` | type | Factory signature and its options. |
 | `ResolveInterrupts` | type | Resolver for server-side-tool approval interrupts (one decision per interrupt). |
@@ -3990,13 +4022,13 @@ component sets, so a new one cannot ship undocumented.
 
 | Feature | Parts |
 | --- | --- |
-| Shell | `panel`, `header`, `title`, `icon`, `header-controls`, `messages`, `empty`, `greeting`, `pending`, `stopped`, `jump-latest`, and one per resize grip: `resize-handle` plus `resize-handle-top`, `resize-handle-bottom`, `resize-handle-left`, `resize-handle-right`, `resize-handle-top-left`, `resize-handle-top-right`, `resize-handle-bottom-left`, `resize-handle-bottom-right` |
+| Shell | `panel`, `header`, `title`, `icon`, `header-controls`, `messages`, `empty`, `greeting`, `pending`, `stopped`, `usage-line`, `jump-latest`, and one per resize grip: `resize-handle` plus `resize-handle-top`, `resize-handle-bottom`, `resize-handle-left`, `resize-handle-right`, `resize-handle-top-left`, `resize-handle-top-right`, `resize-handle-bottom-left`, `resize-handle-bottom-right` |
 | Header buttons | `header-button` on each, plus `history-button`, `checkpoints-button`, `new-button`, `maximize-button`, `collapse-button`, `theme-toggle` |
 | Collapsed widget | `launcher`, `launcher-icon`, `launcher-badge`, `rail-label`, `bar` (the [bottom bar](#collapsing-to-a-bottom-bar)'s wrapper, around the launcher), `bar-place` (the place beside the bar's title; its text carries `place-label` and `place-detail`), `bar-history` |
 | Answers | `answer` (the per-turn group), `message` (plus `message-user`, `message-assistant`), `code-copy` |
 | Reasoning | `thoughts`, `thoughts-toggle`, `thoughts-body`, `thoughts-label` |
 | Follow-up suggestions | `suggestions`, `suggestion-chip` |
-| Message actions | `message-actions`, `message-action` (plus `message-action-retry`, `message-action-copy`, `message-action-up`, `message-action-down`), and the icon holder inside each: `message-action-icon` (plus `message-action-icon-retry`, `message-action-icon-copy`, `message-action-icon-up`, `message-action-icon-down`) |
+| Message actions | `run-error-offer` (the new-conversation offer under a failed run), `message-actions`, `message-action` (plus `message-action-retry`, `message-action-copy`, `message-action-up`, `message-action-down`), and the icon holder inside each: `message-action-icon` (plus `message-action-icon-retry`, `message-action-icon-copy`, `message-action-icon-up`, `message-action-icon-down`) |
 | Queued messages | `queued`, `queued-chip` |
 | Run notices | `run-notice` (plus `run-notice-interrupted`, `run-notice-attachment-pending`, `run-notice-compaction`, `run-notice-skill`, `run-notice-history-replaced`, `run-notice-chart-undrawable`, `run-notice-surface`, `run-notice-not-connected`), `run-notice-icon`, `run-notice-text`, `run-notice-undo` |
 | Tool cards | `tool-card` (plus one status modifier: `tool-card-pending`, `tool-card-deferred`, `tool-card-done`, `tool-card-error`, `tool-card-declined`, `tool-card-interrupted`), `tool-card-head`, `tool-card-icon`, `tool-card-name`, `tool-card-status` (plus `tool-card-status-pending`, `tool-card-status-deferred`, `tool-card-status-done`, `tool-card-status-error`, `tool-card-status-declined`, `tool-card-status-interrupted`), `tool-card-decision`, `tool-card-toggle`, `tool-card-body`, `tool-card-section` (plus `tool-card-args-section`, `tool-card-result-section`), `tool-card-section-label` (plus `tool-card-args-label`, `tool-card-result-label`), `tool-card-args`, `tool-card-result`, `tool-card-approval`, `tool-card-subagent`, `tool-card-repeat` |

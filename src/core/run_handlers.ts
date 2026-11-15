@@ -1,3 +1,4 @@
+import type { TokenUsage } from "@ag-ui/core";
 import {
   CUSTOM_AGENT_EVENT,
   INVALIDATE_CUSTOM_NAME,
@@ -13,9 +14,10 @@ import type { SubAgentProgress } from "../ui/progress/subagent_progress.js";
 import type { AnswerActions } from "../ui/transcript/answer_actions.js";
 import type { AnswerStream } from "../ui/transcript/answer_stream.js";
 import type { Transcript } from "../ui/transcript/transcript.js";
+import { type UsageTotals, usageLineText } from "../ui/transcript/usage_line_text.js";
 import type { UiStrings } from "../ui/ui_strings.js";
 import type { ActivityRegistry } from "./activity_registry.js";
-import type { AgUiClientHandlers } from "./agui_client.js";
+import type { AgUiClientHandlers, RunErrorInfo } from "./agui_client.js";
 import type { CustomAgentDetail } from "./events/custom_agent_detail.js";
 import type { InvalidateDetail } from "./events/invalidate_detail.js";
 import type { RunFinishedDetail } from "./events/run_finished_detail.js";
@@ -49,7 +51,14 @@ export interface RunHandlersHost {
   readonly appendMessage: (role: MessageRole, content: string) => HTMLDivElement;
   /** Note an assistant answer finished on `threadId`, which may be unseen. */
   readonly noteUnread: (threadId: string) => void;
+  /** Start a new conversation, as the element's public `newChat` does. */
+  readonly newChat: () => void;
+  /** Whether `show-usage` is set, read when a turn settles. */
+  readonly showUsage: () => boolean;
 }
+
+/** The `RUN_ERROR` code whose message names the field and limit, and is shown as sent. */
+const IDENTIFIER_TOO_LONG = "identifier_too_long";
 
 /**
  * What one conversation's runs accumulate for the host between an
@@ -101,6 +110,11 @@ interface RunLedger {
   announcedOutcome: boolean;
   /** How the interaction ended so far; read and reset when the run-finished event fires. */
   outcome: RunFinishedDetail["outcome"];
+  /**
+   * Token totals summed over every round of the interaction and every usage
+   * entry in each, `null` for a side no entry carried. Reset at settle.
+   */
+  usage: UsageTotals;
 }
 
 /** An empty ledger, for a conversation nothing has run in yet. */
@@ -111,7 +125,13 @@ function emptyLedger(): RunLedger {
     invalidated: new Set<string>(),
     announcedOutcome: false,
     outcome: "completed",
+    usage: { input: null, output: null },
   };
+}
+
+/** `total` plus `count`, keeping `null` until some entry carried a number. */
+function addTokens(total: number | null, count: number | undefined): number | null {
+  return count === undefined ? total : (total ?? 0) + count;
 }
 
 /** Handlers with the same signatures as `table`, each doing nothing once `attached` is false. */
@@ -194,9 +214,9 @@ export class RunHandlers {
       ...whileAttached(drawing, attached),
       // Recorded outside the check, like the settle: a detached run's ending is
       // still true, and the ledger is the only place it can be kept for the report.
-      onError: (message) => {
+      onError: (message, runError) => {
         ledger.outcome = "failed";
-        guarded.onError(message);
+        guarded.onError(message, runError);
       },
       onCancelled: () => {
         ledger.outcome = "stopped";
@@ -209,6 +229,7 @@ export class RunHandlers {
         // Last, so a listener that refetches sees a transcript that has already
         // stopped changing -- and outside the check, because what a run did is
         // true whichever conversation is on screen when it ends.
+        ledger.usage = { input: null, output: null };
         this.#dispatchRunFinished(ledger, threadId);
       },
     };
@@ -404,11 +425,15 @@ export class RunHandlers {
         this.#host.transcript.hidePending();
         this.#host.stream.end();
       },
-      onError: (message) => {
+      onUsage: (usage) => {
+        ledger.usage = sumUsage(ledger.usage, usage);
+      },
+      onError: (message, runError) => {
         ledger.announcedOutcome = true;
         this.#host.announcer.announce(this.#host.strings().announceFailed);
         this.#host.transcript.hidePending();
-        const bubble = this.#host.appendMessage(MESSAGE_ROLE.ASSISTANT, `⚠️ ${message}`);
+        const text = this.#errorText(message, runError);
+        const bubble = this.#host.appendMessage(MESSAGE_ROLE.ASSISTANT, `⚠️ ${text}`);
         bubble.classList.add("message--failed");
         // A failure is the one message whose action row is only worth having
         // for Retry: there is nothing here worth copying and nothing to rate.
@@ -420,6 +445,11 @@ export class RunHandlers {
         // "distinct from an error, which is a failure". This is a failure, so
         // it stays an error and gains the control instead.
         this.#host.actions.attach(bubble, { rateable: false });
+        // An over-long thread id fails every run on this thread, Retry included;
+        // a new conversation mints fresh ids, so it is the one action that recovers.
+        if (runError?.code === IDENTIFIER_TOO_LONG) {
+          this.#offerNewChat(bubble);
+        }
         this.#host.transcript.revealWords(bubble);
         this.#host.stream.end();
       },
@@ -436,6 +466,10 @@ export class RunHandlers {
         // Terminal guarantee: whatever path ended the run, return to rest.
         if (!ledger.announcedOutcome) {
           this.#host.announcer.announce(this.#host.strings().announceAnswerReady);
+        }
+        const line = usageLineText(this.#host.strings(), ledger.usage);
+        if (line !== null && ledger.outcome === "completed" && this.#host.showUsage()) {
+          this.#host.transcript.appendUsageLine(line);
         }
         this.#host.transcript.hidePending();
         this.#host.setRunning(false);
@@ -454,6 +488,43 @@ export class RunHandlers {
         this.#host.transcript.closeGroup();
       },
     };
+  }
+
+  /**
+   * The failed bubble's words: a known `RUN_ERROR` code's string, the generic
+   * string for an unknown code, and the server's own message for an over-long
+   * identifier (it names the field and the limit), for a `RUN_ERROR` with no
+   * code (a server that never promised a code) and for a thrown error.
+   */
+  #errorText(message: string, runError: RunErrorInfo | undefined): string {
+    const code = runError?.code;
+    if (code === undefined || code === IDENTIFIER_TOO_LONG) {
+      return message;
+    }
+    const strings = this.#host.strings();
+    switch (code) {
+      case "timed_out":
+        return strings.runErrorTimedOut;
+      case "interrupted":
+        return strings.runErrorInterrupted;
+      default:
+        return strings.runErrorFailed;
+    }
+  }
+
+  /** Put the start-a-new-conversation offer under a failed `bubble` and its action row. */
+  #offerNewChat(bubble: HTMLDivElement): void {
+    const offer = document.createElement("button");
+    offer.type = "button";
+    offer.className = "suggestion-chip run-error-offer";
+    offer.setAttribute("part", "run-error-offer");
+    offer.textContent = this.#host.strings().runErrorNewChat;
+    offer.addEventListener("click", () => {
+      this.#host.newChat();
+    });
+    const row = bubble.nextElementSibling;
+    (row?.classList.contains("message-actions") === true ? row : bubble).after(offer);
+    this.#host.transcript.follow();
   }
 
   /**
@@ -521,4 +592,14 @@ export class RunHandlers {
       }),
     );
   }
+}
+
+/** `totals` with each entry of `usage` added, side by side. */
+function sumUsage(totals: UsageTotals, usage: readonly TokenUsage[]): UsageTotals {
+  let { input, output } = totals;
+  for (const entry of usage) {
+    input = addTokens(input, entry.inputTokens);
+    output = addTokens(output, entry.outputTokens);
+  }
+  return { input, output };
 }

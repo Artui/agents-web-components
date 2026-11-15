@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-11-15
+
+### Added
+
+- **An opt-in token-usage line under a finished turn: `show-usage`.** With the attribute set and
+  the server sending usage on `RUN_FINISHED` (django-ag-ui's `include_usage`), the turn ends with a
+  muted line such as `1,234 in · 567 out tokens` (part `usage-line`), summing `inputTokens` and
+  `outputTokens` over every usage entry of every round in the turn. A side no entry carried is
+  left out; a turn with no usage, a failed one and one the user stops draw nothing, and the line is not
+  stored, so a restored conversation has none. The templates are `usageBoth`, `usageInput` and
+  `usageOutput`. A host opts in by setting `show-usage`. `AgUiClientHandlers` gains an optional
+  `onUsage(usage)`.
+
+### Changed
+
+- **A failed run's bubble says what happened, by the `RUN_ERROR` event's `code`.** `timed_out`
+  and `interrupted` each get their own sentence (`runErrorTimedOut`, `runErrorInterrupted` in the
+  strings table); `error` and a code this release does not know show `runErrorFailed`; an event
+  with no code (any other AG-UI server, or django-ag-ui before 0.76.0) keeps showing the server's
+  message, as before. `identifier_too_long` shows the server's own message, which names the field
+  and the limit, and an offer under the action row (`runErrorNewChat`, part `run-error-offer`)
+  that starts a new conversation as New chat does, since a new conversation's fresh ids are what
+  recover from it. A run POST answered with a non-2xx status still shows the client's own
+  `HTTP <status>: <body>` text, now pinned by a test. Every host opts in to nothing; a host that
+  showed the server's words on purpose (django-ag-ui's `tool_failure.include_detail`) now sees the
+  strings for a coded failure instead.
+  `AgUiClientHandlers.onError` gains an optional second argument, `RunErrorInfo`, present for a
+  `RUN_ERROR` and carrying its code; a host table written for the one-argument form still fits.
+
 ## [0.1.2] — 2026-11-14
 
 ### Changed
@@ -88,7 +117,8 @@ move page walks a host over. Each entry below says whether a host opts in.
   kept offering the moon under `theme="dark"`. Only the toggle's own click redrew it before. A host
   opts in to nothing.
 
-[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Artui/agents-web-components/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/Artui/agents-web-components/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/Artui/agents-web-components/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Artui/agents-web-components/compare/v0.0.0...v0.1.0
