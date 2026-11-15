@@ -80,7 +80,7 @@ chat.registerActivityRenderer({
         event.preventDefault();
         void chat.run({
           forwardedProps: { action: "submit_release", name: input.value },
-          message: `Release name: ${input.value}`,
+          message: { id: crypto.randomUUID(), content: `Release name: ${input.value}` },
         });
       });
     }

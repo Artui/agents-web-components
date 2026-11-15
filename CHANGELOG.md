@@ -18,13 +18,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   surface drawn with `live: false` must be inert, since acting on it would re-send a stale action
   on every thread load. One-argument renderers, the built-in chart among them, draw exactly as
   before. A host opts in by reading the second argument.
-- **`chat.run({ forwardedProps, message? })` starts a run that forwards props.** The first
-  request carries `forwardedProps` as `RunAgentInput.forwardedProps`; the frontend-tool and
-  approval rounds after it carry none. `message`, when given, is drawn as the user's turn and
-  announced by `ag-ui-submit`, but is not added to the request's messages, because the server
-  builds that turn from the props. It refuses, waits behind a restore and resolves as
-  `sendMessage` does. `AgUiClient.run(forwardedProps)` is the client half. A host opts in by
-  calling it.
+- **`chat.run({ forwardedProps, runId?, message? })` starts a run for an action.** The first
+  request carries `forwardedProps` as `RunAgentInput.forwardedProps` and `runId`, when given,
+  unchanged; the frontend-tool and approval rounds after it carry neither. `message`
+  (`{ id, content }`) is the user turn the server builds from the props: it is drawn and announced
+  by `ag-ui-submit`, is not in the first request's messages, and joins the conversation under its
+  id when that request's `RUN_STARTED` arrives, after the posted history and before the reply, so
+  later requests post it and the store saves it. It refuses, waits behind a restore and resolves
+  as `sendMessage` does. `AgUiClient.run(request)` and the `AgUiRunRequest` type are the client
+  half. A host opts in by calling it.
 - **`chat.registerContext(provider)` adds entries to every run's context** after what
   `getContext` returns, in registration order, for the conversation's runs and checkpoint
   continuations alike; it returns the function that removes them. A host opts in by calling it;

@@ -88,6 +88,16 @@ function turns(body: Body | undefined): [unknown, unknown][] {
   return ((body?.["messages"] ?? []) as Message[]).map((m) => [m.role, m.content]);
 }
 
+/** Each message a request carried as role and text, with its id when it is a kept turn's. */
+function ids(body: Body | undefined): unknown[][] {
+  return ((body?.["messages"] ?? []) as Message[]).map((m) =>
+    m.id.startsWith("turn-") ? [m.role, m.content, m.id] : [m.role, m.content],
+  );
+}
+
+/** The action's turn, as the server stores it. */
+const TURN = { id: "turn-1", content: "Approve it" };
+
 /** Macrotask ticks: the real `HttpAgent` hands events on across timers. */
 async function settle(): Promise<void> {
   for (let i = 0; i < 20; i += 1) {
@@ -110,23 +120,68 @@ afterEach(() => {
 });
 
 describe("AgUiChat.run", () => {
-  it("forwards the props, and draws the message as the user's turn without sending it", async () => {
+  it("forwards the props and run id, and draws the message without sending it", async () => {
     const bodies = stubEndpoint();
     const el = mount();
     const heard = submits(el);
 
-    const result = await el.run({ forwardedProps: { action: "approve" }, message: "Approve it" });
+    const result = await el.run({
+      forwardedProps: { action: "approve" },
+      runId: "action-run-1",
+      message: TURN,
+    });
     await settle();
 
     expect(result).toBe(true);
     expect(bodies).toHaveLength(1);
-    // The server builds the turn from the props and stores it, so a user
-    // message sent beside them would put it in the conversation twice.
     expect(Object.keys(bodies[0] ?? {})).toContain("forwardedProps");
     expect(bodies[0]?.["forwardedProps"]).toEqual({ action: "approve" });
+    expect(bodies[0]?.["runId"]).toBe("action-run-1");
+    // The server builds the turn from the props and stores it, so a user
+    // message sent beside them would put it in the conversation twice.
     expect(turns(bodies[0])).toEqual([]);
     expect(userBubbles(el)).toEqual(["Approve it"]);
     expect(heard).toEqual(["Approve it"]);
+  });
+
+  it("posts the kept turn on the next send, between the history and the action's reply", async () => {
+    const bodies = stubEndpoint();
+    const el = mount();
+    await el.sendMessage("earlier");
+    await settle();
+
+    await el.run({ forwardedProps: { action: "approve" }, message: TURN });
+    await settle();
+    await el.sendMessage("next");
+    await settle();
+
+    expect(bodies).toHaveLength(3);
+    expect(ids(bodies[1])).toEqual([
+      ["user", "earlier"],
+      ["assistant", "answer 1"],
+    ]);
+    expect(ids(bodies[2])).toEqual([
+      ["user", "earlier"],
+      ["assistant", "answer 1"],
+      ["user", "Approve it", "turn-1"],
+      ["assistant", "answer 2"],
+      ["user", "next"],
+    ]);
+    expect(bodies[2]?.["forwardedProps"]).toEqual({});
+  });
+
+  it("saves the kept turn, so a reload draws it again", async () => {
+    stubEndpoint();
+    const first = mount();
+    await first.run({ forwardedProps: { action: "approve" }, message: TURN });
+    await settle();
+    first.remove();
+
+    const second = mount();
+    await settle();
+
+    expect(userBubbles(second)).toEqual(["Approve it"]);
+    expect(shadow(second).textContent).toContain("answer 1");
   });
 
   it("adds no user message and draws no turn without a message", async () => {
@@ -157,12 +212,18 @@ describe("AgUiChat.run", () => {
       });
     });
 
-    await el.run({ forwardedProps: { action: "approve" } });
+    await el.run({ forwardedProps: { action: "approve" }, runId: "action-run-1", message: TURN });
     await settle();
 
     expect(bodies).toHaveLength(2);
     expect(bodies[0]?.["forwardedProps"]).toEqual({ action: "approve" });
+    expect(bodies[0]?.["runId"]).toBe("action-run-1");
+    expect(turns(bodies[0])).toEqual([]);
+    // Every request after the first posts the turn: the server saves the
+    // posted history on each one, and finds it there by id.
     expect(bodies[1]?.["forwardedProps"]).toEqual({});
+    expect(bodies[1]?.["runId"]).not.toBe("action-run-1");
+    expect(ids(bodies[1])[0]).toEqual(["user", "Approve it", "turn-1"]);
   });
 
   it("refuses while a run is in flight", async () => {
@@ -180,7 +241,10 @@ describe("AgUiChat.run", () => {
     for (let i = 0; i < 6; i += 1) {
       await Promise.resolve();
     }
-    const result = await el.run({ forwardedProps: { action: "approve" }, message: "second" });
+    const result = await el.run({
+      forwardedProps: { action: "approve" },
+      message: { id: "t2", content: "second" },
+    });
 
     expect(result).toBe(false);
     expect(handle.runParams).toHaveLength(1);
@@ -204,7 +268,10 @@ describe("AgUiChat.run", () => {
     const bodies = stubEndpoint();
     const el = mount();
 
-    const result = await el.run({ forwardedProps: { action: "approve" }, message: "" });
+    const result = await el.run({
+      forwardedProps: { action: "approve" },
+      message: { id: "t0", content: "" },
+    });
     await settle();
 
     expect(result).toBe(false);
@@ -245,7 +312,10 @@ describe("AgUiChat.run", () => {
     });
     await settle();
 
-    const running = el.run({ forwardedProps: { action: "approve" }, message: "now" });
+    const running = el.run({
+      forwardedProps: { action: "approve" },
+      message: { id: "turn-now", content: "now" },
+    });
     await settle();
     expect(bodies).toEqual([]);
 

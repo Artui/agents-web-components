@@ -89,7 +89,7 @@ import type { ActivityRegistration } from "./activity_registration.js";
 import { ActivityRegistry } from "./activity_registry.js";
 import type { ActivityRenderContext } from "./activity_render_context.js";
 import type { ActivityRenderer } from "./activity_renderer.js";
-import { AgUiClient } from "./agui_client.js";
+import { AgUiClient, type AgUiRunRequest } from "./agui_client.js";
 // biome-ignore lint/style/useImportType: the emitted declaration file copies this form
 import { type AttachmentRef } from "./attachment.js";
 import { ChatRegistration } from "./chat_registry.js";
@@ -3675,36 +3675,38 @@ export class AgUiChat extends HTMLElement {
   }
 
   /**
-   * Start a run carrying `forwardedProps`, with or without a user message.
+   * Start a run for an action the server reads from `forwardedProps`, with or
+   * without a user turn to show for it.
    *
    * `forwardedProps` is sent as the first request's
    * `RunAgentInput.forwardedProps`, which is how a host tells the server
-   * something that is not a turn of the conversation: what was picked on a
-   * surface an activity drew, say. Only the first request carries it; the
-   * rounds a frontend tool or an approval starts after it do not, since a
-   * server may turn it into a turn of its own and would then see it again.
+   * something that is not a typed turn: what was picked on a surface an
+   * activity drew, say. `runId`, when given, is sent unchanged as that
+   * request's `runId`, so a caller can name the run and what it derives from
+   * it. Only the first request carries either; the rounds a frontend tool or
+   * an approval starts after it do not, since the server would otherwise act
+   * on the action again for each of them.
    *
-   * With `message`, the message is drawn as {@link sendMessage} draws a turn,
-   * as the user's bubble announced by {@link SUBMIT_EVENT}, but it is not added
-   * to the messages the request carries: the server builds that turn from
-   * `forwardedProps` and stores it, so sending it as well would put it in the
-   * conversation twice. Without it nothing is drawn or announced. Either way
-   * no user message is added, and the run answers the conversation as it
-   * stands. An empty `message` is refused, as an empty {@link sendMessage} is.
+   * `message` is the user turn the server builds from the props and stores,
+   * under its `id`. It is drawn as {@link sendMessage} draws a turn, as the
+   * user's bubble announced by {@link SUBMIT_EVENT}, but it is not in the first
+   * request's messages, which would put it in the conversation twice. It joins
+   * this element's copy of the conversation when that request's run starts,
+   * after the history it posted and before the reply, so every later request
+   * posts it and the store saves it; a run refused before it starts keeps
+   * nothing. Without `message`, nothing is drawn or announced. A `message`
+   * with empty content is refused, as an empty {@link sendMessage} is.
    *
    * Resolves as {@link sendMessage} does, and refuses or waits by the same
    * rules: `false` while a run, a send or a picked checkpoint's continuation is
    * in flight and with no `endpoint`; behind a restore it waits, then runs;
    * `true` once the run has been handed to the client.
    */
-  run(options: {
-    readonly forwardedProps: Readonly<Record<string, unknown>>;
-    readonly message?: string;
-  }): Promise<boolean> {
-    const { forwardedProps, message } = options;
+  run(request: AgUiRunRequest): Promise<boolean> {
+    const { message } = request;
     return this.#startRun(
-      message === undefined ? null : { content: message, attachments: [] },
-      (client) => client.run(forwardedProps),
+      message === undefined ? null : { content: message.content, attachments: [] },
+      (client) => client.run(request),
     );
   }
 
@@ -3786,9 +3788,10 @@ export class AgUiChat extends HTMLElement {
   /**
    * Put a turn the user sent on screen, and tell the host it was sent.
    *
-   * The half of a send that does not depend on where it goes, so both senders
-   * take it from here: {@link sendMessage}, and a checkpoint continuation, which
-   * posts to the resume or fork endpoint on a client of its own.
+   * The half of a send that does not depend on where it goes, so every sender
+   * takes it from here: {@link sendMessage}, {@link run} with a message, and a
+   * checkpoint continuation, which posts to the resume or fork endpoint on a
+   * client of its own.
    *
    * Arming the composer's travel stays with {@link sendMessage}: continuing a
    * run is a change of context, and docks at once.
@@ -3818,9 +3821,9 @@ export class AgUiChat extends HTMLElement {
   }
 
   /**
-   * Hand the message to the client, or say why it is going nowhere.
+   * Start the client's run, or say why nothing is going anywhere.
    *
-   * With no `endpoint`, the bubble and {@link SUBMIT_EVENT} have already
+   * With no `endpoint`, any bubble and {@link SUBMIT_EVENT} have already
    * happened, so the send looks made. The console tells the developer which
    * attribute is missing and the transcript tells the reader, on every
    * attempt: a once-only report is silence for each one after.

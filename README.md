@@ -415,28 +415,33 @@ chat.attachFile(fileInput.files[0]);
 
 ### Starting a run with forwarded props
 
-`run({ forwardedProps, message? })` starts a run whose first request carries `forwardedProps` as
-`RunAgentInput.forwardedProps`: how a host tells the server something that is not a turn of the
-conversation, such as what the user picked on a surface an activity drew.
+`run({ forwardedProps, runId?, message? })` starts a run for an action the server reads from
+`RunAgentInput.forwardedProps` rather than from a typed turn, such as what the user picked on a
+surface an activity drew.
 
 ```js
 await chat.run({
   forwardedProps: { action: "approve", surface: "s1" },
-  message: "Approve the refund",
+  runId: actionRunId,
+  message: { id: `${actionRunId}-turn`, content: "Approve the refund" },
 });
 ```
 
-- **Only the first request carries them.** The rounds a frontend tool or an approval starts
-  afterwards send none, because a server that turns them into a turn would otherwise add it again
-  for every round.
-- **`message` is drawn, not sent.** Given, it is drawn as the user's bubble and announced by
-  `ag-ui-submit`, exactly as a `sendMessage` turn is, but it is not added to the request's
-  `messages`: the server builds that turn from `forwardedProps` and stores it, and sending it as
-  well would put it in the conversation twice. Without it, nothing is drawn or announced. An empty
-  `message` is refused.
+- **Only the first request carries `forwardedProps` and `runId`.** `runId` reaches the wire
+  unchanged, so you can derive ids from it. The rounds a frontend tool or an approval starts
+  afterwards send `{}` and a run id of their own, because a server that acts on the props would
+  otherwise act again for every round.
+- **`message` is the turn the server stores, under your `id`.** It is drawn as the user's bubble
+  and announced by `ag-ui-submit`, as a `sendMessage` turn is, but it is not in the first
+  request's `messages`, which would put it in the conversation twice. When that request's
+  `RUN_STARTED` arrives, the turn joins the element's copy of the conversation, after the history
+  that request posted and before the reply. From then on every request posts it, the follow-up
+  rounds of the same run included, and the store saves it, so a reload draws it again. A run
+  refused before `RUN_STARTED` keeps nothing. Without `message`, nothing is drawn or announced.
+  A `message` with empty content is refused.
 - **It refuses and waits as `sendMessage` does.** It resolves `false` while a run, a send or a
-  picked checkpoint's continuation is in flight, and with no `endpoint`; behind a restore it waits,
-  then runs; it resolves `true` once the run is handed to the client.
+  picked checkpoint's continuation is in flight, and with no `endpoint`. Behind a restore it waits,
+  then runs. It resolves `true` once the run is handed to the client.
 
 ### Adding to every run's context
 
@@ -3431,6 +3436,7 @@ paths.
 | Export | Kind | Summary |
 | --- | --- | --- |
 | `AgUiClient` | class | Orchestration layer over an AG-UI `AbstractAgent`. |
+| `AgUiRunRequest` | type | What `run` takes, on the element and on `AgUiClient` (`{ forwardedProps, runId?, message? }`). |
 | `AgUiClientConfig` / `AgUiClientHandlers` / `AgUiRunInputs` | type | Client config, lifecycle handlers, per-run input providers. |
 | `AgUiToolCall` / `ToolExecution` / `ExecuteTool` | type | Tool-call shape, execution result, executor signature. |
 | `AgUiMessageIds` | type | Which message `AgUiClientHandlers.onTextEnd` completed: its `messageId`, and the `runId` its `RUN_STARTED` named. |

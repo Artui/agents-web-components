@@ -43,6 +43,7 @@ export {
   type AgUiClientHandlers,
   type AgUiMessageIds,
   type AgUiRunInputs,
+  type AgUiRunRequest,
   type AgUiToolCall,
   ConnectionLostError,
   type ExecuteTool,
