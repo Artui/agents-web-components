@@ -21,6 +21,24 @@ export function payloadOf(frame: string): Record<string, unknown> {
   return JSON.parse(body) as Record<string, unknown>;
 }
 
+/** A response the server sent instead of a stream: its status, content type and body. */
+export interface RecordedRefusal {
+  readonly status: number;
+  readonly contentType: string;
+  readonly body: string;
+}
+
+/** The recorded refusals, keyed as the recorder names them. */
+export const REFUSALS: Readonly<Record<string, RecordedRefusal>> = recorded.refusals;
+
+export function refusalOf(name: string): RecordedRefusal {
+  const refusal = REFUSALS[name];
+  if (refusal === undefined) {
+    throw new Error(`no recorded refusal named "${name}"`);
+  }
+  return refusal;
+}
+
 export function framesOf(run: string): readonly string[] {
   const frames = RUNS[run];
   if (frames === undefined) {
@@ -74,12 +92,16 @@ export const ENDPOINT = "/agent/";
  * harness's traffic with an SSE stream.
  */
 export function stubFetch(frames: readonly string[]): () => void {
+  return stubEndpoint(() => sseResponse(frames));
+}
+
+function stubEndpoint(respond: () => Response): () => void {
   const original = globalThis.fetch;
   globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
     if (new URL(String(input), location.href).pathname !== ENDPOINT) {
       return original(input, init);
     }
-    return Promise.resolve(sseResponse(frames));
+    return Promise.resolve(respond());
   }) as typeof fetch;
   return () => {
     globalThis.fetch = original;
@@ -104,7 +126,20 @@ export function shadow(el: AgUiChat): ShadowRoot {
  * reader, so the decode advances on macrotasks and not on microtasks.
  */
 export async function replay(el: AgUiChat, frames: readonly string[]): Promise<void> {
-  const restore = stubFetch(frames);
+  await send(el, stubFetch(frames));
+}
+
+/** Send a message the endpoint answers with a recorded refusal, and let it render. */
+export async function replayRefusal(el: AgUiChat, refusal: RecordedRefusal): Promise<void> {
+  const respond = (): Response =>
+    new Response(refusal.body, {
+      status: refusal.status,
+      headers: { "Content-Type": refusal.contentType },
+    });
+  await send(el, stubEndpoint(respond));
+}
+
+async function send(el: AgUiChat, restore: () => void): Promise<void> {
   // `sendMessage` reports failures through the element rather than by
   // rejecting, so nothing here is being swallowed.
   void el.sendMessage("what happened this week?");

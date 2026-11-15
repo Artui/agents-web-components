@@ -42,10 +42,29 @@ import django
 from django.conf import settings
 
 # ``django_ag_ui`` imports Django settings at module scope, so configure a
-# minimal in-memory project before touching it. Nothing recorded here runs a
-# request or reaches a database; the settings only satisfy the import.
-settings.configure(DEBUG=False, INSTALLED_APPS=[], DATABASES={})
+# minimal in-memory project before touching it. The streamed runs reach no
+# database; the refusals are answered by the real view, whose conversation
+# store checks an id's length against its own columns, so it gets an in-memory
+# database with the store's tables.
+settings.configure(
+    DEBUG=False,
+    SECRET_KEY="recorder",
+    USE_TZ=True,
+    INSTALLED_APPS=[
+        "django.contrib.contenttypes",
+        "django.contrib.auth",
+        "django_spec_agents.contrib.store",
+    ],
+    DATABASES={"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}},
+    MIDDLEWARE=[],
+)
 django.setup()
+
+import asyncio  # noqa: E402
+from types import SimpleNamespace  # noqa: E402
+
+from django.core.management import call_command  # noqa: E402
+from django.test import RequestFactory  # noqa: E402
 
 from ag_ui.core import (  # noqa: E402
     ActivitySnapshotEvent,
@@ -78,9 +97,15 @@ from django_ag_ui.agent.inject_compaction_events import (  # noqa: E402
 from django_ag_ui.agent.stamp_outcome import stamp_outcome  # noqa: E402
 from django_ag_ui.agent.types.chart_series import ChartSeries  # noqa: E402
 from django_ag_ui.agent.types.chart_spec import ChartSpec  # noqa: E402
+from django_ag_ui.agent.agui_view import DjangoAGUIView  # noqa: E402
 from django_ag_ui.agent.utils import run_error_code  # noqa: E402
 from django_spec_agents import IdentifierTooLongError  # noqa: E402
+from django_spec_agents.contrib.store.default_conversation_store import (  # noqa: E402
+    DefaultConversationStore,
+)
+from django_spec_agents.registry.tool_registry import ToolRegistry  # noqa: E402
 from pydantic_ai.messages import ModelResponse  # noqa: E402
+from pydantic_ai.models.test import TestModel  # noqa: E402
 from pydantic_ai.ui.ag_ui._lifecycle_1_0 import token_usage_from_messages  # noqa: E402
 from pydantic_ai.usage import RequestUsage  # noqa: E402
 
@@ -302,6 +327,41 @@ def _identifier_too_long_run() -> list[Any]:
     ]
 
 
+def _identifier_too_long_preflight() -> dict[str, Any]:
+    """The view's own answer to a run whose thread id is over the store's limit.
+
+    Refused before any stream opens, so it is a plain response rather than
+    frames: recorded as the status, content type and body the view returned.
+    Nothing here writes the body; the view does, and the model never runs.
+    """
+    call_command("migrate", verbosity=0)
+    body = {
+        "threadId": "t" * 300,
+        "runId": "run-too-long-preflight",
+        "state": {},
+        "messages": [{"id": "user-1", "role": "user", "content": "hi"}],
+        "tools": [],
+        "context": [],
+        "forwardedProps": {},
+    }
+    request = RequestFactory().post(
+        "/agent/", data=json.dumps(body), content_type="application/json"
+    )
+    request.user = SimpleNamespace(is_authenticated=True, pk=1, username="recorder")
+    view = DjangoAGUIView(
+        ToolRegistry(),
+        model=TestModel(),
+        conversation_store=DefaultConversationStore(),
+        csrf_exempt=True,
+    )
+    response = asyncio.run(view(request))
+    return {
+        "status": response.status_code,
+        "contentType": response["Content-Type"],
+        "body": response.content.decode(),
+    }
+
+
 def main() -> None:
     encoder = EventEncoder()
     runs = {
@@ -319,11 +379,12 @@ def main() -> None:
             name: [encoder.encode(_stamp(event)) for event in events]
             for name, events in runs.items()
         },
+        "refusals": {"identifierTooLongPreflight": _identifier_too_long_preflight()},
     }
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text(json.dumps(document, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     frames = sum(len(body) for body in document["runs"].values())
-    print(f"wrote {frames} frames across {len(runs)} runs to {OUTPUT.name}")
+    print(f"wrote {frames} frames across {len(runs)} runs and one refusal to {OUTPUT.name}")
 
 
 def _stamp(event: Any) -> Any:
