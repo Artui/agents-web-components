@@ -771,9 +771,10 @@ With `show-usage` set, a finished turn ends with a muted line such as `1,234 in 
 tokens` (part `usage-line`), the sums of `inputTokens` and `outputTokens` over every usage entry
 of every round in the turn. A side no entry carried is left out (`usageInput`, `usageOutput`);
 a turn with no usage, a failed turn and one you stop draw nothing. A `RUN_FINISHED` whose
-outcome is `cancelled` (a server-side stop) is still read as a finish today, and draws the line. The line is not stored, so a
-conversation restored from history has none. The digits are grouped with commas whatever the
-locale; the three templates take `{input}` and `{output}`.
+outcome is `cancelled` (a server-side stop) is still read as a finish today, and draws the
+line. The line is not stored, so a conversation restored from history has none. The digits
+are grouped with commas whatever the locale; the three templates take `{input}` and
+`{output}`.
 
 ### Registering tools
 
