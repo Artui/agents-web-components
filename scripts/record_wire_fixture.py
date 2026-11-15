@@ -64,6 +64,7 @@ from ag_ui.core import (  # noqa: E402
     TextMessageContentEvent,
     TextMessageEndEvent,
     TextMessageStartEvent,
+    TokenUsage,
     ToolCallArgsEvent,
     ToolCallEndEvent,
     ToolCallResultEvent,
@@ -78,6 +79,8 @@ from django_ag_ui.agent.inject_compaction_events import (  # noqa: E402
 from django_ag_ui.agent.stamp_outcome import stamp_outcome  # noqa: E402
 from django_ag_ui.agent.types.chart_series import ChartSeries  # noqa: E402
 from django_ag_ui.agent.types.chart_spec import ChartSpec  # noqa: E402
+from django_ag_ui.agent.utils import run_error_code  # noqa: E402
+from django_spec_agents import IdentifierTooLongError  # noqa: E402
 
 OUTPUT = Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "recorded_ag_ui_runs.json"
 
@@ -253,6 +256,36 @@ def _deferred_run() -> list[Any]:
     ]
 
 
+def _usage_run() -> list[Any]:
+    """An answered run whose RUN_FINISHED carries the server's ``usage`` list (``include_usage`` on)."""
+    return [
+        RunStartedEvent(thread_id=THREAD_ID, run_id="run-usage"),
+        TextMessageStartEvent(message_id="assistant-5"),
+        TextMessageContentEvent(message_id="assistant-5", delta="Done."),
+        TextMessageEndEvent(message_id="assistant-5"),
+        RunFinishedEvent(
+            thread_id=THREAD_ID,
+            run_id="run-usage",
+            outcome=RunFinishedSuccessOutcome(),
+            usage=[TokenUsage(input_tokens=1234, output_tokens=567)],
+        ),
+    ]
+
+
+def _identifier_too_long_run() -> list[Any]:
+    """A run refused for an over-long id: the code is the one the server derives from the error."""
+    error = IdentifierTooLongError(
+        "thread_id is 300 characters, over its 255-character limit",
+        field="thread_id",
+        length=300,
+        limit=255,
+    )
+    return [
+        RunStartedEvent(thread_id=THREAD_ID, run_id="run-too-long"),
+        RunErrorEvent(message=str(error), code=run_error_code(error)),
+    ]
+
+
 def main() -> None:
     encoder = EventEncoder()
     runs = {
@@ -260,6 +293,8 @@ def main() -> None:
         "failed": _failed_run(),
         "refused": _refused_run(),
         "deferred": _deferred_run(),
+        "usage": _usage_run(),
+        "identifierTooLong": _identifier_too_long_run(),
     }
     document = {
         "recordedBy": Path(__file__).name,
