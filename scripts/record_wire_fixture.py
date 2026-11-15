@@ -328,12 +328,7 @@ def _identifier_too_long_run() -> list[Any]:
 
 
 def _identifier_too_long_preflight() -> dict[str, Any]:
-    """The view's own answer to a run whose thread id is over the store's limit.
-
-    Refused before any stream opens, so it is a plain response rather than
-    frames: recorded as the status, content type and body the view returned.
-    Nothing here writes the body; the view does, and the model never runs.
-    """
+    """The real view's pre-stream refusal of an over-long thread id: status, type and body."""
     call_command("migrate", verbosity=0)
     body = {
         "threadId": "t" * 300,

@@ -203,6 +203,47 @@ describe("AgUiClient", () => {
     expect(handlers.calls).toEqual(["err:boom", "settled"]);
   });
 
+  /** An agent whose run rejects as `@ag-ui/client` does for a non-2xx POST with `payload`. */
+  function refusingAgent(message: string, payload: unknown, before?: () => void) {
+    const fake = makeFakeAgent();
+    (fake.agent as unknown as { runAgent: () => Promise<never> }).runAgent = () => {
+      before?.();
+      return Promise.reject(Object.assign(new Error(message), { status: 400, payload }));
+    };
+    return fake;
+  }
+
+  it.each([
+    ["a null body", null, "HTTP 400: null"],
+    [
+      "an error that is not a string",
+      { error: 5, code: "identifier_too_long" },
+      'HTTP 400: {"error":5,"code":"identifier_too_long"}',
+    ],
+  ])("keeps the client's message for %s", async (_name, payload, message) => {
+    const errors: unknown[] = [];
+    const handlers = recordingHandlers();
+    handlers.onError = (m, runError) => {
+      errors.push([m, runError]);
+    };
+    await new AgUiClient({ agent: refusingAgent(message, payload).agent, handlers }).send("x");
+    const code = (payload as { code?: string } | null)?.code;
+    expect(errors).toEqual([[message, code === undefined ? undefined : { code }]]);
+  });
+
+  it("reports a Stop, not a coded refusal that lands after it", async () => {
+    const handlers = recordingHandlers();
+    let client: AgUiClient | undefined;
+    const fake = refusingAgent("HTTP 400: {}", { error: "x", code: "identifier_too_long" }, () =>
+      client?.cancel(),
+    );
+    client = new AgUiClient({ agent: fake.agent, handlers });
+    await client.send("x");
+    expect(handlers.calls.filter((c) => c.startsWith("err:") || c === "cancelled")).toEqual([
+      "cancelled",
+    ]);
+  });
+
   it("reflects the agent's running state", () => {
     const idle = makeFakeAgent({ isRunning: false });
     const busy = makeFakeAgent({ isRunning: true });

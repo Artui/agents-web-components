@@ -233,7 +233,7 @@ describe("a run POST the server refuses", () => {
   });
 
   it.each([
-    ["a body that is not JSON", "Bad Request", "text/plain", "HTTP 400: Bad Request"],
+    ["a body not sent as JSON", "Bad Request", "text/plain", "HTTP 400: Bad Request"],
     ["a code that is not a string", '{"code":7}', "application/json", 'HTTP 400: {"code":7}'],
     [
       "a JSON array",

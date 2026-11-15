@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   non-2xx body that is JSON with a string `code` now takes the same path as a `RUN_ERROR` with
   that code: the code's string, or for `identifier_too_long` the server's `error` message and
   the offer, and `onError` receives the code in `RunErrorInfo`. A body with no `code`, or one
-  that is not JSON, keeps `HTTP <status>: <body>`. A host opts in to nothing.
+  not sent as `application/json`, keeps `HTTP <status>: <body>`. A host opts in to nothing.
 
 ## [0.2.0] — 2026-11-15
 

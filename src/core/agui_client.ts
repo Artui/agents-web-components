@@ -215,8 +215,10 @@ export interface AgUiClientHandlers {
   onSubAgentError(subagentRunId: string, message: string): void;
   /**
    * The run failed. `runError` is present when the failure was a `RUN_ERROR`
-   * event, carrying its `code` if the server sent one; a thrown error (a dropped
-   * stream, a non-2xx POST) passes only the message.
+   * event, carrying its `code` if the server sent one, and when a non-2xx run
+   * POST's JSON body carries a string `code`; `message` is then the body's
+   * `error` when that is a string. Any other thrown error (a dropped stream, an
+   * uncoded non-2xx POST) passes only the message.
    */
   onError(message: string, runError?: RunErrorInfo): void;
   /**
@@ -240,9 +242,12 @@ export interface AgUiClientHandlers {
   onSettled(): void;
 }
 
-/** What {@link AgUiClientHandlers.onError} is told about a `RUN_ERROR` event. */
+/**
+ * What {@link AgUiClientHandlers.onError} is told about a `RUN_ERROR` event, or
+ * about a non-2xx run POST whose JSON body carries a string `code`.
+ */
 export interface RunErrorInfo {
-  /** The event's machine-readable code; the protocol defines no vocabulary. */
+  /** The event's or the body's machine-readable code; the protocol defines no vocabulary. */
   readonly code?: string;
 }
 
@@ -1025,7 +1030,7 @@ interface RunState {
  */
 function codedRefusal(error: unknown): { code: string; message?: string } | null {
   const payload: unknown = error instanceof Error ? Reflect.get(error, "payload") : undefined;
-  if (typeof payload !== "object" || payload === null || Array.isArray(payload)) {
+  if (typeof payload !== "object" || payload === null) {
     return null;
   }
   const code: unknown = Reflect.get(payload, "code");

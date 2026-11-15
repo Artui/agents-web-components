@@ -789,7 +789,7 @@ A run POST the server refuses before any event arrives reads the same table when
 JSON with a string `code`: django-ag-ui answers an over-long thread or run id with a 400 whose
 body is `{"error": <message>, "code": "identifier_too_long"}`, which draws the server's `error`
 message and the new-conversation offer, exactly as the `RUN_ERROR` would. `onError` receives the
-code in `RunErrorInfo` either way. A refusal with no `code`, or a body that is not JSON, and a
+code in `RunErrorInfo` either way. A refusal with no `code`, or a body not sent as `application/json`, and a
 stream that drops, show the client's own error text, for example `HTTP 400: {"detail": ...}`,
 with no offer.
 
@@ -3355,7 +3355,7 @@ paths.
 | `ToolOutcome` | type | The `TOOL_OUTCOME` values as a union. |
 | `toolStatusFromOutcome` | function | Map a wire outcome to the card status it settles into; anything absent or unrecognised is a success. |
 | `ConnectionLostError` | class | Raised (→ `onError`) when a run's stream closes with no terminal AG-UI event. |
-| `RunErrorInfo` | type | The second argument `AgUiClientHandlers.onError` gets for a `RUN_ERROR`: its `code`, when the server sent one. |
+| `RunErrorInfo` | type | The second argument `AgUiClientHandlers.onError` gets for a `RUN_ERROR`, or for a non-2xx run POST whose JSON body carries a string `code`: that `code`. For such a body, the message is the body's `error` when it is a string. |
 | `createHttpAgent(options)` | function | Default agent factory (wraps `HttpAgent`). |
 | `AgentFactory` / `HttpAgentOptions` | type | Factory signature and its options. |
 | `ResolveInterrupts` | type | Resolver for server-side-tool approval interrupts (one decision per interrupt). |
