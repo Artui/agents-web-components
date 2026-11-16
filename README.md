@@ -2098,13 +2098,21 @@ no run. A component or a catalog this renderer does not hold is drawn as an
 
 `./a2ui/bundle` (`dist/agents-web-components.a2ui.bundle.js`) is the same entry
 as one file with everything inlined, to load beside the main bundle. It reaches
-the element only through the `chat` it is handed, so it carries none of it.
+the element only through the `chat` it is handed, so it carries none of it. It
+does carry its own copy of `marked` and DOMPurify, since Text draws markdown
+through the same sanitiser as the transcript.
 
 ### Styling a surface
 
 Each surface is an `a2ui-surface` part; every component on it carries
-`part="a2ui-<kebab-case type>"` (`a2ui-text`, `a2ui-choice-picker`) and
-`data-a2ui-id`, its id on the surface. A slot whose child has not arrived yet
+`part="a2ui-<kebab-case type>"` and `data-a2ui-id`, its id on the surface. The
+parts are `a2ui-text`, `a2ui-image`, `a2ui-icon`, `a2ui-row`, `a2ui-column`,
+`a2ui-list`, `a2ui-card`, `a2ui-divider`, `a2ui-button`, `a2ui-text-field`,
+`a2ui-check-box` and `a2ui-choice-picker`. A variant shows on the component as a
+`data-` attribute: `data-variant` on Text and Image, `data-fit` on Image,
+`data-justify` and `data-align` on Row and Column, `data-align` and
+`data-direction` on List, `data-axis` on Divider, and `data-unknown` on an Icon
+whose name has no glyph. A slot whose child has not arrived yet
 holds a hidden `a2ui-placeholder`. An `@accessibility` label or description
 lands on the component's native control where it has one (the `<button>`, the
 `<input>`), and on the component otherwise. Inside the inputs:
