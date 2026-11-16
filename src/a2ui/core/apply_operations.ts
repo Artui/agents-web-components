@@ -1,4 +1,5 @@
 import type { A2uiError } from "./a2ui_error.js";
+import { idCounter } from "./id_counter.js";
 import { isObject } from "./is_object.js";
 import type { OperationsOptions } from "./operations_options.js";
 import { Surface } from "./surface.js";
@@ -20,6 +21,7 @@ export function applyOperations(
 ): SurfaceSet {
   const surfaces = new Map<string, { surface: Surface | null; catalogId: string }>();
   const report = (error: A2uiError): void => options.onError(error);
+  const nextId = options.nextId ?? idCounter();
   for (const [i, operation] of operations.entries()) {
     const at = `/a2ui_operations/${i}`;
     if (!isObject(operation)) {
@@ -77,7 +79,7 @@ export function applyOperations(
         surfaces.set(surfaceId, { surface: null, catalogId });
         continue;
       }
-      const surface = new Surface({ ...options, surfaceId });
+      const surface = new Surface({ ...options, nextId, surfaceId });
       if ("dataModel" in body) {
         surface.model.set("/", body["dataModel"]);
       }

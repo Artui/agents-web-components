@@ -4,6 +4,7 @@ import { A2UI_STYLES } from "./a2ui_styles.js";
 import { CATALOG_COMPONENTS } from "./catalog_components.js";
 import type { A2uiErrorMessage } from "./core/a2ui_error_message.js";
 import { applyOperations } from "./core/apply_operations.js";
+import { idCounter } from "./core/id_counter.js";
 import { isObject } from "./core/is_object.js";
 import { notice } from "./core/notice.js";
 import type { Surface } from "./core/surface.js";
@@ -28,6 +29,7 @@ export function a2uiRenderer(
   onError: (message: A2uiErrorMessage) => void,
 ): ActivityRenderer {
   const drawn = new WeakMap<Node, Drawn>();
+  const nextId = idCounter();
   return (content, { previous, live }) => {
     const key = `${live}:${JSON.stringify(content)}`;
     const last = previous === null ? undefined : drawn.get(previous);
@@ -46,6 +48,7 @@ export function a2uiRenderer(
       components: CATALOG_COMPONENTS,
       functions: BASIC_FUNCTIONS,
       live,
+      nextId,
       onAction,
       onError: (error) => {
         if (live) {

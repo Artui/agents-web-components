@@ -55,4 +55,27 @@ describe("a2uiRenderer", () => {
     expect(content).toEqual(before);
     expect(render(content, node)).toBe(node);
   });
+
+  it("gives the controls of two surfaces it draws distinct ids", () => {
+    const { chat, render } = host();
+    registerA2ui(chat);
+    const first = render(FORM()) as HTMLElement;
+    const second = render({ a2ui_operations: [] }) as HTMLElement;
+    const third = render(FORM()) as HTMLElement;
+    const ids = [first, third].map((node) => node.querySelector("input")?.id);
+    expect(second).not.toBeNull();
+    expect(ids[0]).not.toBe("");
+    expect(ids[0]).not.toBe(ids[1]);
+  });
+
+  it("counts ids per registration, so a second one starts where the first did", () => {
+    const one = host();
+    const two = host();
+    registerA2ui(one.chat);
+    registerA2ui(two.chat);
+    const idIn = (node: Node | null) => (node as HTMLElement).querySelector("input")?.id;
+    const first = idIn(one.render(FORM()));
+    one.render(FORM());
+    expect(idIn(two.render(FORM()))).toBe(first);
+  });
 });

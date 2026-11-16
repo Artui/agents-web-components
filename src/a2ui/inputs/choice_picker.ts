@@ -1,5 +1,5 @@
 import type { ComponentRenderer } from "../core/component_renderer.js";
-import { asText, bindChecks, nextId } from "./utils.js";
+import { asText, bindChecks } from "./utils.js";
 
 interface Choice {
   readonly option: HTMLLabelElement;
@@ -38,7 +38,7 @@ export const choicePicker: ComponentRenderer = (component, scope) => {
   message.setAttribute("part", "a2ui-choice-picker-message");
   root.append(list, message);
 
-  const name = nextId("a2ui-choice");
+  const name = scope.nextId("a2ui-choice");
   const choices: Choice[] = [];
   const refilter = (): void => {
     const query = filter === null ? "" : filter.value.trim().toLowerCase();

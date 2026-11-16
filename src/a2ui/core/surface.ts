@@ -5,6 +5,7 @@ import type { CheckFailure } from "./check_failure.js";
 import type { ComponentRenderer } from "./component_renderer.js";
 import { DataModel } from "./data_model.js";
 import type { FunctionContext } from "./function_context.js";
+import { idCounter } from "./id_counter.js";
 import { isObject } from "./is_object.js";
 import { joinPointer } from "./join_pointer.js";
 import { notice } from "./notice.js";
@@ -23,6 +24,8 @@ export interface SurfaceOptions {
   readonly onAction: (action: UserAction) => void;
   /** Each distinct error once per surface, in the order it was found. */
   readonly onError: (error: A2uiError) => void;
+  /** Where {@link SurfaceScope.nextId} draws from; surfaces sharing one never repeat an id. */
+  readonly nextId?: (prefix: string) => string;
 }
 
 interface Watcher {
@@ -58,10 +61,12 @@ export class Surface {
   readonly #definitions = new Map<string, A2uiComponent>();
   readonly #watchers = new Set<Watcher>();
   readonly #reported = new Set<string>();
+  readonly #nextId: (prefix: string) => string;
   #drawn: Bag | null = null;
 
   constructor(options: SurfaceOptions, model: DataModel = new DataModel()) {
     this.#options = options;
+    this.#nextId = options.nextId ?? idCounter();
     this.model = model;
     model.subscribe(() => this.#refresh());
   }
@@ -417,6 +422,7 @@ export class Surface {
       children: (list, container) => this.#children(place, list, container),
       act: (action, component) => this.#act(place, action, component),
       checks: (component, apply) => this.#checks(place, component, apply),
+      nextId: (prefix) => this.#nextId(prefix),
     };
   }
 }

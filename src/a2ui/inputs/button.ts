@@ -1,5 +1,4 @@
 import type { ComponentRenderer } from "../core/component_renderer.js";
-import { nextId } from "./utils.js";
 
 const VARIANTS: readonly unknown[] = ["default", "primary", "borderless"];
 
@@ -23,7 +22,7 @@ export const button: ComponentRenderer = (component, scope) => {
 
   const message = document.createElement("div");
   message.setAttribute("part", "a2ui-button-message");
-  message.id = nextId("a2ui-check");
+  message.id = scope.nextId("a2ui-check");
   message.hidden = true;
   root.append(control, message);
 

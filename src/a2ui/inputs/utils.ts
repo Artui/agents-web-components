@@ -2,14 +2,6 @@ import type { A2uiComponent } from "../core/a2ui_component.js";
 import type { CheckFailure } from "../core/check_failure.js";
 import type { SurfaceScope } from "../core/surface_scope.js";
 
-let counter = 0;
-
-/** An id unique to this page, for a label's `for` and an `aria-describedby`. */
-export function nextId(prefix: string): string {
-  counter += 1;
-  return `${prefix}-${counter}`;
-}
-
 /** A resolved `DynamicString` as text: nothing for `null` or a missing value. */
 export function asText(value: unknown): string {
   return value === undefined || value === null ? "" : String(value);
@@ -26,7 +18,7 @@ export function bindChecks(
   message: HTMLElement,
   control: Element,
 ): () => void {
-  message.id = nextId("a2ui-check");
+  message.id = scope.nextId("a2ui-check");
   message.hidden = true;
   let failures: readonly CheckFailure[] = [];
   let touched = false;

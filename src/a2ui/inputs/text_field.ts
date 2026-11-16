@@ -1,5 +1,5 @@
 import type { ComponentRenderer } from "../core/component_renderer.js";
-import { asText, bindChecks, nextId } from "./utils.js";
+import { asText, bindChecks } from "./utils.js";
 
 const VARIANTS: readonly unknown[] = ["shortText", "longText", "number", "obscured"];
 
@@ -29,7 +29,7 @@ export const textField: ComponentRenderer = (component, scope) => {
       control.inputMode = "decimal";
     }
   }
-  control.id = nextId("a2ui-text-field");
+  control.id = scope.nextId("a2ui-text-field");
   label.htmlFor = control.id;
   control.disabled = !scope.live;
 

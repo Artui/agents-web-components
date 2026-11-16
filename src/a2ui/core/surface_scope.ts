@@ -55,4 +55,9 @@ export interface SurfaceScope {
    * `apply` with the ones that fail (an empty list when all pass).
    */
   checks(component: A2uiComponent, apply: (failures: readonly CheckFailure[]) => void): void;
+  /**
+   * An id unique among everything this renderer draws, for a label's `for`
+   * and an `aria-describedby`: `prefix-n`.
+   */
+  nextId(prefix: string): string;
 }
