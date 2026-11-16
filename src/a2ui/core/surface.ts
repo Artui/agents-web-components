@@ -263,11 +263,12 @@ export class Surface {
     if (!isObject(accessibility)) {
       return;
     }
-    const attribute = (name: string, value: unknown): void => {
+    const control = element.querySelector("[data-a2ui-control]") ?? element;
+    const attribute = (name: string, value: unknown, target: Element = element): void => {
       if (value === undefined || value === null || value === "") {
-        element.removeAttribute(name);
+        target.removeAttribute(name);
       } else {
-        element.setAttribute(name, String(value));
+        target.setAttribute(name, String(value));
       }
     };
     if (accessibility["label"] !== undefined) {
@@ -275,7 +276,7 @@ export class Surface {
         place,
         () => this.#resolve(place, accessibility["label"]),
         (value) => {
-          attribute("aria-label", value);
+          attribute("aria-label", value, control);
         },
       );
     }
@@ -284,7 +285,7 @@ export class Surface {
         place,
         () => this.#resolve(place, accessibility["description"]),
         (value) => {
-          attribute("aria-description", value);
+          attribute("aria-description", value, control);
         },
       );
     }

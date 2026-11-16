@@ -2105,8 +2105,11 @@ the element only through the `chat` it is handed, so it carries none of it.
 Each surface is an `a2ui-surface` part; every component on it carries
 `part="a2ui-<kebab-case type>"` (`a2ui-text`, `a2ui-choice-picker`) and
 `data-a2ui-id`, its id on the surface. A slot whose child has not arrived yet
-holds a hidden `a2ui-placeholder`. Inside the inputs:
+holds a hidden `a2ui-placeholder`. An `@accessibility` label or description
+lands on the component's native control where it has one (the `<button>`, the
+`<input>`), and on the component otherwise. Inside the inputs:
 
+- Button: `a2ui-button-control`, `a2ui-button-message`;
 - TextField: `a2ui-text-field-label`, `a2ui-text-field-input`,
   `a2ui-text-field-message`;
 - CheckBox: `a2ui-check-box-label`, `a2ui-check-box-input`,
