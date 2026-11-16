@@ -194,4 +194,17 @@ describe("ChoicePicker", () => {
     expect(drawn.model.get("/pick")).toEqual(["email"]);
     expect(drawn.actions).toEqual([]);
   });
+
+  it("takes an @accessibility label on the fieldset, and on no input", () => {
+    const drawn = drawSurface({
+      components: [picker({ "@accessibility": { label: "Preferred channel" } })],
+    });
+    const fieldset = drawn.byId("root");
+
+    expect(fieldset.tagName).toBe("FIELDSET");
+    expect(fieldset.getAttribute("aria-label")).toBe("Preferred channel");
+    for (const input of drawn.node.querySelectorAll("input")) {
+      expect(input.hasAttribute("aria-label")).toBe(false);
+    }
+  });
 });
