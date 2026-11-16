@@ -31,13 +31,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The A2UI renderer draws the basic catalog's display components**: Text, Image, Icon, Row,
   Column, List, Card and Divider, with the basic catalog v1's names and properties. Text is
   markdown through the transcript's sanitiser, so an agent's HTML, handlers, links to `javascript:`
-  and images never reach the DOM. Image loads only `http:`, `https:` and `data:image/...` URLs and
-  is hidden with no source otherwise. Icon draws the catalog's 59 names as Material Symbols glyphs
-  (Apache-2.0) and the `{svgPath}` form in a 24-unit box; an unknown name draws an empty glyph.
-  List draws a template once per item of its array. Each component is styled through the theme's
-  tokens and found by its part (`a2ui-text`, `a2ui-image`, `a2ui-icon`, `a2ui-row`, `a2ui-column`,
-  `a2ui-list`, `a2ui-card`, `a2ui-divider`), with its variant on a `data-` attribute. A host opts
-  in through the `./a2ui` entry.
+  and images never reach the DOM. Image loads only `http:`, `https:` and `data:image/...` URLs, or
+  a relative path on the page's own host, and is hidden with no source otherwise. Icon draws the
+  catalog's 59 names as Material Symbols glyphs (Apache-2.0) and the `{svgPath}` form in a 24-unit
+  box; an unknown name draws an empty glyph. List draws a template once per item of its array.
+  Each component is styled through the theme's tokens and found by its part (`a2ui-text`,
+  `a2ui-image`, `a2ui-icon`, `a2ui-row`, `a2ui-column`, `a2ui-list`, `a2ui-card`, `a2ui-divider`),
+  with its variant on a `data-` attribute. A host opts in through the `./a2ui` entry.
 - **The A2UI input components: `Button`, `TextField`, `CheckBox` and `ChoicePicker`, with the basic
   catalog's names and properties.** `Button` draws its child inside a native button, runs its
   `action` once per click, and is disabled while any `@checks` rule fails, with the rule's message
@@ -63,8 +63,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `pluralize` go through `Intl` in the page's locale; `and`, `or` and `not` coerce by the spec's
   table. `regex` follows the A2UI dialect: a pattern it forbids or cannot compile is `valid:
   false`, never a throw. `openUrl` runs only from a user gesture and only for a URL the http(s)
-  allowlist approves, opened with `noopener,noreferrer`. `pluralize` picks `zero` for 0 when it is
-  given.
+  allowlist approves or a relative path on the page's own host, opened with `noopener,noreferrer`.
+  `pluralize` picks `zero` for 0 when it is given.
 
 ## [0.3.0] — 2026-11-15
 

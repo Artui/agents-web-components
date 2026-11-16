@@ -2081,6 +2081,10 @@ Row, Column, List, Card, Divider, Button, TextField, CheckBox, ChoicePicker)
 and fourteen functions (required, regex, length, numeric, email, formatString,
 formatNumber, formatCurrency, formatDate, pluralize, openUrl, and, or, not).
 
+An Image loads only an `http:` or `https:` URL, an image `data:` URL, or a
+relative path on the page's own host; `openUrl` takes the same, minus `data:`.
+Anything else the agent names draws no image and opens nothing.
+
 A surface restored from a stored conversation is drawn inert: its buttons do
 nothing and its inputs are disabled, because acting on it would send an action
 from a turn long past.

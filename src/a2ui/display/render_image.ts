@@ -6,8 +6,9 @@ const VARIANTS = ["icon", "avatar", "smallFeature", "mediumFeature", "largeFeatu
 const FITS = ["contain", "cover", "fill", "none", "scaleDown"];
 
 /**
- * Image: `url` when it is http, https or an image data URL, else no source at
- * all and the element hidden, so nothing the agent names outside that list loads.
+ * Image: `url` when it is http, https, an image data URL or a relative path on
+ * the page's own host, else no source at all and the element hidden, so
+ * nothing the agent names outside that list loads.
  */
 export const renderImage: ComponentRenderer = (component, scope) => {
   const element = document.createElement("img");
