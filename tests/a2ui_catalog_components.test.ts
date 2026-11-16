@@ -34,13 +34,11 @@ const FUNCTIONS = [
 ];
 
 describe("the catalog tables", () => {
-  it("draws only components of the catalog", () => {
-    expect(Object.keys(CATALOG_COMPONENTS).filter((name) => !COMPONENTS.includes(name))).toEqual(
-      [],
-    );
+  it("draws every component of the catalog, and nothing else", () => {
+    expect(Object.keys(CATALOG_COMPONENTS).sort()).toEqual([...COMPONENTS].sort());
   });
 
-  it("runs only functions of the catalog", () => {
-    expect(Object.keys(BASIC_FUNCTIONS).filter((name) => !FUNCTIONS.includes(name))).toEqual([]);
+  it("runs every function of the catalog, and nothing else", () => {
+    expect(Object.keys(BASIC_FUNCTIONS).sort()).toEqual([...FUNCTIONS].sort());
   });
 });
