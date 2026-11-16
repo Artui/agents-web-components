@@ -3,6 +3,7 @@
 //   - dist/index.js, dist/chat.js and their shared chunks — externals (@ag-ui/*) NOT bundled
 //     (npm-consumer build)
 //   - dist/agents-web-components.bundle.js  — ESM, @ag-ui/* INLINED (vendored-bundle build)
+//   - dist/agents-web-components.a2ui.bundle.js — the A2UI renderer alone, vendored beside it
 //
 // The vendored bundle is what django-admin-agent ships under its
 // static/ directory. Its options are exported so the browser test that loads
@@ -101,7 +102,7 @@ export const zodNamespaceImport = {
  */
 export const LIBRARY = {
   ...SHARED,
-  entryPoints: ["src/index.ts", "src/chat.ts"],
+  entryPoints: ["src/index.ts", "src/chat.ts", "src/a2ui.ts"],
   outdir: "dist",
   splitting: true,
   external: ["@ag-ui/client", "@ag-ui/core"],
@@ -119,6 +120,20 @@ export const VENDORED_BUNDLE = {
   outfile: "dist/agents-web-components.bundle.js",
   minify: true,
   plugins: [zodNamespaceImport],
+};
+
+/**
+ * The A2UI renderer as a second vendored file, loaded beside the main bundle
+ * by a host that draws A2UI surfaces. It reaches the element only through the
+ * `chat` it is handed, so it inlines none of it (tests/entries.test.ts).
+ *
+ * @type {import("esbuild").BuildOptions}
+ */
+export const A2UI_BUNDLE = {
+  ...SHARED,
+  entryPoints: ["src/a2ui.ts"],
+  outfile: "dist/agents-web-components.a2ui.bundle.js",
+  minify: true,
 };
 
 /**
@@ -148,6 +163,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   const [, vendored] = await Promise.all([
     build(LIBRARY),
     build({ ...VENDORED_BUNDLE, metafile: true }),
+    build(A2UI_BUNDLE),
   ]);
   const jsonSchema = zodJsonSchemaInputs(vendored.metafile);
   if (jsonSchema.length > 0) {
