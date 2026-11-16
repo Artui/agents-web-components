@@ -48,6 +48,9 @@ function rejected(pattern: string): boolean {
       if (inner.nested || repeated) {
         mark(groups, "nested");
       }
+      if (inner.alternates) {
+        mark(groups, "alternates");
+      }
     } else if (char === "|") {
       mark(groups, "alternates");
     } else if (UNBOUNDED.test(pattern.slice(i))) {

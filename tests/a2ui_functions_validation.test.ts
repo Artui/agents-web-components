@@ -51,6 +51,10 @@ describe("regex", () => {
     ["an overlapping alternation repeated by a star", "(a|a)*b"],
     ["an overlapping alternation repeated by a plus", "(a|aa)+$"],
     ["a non-capturing alternation repeated by an open range", "(?:x|y){2,}"],
+    ["an alternation one group down, repeated", "((a|a))*b"],
+    ["an alternation two non-capturing groups down, repeated", "(?:(?:a|a))*b"],
+    ["an alternation beside an optional, repeated", "(x?(a|a))*b"],
+    ["an alternation before an optional, repeated", "((a|a)x?)*b"],
   ])("returns false and never throws for %s", (_name, pattern) => {
     const result = callBasic("regex", { value: "aaaa", pattern }) as {
       valid: boolean;

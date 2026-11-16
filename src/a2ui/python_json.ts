@@ -2,9 +2,9 @@ const EXPONENT = /e([+-])(\d)$/;
 
 /**
  * `value` as compact JSON spelled the way Python's `json.dumps(value,
- * separators=(",", ":"), ensure_ascii=False)` spells it. The two agree except
- * for a non-integer number below 1e-4, which Python writes `1e-05` where
- * `JSON.stringify` writes `0.00001`, or `1.5e-07` where it writes `1.5e-7`.
+ * separators=(",", ":"), ensure_ascii=False)` spells it: a non-integer number
+ * below 1e-4 is `1e-05`, not `0.00001`. What a parsed JS value cannot carry
+ * (`1.0` against `1`, integers past 2^53, a lone surrogate) still differs.
  */
 export function pythonJson(value: unknown): string {
   if (typeof value === "number") {
