@@ -28,6 +28,9 @@ describe("safeUrl", () => {
     "\\\\evil.example/x",
     "/\\evil.example/x",
     "/\t/evil.example/x",
+    `j${"\t".repeat(70)}avascript:alert(1)`,
+    `/${"\t".repeat(70)}/evil.example/x`,
+    `\n${"\r".repeat(100)}//evil.example/x`,
   ])("refuses %j", (url) => {
     expect(safeUrl(url)).toBeNull();
   });

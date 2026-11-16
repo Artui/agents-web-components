@@ -30,10 +30,17 @@ export function safeUrl(
   if (start === end) {
     return null;
   }
-  const head = value.slice(start, Math.min(end, start + HEAD)).replace(/[\t\n\r]/g, "");
+  let head = "";
+  for (let i = start; i < end && head.length < HEAD; i++) {
+    const char = value.charAt(i);
+    if (char !== "\t" && char !== "\n" && char !== "\r") {
+      head += char;
+    }
+  }
   const scheme = /^([a-zA-Z][a-zA-Z0-9+.-]*):/.exec(head)?.[1]?.toLowerCase();
   if (scheme === undefined) {
-    return /^[/\\]{2}/.test(head) ? null : resolve(value.slice(start, end));
+    const url = /^[/\\]{2}/.test(head) ? null : resolve(value.slice(start, end));
+    return url?.origin === new URL(document.baseURI).origin ? url.href : null;
   }
   if (!schemes.includes(`${scheme}:`)) {
     return null;
@@ -44,12 +51,13 @@ export function safeUrl(
   if ((scheme === "http" || scheme === "https") && !/^[a-z]+:[/\\]{2}[^/\\?#]/i.test(head)) {
     return null;
   }
-  return resolve(value.slice(start, end));
+  const url = resolve(value.slice(start, end));
+  return url !== null && schemes.includes(url.protocol) ? url.href : null;
 }
 
-function resolve(url: string): string | null {
+function resolve(url: string): URL | null {
   try {
-    return new URL(url, document.baseURI).href;
+    return new URL(url, document.baseURI);
   } catch {
     return null;
   }

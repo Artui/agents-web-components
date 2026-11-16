@@ -204,6 +204,29 @@ async function handleAgent(res, body) {
     res.end();
     return;
   }
+  // An A2UI surface in the shape django-ag-ui's render_a2ui sends, for the
+  // catalog registerA2ui posts; its button's action comes back as props.
+  const a2uiAction = input.forwardedProps?.a2uiAction?.userAction;
+  if (a2uiAction !== undefined) {
+    const { name, context } = a2uiAction;
+    await streamText(res, id("msg"), [`Action "${name}" arrived with `, `${JSON.stringify(context)}.`]);
+    emit(res, { type: "RUN_FINISHED", threadId, runId });
+    res.end();
+    return;
+  }
+  if (/\ba2ui\b/i.test(prompt)) {
+    await streamText(res, id("msg"), ["Here is a small A2UI form."]);
+    emit(res, {
+      type: "ACTIVITY_SNAPSHOT",
+      messageId: id("a2ui-surface"),
+      activityType: "a2ui-surface",
+      replace: true,
+      content: { a2ui_operations: a2uiSurface(input.context) },
+    });
+    emit(res, { type: "RUN_FINISHED", threadId, runId });
+    res.end();
+    return;
+  }
   if (/\brelease form\b/i.test(prompt)) {
     const surface = id("m");
     emit(res, { type: "ACTIVITY_SNAPSHOT", messageId: surface, activityType: "release_form", content: { step: "Step 1 of 2: name the release" } });
@@ -573,6 +596,66 @@ async function handleAgent(res, body) {
   res.end();
 }
 
+/** The operations of the demo's A2UI surface, under the catalog id the page posted. */
+function a2uiSurface(context) {
+  const posted = (context ?? []).find((entry) => entry.description.startsWith("A2UI Component Schema"));
+  const catalogId = posted === undefined ? "unknown" : JSON.parse(posted.value).catalogId;
+  const surfaceId = id("release");
+  const components = [
+    { id: "root", component: "Card", child: "body" },
+    { id: "body", component: "Column", children: ["title", "name", "channel", "notify", "send"] },
+    { id: "title", component: "Text", text: "Name the release", variant: "body" },
+    {
+      id: "name",
+      component: "TextField",
+      label: "Release name",
+      value: { "@path": "/release/name" },
+      "@checks": [
+        {
+          condition: { "@call": "required", args: { value: { "@path": "/release/name" } } },
+          message: "A release needs a name.",
+        },
+      ],
+    },
+    {
+      id: "channel",
+      component: "ChoicePicker",
+      label: "Channel",
+      options: [
+        { label: "Stable", value: "stable" },
+        { label: "Beta", value: "beta" },
+      ],
+      value: { "@path": "/release/channel" },
+    },
+    { id: "notify", component: "CheckBox", label: "Notify subscribers", value: { "@path": "/release/notify" } },
+    { id: "send-label", component: "Text", text: "Submit" },
+    {
+      id: "send",
+      component: "Button",
+      child: "send-label",
+      variant: "primary",
+      action: {
+        event: {
+          name: "submit_release",
+          userMessage: {
+            "@call": "formatString",
+            args: { value: "Submit release ${/release/name}" },
+          },
+          context: { release: { "@path": "/release" } },
+        },
+      },
+    },
+  ];
+  return [
+    { version: "1.0", createSurface: { surfaceId, catalogId } },
+    { version: "1.0", updateComponents: { surfaceId, components } },
+    {
+      version: "1.0",
+      updateDataModel: { surfaceId, path: "/", value: { release: { name: "", channel: ["stable"], notify: true } } },
+    },
+  ];
+}
+
 async function serveFile(res, path, contentType) {
   try {
     const data = await readFile(path);
@@ -766,6 +849,10 @@ const server = createServer((req, res) => {
   }
   if (req.method === "GET" && (path === "/" || path === "/index.html")) {
     serveFile(res, join(HERE, "themes", "index.html"), "text/html; charset=utf-8");
+    return;
+  }
+  if (req.method === "GET" && req.url === "/a2ui.bundle.js") {
+    serveFile(res, join(ROOT, "dist", "agents-web-components.a2ui.bundle.js"), "text/javascript");
     return;
   }
   if (req.method === "GET" && req.url === "/bundle.js") {
