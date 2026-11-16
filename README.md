@@ -55,6 +55,7 @@ This package is the successor of `@artooi/ag-ui-web-component`. Coming from it? 
   - [Maximizing the panel](#maximizing-the-panel)
   - [Collapsing to the launcher](#collapsing-to-the-launcher)
   - [Collapsing to a bottom bar](#collapsing-to-a-bottom-bar)
+- [A2UI surfaces](#a2ui-surfaces)
 - [Tool-call display modes](#tool-call-display-modes)
 - [Delegated sub-agents](#delegated-sub-agents)
 - [Markdown rendering](#markdown-rendering)
@@ -2045,6 +2046,16 @@ chat.unhandledActivityTypes; // ["build_status", …]
 
 Note `"chart"` appears there until you call `enableCharts(["activity"])`, which
 is the honest answer to "I pushed a chart and nothing happened".
+
+## A2UI surfaces
+
+An agent can describe a small interface as A2UI 1.0 components, and the
+`./a2ui` entry draws it from the data the server pushes, never from markup.
+Each surface is an `a2ui-surface` part; every component on it carries
+`part="a2ui-<kebab-case type>"` (`a2ui-text`, `a2ui-choice-picker`) and
+`data-a2ui-id`. A slot whose child has not arrived yet holds a hidden
+`a2ui-placeholder`, and a component this catalog cannot draw shows an
+`a2ui-notice` in its place.
 
 ## Tool-call display modes
 

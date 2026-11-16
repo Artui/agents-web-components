@@ -43,6 +43,8 @@ const DYNAMIC: Record<string, readonly string[]> = {
     "run-notice-surface",
     "run-notice-not-connected",
   ],
+  // a2ui Surface #decorate: `a2ui-<kebab-case type>` on each component it draws.
+  a2ui_component: ["a2ui-text", "a2ui-choice-picker"],
   // ag_ui_chat message bubbles, by role.
   bubble: ["message", "message-user", "message-assistant"],
   approval_card: ["approval-button", "approval-approve", "approval-deny"],
@@ -114,7 +116,7 @@ const DYNAMIC: Record<string, readonly string[]> = {
  * it. Every one is accounted for in {@link DYNAMIC}; a new one moves this number,
  * which is the point.
  */
-const RUNTIME_ASSEMBLED = { template: 15, variable: 1 };
+const RUNTIME_ASSEMBLED = { template: 16, variable: 1 };
 
 function sources(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
