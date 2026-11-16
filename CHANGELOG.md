@@ -18,8 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   context entry the server builds its `render_a2ui` tool from, and starts a run with
   `forwardedProps.a2uiAction` for each action, under the user turn id and text django-ag-ui stores
   for it, numbers spelled as Python's `json.dumps` spells them. Bindings, templates, `@checks` and
-  `@accessibility` follow the spec; a surface replayed from a stored conversation is drawn inert. A component or a catalog it does not hold is drawn as
-  a notice (part `a2ui-notice`); surfaces carry parts `a2ui-surface` and `a2ui-<kebab-case type>`.
+  `@accessibility` follow the spec; a surface replayed from a stored conversation is drawn inert. A
+  component or a catalog it does not hold is drawn as a notice (part `a2ui-notice`); surfaces carry
+  parts `a2ui-surface` and `a2ui-<kebab-case type>`.
   `./a2ui/bundle` is the same entry as a second vendored file (about 146 KB, with its own `marked`
   and DOMPurify for Text), which inlines none of the element. The main entries and the main bundle
   carry no A2UI code, so a host opts in by importing `./a2ui`.

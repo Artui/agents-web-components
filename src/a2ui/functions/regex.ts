@@ -9,7 +9,7 @@ interface Group {
   alternates: boolean;
 }
 
-function flag(groups: readonly Group[], key: keyof Group): void {
+function mark(groups: readonly Group[], key: keyof Group): void {
   const group = groups.at(-1);
   if (group !== undefined) {
     group[key] = true;
@@ -46,12 +46,12 @@ function rejected(pattern: string): boolean {
         return true;
       }
       if (inner.nested || repeated) {
-        flag(groups, "nested");
+        mark(groups, "nested");
       }
     } else if (char === "|") {
-      flag(groups, "alternates");
+      mark(groups, "alternates");
     } else if (UNBOUNDED.test(pattern.slice(i))) {
-      flag(groups, "nested");
+      mark(groups, "nested");
     }
   }
   return false;
