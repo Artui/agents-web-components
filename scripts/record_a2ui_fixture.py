@@ -75,7 +75,15 @@ ACTIONS = [
         "sourceComponentId": "go",
         "timestamp": "2026-11-16T10:00:00.000Z",
         "userMessage": "Ada",
-        "context": {"name": "Ada", "count": 2, "ratio": 0.5, "ok": True, "none": None},
+        "context": {
+            "name": "Ada",
+            "count": 2,
+            "ratio": 0.5,
+            "ok": True,
+            "none": None,
+            "tiny": 0.00001,
+            "small": 1.5e-7,
+        },
     },
     {
         "name": "pick",

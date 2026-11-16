@@ -147,11 +147,13 @@
           "count": 2,
           "ratio": 0.5,
           "ok": true,
-          "none": null
+          "none": null,
+          "tiny": 1e-05,
+          "small": 1.5e-07
         }
       },
       "id": "a2ui-action-user-4e65d3fbe8ad6535681b021b30785b12b6c0e3f8878859a4148b3f58b8835db0",
-      "content": "Ada\n\nA2UI user action:\n{\"name\":\"submit\",\"surfaceId\":\"s1\",\"sourceComponentId\":\"go\",\"timestamp\":\"2026-11-16T10:00:00.000Z\",\"userMessage\":\"Ada\",\"context\":{\"name\":\"Ada\",\"count\":2,\"ratio\":0.5,\"ok\":true,\"none\":null}}"
+      "content": "Ada\n\nA2UI user action:\n{\"name\":\"submit\",\"surfaceId\":\"s1\",\"sourceComponentId\":\"go\",\"timestamp\":\"2026-11-16T10:00:00.000Z\",\"userMessage\":\"Ada\",\"context\":{\"name\":\"Ada\",\"count\":2,\"ratio\":0.5,\"ok\":true,\"none\":null,\"tiny\":1e-05,\"small\":1.5e-07}}"
     },
     {
       "runId": "3f2c1d1e-7a7b-4c4d-8e8f-909192939495",

@@ -1,5 +1,6 @@
 import type { AgUiRunRequest } from "../core/agui_client.js";
 import type { UserAction } from "./core/user_action.js";
+import { pythonJson } from "./python_json.js";
 import { sha256Hex } from "./sha256_hex.js";
 
 /**
@@ -12,7 +13,7 @@ import { sha256Hex } from "./sha256_hex.js";
  * JSON.
  */
 export function actionRequest(action: UserAction, runId: string): AgUiRunRequest {
-  const block = `A2UI user action:\n${JSON.stringify(action)}`;
+  const block = `A2UI user action:\n${pythonJson(action)}`;
   return {
     forwardedProps: { a2uiAction: { userAction: action } },
     runId,
