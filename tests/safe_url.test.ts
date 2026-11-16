@@ -35,6 +35,10 @@ describe("safeUrl", () => {
     expect(safeUrl(url)).toBeNull();
   });
 
+  it("refuses a two-slash path naming the page's own host", () => {
+    expect(safeUrl(`//${location.host}/x`)).toBeNull();
+  });
+
   it("reads tab, CR and LF out of the scheme as a browser does", () => {
     expect(safeUrl("ht\ttps://example.com/")).toBe("https://example.com/");
   });

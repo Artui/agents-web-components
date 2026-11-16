@@ -17,6 +17,11 @@ describe("safeUrl in a browser", () => {
     expect(safeUrl(url, ["https:", "http:", "data:"])).toBeNull();
   });
 
+  it("refuses a two-slash path naming the page's own host", () => {
+    expect(location.host).not.toBe("");
+    expect(safeUrl(`//${location.host}/x`)).toBeNull();
+  });
+
   it("keeps a same-host path on the page's host", () => {
     expect(safeUrl("/img/a.png")).toBe(new URL("/img/a.png", document.baseURI).href);
   });
