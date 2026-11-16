@@ -41,7 +41,7 @@ export function a2uiRenderer(
     if (!Array.isArray(operations)) {
       return null;
     }
-    const set = applyOperations(operations, {
+    const set = applyOperations(structuredClone(operations), {
       catalogId: A2UI_CATALOG.catalogId,
       components: CATALOG_COMPONENTS,
       functions: BASIC_FUNCTIONS,
