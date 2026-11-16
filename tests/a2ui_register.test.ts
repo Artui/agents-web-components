@@ -144,6 +144,18 @@ describe("registerA2ui", () => {
     expect(request?.message?.content.startsWith("Ada\n\nA2UI user action:\n{")).toBe(true);
   });
 
+  it("gives each click of a live action its own run and its own user turn", () => {
+    const { chat, render, runs } = host();
+    registerA2ui(chat);
+    const button = (render(PROBE()) as HTMLElement).querySelector("button");
+    button?.click();
+    button?.click();
+    const [first, second] = runs;
+    expect(runs).toHaveLength(2);
+    expect(first?.runId).not.toBe(second?.runId);
+    expect(first?.message?.id).not.toBe(second?.message?.id);
+  });
+
   it("draws a replayed surface inert: no run, no error", () => {
     const { chat, render, runs } = host();
     const errors: A2uiErrorMessage[] = [];
