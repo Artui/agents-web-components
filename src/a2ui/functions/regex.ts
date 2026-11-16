@@ -4,12 +4,24 @@ const MAX_PATTERN_CODE_POINTS = 256;
 const UNBOUNDED = /^(?:[*+]|\{\d+,\})/;
 const FORBIDDEN = /^(?:[1-9]|k<|[pP]\{)/;
 
-/** Whether the A2UI regex dialect forbids `pattern`: backreferences, lookbehind, named groups, `\p`, nested unbounded quantifiers. */
+interface Group {
+  nested: boolean;
+  alternates: boolean;
+}
+
+function flag(groups: readonly Group[], key: keyof Group): void {
+  const group = groups.at(-1);
+  if (group !== undefined) {
+    group[key] = true;
+  }
+}
+
+/** Whether the A2UI regex dialect forbids `pattern`: backreferences, lookbehind, named groups, `\p`, nested or alternating unbounded quantifiers. */
 function rejected(pattern: string): boolean {
   if ([...pattern].length > MAX_PATTERN_CODE_POINTS) {
     return true;
   }
-  const groups: boolean[] = [];
+  const groups: Group[] = [];
   let inClass = false;
   for (let i = 0; i < pattern.length; i++) {
     const char = pattern.charAt(i);
@@ -26,19 +38,20 @@ function rejected(pattern: string): boolean {
       if (/^\(\?<[=!A-Za-z_$]/.test(pattern.slice(i, i + 4))) {
         return true;
       }
-      groups.push(false);
+      groups.push({ nested: false, alternates: false });
     } else if (char === ")") {
-      const inner = groups.pop() ?? false;
-      const next = pattern.slice(i + 1);
-      const repeated = UNBOUNDED.test(next);
-      if (inner && repeated) {
+      const inner = groups.pop() ?? { nested: false, alternates: false };
+      const repeated = UNBOUNDED.test(pattern.slice(i + 1));
+      if (repeated && (inner.nested || inner.alternates)) {
         return true;
       }
-      if (groups.length > 0 && (inner || repeated)) {
-        groups[groups.length - 1] = true;
+      if (inner.nested || repeated) {
+        flag(groups, "nested");
       }
-    } else if (groups.length > 0 && UNBOUNDED.test(pattern.slice(i))) {
-      groups[groups.length - 1] = true;
+    } else if (char === "|") {
+      flag(groups, "alternates");
+    } else if (UNBOUNDED.test(pattern.slice(i))) {
+      flag(groups, "nested");
     }
   }
   return false;

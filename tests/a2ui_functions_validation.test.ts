@@ -48,6 +48,9 @@ describe("regex", () => {
     ["an open range inside a repeated group", "((a{2,})b)+"],
     ["a deeper nesting", "((a+)b)*"],
     ["a stray closing parenthesis", "a)"],
+    ["an overlapping alternation repeated by a star", "(a|a)*b"],
+    ["an overlapping alternation repeated by a plus", "(a|aa)+$"],
+    ["a non-capturing alternation repeated by an open range", "(?:x|y){2,}"],
   ])("returns false and never throws for %s", (_name, pattern) => {
     const result = callBasic("regex", { value: "aaaa", pattern }) as {
       valid: boolean;
@@ -57,7 +60,10 @@ describe("regex", () => {
   });
 
   it("accepts what the dialect allows", () => {
-    expect(valid("regex", { value: "ab", pattern: "^(a|b)+$" })).toBe(true);
+    expect(valid("regex", { value: "b", pattern: "^(a|b)$" })).toBe(true);
+    expect(valid("regex", { value: "cdab", pattern: "^(?:ab|cd){2}$" })).toBe(true);
+    expect(valid("regex", { value: "a|b", pattern: "^[a|b]+$" })).toBe(true);
+    expect(valid("regex", { value: "abbb", pattern: "^a|b+$" })).toBe(true);
     expect(valid("regex", { value: "a+", pattern: "^a\\+$" })).toBe(true);
     expect(valid("regex", { value: "a1", pattern: "^[a-z\\d]+$" })).toBe(true);
     expect(valid("regex", { value: "a]", pattern: "^[\\]a]+$" })).toBe(true);
