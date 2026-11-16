@@ -1,5 +1,5 @@
 import type { A2uiFunction } from "../core/a2ui_function.js";
-import { localeOf, stringArg } from "./utils.js";
+import { stringArg } from "./utils.js";
 
 const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
 
@@ -25,7 +25,7 @@ function toDate(value: unknown): Date {
   return date;
 }
 
-function fieldsOf(value: unknown, timeZone: string | undefined): Fields {
+function fieldsOf(value: unknown): Fields {
   if (typeof value === "string") {
     const match = DATE_ONLY.exec(value);
     if (match) {
@@ -40,47 +40,25 @@ function fieldsOf(value: unknown, timeZone: string | undefined): Fields {
     }
   }
   const date = toDate(value);
-  if (timeZone === undefined) {
-    return {
-      year: date.getFullYear(),
-      month: date.getMonth() + 1,
-      day: date.getDate(),
-      hour: date.getHours(),
-      minute: date.getMinutes(),
-      second: date.getSeconds(),
-    };
-  }
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    hourCycle: "h23",
-    year: "numeric",
-    month: "numeric",
-    day: "numeric",
-    hour: "numeric",
-    minute: "numeric",
-    second: "numeric",
-  }).formatToParts(date);
-  const read = (type: string): number =>
-    Number(parts.filter((part) => part.type === type).map((part) => part.value)[0]);
   return {
-    year: read("year"),
-    month: read("month"),
-    day: read("day"),
-    hour: read("hour"),
-    minute: read("minute"),
-    second: read("second"),
+    year: date.getFullYear(),
+    month: date.getMonth() + 1,
+    day: date.getDate(),
+    hour: date.getHours(),
+    minute: date.getMinutes(),
+    second: date.getSeconds(),
   };
 }
 
 const pad = (value: number, width: number): string => String(value).padStart(width, "0");
 
 /** The Unicode TR35 pattern's tokens: runs of a letter, quoted text, anything else as is. */
-function render(pattern: string, fields: Fields, locale: string | undefined): string {
+function render(pattern: string, fields: Fields): string {
   const wall = new Date(
     Date.UTC(fields.year, fields.month - 1, fields.day, fields.hour, fields.minute, fields.second),
   );
   const name = (options: Intl.DateTimeFormatOptions): string =>
-    new Intl.DateTimeFormat(locale, { ...options, timeZone: "UTC" }).format(wall);
+    new Intl.DateTimeFormat(undefined, { ...options, timeZone: "UTC" }).format(wall);
   const hour12 = fields.hour % 12 === 0 ? 12 : fields.hour % 12;
   let out = "";
   for (let i = 0; i < pattern.length; ) {
@@ -139,7 +117,11 @@ function render(pattern: string, fields: Fields, locale: string | undefined): st
         out += pad(fields.second, run);
         break;
       case "a":
-        out += new Intl.DateTimeFormat(locale, { hour: "numeric", hour12: true, timeZone: "UTC" })
+        out += new Intl.DateTimeFormat(undefined, {
+          hour: "numeric",
+          hour12: true,
+          timeZone: "UTC",
+        })
           .formatToParts(wall)
           .filter((part) => part.type === "dayPeriod")
           .map((part) => part.value)
@@ -152,12 +134,6 @@ function render(pattern: string, fields: Fields, locale: string | undefined): st
   return out;
 }
 
-/** `formatDate`: a date (ISO string, epoch milliseconds) by a Unicode TR35 `format`, names from `Intl`, with an optional `locale` and `timeZone`. */
-export const formatDate: A2uiFunction = (args) => {
-  const timeZone = args["timeZone"];
-  return render(
-    stringArg(args["format"], "format"),
-    fieldsOf(args["value"], typeof timeZone === "string" ? timeZone : undefined),
-    localeOf(args),
-  );
-};
+/** `formatDate`: a date (ISO string, epoch milliseconds) by a Unicode TR35 `format`, names from `Intl` in the page's locale and time zone. */
+export const formatDate: A2uiFunction = (args) =>
+  render(stringArg(args["format"], "format"), fieldsOf(args["value"]));

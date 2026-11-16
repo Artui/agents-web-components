@@ -1,8 +1,8 @@
 import type { A2uiFunction } from "../core/a2ui_function.js";
 import { toBoolean } from "../core/to_boolean.js";
-import { localeOf, numberArg, stringArg } from "./utils.js";
+import { numberArg, stringArg } from "./utils.js";
 
-/** `formatCurrency`: `value` in the ISO 4217 `currency` through `Intl.NumberFormat`, with `decimals`, `grouping` and an optional `locale`. */
+/** `formatCurrency`: `value` in the ISO 4217 `currency` through `Intl.NumberFormat`, with `decimals` and `grouping`. */
 export const formatCurrency: A2uiFunction = (args) => {
   const options: Intl.NumberFormatOptions = {
     style: "currency",
@@ -14,5 +14,5 @@ export const formatCurrency: A2uiFunction = (args) => {
     options.minimumFractionDigits = decimals;
     options.maximumFractionDigits = decimals;
   }
-  return new Intl.NumberFormat(localeOf(args), options).format(numberArg(args["value"], "value"));
+  return new Intl.NumberFormat(undefined, options).format(numberArg(args["value"], "value"));
 };

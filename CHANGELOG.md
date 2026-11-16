@@ -12,11 +12,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The A2UI basic catalog's 14 functions run.** `required`, `regex`, `length`, `numeric` and
   `email` return a `ValidationResult`; `formatString` interpolates `${path}` and
   `${fn(name: value)}` (with `\${` as a literal); `formatNumber`, `formatCurrency`,
-  `formatDate` and `pluralize` go through `Intl` and take an optional `locale` (`formatDate`
-  also an optional `timeZone`); `and`, `or` and `not` coerce by the spec's table. `regex`
-  follows the A2UI dialect: a pattern it forbids or cannot compile is `valid: false`, never a
+  `formatDate` and `pluralize` go through `Intl` in the page's locale; `and`, `or` and `not`
+  coerce by the spec's table. `regex` follows the A2UI dialect: a pattern it forbids or cannot compile is `valid: false`, never a
   throw. `openUrl` runs only from a user gesture and only for a URL the http(s) allowlist
   approves, opened with `noopener,noreferrer`. `pluralize` picks `zero` for 0 when it is given.
+- **A2UI 1.0 surfaces, drawn from data, in a new `./a2ui` entry.** `registerA2ui(chat, {onError?})`
+  registers the `a2ui-surface` activity renderer that `@ag-ui/a2ui-middleware` 0.0.16 and
+  django-ag-ui 0.78.0's `render_a2ui` send, posts this renderer's catalog (the basic catalog's
+  twelve components and fourteen functions, `a2ui/v1/catalog.json`, about 12,000 characters) as
+  the context entry the server builds its `render_a2ui` tool from, and starts a run with
+  `forwardedProps.a2uiAction` for each action, under the user turn id and text django-ag-ui
+  stores for it. Bindings, templates, `@checks` and `@accessibility` follow the spec; a surface
+  replayed from a stored conversation is drawn inert. A component or a catalog it does not hold
+  is drawn as a notice (part `a2ui-notice`); surfaces carry parts `a2ui-surface` and
+  `a2ui-<kebab-case type>`. `./a2ui/bundle` is the same entry as a second vendored file, which
+  inlines none of the element. The main entries and the main bundle carry no A2UI code, so a host
+  opts in by importing `./a2ui`.
+- **A2UI errors go to the host, not the agent.** Neither the middleware nor django-ag-ui carries
+  A2UI's `error` message back yet, so a live surface hands each distinct one, in the spec's
+  `{version: "1.0", error: {code, surfaceId, message, path?}}` shape, to `onError` (default
+  `console.warn`), draws a notice, and starts no run (owner ruling).
 
 ## [0.3.0] — 2026-11-15
 

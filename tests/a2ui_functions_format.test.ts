@@ -1,29 +1,31 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { callBasic } from "./helpers/a2ui_function_context.js";
 
 const fmt = (name: string, args: Record<string, unknown>): unknown => callBasic(name, args);
 
+const NUMBER = (value: number, options?: Intl.NumberFormatOptions): string =>
+  new Intl.NumberFormat(undefined, options).format(value);
+
 describe("formatNumber", () => {
-  it("groups by default and honours decimals and grouping", () => {
-    expect(fmt("formatNumber", { value: 1234567.891, locale: "en-US" })).toBe("1,234,567.891");
-    expect(fmt("formatNumber", { value: 1234.5, decimals: 2, locale: "en-US" })).toBe("1,234.50");
-    expect(fmt("formatNumber", { value: 1234.5, decimals: 0, locale: "en-US" })).toBe("1,235");
-    expect(fmt("formatNumber", { value: 1234, grouping: false, locale: "en-US" })).toBe("1234");
-    expect(fmt("formatNumber", { value: 1234, grouping: "false", locale: "en-US" })).toBe("1234");
-  });
-
-  it("honours an explicit locale", () => {
-    expect(fmt("formatNumber", { value: 1234.5, decimals: 1, locale: "de-DE" })).toBe("1.234,5");
-  });
-
-  it("uses the host locale without one and reads a numeric string", () => {
-    expect(fmt("formatNumber", { value: "12" })).toBe(new Intl.NumberFormat().format(12));
-    expect(fmt("formatNumber", { value: 5, locale: null, decimals: 1, grouping: true })).toBe(
-      new Intl.NumberFormat(undefined, {
-        minimumFractionDigits: 1,
-        maximumFractionDigits: 1,
-      }).format(5),
+  it("groups by default and honours decimals and grouping, in the page's locale", () => {
+    expect(fmt("formatNumber", { value: 1234567.891 })).toBe(NUMBER(1234567.891));
+    expect(fmt("formatNumber", { value: 1234.5, decimals: 2 })).toBe(
+      NUMBER(1234.5, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
     );
+    expect(fmt("formatNumber", { value: 1234.5, decimals: 0 })).toBe(
+      NUMBER(1234.5, { maximumFractionDigits: 0 }),
+    );
+    expect(fmt("formatNumber", { value: 1234, grouping: false })).toBe(
+      NUMBER(1234, { useGrouping: false }),
+    );
+    expect(fmt("formatNumber", { value: 1234, grouping: "false" })).toBe(
+      NUMBER(1234, { useGrouping: false }),
+    );
+    expect(fmt("formatNumber", { value: "12", grouping: true })).toBe(NUMBER(12));
+  });
+
+  it("does not take a locale argument", () => {
+    expect(fmt("formatNumber", { value: 1234.5, locale: "de-DE" })).toBe(NUMBER(1234.5));
   });
 
   it.each([null, "abc", "", Number.NaN, Number.POSITIVE_INFINITY, {}])(
@@ -33,31 +35,26 @@ describe("formatNumber", () => {
     },
   );
 
-  it("throws on a non-numeric decimals or a non-string locale", () => {
+  it("throws on a non-numeric decimals", () => {
     expect(() => fmt("formatNumber", { value: 1, decimals: "x" })).toThrow("decimals");
-    expect(() => fmt("formatNumber", { value: 1, locale: 5 })).toThrow("locale");
   });
 });
 
 describe("formatCurrency", () => {
-  it("formats in the currency, with the locale's own digits by default", () => {
-    expect(fmt("formatCurrency", { value: 1234.5, currency: "USD", locale: "en-US" })).toBe(
-      "$1,234.50",
-    );
-    expect(fmt("formatCurrency", { value: 1234, currency: "JPY", locale: "ja-JP" })).toBe(
-      "￥1,234",
-    );
+  const money = (value: number, currency: string, extra?: Intl.NumberFormatOptions): string =>
+    NUMBER(value, { style: "currency", currency, ...extra });
+
+  it("formats in the currency, with its own digits by default", () => {
+    expect(fmt("formatCurrency", { value: 1234.5, currency: "USD" })).toBe(money(1234.5, "USD"));
+    expect(fmt("formatCurrency", { value: 1234, currency: "JPY" })).toBe(money(1234, "JPY"));
   });
 
-  it("honours decimals, grouping and an explicit locale", () => {
-    expect(
-      fmt("formatCurrency", { value: 1234.567, currency: "EUR", decimals: 0, locale: "en-US" }),
-    ).toBe("€1,235");
-    expect(
-      fmt("formatCurrency", { value: 1234, currency: "USD", grouping: false, locale: "en-US" }),
-    ).toBe("$1234.00");
-    expect(fmt("formatCurrency", { value: 1234.5, currency: "EUR", locale: "de-DE" })).toBe(
-      "1.234,50\u00a0€",
+  it("honours decimals and grouping", () => {
+    expect(fmt("formatCurrency", { value: 1234.567, currency: "EUR", decimals: 0 })).toBe(
+      money(1234.567, "EUR", { minimumFractionDigits: 0, maximumFractionDigits: 0 }),
+    );
+    expect(fmt("formatCurrency", { value: 1234, currency: "USD", grouping: false })).toBe(
+      money(1234, "USD", { useGrouping: false }),
     );
   });
 
@@ -68,65 +65,74 @@ describe("formatCurrency", () => {
 });
 
 describe("formatDate", () => {
-  const stamp = "2026-01-16T14:05:09Z";
-  const utc = (format: string, extra: Record<string, unknown> = {}): unknown =>
-    fmt("formatDate", { value: stamp, format, timeZone: "UTC", locale: "en-US", ...extra });
+  const when = new Date(2026, 0, 16, 14, 5, 9);
+  const named = (options: Intl.DateTimeFormatOptions, date = when): string =>
+    new Intl.DateTimeFormat(undefined, { ...options, timeZone: "UTC" }).format(
+      new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours())),
+    );
+  const at = (format: string, date: Date = when): unknown =>
+    fmt("formatDate", { value: date, format });
+  const period = (date: Date): string =>
+    new Intl.DateTimeFormat(undefined, { hour: "numeric", hour12: true, timeZone: "UTC" })
+      .formatToParts(new Date(Date.UTC(2026, 0, 16, date.getHours())))
+      .filter((part) => part.type === "dayPeriod")
+      .map((part) => part.value)
+      .join("");
 
-  it("renders the catalog's documented tokens", () => {
-    expect(utc("MMM dd, yyyy")).toBe("Jan 16, 2026");
-    expect(utc("HH:mm")).toBe("14:05");
-    expect(utc("h:mm a")).toBe("2:05 PM");
-    expect(utc("EEEE, d MMMM")).toBe("Friday, 16 January");
-    expect(utc("yy-M-d H:m:s")).toBe("26-1-16 14:5:9");
-    expect(utc("MM/dd hh:ss")).toBe("01/16 02:09");
-    expect(utc("E MMMMM")).toBe("Fri J");
-    expect(utc("EEEEE")).toBe("F");
-    expect(utc("y")).toBe("2026");
+  it("renders the catalog's numeric tokens in the page's time zone", () => {
+    expect(at("HH:mm")).toBe("14:05");
+    expect(at("yy-M-d H:m:s")).toBe("26-1-16 14:5:9");
+    expect(at("MM/dd hh:ss")).toBe("01/16 02:09");
+    expect(at("y")).toBe("2026");
+    expect(at("yyyy-MM-dd")).toBe("2026-01-16");
   });
 
-  it("reads 12 as noon and midnight as 12 AM", () => {
-    expect(
-      fmt("formatDate", { value: "2026-01-16T00:30:00Z", format: "h a", timeZone: "UTC" }),
-    ).toBe("12 AM");
-    expect(
-      fmt("formatDate", { value: "2026-01-16T12:30:00Z", format: "h a", timeZone: "UTC" }),
-    ).toBe("12 PM");
+  it("names months, weekdays and the period through Intl", () => {
+    expect(at("MMM")).toBe(named({ month: "short" }));
+    expect(at("MMMM")).toBe(named({ month: "long" }));
+    expect(at("MMMMM")).toBe(named({ month: "narrow" }));
+    expect(at("E")).toBe(named({ weekday: "short" }));
+    expect(at("EEEE")).toBe(named({ weekday: "long" }));
+    expect(at("EEEEE")).toBe(named({ weekday: "narrow" }));
+    expect(at("h:mm a")).toBe(`2:05 ${period(when)}`);
+  });
+
+  it("reads 12 as noon and midnight as 12", () => {
+    const midnight = new Date(2026, 0, 16, 0, 30);
+    const noon = new Date(2026, 0, 16, 12, 30);
+    expect(at("h", midnight)).toBe("12");
+    expect(at("h a", noon)).toBe(`12 ${period(noon)}`);
   });
 
   it("quotes literal text and passes other characters through", () => {
-    expect(utc("'Day' d 'of' MMMM")).toBe("Day 16 of January");
-    expect(utc("d 'o''clock'")).toBe("16 o'clock");
-    expect(utc("d 'open")).toBe("16 open");
-    expect(utc("d ''")).toBe("16 '");
-    expect(utc("d, QQ")).toBe("16, QQ");
-  });
-
-  it("honours an explicit locale for names", () => {
-    expect(utc("EEEE d MMMM", { locale: "fr-FR" })).toBe("vendredi 16 janvier");
-  });
-
-  it("converts to an explicit time zone", () => {
-    expect(utc("HH:mm d", { timeZone: "Asia/Tokyo" })).toBe("23:05 16");
-    expect(utc("HH:mm d", { timeZone: "America/Los_Angeles" })).toBe("06:05 16");
+    expect(at("'Day' d 'of'")).toBe("Day 16 of");
+    expect(at("d 'o''clock'")).toBe("16 o'clock");
+    expect(at("d 'open")).toBe("16 open");
+    expect(at("d ''")).toBe("16 '");
+    expect(at("d, QQ")).toBe("16, QQ");
   });
 
   it("reads a date-only string as that calendar day wherever the host is", () => {
-    expect(fmt("formatDate", { value: "2023-01-01", format: "MMM d", locale: "en-US" })).toBe(
-      "Jan 1",
+    expect(fmt("formatDate", { value: "2023-01-01", format: "yyyy-MM-dd HH" })).toBe(
+      "2023-01-01 00",
     );
   });
 
-  it("reads epoch milliseconds, a Date and a local-time string in the host's zone", () => {
-    const local = new Date(2026, 0, 16, 14, 30);
-    expect(fmt("formatDate", { value: local.getTime(), format: "HH:mm" })).toBe("14:30");
-    expect(fmt("formatDate", { value: local, format: "yyyy-MM-dd" })).toBe("2026-01-16");
+  it("reads epoch milliseconds and a local-time string", () => {
+    expect(fmt("formatDate", { value: when.getTime(), format: "HH:mm" })).toBe("14:05");
     expect(fmt("formatDate", { value: "2026-01-16T14:30:00", format: "HH:mm" })).toBe("14:30");
+  });
+
+  it("takes no locale or time zone argument", () => {
+    expect(fmt("formatDate", { value: when, format: "HH:mm", timeZone: "Asia/Tokyo" })).toBe(
+      "14:05",
+    );
   });
 
   it("throws on what is not a date or a pattern", () => {
     expect(() => fmt("formatDate", { value: "nope", format: "d" })).toThrow("not a date");
     expect(() => fmt("formatDate", { value: null, format: "d" })).toThrow("not a date");
-    expect(() => fmt("formatDate", { value: stamp, format: 4 })).toThrow("format");
+    expect(() => fmt("formatDate", { value: when, format: 4 })).toThrow("format");
   });
 });
 
@@ -140,18 +146,37 @@ describe("pluralize", () => {
     other: "items",
   };
 
-  it("picks the CLDR category, falling back to other", () => {
-    expect(fmt("pluralize", { value: 1, one: "item", other: "items", locale: "en" })).toBe("item");
-    expect(fmt("pluralize", { value: 5, one: "item", other: "items", locale: "en" })).toBe("items");
-    expect(fmt("pluralize", { value: 2, ...forms, locale: "ar" })).toBe("a pair");
-    expect(fmt("pluralize", { value: 3, ...forms, locale: "ru" })).toBe("few");
-    expect(fmt("pluralize", { value: 5, ...forms, locale: "ru" })).toBe("many");
-    expect(fmt("pluralize", { value: 5, one: "x", other: "items", locale: "ru" })).toBe("items");
+  const category = (name: string) =>
+    vi.spyOn(Intl, "PluralRules").mockImplementation(
+      class {
+        select = () => name;
+      } as unknown as typeof Intl.PluralRules,
+    );
+
+  it("picks the category of the page's locale, falling back to other", () => {
+    expect(fmt("pluralize", { value: 1, one: "item", other: "items" })).toBe(
+      new Intl.PluralRules().select(1) === "one" ? "item" : "items",
+    );
+    expect(fmt("pluralize", { value: 5, one: "item", other: "items" })).toBe("items");
+  });
+
+  it.each(["two", "few", "many", "one"])("takes the %s string for that category", (name) => {
+    const spy = category(name);
+    expect(fmt("pluralize", { value: 7, ...forms })).toBe(forms[name as keyof typeof forms]);
+    spy.mockRestore();
+  });
+
+  it("falls back to other when the category's string is missing", () => {
+    const spy = category("many");
+    expect(fmt("pluralize", { value: 7, one: "x", other: "items" })).toBe("items");
+    spy.mockRestore();
   });
 
   it("uses zero for 0 when given, else the category", () => {
-    expect(fmt("pluralize", { value: 0, ...forms, locale: "en" })).toBe("no items");
-    expect(fmt("pluralize", { value: 0, one: "item", other: "items", locale: "en" })).toBe("items");
+    expect(fmt("pluralize", { value: 0, ...forms })).toBe("no items");
+    expect(fmt("pluralize", { value: 0, one: "item", other: "items" })).toBe(
+      new Intl.PluralRules().select(0) === "one" ? "item" : "items",
+    );
   });
 
   it("throws without a number or an other", () => {

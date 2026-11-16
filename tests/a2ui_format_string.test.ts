@@ -29,10 +29,15 @@ describe("formatString", () => {
   });
 
   it("calls a function with named arguments, quoted, numeric, boolean and path values", () => {
-    expect(fs("${formatDate(value:${/when}, format:'MMM d', locale:'en-US')}")).toBe("Jan 16");
-    expect(
-      fs('${formatNumber(value: 1234.5, decimals: 1, grouping: false, locale: "en-US")}'),
-    ).toBe("1234.5");
+    expect(fs("${formatDate(value:${/when}, format:'yyyy-MM-dd')}")).toBe("2026-01-16");
+    expect(fs('${formatDate(value: "2026-02-03", format: "dd.MM.yy")}')).toBe("03.02.26");
+    expect(fs("${formatNumber(value: 1234.5, decimals: 1, grouping: false)}")).toBe(
+      new Intl.NumberFormat(undefined, {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+        useGrouping: false,
+      }).format(1234.5),
+    );
     expect(fs("${not(value: true)} ${not(value: false)}")).toBe("false true");
     expect(fs("${required(value: null)}")).toBe('{"valid":false}');
     expect(fs("${formatNumber(value:/n)}")).toBe(new Intl.NumberFormat().format(3));
