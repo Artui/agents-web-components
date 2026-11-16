@@ -1,0 +1,179 @@
+{
+  "contextDescription": "A2UI Component Schema — available components for generating UI surfaces. Use these component names and properties when creating A2UI operations.",
+  "surface": {
+    "type": "ACTIVITY_SNAPSHOT",
+    "messageId": "a2ui-surface-call-1",
+    "activityType": "a2ui-surface",
+    "content": {
+      "a2ui_operations": [
+        {
+          "version": "1.0",
+          "createSurface": {
+            "surfaceId": "s1",
+            "catalogId": "https://raw.githubusercontent.com/Artui/agents-web-components/main/a2ui/v1/catalog.json"
+          }
+        },
+        {
+          "version": "1.0",
+          "updateComponents": {
+            "surfaceId": "s1",
+            "components": [
+              {
+                "id": "root",
+                "component": "Column",
+                "children": [
+                  "title",
+                  "items",
+                  "name",
+                  "agree",
+                  "go"
+                ]
+              },
+              {
+                "id": "title",
+                "component": "Text",
+                "text": {
+                  "@path": "/title"
+                },
+                "variant": "body"
+              },
+              {
+                "id": "items",
+                "component": "List",
+                "children": {
+                  "componentId": "item",
+                  "path": "/items"
+                }
+              },
+              {
+                "id": "item",
+                "component": "Text",
+                "text": {
+                  "@path": "label"
+                }
+              },
+              {
+                "id": "name",
+                "component": "TextField",
+                "label": "Name",
+                "value": {
+                  "@path": "/form/name"
+                },
+                "@checks": [
+                  {
+                    "condition": {
+                      "@call": "required",
+                      "args": {
+                        "value": {
+                          "@path": "/form/name"
+                        }
+                      }
+                    },
+                    "message": "A name is required."
+                  }
+                ]
+              },
+              {
+                "id": "agree",
+                "component": "CheckBox",
+                "label": "Agree",
+                "value": {
+                  "@path": "/form/agree"
+                }
+              },
+              {
+                "id": "go-label",
+                "component": "Text",
+                "text": "Send"
+              },
+              {
+                "id": "go",
+                "component": "Button",
+                "child": "go-label",
+                "variant": "primary",
+                "action": {
+                  "event": {
+                    "name": "submit",
+                    "userMessage": {
+                      "@path": "/form/name"
+                    },
+                    "context": {
+                      "name": {
+                        "@path": "/form/name"
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "version": "1.0",
+          "updateDataModel": {
+            "surfaceId": "s1",
+            "path": "/",
+            "value": {
+              "title": "Hello",
+              "items": [
+                {
+                  "label": "one"
+                },
+                {
+                  "label": "two"
+                }
+              ],
+              "form": {
+                "name": "Ada"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "replace": true
+  },
+  "actions": [
+    {
+      "runId": "run-1",
+      "userAction": {
+        "name": "submit",
+        "surfaceId": "s1",
+        "sourceComponentId": "go",
+        "timestamp": "2026-11-16T10:00:00.000Z",
+        "userMessage": "Ada",
+        "context": {
+          "name": "Ada",
+          "count": 2,
+          "ratio": 0.5,
+          "ok": true,
+          "none": null,
+          "tiny": 1e-05,
+          "small": 1.5e-07
+        }
+      },
+      "id": "a2ui-action-user-4e65d3fbe8ad6535681b021b30785b12b6c0e3f8878859a4148b3f58b8835db0",
+      "content": "Ada\n\nA2UI user action:\n{\"name\":\"submit\",\"surfaceId\":\"s1\",\"sourceComponentId\":\"go\",\"timestamp\":\"2026-11-16T10:00:00.000Z\",\"userMessage\":\"Ada\",\"context\":{\"name\":\"Ada\",\"count\":2,\"ratio\":0.5,\"ok\":true,\"none\":null,\"tiny\":1e-05,\"small\":1.5e-07}}"
+    },
+    {
+      "runId": "3f2c1d1e-7a7b-4c4d-8e8f-909192939495",
+      "userAction": {
+        "name": "pick",
+        "surfaceId": "s1",
+        "sourceComponentId": "go",
+        "timestamp": "2026-11-16T10:00:00.000Z",
+        "context": {
+          "place": "Zürich — “quoted”",
+          "nested": {
+            "list": [
+              1,
+              "two"
+            ]
+          }
+        }
+      },
+      "id": "a2ui-action-user-e96e9f4a6f0b3424e78cedd3f6286755ed44c72ea9f9cf45e09df97a3e2c51bf",
+      "content": "A2UI user action:\n{\"name\":\"pick\",\"surfaceId\":\"s1\",\"sourceComponentId\":\"go\",\"timestamp\":\"2026-11-16T10:00:00.000Z\",\"context\":{\"place\":\"Zürich — “quoted”\",\"nested\":{\"list\":[1,\"two\"]}}}"
+    }
+  ]
+}

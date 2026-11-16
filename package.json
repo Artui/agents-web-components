@@ -1,6 +1,6 @@
 {
   "name": "@artooi/agents-web-components",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Framework-free <ag-ui-chat> Web Component over the AG-UI protocol. Drop-in chat sidebar with a pluggable client-side tool registry, DOM driver primitives, animations, and destructive-action confirmation modal.",
   "type": "module",
   "main": "./dist/index.js",
@@ -18,15 +18,25 @@
     "./bundle": {
       "types": "./dist/bundle.d.ts",
       "import": "./dist/agents-web-components.bundle.js"
+    },
+    "./a2ui": {
+      "types": "./dist/a2ui.d.ts",
+      "import": "./dist/a2ui.js"
+    },
+    "./a2ui/bundle": {
+      "types": "./dist/a2ui.d.ts",
+      "import": "./dist/agents-web-components.a2ui.bundle.js"
     }
   },
   "sideEffects": false,
   "files": [
     "dist/",
+    "a2ui/",
     "src/",
     "README.md",
     "LICENSE",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "NOTICE"
   ],
   "scripts": {
     "build": "node esbuild.config.mjs && tsc -p tsconfig.build.json",

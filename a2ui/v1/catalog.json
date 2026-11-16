@@ -1,0 +1,758 @@
+{
+  "catalogId": "https://raw.githubusercontent.com/Artui/agents-web-components/main/a2ui/v1/catalog.json",
+  "protocolVersion": "1.0",
+  "components": {
+    "Text": {
+      "properties": {
+        "text": {
+          "$ref": "DynamicString",
+          "description": "The text content to display."
+        },
+        "variant": {
+          "type": "string",
+          "enum": [
+            "caption",
+            "body"
+          ],
+          "default": "body",
+          "description": "A hint for the base text style."
+        },
+        "weight": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "text"
+      ]
+    },
+    "Image": {
+      "properties": {
+        "url": {
+          "$ref": "DynamicString",
+          "description": "The URL of the image to display."
+        },
+        "description": {
+          "$ref": "DynamicString",
+          "description": "Accessibility text for the image."
+        },
+        "fit": {
+          "type": "string",
+          "enum": [
+            "contain",
+            "cover",
+            "fill",
+            "none",
+            "scaleDown"
+          ],
+          "default": "fill",
+          "description": "Specifies how the image should be resized to fit its container."
+        },
+        "variant": {
+          "type": "string",
+          "enum": [
+            "icon",
+            "avatar",
+            "smallFeature",
+            "mediumFeature",
+            "largeFeature",
+            "header"
+          ],
+          "default": "mediumFeature",
+          "description": "A hint for the image size and style."
+        },
+        "weight": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "url"
+      ]
+    },
+    "Icon": {
+      "properties": {
+        "name": {
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": [
+                "accountCircle",
+                "add",
+                "arrowBack",
+                "arrowForward",
+                "attachFile",
+                "calendarToday",
+                "call",
+                "camera",
+                "check",
+                "close",
+                "delete",
+                "download",
+                "edit",
+                "event",
+                "error",
+                "fastForward",
+                "favorite",
+                "favoriteOff",
+                "folder",
+                "help",
+                "home",
+                "info",
+                "locationOn",
+                "lock",
+                "lockOpen",
+                "mail",
+                "menu",
+                "moreVert",
+                "moreHoriz",
+                "notificationsOff",
+                "notifications",
+                "pause",
+                "payment",
+                "person",
+                "phone",
+                "photo",
+                "play",
+                "print",
+                "refresh",
+                "rewind",
+                "search",
+                "send",
+                "settings",
+                "share",
+                "shoppingCart",
+                "skipNext",
+                "skipPrevious",
+                "star",
+                "starHalf",
+                "starOff",
+                "stop",
+                "upload",
+                "visibility",
+                "visibilityOff",
+                "volumeDown",
+                "volumeMute",
+                "volumeOff",
+                "volumeUp",
+                "warning"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "svgPath": {
+                  "$ref": "DynamicString"
+                }
+              },
+              "required": [
+                "svgPath"
+              ]
+            },
+            {
+              "$ref": "DataBinding"
+            }
+          ],
+          "description": "The name of the icon to display."
+        },
+        "weight": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "Row": {
+      "properties": {
+        "children": {
+          "$ref": "ChildList",
+          "description": "Defines the children."
+        },
+        "justify": {
+          "type": "string",
+          "enum": [
+            "center",
+            "end",
+            "spaceAround",
+            "spaceBetween",
+            "spaceEvenly",
+            "start",
+            "stretch"
+          ],
+          "default": "start",
+          "description": "Defines the arrangement of children along the main axis (horizontally)."
+        },
+        "align": {
+          "type": "string",
+          "enum": [
+            "start",
+            "center",
+            "end",
+            "stretch"
+          ],
+          "default": "stretch",
+          "description": "Defines the alignment of children along the cross axis (vertically)."
+        },
+        "weight": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "children"
+      ],
+      "description": "A layout component that arranges its children horizontally."
+    },
+    "Column": {
+      "properties": {
+        "children": {
+          "$ref": "ChildList",
+          "description": "Defines the children."
+        },
+        "justify": {
+          "type": "string",
+          "enum": [
+            "start",
+            "center",
+            "end",
+            "spaceBetween",
+            "spaceAround",
+            "spaceEvenly",
+            "stretch"
+          ],
+          "default": "start",
+          "description": "Defines the arrangement of children along the main axis (vertically)."
+        },
+        "align": {
+          "type": "string",
+          "enum": [
+            "center",
+            "end",
+            "start",
+            "stretch"
+          ],
+          "default": "stretch",
+          "description": "Defines the alignment of children along the cross axis (horizontally)."
+        },
+        "weight": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "children"
+      ],
+      "description": "A layout component that arranges its children vertically."
+    },
+    "List": {
+      "properties": {
+        "children": {
+          "$ref": "ChildList",
+          "description": "Defines the children."
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "vertical",
+            "horizontal"
+          ],
+          "default": "vertical",
+          "description": "The direction in which the list items are laid out."
+        },
+        "align": {
+          "type": "string",
+          "enum": [
+            "start",
+            "center",
+            "end",
+            "stretch"
+          ],
+          "default": "stretch",
+          "description": "Defines the alignment of children along the cross axis."
+        },
+        "weight": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "children"
+      ]
+    },
+    "Card": {
+      "properties": {
+        "child": {
+          "$ref": "Child",
+          "description": "The ID of the single child component to be rendered inside the card."
+        },
+        "weight": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "child"
+      ]
+    },
+    "Divider": {
+      "properties": {
+        "axis": {
+          "type": "string",
+          "enum": [
+            "horizontal",
+            "vertical"
+          ],
+          "default": "horizontal",
+          "description": "The orientation of the divider."
+        },
+        "weight": {
+          "type": "number"
+        }
+      },
+      "required": []
+    },
+    "Button": {
+      "properties": {
+        "child": {
+          "$ref": "Child",
+          "description": "The ID of the child component."
+        },
+        "variant": {
+          "type": "string",
+          "enum": [
+            "default",
+            "primary",
+            "borderless"
+          ],
+          "default": "default",
+          "description": "A hint for the button style."
+        },
+        "action": {
+          "$ref": "Action"
+        },
+        "weight": {
+          "type": "number"
+        },
+        "@checks": {
+          "type": "array",
+          "items": {
+            "$ref": "CheckRule"
+          }
+        }
+      },
+      "required": [
+        "child",
+        "action"
+      ]
+    },
+    "TextField": {
+      "properties": {
+        "label": {
+          "$ref": "DynamicString",
+          "description": "The text label for the input field."
+        },
+        "value": {
+          "$ref": "DynamicString",
+          "description": "The value of the text field."
+        },
+        "placeholder": {
+          "$ref": "DynamicString",
+          "description": "The placeholder text for the input field."
+        },
+        "variant": {
+          "type": "string",
+          "enum": [
+            "longText",
+            "number",
+            "shortText",
+            "obscured"
+          ],
+          "default": "shortText",
+          "description": "The type of input field to display."
+        },
+        "weight": {
+          "type": "number"
+        },
+        "@checks": {
+          "type": "array",
+          "items": {
+            "$ref": "CheckRule"
+          }
+        }
+      },
+      "required": [
+        "label",
+        "value"
+      ]
+    },
+    "CheckBox": {
+      "properties": {
+        "label": {
+          "$ref": "DynamicString",
+          "description": "The text to display next to the checkbox."
+        },
+        "value": {
+          "$ref": "DynamicBoolean",
+          "description": "The current state of the checkbox (true for checked, false for unchecked)."
+        },
+        "weight": {
+          "type": "number"
+        },
+        "@checks": {
+          "type": "array",
+          "items": {
+            "$ref": "CheckRule"
+          }
+        }
+      },
+      "required": [
+        "label",
+        "value"
+      ]
+    },
+    "ChoicePicker": {
+      "properties": {
+        "label": {
+          "$ref": "DynamicString",
+          "description": "The label for the group of options."
+        },
+        "variant": {
+          "type": "string",
+          "enum": [
+            "multipleSelection",
+            "mutuallyExclusive"
+          ],
+          "default": "mutuallyExclusive",
+          "description": "A hint for how the choice picker should be displayed and behave."
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": {
+                "$ref": "DynamicString",
+                "description": "The text to display for this option."
+              },
+              "value": {
+                "type": "string",
+                "description": "The stable value associated with this option."
+              }
+            },
+            "required": [
+              "label",
+              "value"
+            ]
+          },
+          "description": "The list of available options to choose from."
+        },
+        "value": {
+          "$ref": "DynamicStringList",
+          "description": "The list of currently selected values."
+        },
+        "displayStyle": {
+          "type": "string",
+          "enum": [
+            "checkbox",
+            "chips"
+          ],
+          "default": "checkbox",
+          "description": "The display style of the component."
+        },
+        "filterable": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, displays a search input to filter the options."
+        },
+        "weight": {
+          "type": "number"
+        },
+        "@checks": {
+          "type": "array",
+          "items": {
+            "$ref": "CheckRule"
+          }
+        }
+      },
+      "required": [
+        "options",
+        "value"
+      ],
+      "description": "A component that allows selecting one or more options from a list."
+    }
+  },
+  "functions": {
+    "required": {
+      "description": "Checks that the value is not null, undefined, or empty.",
+      "returnType": "validationResult",
+      "args": {
+        "value": {
+          "description": "The value to check."
+        }
+      },
+      "required": [
+        "value"
+      ]
+    },
+    "regex": {
+      "description": "Checks that the value matches a regular expression string.",
+      "returnType": "validationResult",
+      "args": {
+        "value": {
+          "$ref": "DynamicString"
+        },
+        "pattern": {
+          "type": "string",
+          "description": "The regular expression to search for in the value."
+        }
+      },
+      "required": [
+        "value",
+        "pattern"
+      ]
+    },
+    "length": {
+      "description": "Checks string length constraints.",
+      "returnType": "validationResult",
+      "args": {
+        "value": {
+          "$ref": "DynamicString"
+        },
+        "min": {
+          "type": "integer",
+          "description": "The minimum allowed length."
+        },
+        "max": {
+          "type": "integer",
+          "description": "The maximum allowed length."
+        }
+      },
+      "required": [
+        "value"
+      ]
+    },
+    "numeric": {
+      "description": "Checks numeric range constraints.",
+      "returnType": "validationResult",
+      "args": {
+        "value": {
+          "$ref": "DynamicNumber"
+        },
+        "min": {
+          "type": "number",
+          "description": "The minimum allowed value."
+        },
+        "max": {
+          "type": "number",
+          "description": "The maximum allowed value."
+        }
+      },
+      "required": [
+        "value"
+      ]
+    },
+    "email": {
+      "description": "Checks that the value is a valid email address.",
+      "returnType": "validationResult",
+      "args": {
+        "value": {
+          "$ref": "DynamicString"
+        }
+      },
+      "required": [
+        "value"
+      ]
+    },
+    "formatString": {
+      "description": "Performs string interpolation of data model values and other functions in the catalog functions list and returns the resulting string. The value string can contain interpolated expressions in the `${expression}` format. Supported expression types include: JSON Pointer paths to the data model (e.g., `${/absolute/path}` or `${relative/path}`), and renderer-side function calls (e.g., `${now()}`). Function arguments must be named (e.g., `${formatDate(value:${/currentDate}, format:'MM-dd')}`). To include a literal `${` sequence, escape it as `\\${`.",
+      "returnType": "string",
+      "args": {
+        "value": {
+          "$ref": "DynamicString"
+        }
+      },
+      "required": [
+        "value"
+      ]
+    },
+    "formatNumber": {
+      "description": "Formats a number with the specified grouping and decimal precision.",
+      "returnType": "string",
+      "args": {
+        "value": {
+          "$ref": "DynamicNumber",
+          "description": "The number to format."
+        },
+        "decimals": {
+          "$ref": "DynamicNumber",
+          "description": "Optional."
+        },
+        "grouping": {
+          "$ref": "DynamicBoolean",
+          "description": "Optional."
+        }
+      },
+      "required": [
+        "value"
+      ]
+    },
+    "formatCurrency": {
+      "description": "Formats a number as a currency string.",
+      "returnType": "string",
+      "args": {
+        "value": {
+          "$ref": "DynamicNumber",
+          "description": "The monetary amount."
+        },
+        "currency": {
+          "$ref": "DynamicString",
+          "description": "The ISO 4217 currency code (e.g., 'USD', 'EUR')."
+        },
+        "decimals": {
+          "$ref": "DynamicNumber",
+          "description": "Optional."
+        },
+        "grouping": {
+          "$ref": "DynamicBoolean",
+          "description": "Optional."
+        }
+      },
+      "required": [
+        "currency",
+        "value"
+      ]
+    },
+    "formatDate": {
+      "description": "Formats a timestamp into a string using a pattern.",
+      "returnType": "string",
+      "args": {
+        "value": {
+          "$ref": "DynamicValue",
+          "description": "The date to format."
+        },
+        "format": {
+          "$ref": "DynamicString",
+          "description": "A Unicode TR35 date pattern string."
+        }
+      },
+      "required": [
+        "format",
+        "value"
+      ]
+    },
+    "pluralize": {
+      "description": "Returns a localized string based on the Common Locale Data Repository (CLDR) plural category of the count (zero, one, two, few, many, other).",
+      "returnType": "string",
+      "args": {
+        "value": {
+          "$ref": "DynamicNumber",
+          "description": "The numeric value used to determine the plural category."
+        },
+        "zero": {
+          "$ref": "DynamicString",
+          "description": "String for the 'zero' category (e.g., 0 items)."
+        },
+        "one": {
+          "$ref": "DynamicString",
+          "description": "String for the 'one' category (e.g., 1 item)."
+        },
+        "two": {
+          "$ref": "DynamicString",
+          "description": "String for the 'two' category (used in Arabic, Welsh, etc.)."
+        },
+        "few": {
+          "$ref": "DynamicString",
+          "description": "String for the 'few' category (e.g., small groups in Slavic languages)."
+        },
+        "many": {
+          "$ref": "DynamicString",
+          "description": "String for the 'many' category (e.g., large groups in various languages)."
+        },
+        "other": {
+          "$ref": "DynamicString",
+          "description": "The default/fallback string (used for general plural cases)."
+        }
+      },
+      "required": [
+        "value",
+        "other"
+      ]
+    },
+    "openUrl": {
+      "description": "Opens the specified URL in a browser or handler (requires user activation).",
+      "returnType": "void",
+      "args": {
+        "url": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "DataBinding"
+            },
+            {
+              "$ref": "FunctionCall"
+            }
+          ],
+          "description": "The URL to open."
+        }
+      },
+      "required": [
+        "url"
+      ]
+    },
+    "and": {
+      "description": "Performs a logical AND operation on a list of boolean values.",
+      "returnType": "boolean",
+      "args": {
+        "values": {
+          "type": "array",
+          "items": {
+            "$ref": "DynamicBoolean"
+          },
+          "description": "The list of boolean values to evaluate."
+        }
+      },
+      "required": [
+        "values"
+      ]
+    },
+    "or": {
+      "description": "Performs a logical OR operation on a list of boolean values.",
+      "returnType": "boolean",
+      "args": {
+        "values": {
+          "type": "array",
+          "items": {
+            "$ref": "DynamicBoolean"
+          },
+          "description": "The list of boolean values to evaluate."
+        }
+      },
+      "required": [
+        "values"
+      ]
+    },
+    "not": {
+      "description": "Performs a logical NOT operation on a boolean value.",
+      "returnType": "boolean",
+      "args": {
+        "value": {
+          "$ref": "DynamicBoolean",
+          "description": "The boolean value to negate."
+        }
+      },
+      "required": [
+        "value"
+      ]
+    }
+  },
+  "types": {
+    "DynamicString": "a string, {\"@path\": pointer} or {\"@call\": name, \"args\": {...}}",
+    "DynamicNumber": "a number, @path or @call",
+    "DynamicBoolean": "a boolean, @path or @call",
+    "DynamicStringList": "a string array, @path or @call",
+    "DynamicValue": "any JSON value, @path or @call",
+    "DataBinding": "{\"@path\": pointer}",
+    "FunctionCall": "{\"@call\": name, \"args\": {...}}",
+    "Child": "a component id",
+    "ChildList": "an array of component ids, or {\"componentId\": id, \"path\": pointer} to repeat one per array item",
+    "Action": "{\"event\": {\"name\": string, \"context\": {...}}} sent to you, or {\"functionCall\": FunctionCall} run here",
+    "CheckRule": "{\"condition\": DynamicBoolean, \"message\": string}; the message shows while the condition is false"
+  }
+}

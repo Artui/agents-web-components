@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
+import { build } from "esbuild";
 import { describe, expect, it } from "vitest";
-import { LIBRARY, VENDORED_BUNDLE } from "../esbuild.config.mjs";
+import { A2UI_BUNDLE, LIBRARY, VENDORED_BUNDLE } from "../esbuild.config.mjs";
+import * as a2ui from "../src/a2ui.js";
 import * as bundle from "../src/bundle.js";
 import * as chat from "../src/chat.js";
 import { ELEMENT_TAG } from "../src/constants.js";
@@ -51,5 +53,40 @@ describe("the package entries", () => {
       types: "./dist/bundle.d.ts",
       import: `./${VENDORED_BUNDLE.outfile}`,
     });
+  });
+
+  it("publishes the A2UI renderer as its own entry and its own vendored file", () => {
+    expect(Object.keys(a2ui)).toEqual(["registerA2ui"]);
+    expect(MANIFEST.exports["./a2ui"]).toEqual({
+      types: "./dist/a2ui.d.ts",
+      import: "./dist/a2ui.js",
+    });
+    expect(A2UI_BUNDLE.entryPoints).toEqual(["src/a2ui.ts"]);
+    expect(MANIFEST.exports["./a2ui/bundle"]).toEqual({
+      types: "./dist/a2ui.d.ts",
+      import: `./${A2UI_BUNDLE.outfile}`,
+    });
+  });
+
+  it("keeps A2UI out of the main bundle", async () => {
+    expect(Object.keys(bundle)).not.toContain("registerA2ui");
+    const result = await build({ ...VENDORED_BUNDLE, write: false, metafile: true });
+    const inputs = Object.keys(result.metafile.inputs);
+    expect(inputs.filter((path) => path.startsWith("src/a2ui"))).toEqual([]);
+  });
+
+  it("keeps the element and the protocol packages out of the A2UI bundle", async () => {
+    const result = await build({ ...A2UI_BUNDLE, write: false, metafile: true });
+    const inputs = Object.keys(result.metafile.inputs);
+    expect(inputs).toContain("src/a2ui.ts");
+    expect(
+      inputs.filter(
+        (path) =>
+          path === "src/index.ts" ||
+          path === "src/chat.ts" ||
+          path === "src/core/ag_ui_chat.ts" ||
+          path.includes("@ag-ui"),
+      ),
+    ).toEqual([]);
   });
 });

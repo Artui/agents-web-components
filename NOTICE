@@ -1,0 +1,14 @@
+@artooi/agents-web-components
+
+a2ui/v1/catalog.json and src/a2ui/a2ui_catalog.ts are derived from the A2UI
+1.0 basic catalog (catalogs/basic/v1/catalog.json at commit
+57f961f143da23f4212313e432a64b5843d978f9 of https://github.com/google/A2UI),
+Copyright the A2UI authors, licensed under the Apache License, Version 2.0
+(https://www.apache.org/licenses/LICENSE-2.0). Changes: the twelve components
+and fourteen functions this renderer draws, flattened, with descriptions cut to
+their first sentence and a legend of the shared types added.
+
+src/a2ui/display/icon_glyphs.ts holds path data from Material Symbols Outlined
+(symbols/web of https://github.com/google/material-design-icons), Copyright
+Google LLC, licensed under the Apache License, Version 2.0. Changes: the 59
+glyphs the A2UI basic catalog names, at weight 400, grade 0, 24px optical size.

@@ -55,6 +55,7 @@ This package is the successor of `@artooi/ag-ui-web-component`. Coming from it? 
   - [Maximizing the panel](#maximizing-the-panel)
   - [Collapsing to the launcher](#collapsing-to-the-launcher)
   - [Collapsing to a bottom bar](#collapsing-to-a-bottom-bar)
+- [A2UI surfaces](#a2ui-surfaces)
 - [Tool-call display modes](#tool-call-display-modes)
 - [Delegated sub-agents](#delegated-sub-agents)
 - [Markdown rendering](#markdown-rendering)
@@ -2045,6 +2046,94 @@ chat.unhandledActivityTypes; // ["build_status", …]
 
 Note `"chart"` appears there until you call `enableCharts(["activity"])`, which
 is the honest answer to "I pushed a chart and nothing happened".
+
+## A2UI surfaces
+
+An agent can describe a small interface as A2UI 1.0 components: a form, a
+choice, a card with a button. The `./a2ui` entry draws it from the data the
+server pushes, never from markup, and sends what the user does back as a run.
+
+```js
+import { registerA2ui } from "@artooi/agents-web-components/a2ui";
+
+const chat = document.querySelector("ag-ui-chat");
+registerA2ui(chat, {
+  onError: (message) => console.warn(message), // the default
+});
+```
+
+`registerA2ui` does three things:
+
+- registers the `a2ui-surface` activity renderer, the activity type
+  `@ag-ui/a2ui-middleware` and django-ag-ui's `render_a2ui` tool send;
+- posts this renderer's catalog as a context entry on every run, under the
+  description the server looks it up by, so the server offers the agent a
+  `render_a2ui` tool for exactly these components. The catalog is
+  `a2ui/v1/catalog.json` in this package, and its id is that file's URL;
+- starts a run for each action a surface sends, with the action in
+  `forwardedProps.a2uiAction` and the user turn django-ag-ui stores for it, so
+  the bubble drawn now is the one a reload shows.
+
+It returns the function that stops posting the catalog.
+
+The catalog is the A2UI basic catalog's twelve components (Text, Image, Icon,
+Row, Column, List, Card, Divider, Button, TextField, CheckBox, ChoicePicker)
+and fourteen functions (required, regex, length, numeric, email, formatString,
+formatNumber, formatCurrency, formatDate, pluralize, openUrl, and, or, not).
+
+An Image loads only an `http:` or `https:` URL, an image `data:` URL, or a
+relative path on the page's own host; `openUrl` takes the same, minus `data:`.
+Anything else the agent names draws no image and opens nothing.
+
+A surface restored from a stored conversation is drawn inert: its buttons do
+nothing and its inputs are disabled, because acting on it would send an action
+from a turn long past.
+
+**Errors go to the host.** A2UI's `error` message (`VALIDATION_FAILED`,
+`EXPRESSION_ERROR`, `EXECUTION_ERROR`, `INTEGRITY_ERROR`) is meant for the
+agent, but neither `@ag-ui/a2ui-middleware` nor django-ag-ui carries one back
+yet. So a live surface hands each error, as the spec's
+`{version: "1.0", error: {code, surfaceId, message, path?}}`, to `onError`
+(by default `console.warn`) once per draw of the surface; a redraw with new
+content reports again. It draws a notice where it could not draw, and starts
+no run. A component or a catalog this renderer does not hold is drawn as an
+`a2ui-notice`.
+
+### Vendoring it
+
+`./a2ui/bundle` (`dist/agents-web-components.a2ui.bundle.js`) is the same entry
+as one file with everything inlined, to load beside the main bundle. It reaches
+the element only through the `chat` it is handed, so it carries none of it. It
+does carry its own copy of `marked` and DOMPurify, since Text draws markdown
+through the same sanitiser as the transcript.
+
+### Styling a surface
+
+Each surface is an `a2ui-surface` part; every component on it carries
+`part="a2ui-<kebab-case type>"` and `data-a2ui-id`, its id on the surface. The
+parts are `a2ui-text`, `a2ui-image`, `a2ui-icon`, `a2ui-row`, `a2ui-column`,
+`a2ui-list`, `a2ui-card`, `a2ui-divider`, `a2ui-button`, `a2ui-text-field`,
+`a2ui-check-box` and `a2ui-choice-picker`. A variant shows on the component as a
+`data-` attribute: `data-variant` on Text and Image, `data-fit` on Image,
+`data-justify` and `data-align` on Row and Column, `data-align` and
+`data-direction` on List, `data-axis` on Divider, and `data-unknown` on an Icon
+whose name has no glyph. A slot whose child has not arrived yet
+holds a hidden `a2ui-placeholder`. An `@accessibility` label or description
+lands on the component's native control where it has one (the `<button>`, the
+`<input>`), and on the component otherwise. Inside the inputs:
+
+- Button: `a2ui-button-control`, `a2ui-button-message`;
+- TextField: `a2ui-text-field-label`, `a2ui-text-field-input`,
+  `a2ui-text-field-message`;
+- CheckBox: `a2ui-check-box-label`, `a2ui-check-box-input`,
+  `a2ui-check-box-text`, `a2ui-check-box-message`;
+- ChoicePicker: `a2ui-choice-picker-label`, `a2ui-choice-picker-filter`,
+  `a2ui-choice-picker-options`, `a2ui-choice-picker-option`,
+  `a2ui-choice-picker-input`, `a2ui-choice-picker-option-text`,
+  `a2ui-choice-picker-message`.
+
+The surfaces read the element's theme tokens, so a theme set on `<ag-ui-chat>`
+reaches them.
 
 ## Tool-call display modes
 

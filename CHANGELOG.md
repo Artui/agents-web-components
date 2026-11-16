@@ -7,6 +7,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-11-16
+
+### Added
+
+- **A2UI 1.0 surfaces, drawn from data, in a new `./a2ui` entry.** `registerA2ui(chat, {onError?})`
+  registers the `a2ui-surface` activity renderer that `@ag-ui/a2ui-middleware` 0.0.16 and
+  django-ag-ui 0.78.0's `render_a2ui` send, posts this renderer's catalog (the basic catalog's
+  twelve components and fourteen functions, `a2ui/v1/catalog.json`, about 12,000 characters) as the
+  context entry the server builds its `render_a2ui` tool from, and starts a run with
+  `forwardedProps.a2uiAction` for each action, under the user turn id and text django-ag-ui stores
+  for it, numbers spelled as Python's `json.dumps` spells them. Bindings, templates, `@checks` and
+  `@accessibility` follow the spec; a surface replayed from a stored conversation is drawn inert. A
+  component or a catalog it does not hold is drawn as a notice (part `a2ui-notice`); surfaces carry
+  parts `a2ui-surface` and `a2ui-<kebab-case type>`.
+  `./a2ui/bundle` is the same entry as a second vendored file (about 146 KB, with its own `marked`
+  and DOMPurify for Text), which inlines none of the element. The main entries and the main bundle
+  carry no A2UI code, so a host opts in by importing `./a2ui`.
+- **A2UI errors go to the host, not the agent.** Neither the middleware nor django-ag-ui carries
+  A2UI's `error` message back yet, so a live surface hands each one, in the spec's
+  `{version: "1.0", error: {code, surfaceId, message, path?}}` shape, to `onError` (default
+  `console.warn`) once per draw of the surface (a redraw with new content reports again), draws a
+  notice, and starts no run (owner ruling).
+- **The A2UI renderer draws the basic catalog's display components**: Text, Image, Icon, Row,
+  Column, List, Card and Divider, with the basic catalog v1's names and properties. Text is
+  markdown through the transcript's sanitiser, so an agent's HTML, handlers, links to `javascript:`
+  and images never reach the DOM. Image loads only `http:`, `https:` and `data:image/...` URLs, or
+  a relative path on the page's own host, and is hidden with no source otherwise. Icon draws the
+  catalog's 59 names as Material Symbols glyphs (Apache-2.0) and the `{svgPath}` form in a 24-unit
+  box; an unknown name draws an empty glyph. List draws a template once per item of its array.
+  Each component is styled through the theme's tokens and found by its part (`a2ui-text`,
+  `a2ui-image`, `a2ui-icon`, `a2ui-row`, `a2ui-column`, `a2ui-list`, `a2ui-card`, `a2ui-divider`),
+  with its variant on a `data-` attribute. A host opts in through the `./a2ui` entry.
+- **The A2UI input components: `Button`, `TextField`, `CheckBox` and `ChoicePicker`, with the basic
+  catalog's names and properties.** `Button` draws its child inside a native button, runs its
+  `action` once per click, and is disabled while any `@checks` rule fails, with the rule's message
+  shown under it; `variant` (`default`, `primary`, `borderless`) is stated on the root. An
+  `@accessibility` label or description lands on the native button, input or checkbox, and on a
+  `ChoicePicker`'s fieldset. The other three bind `value` both ways: a keystroke, toggle or choice
+  writes the data model at once, creating the path, and a model change redraws the control without
+  moving a user's caret or focus. `TextField` draws `shortText`, `longText` (a textarea), `number`
+  (a text input with a decimal keyboard, since the value is a string) and `obscured`;
+  `ChoicePicker` draws radios for `mutuallyExclusive` and checkboxes for `multipleSelection`, as a
+  list or as `chips`, with a search box when `filterable`. A failing `@checks` rule shows its
+  message under the control and marks it `aria-invalid` for an error, once the user has edited or
+  left it, so an empty form opens quiet. On a surface that is not live every control is disabled,
+  writes nothing and dispatches nothing. Parts: `a2ui-button-control`, `a2ui-button-message`,
+  `a2ui-text-field-label`, `a2ui-text-field-input`, `a2ui-text-field-message`,
+  `a2ui-check-box-label`, `a2ui-check-box-input`, `a2ui-check-box-text`, `a2ui-check-box-message`,
+  `a2ui-choice-picker-label`, `a2ui-choice-picker-filter`, `a2ui-choice-picker-options`,
+  `a2ui-choice-picker-option` (`data-selected` when chosen), `a2ui-choice-picker-input`,
+  `a2ui-choice-picker-option-text`, `a2ui-choice-picker-message` (`data-severity`).
+- **The A2UI basic catalog's 14 functions run.** `required`, `regex`, `length`, `numeric` and
+  `email` return a `ValidationResult`; `formatString` interpolates `${path}` and `${fn(name:
+  value)}` (with `\${` as a literal); `formatNumber`, `formatCurrency`, `formatDate` and
+  `pluralize` go through `Intl` in the page's locale; `and`, `or` and `not` coerce by the spec's
+  table. `regex` follows the A2UI dialect: a pattern it forbids (backreferences, lookbehind,
+  nested or alternating unbounded repeats) or cannot compile is `valid: false`, never a throw.
+  `openUrl` runs only from a user gesture and only for a URL the http(s) allowlist approves or a
+  relative path on the page's own host, opened with `noopener,noreferrer`. `pluralize` picks `zero`
+  for 0 when it is given.
+
 ## [0.3.0] — 2026-11-15
 
 ### Added
@@ -195,7 +256,8 @@ move page walks a host over. Each entry below says whether a host opts in.
   kept offering the moon under `theme="dark"`. Only the toggle's own click redrew it before. A host
   opts in to nothing.
 
-[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/Artui/agents-web-components/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Artui/agents-web-components/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/Artui/agents-web-components/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Artui/agents-web-components/compare/v0.1.2...v0.2.0
