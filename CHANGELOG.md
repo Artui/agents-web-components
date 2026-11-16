@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **The A2UI input components: `Button`, `TextField`, `CheckBox` and `ChoicePicker`, with the
+  basic catalog's names and properties.** `Button` draws its child inside a native button, runs
+  its `action` once per click, and is disabled while any `@checks` rule fails, with the rule's
+  message shown under it; `variant` (`default`, `primary`, `borderless`) is stated on the root.
+  The other three bind `value` both ways: a keystroke, toggle or choice
+  writes the data model at once, creating the path, and a model change redraws the control
+  without moving a user's caret or focus. `TextField` draws `shortText`, `longText` (a
+  textarea), `number` (a text input with a decimal keyboard, since the value is a string) and
+  `obscured`; `ChoicePicker` draws radios for `mutuallyExclusive` and checkboxes for
+  `multipleSelection`, as a list or as `chips`, with a search box when `filterable`. A failing
+  `@checks` rule shows its message under the control and marks it `aria-invalid` for an error,
+  once the user has edited or left it, so an empty form opens quiet. On a surface that is not
+  live every control is disabled, writes nothing and dispatches nothing. Parts:
+  `a2ui-button-control`, `a2ui-button-message`, `a2ui-text-field-label`,
+  `a2ui-text-field-input`, `a2ui-text-field-message`, `a2ui-check-box-label`,
+  `a2ui-check-box-input`, `a2ui-check-box-text`, `a2ui-check-box-message`,
+  `a2ui-choice-picker-label`, `a2ui-choice-picker-filter`, `a2ui-choice-picker-options`,
+  `a2ui-choice-picker-option` (`data-selected` when chosen), `a2ui-choice-picker-input`,
+  `a2ui-choice-picker-option-text`, `a2ui-choice-picker-message` (`data-severity`).
+
 ## [0.3.0] — 2026-11-15
 
 ### Added
