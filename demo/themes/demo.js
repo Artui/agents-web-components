@@ -14,6 +14,7 @@ import {
   toggleCheckbox,
   X_DESTRUCTIVE_KEY,
 } from "/bundle.js";
+import { registerA2ui } from "/a2ui.bundle.js";
 
 const $ = (id) => document.getElementById(id);
 const chat = $("chat");
@@ -102,6 +103,10 @@ chat.registerActivityRenderer({
     return form;
   },
 });
+// A2UI surfaces from the second vendored file. Errors go to the host; this
+// one logs them, which is the default.
+registerA2ui(chat, { onError: (message) => console.warn("A2UI", message) });
+
 // Every run says which surface is open, after whatever getContext returns.
 chat.registerContext(() => [{ description: "demo_surface", value: "release_form" }]);
 
