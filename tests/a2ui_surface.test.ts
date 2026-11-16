@@ -39,6 +39,13 @@ const RENDERERS: Record<string, ComponentRenderer> = {
     element.addEventListener("click", () => scope.act(component["action"], component));
     return element;
   },
+  Wrapped: () => {
+    const element = document.createElement("div");
+    const control = document.createElement("button");
+    control.setAttribute("data-a2ui-control", "");
+    element.append(control);
+    return element;
+  },
   Glyph: () => document.createElementNS("http://www.w3.org/2000/svg", "svg"),
 };
 
@@ -208,6 +215,23 @@ describe("Surface drawing", () => {
     drawn.model.set("/n", "Named");
     drawn.model.set("/n", null);
     expect(drawn.byId("b").hasAttribute("aria-label")).toBe(false);
+  });
+
+  it("labels the marked native control, and keeps hidden and live on the component", () => {
+    const drawn = draw([
+      {
+        id: "root",
+        component: "Wrapped",
+        "@accessibility": { label: "Send", description: "Sends it", hidden: true, live: "polite" },
+      },
+    ]);
+    const root = drawn.byId("root");
+    const control = root.querySelector("[data-a2ui-control]");
+    expect(control?.getAttribute("aria-label")).toBe("Send");
+    expect(control?.getAttribute("aria-description")).toBe("Sends it");
+    expect(root.hasAttribute("aria-label")).toBe(false);
+    expect(root.getAttribute("aria-hidden")).toBe("true");
+    expect(root.getAttribute("aria-live")).toBe("polite");
   });
 
   it("ignores @accessibility that is not an object", () => {

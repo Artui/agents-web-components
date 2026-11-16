@@ -210,4 +210,14 @@ describe("TextField", () => {
     expect(input.value).toBe("edited");
     expect(drawn.errors).toEqual([]);
   });
+
+  it("takes an @accessibility description on the input", () => {
+    const drawn = drawSurface({
+      components: [field({ "@accessibility": { description: "As on your passport" } })],
+    });
+
+    expect(drawn.node.querySelector("input")?.getAttribute("aria-description")).toBe(
+      "As on your passport",
+    );
+  });
 });

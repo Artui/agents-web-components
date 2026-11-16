@@ -5,7 +5,9 @@ import type { CheckFailure } from "./check_failure.js";
 import type { ComponentRenderer } from "./component_renderer.js";
 import { DataModel } from "./data_model.js";
 import type { FunctionContext } from "./function_context.js";
+import { isObject } from "./is_object.js";
 import { joinPointer } from "./join_pointer.js";
+import { notice } from "./notice.js";
 import type { SurfaceScope } from "./surface_scope.js";
 import { toValidationResult } from "./to_validation_result.js";
 import type { UserAction } from "./user_action.js";
@@ -261,11 +263,12 @@ export class Surface {
     if (!isObject(accessibility)) {
       return;
     }
-    const attribute = (name: string, value: unknown): void => {
+    const control = element.querySelector("[data-a2ui-control]") ?? element;
+    const attribute = (name: string, value: unknown, target: Element = element): void => {
       if (value === undefined || value === null || value === "") {
-        element.removeAttribute(name);
+        target.removeAttribute(name);
       } else {
-        element.setAttribute(name, String(value));
+        target.setAttribute(name, String(value));
       }
     };
     if (accessibility["label"] !== undefined) {
@@ -273,7 +276,7 @@ export class Surface {
         place,
         () => this.#resolve(place, accessibility["label"]),
         (value) => {
-          attribute("aria-label", value);
+          attribute("aria-label", value, control);
         },
       );
     }
@@ -282,7 +285,7 @@ export class Surface {
         place,
         () => this.#resolve(place, accessibility["description"]),
         (value) => {
-          attribute("aria-description", value);
+          attribute("aria-description", value, control);
         },
       );
     }
@@ -418,10 +421,6 @@ export class Surface {
   }
 }
 
-function isObject(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function isComponent(value: unknown): value is A2uiComponent {
   return (
     isObject(value) && typeof value["id"] === "string" && typeof value["component"] === "string"
@@ -438,12 +437,4 @@ function kebab(type: string): string {
 
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-function notice(text: string): HTMLElement {
-  const element = document.createElement("div");
-  element.setAttribute("part", "a2ui-notice");
-  element.setAttribute("role", "note");
-  element.textContent = text;
-  return element;
 }

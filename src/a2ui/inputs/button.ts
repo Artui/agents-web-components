@@ -16,6 +16,7 @@ export const button: ComponentRenderer = (component, scope) => {
     : "default";
   const control = document.createElement("button");
   control.setAttribute("part", "a2ui-button-control");
+  control.setAttribute("data-a2ui-control", "");
   control.type = "button";
   control.disabled = !scope.live;
   control.append(scope.child(component["child"]));
@@ -39,10 +40,6 @@ export const button: ComponentRenderer = (component, scope) => {
       control.setAttribute("aria-describedby", message.id);
     }
   });
-  control.addEventListener("click", () => {
-    if (!control.disabled) {
-      scope.act(component["action"], component);
-    }
-  });
+  control.addEventListener("click", () => scope.act(component["action"], component));
   return root;
 };

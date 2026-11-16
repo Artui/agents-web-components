@@ -846,6 +846,13 @@
             declined), <em>delegate this</em> (sub-agent error). Press Stop mid-run for
             interrupted. Needs <em>Tool cards</em> on <em>grouped</em>.
           </p>
+          <h3>A2UI surfaces</h3>
+          <p>
+            Say <em>a2ui</em> for a form drawn from A2UI 1.0 components through
+            <code>registerA2ui</code>, loaded from the second vendored file. Its button sends
+            the action as <code>forwardedProps.a2uiAction</code>, and the answer echoes what
+            arrived. Reload the thread and the form comes back inert.
+          </p>
           <h3>Failed runs and usage</h3>
           <p>
             A run that ends in <code>RUN_ERROR</code> words its bubble by code: say

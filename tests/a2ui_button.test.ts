@@ -138,4 +138,14 @@ describe("Button", () => {
     button.dispatchEvent(new MouseEvent("click"));
     expect(drawn.actions).toEqual([]);
   });
+
+  it("takes an @accessibility label on the native button, not the wrapper", () => {
+    const drawn = drawSurface({
+      components: [submit({ "@accessibility": { label: "Send the form" } }), LABEL],
+      renderers: RENDERERS,
+    });
+
+    expect(control(drawn.node).getAttribute("aria-label")).toBe("Send the form");
+    expect(drawn.byId("root").hasAttribute("aria-label")).toBe(false);
+  });
 });

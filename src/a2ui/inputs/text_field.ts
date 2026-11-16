@@ -22,6 +22,7 @@ export const textField: ComponentRenderer = (component, scope) => {
   const control =
     variant === "longText" ? document.createElement("textarea") : document.createElement("input");
   control.setAttribute("part", "a2ui-text-field-input");
+  control.setAttribute("data-a2ui-control", "");
   if (control instanceof HTMLInputElement) {
     control.type = variant === "obscured" ? "password" : "text";
     if (variant === "number") {

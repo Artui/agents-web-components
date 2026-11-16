@@ -76,4 +76,10 @@ describe("CheckBox", () => {
     expect(drawn.model.get("/terms")).toBe(false);
     expect(drawn.actions).toEqual([]);
   });
+
+  it("takes an @accessibility label on the checkbox", () => {
+    const drawn = drawSurface({ components: [{ ...BOX, "@accessibility": { label: "Terms" } }] });
+
+    expect(drawn.node.querySelector("input")?.getAttribute("aria-label")).toBe("Terms");
+  });
 });

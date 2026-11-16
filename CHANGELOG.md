@@ -9,10 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **A2UI 1.0 surfaces, drawn from data, in a new `./a2ui` entry.** `registerA2ui(chat, {onError?})`
+  registers the `a2ui-surface` activity renderer that `@ag-ui/a2ui-middleware` 0.0.16 and
+  django-ag-ui 0.78.0's `render_a2ui` send, posts this renderer's catalog (the basic catalog's
+  twelve components and fourteen functions, `a2ui/v1/catalog.json`, about 12,000 characters) as
+  the context entry the server builds its `render_a2ui` tool from, and starts a run with
+  `forwardedProps.a2uiAction` for each action, under the user turn id and text django-ag-ui
+  stores for it. Bindings, templates, `@checks` and `@accessibility` follow the spec; a surface
+  replayed from a stored conversation is drawn inert. A component or a catalog it does not hold
+  is drawn as a notice (part `a2ui-notice`); surfaces carry parts `a2ui-surface` and
+  `a2ui-<kebab-case type>`. `./a2ui/bundle` is the same entry as a second vendored file, which
+  inlines none of the element. The main entries and the main bundle carry no A2UI code, so a host
+  opts in by importing `./a2ui`.
+- **A2UI errors go to the host, not the agent.** Neither the middleware nor django-ag-ui carries
+  A2UI's `error` message back yet, so a live surface hands each distinct one, in the spec's
+  `{version: "1.0", error: {code, surfaceId, message, path?}}` shape, to `onError` (default
+  `console.warn`), draws a notice, and starts no run (owner ruling).
+
 - **The A2UI input components: `Button`, `TextField`, `CheckBox` and `ChoicePicker`, with the
   basic catalog's names and properties.** `Button` draws its child inside a native button, runs
   its `action` once per click, and is disabled while any `@checks` rule fails, with the rule's
   message shown under it; `variant` (`default`, `primary`, `borderless`) is stated on the root.
+  An `@accessibility` label or description lands on the native button, input or checkbox, and
+  on a `ChoicePicker`'s fieldset.
   The other three bind `value` both ways: a keystroke, toggle or choice
   writes the data model at once, creating the path, and a model change redraws the control
   without moving a user's caret or focus. `TextField` draws `shortText`, `longText` (a

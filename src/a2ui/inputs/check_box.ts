@@ -9,6 +9,7 @@ export const checkBox: ComponentRenderer = (component, scope) => {
   label.setAttribute("part", "a2ui-check-box-label");
   const control = document.createElement("input");
   control.setAttribute("part", "a2ui-check-box-input");
+  control.setAttribute("data-a2ui-control", "");
   control.type = "checkbox";
   control.disabled = !scope.live;
   const text = document.createElement("span");
