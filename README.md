@@ -2088,9 +2088,10 @@ from a turn long past.
 **Errors go to the host.** A2UI's `error` message (`VALIDATION_FAILED`,
 `EXPRESSION_ERROR`, `EXECUTION_ERROR`, `INTEGRITY_ERROR`) is meant for the
 agent, but neither `@ag-ui/a2ui-middleware` nor django-ag-ui carries one back
-yet. So a live surface hands each distinct error, as the spec's
+yet. So a live surface hands each error, as the spec's
 `{version: "1.0", error: {code, surfaceId, message, path?}}`, to `onError`
-(by default `console.warn`), draws a notice where it could not draw, and starts
+(by default `console.warn`) once per draw of the surface; a redraw with new
+content reports again. It draws a notice where it could not draw, and starts
 no run. A component or a catalog this renderer does not hold is drawn as an
 `a2ui-notice`.
 

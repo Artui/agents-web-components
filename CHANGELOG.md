@@ -24,9 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and DOMPurify for Text), which inlines none of the element. The main entries and the main bundle
   carry no A2UI code, so a host opts in by importing `./a2ui`.
 - **A2UI errors go to the host, not the agent.** Neither the middleware nor django-ag-ui carries
-  A2UI's `error` message back yet, so a live surface hands each distinct one, in the spec's
+  A2UI's `error` message back yet, so a live surface hands each one, in the spec's
   `{version: "1.0", error: {code, surfaceId, message, path?}}` shape, to `onError` (default
-  `console.warn`), draws a notice, and starts no run (owner ruling).
+  `console.warn`) once per draw of the surface (a redraw with new content reports again), draws a
+  notice, and starts no run (owner ruling).
 - **The A2UI renderer draws the basic catalog's display components**: Text, Image, Icon, Row,
   Column, List, Card and Divider, with the basic catalog v1's names and properties. Text is
   markdown through the transcript's sanitiser, so an agent's HTML, handlers, links to `javascript:`
