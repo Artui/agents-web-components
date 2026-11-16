@@ -139,6 +139,19 @@ describe("Display layout (real browser)", () => {
     expect(icon.querySelector("svg")?.getBoundingClientRect().height).toBe(24);
   });
 
+  it("leaves an element outside the layout parts alone when it states justify or align", () => {
+    styled();
+    const stray = document.createElement("div");
+    stray.dataset["align"] = "end";
+    stray.dataset["justify"] = "stretch";
+    stray.style.display = "flex";
+    stray.append(document.createElement("span"));
+    document.body.append(stray);
+    expect(getComputedStyle(stray).alignItems).toBe("normal");
+    expect(getComputedStyle(stray).justifyContent).toBe("normal");
+    expect(getComputedStyle(stray.firstElementChild as Element).flexGrow).toBe("0");
+  });
+
   it("draws a vertical divider one pixel wide across a row's height", () => {
     styled();
     const drawn = drawSurface({

@@ -1,6 +1,7 @@
 /**
  * The display components' shadow styles; only the --_* aliases, never a public
- * token. Each element is found by its part, and a variant by a data attribute.
+ * token. Each element is found by its part, and a variant by a data attribute
+ * on that part only, since the sheet reaches the whole shadow tree.
  */
 export const DISPLAY_STYLES: string = `
 [part~="a2ui-text"] {
@@ -54,16 +55,16 @@ export const DISPLAY_STYLES: string = `
   flex-shrink: 0;
   max-width: 80%;
 }
-[data-justify="center"] { justify-content: center; }
-[data-justify="end"] { justify-content: flex-end; }
-[data-justify="spaceBetween"] { justify-content: space-between; }
-[data-justify="spaceAround"] { justify-content: space-around; }
-[data-justify="spaceEvenly"] { justify-content: space-evenly; }
-[data-justify="stretch"] { justify-content: stretch; }
-[data-justify="stretch"] > * { flex-grow: 1; }
-[data-align="start"] { align-items: flex-start; }
-[data-align="center"] { align-items: center; }
-[data-align="end"] { align-items: flex-end; }
+:is([part~="a2ui-row"], [part~="a2ui-column"], [part~="a2ui-list"])[data-justify="center"] { justify-content: center; }
+:is([part~="a2ui-row"], [part~="a2ui-column"], [part~="a2ui-list"])[data-justify="end"] { justify-content: flex-end; }
+:is([part~="a2ui-row"], [part~="a2ui-column"], [part~="a2ui-list"])[data-justify="spaceBetween"] { justify-content: space-between; }
+:is([part~="a2ui-row"], [part~="a2ui-column"], [part~="a2ui-list"])[data-justify="spaceAround"] { justify-content: space-around; }
+:is([part~="a2ui-row"], [part~="a2ui-column"], [part~="a2ui-list"])[data-justify="spaceEvenly"] { justify-content: space-evenly; }
+:is([part~="a2ui-row"], [part~="a2ui-column"], [part~="a2ui-list"])[data-justify="stretch"] { justify-content: stretch; }
+:is([part~="a2ui-row"], [part~="a2ui-column"], [part~="a2ui-list"])[data-justify="stretch"] > * { flex-grow: 1; }
+:is([part~="a2ui-row"], [part~="a2ui-column"], [part~="a2ui-list"])[data-align="start"] { align-items: flex-start; }
+:is([part~="a2ui-row"], [part~="a2ui-column"], [part~="a2ui-list"])[data-align="center"] { align-items: center; }
+:is([part~="a2ui-row"], [part~="a2ui-column"], [part~="a2ui-list"])[data-align="end"] { align-items: flex-end; }
 
 [part~="a2ui-card"] {
   display: block;
