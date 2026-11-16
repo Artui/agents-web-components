@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **The A2UI basic catalog's 14 functions run.** `required`, `regex`, `length`, `numeric` and
+  `email` return a `ValidationResult`; `formatString` interpolates `${path}` and
+  `${fn(name: value)}` (with `\${` as a literal); `formatNumber`, `formatCurrency`,
+  `formatDate` and `pluralize` go through `Intl` and take an optional `locale` (`formatDate`
+  also an optional `timeZone`); `and`, `or` and `not` coerce by the spec's table. `regex`
+  follows the A2UI dialect: a pattern it forbids or cannot compile is `valid: false`, never a
+  throw. `openUrl` runs only from a user gesture and only for a URL the http(s) allowlist
+  approves, opened with `noopener,noreferrer`. `pluralize` picks `zero` for 0 when it is given.
+
 ## [0.3.0] — 2026-11-15
 
 ### Added
