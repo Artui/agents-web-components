@@ -240,6 +240,12 @@ h1 {
   text-decoration: none;
 }
 
+.try .reset {
+  margin-left: auto;
+  border-color: var(--line, #e3e5ea);
+  color: var(--muted);
+}
+
 .try button:hover,
 .try a:hover {
   background: var(--accent-soft);
@@ -295,13 +301,13 @@ h1 {
 /* A control is a label beside its input: two columns on a wide window, one on a phone. */
 .controls {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 10px 24px;
 }
 
 .ctl {
   display: grid;
-  grid-template-columns: 9.5rem minmax(0, 1fr);
+  grid-template-columns: 8.5rem minmax(0, 1fr);
   align-items: center;
   gap: 10px;
   min-height: 34px;
@@ -316,6 +322,23 @@ h1 {
 
 .ctl.wide {
   grid-column: 1 / -1;
+}
+
+/* A control sizes to its words and wraps inside its own border rather than
+   running past it. */
+.ctl > button,
+.ctl .inline > button {
+  justify-self: start;
+  max-width: 100%;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.ctl select,
+.ctl input[type="text"],
+.ctl input[type="number"] {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .ctl.check input {
@@ -412,10 +435,6 @@ ol.log {
 .card span {
   font-size: 13px;
   color: var(--muted);
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 .prompt-index {
@@ -678,5 +697,12 @@ ag-ui-chat[collapsed] {
 
   .ctl {
     grid-template-columns: 8rem minmax(0, 1fr);
+  }
+
+  /* A wide row's value (a long button, a readout) gets the full width under
+     its label rather than a narrow column beside it. */
+  .ctl.wide {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
   }
 }

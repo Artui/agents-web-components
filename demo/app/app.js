@@ -32,6 +32,41 @@ const scenario = scenarioFor(location.pathname);
 const slug = scenario?.slug ?? "start";
 const on = (...slugs) => slugs.includes(slug);
 
+// Try and Reset start over from a fresh load: the scenario's stored state (its
+// conversation, collapsed state, theme, size) is dropped and the page reloads,
+// so nothing an earlier run left behind (a filled form, a pending approval, a
+// readout) carries into the next. Try keeps the scenario's control values and
+// sends its prompt once the page is up; Reset leaves every control at its
+// default.
+const RESTART_KEY = "demo:restart";
+const restart = (() => {
+  try {
+    const value = JSON.parse(sessionStorage.getItem(RESTART_KEY) ?? "null");
+    sessionStorage.removeItem(RESTART_KEY);
+    return value?.slug === slug ? value : null;
+  } catch {
+    return null;
+  }
+})();
+const controlsOf = () => [
+  ...document.querySelectorAll(`section[data-scenario="${slug}"] .controls :is(input, select, textarea)[id]`),
+];
+const startOver = (prompt) => {
+  const controls =
+    prompt === null
+      ? []
+      : controlsOf().map((c) => [c.id, c.type === "checkbox" || c.type === "radio" ? c.checked : c.value]);
+  for (const store of [sessionStorage, localStorage]) {
+    for (const key of Object.keys(store)) {
+      if (key.includes(`chat-${slug}`) || (prompt === null && key.startsWith("demo:"))) {
+        store.removeItem(key);
+      }
+    }
+  }
+  sessionStorage.setItem(RESTART_KEY, JSON.stringify({ slug, prompt, controls }));
+  location.replace(location.pathname);
+};
+
 // ── The shell ────────────────────────────────────────────────────────────────
 
 $("version").textContent = VERSION;
@@ -101,12 +136,18 @@ if (scenario === null) {
     }
   }
 } else {
-  const tryRow = el("div", { className: "try" }, el("span", {}, "Try"));
+  const tryRow = el("div", { className: "try" });
+  if (scenario.prompts.length > 0) {
+    tryRow.append(el("span", {}, "Try"));
+  }
   for (const [label, text] of scenario.prompts) {
     const button = el("button", { type: "button", title: text }, label);
-    button.addEventListener("click", () => send(text));
+    button.addEventListener("click", () => startOver(text));
     tryRow.append(button);
   }
+  const reset = el("button", { type: "button", className: "reset", title: "A fresh conversation, every control at its default" }, "Reset");
+  reset.addEventListener("click", () => startOver(null));
+  tryRow.append(reset);
   if (scenario.link !== undefined) {
     tryRow.append(el("a", { href: scenario.link[1] }, scenario.link[0]));
   }
@@ -115,9 +156,7 @@ if (scenario === null) {
     el("h1", {}, scenario.title, el("span", { className: "since" }, `since ${scenario.since}`)),
     el("p", { className: "summary" }, scenario.summary),
   );
-  if (tryRow.childElementCount > 1) {
-    head.append(tryRow);
-  }
+  head.append(tryRow);
 }
 const section = document.querySelector(`section[data-scenario="${slug}"]`);
 if (section !== null) {
@@ -875,4 +914,33 @@ if (on("requests")) {
   };
   $("ctx-on").addEventListener("change", syncContext);
   syncContext();
+}
+
+// ── After a Try or Reset ─────────────────────────────────────────────────────
+
+// Controls come back in page order and fire the events their handlers listen
+// for, so each one is applied the way a click or a keystroke would apply it.
+if (restart !== null) {
+  for (const [id, value] of restart.controls) {
+    const control = $(id);
+    if (control === null) {
+      continue;
+    }
+    if (typeof value === "boolean") {
+      if (control.checked === value) {
+        continue;
+      }
+      control.checked = value;
+    } else {
+      if (control.value === value) {
+        continue;
+      }
+      control.value = value;
+    }
+    control.dispatchEvent(new Event("input", { bubbles: true }));
+    control.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+  if (restart.prompt !== null) {
+    send(restart.prompt);
+  }
 }

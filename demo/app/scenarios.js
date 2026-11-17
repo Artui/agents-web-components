@@ -99,10 +99,7 @@ export const SCENARIOS = [
     since: "0.1.0",
     summary:
       "The thread API, the history drawer, restoring a conversation after a reload, a slow store, and resuming or forking a stored run.",
-    prompts: [
-      ["Send a message", "echo first message"],
-      ["Send another", "echo second message"],
-    ],
+    prompts: [["Start a thread", "echo first message"]],
   },
   {
     slug: "message-actions",
@@ -193,10 +190,10 @@ export const SCENARIOS = [
     title: "Activity renderers",
     since: "0.3.0",
     summary:
-      "A surface redrawn in place that keeps your typing (0.3.0), a run started from its button with chat.run (0.3.0), pydantic-ai's own activity types (0.3.0), and a renderer that draws nothing by design (0.3.0).",
+      "A surface redrawn in place that keeps your typing (0.3.0), a run started from its button with chat.run (0.3.0), the activity types an agent framework sends for its own bookkeeping (0.3.0), and a renderer that draws nothing by design (0.3.0).",
     prompts: [
       ["Release form", "release form"],
-      ["Adapter activities", "adapter"],
+      ["Built-in activity types", "built-in activity types"],
       ["Nothing to draw", "nothing to draw"],
     ],
   },

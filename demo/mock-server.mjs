@@ -109,7 +109,7 @@ function emitToolResult(res, toolCallId, content) {
   emit(res, { type: "TOOL_CALL_RESULT", toolCallId, messageId: id("m"), content });
 }
 
-// A denied gated call's result, as django-ag-ui streams it. pydantic-ai answers
+// A denied gated call's result, as django-ag-ui streams it. The agent answers
 // a denial with a tool return carrying the denial's message, and the server
 // stamps how the call ended on both carriers: `metadata` for a 1.0 client, the
 // top-level key for a 0.x one. Without it the call has no result at all, so the
@@ -126,7 +126,7 @@ function emitDeniedResult(res, toolCallId, content) {
   });
 }
 
-// The message pydantic-ai's AG-UI adapter denies an answer with: Deny sends
+// The message the agent's AG-UI adapter denies an answer with: Deny sends
 // `cancelled`, and anything else that is not an approval is denied by default.
 function denialMessage(answer) {
   if (answer.status === "cancelled") {
@@ -136,7 +136,7 @@ function denialMessage(answer) {
   return typeof reason === "string" && reason !== "" ? reason : "The tool call was denied.";
 }
 
-// Whether an answer approves its call. pydantic-ai denies by default: only a
+// Whether an answer approves its call. The adapter denies by default: only a
 // `resolved` answer whose payload says `approved: true` runs the tool.
 function isApproval(answer) {
   return answer.status === "resolved" && answer.payload?.approved === true;
@@ -209,7 +209,7 @@ async function handleAgent(res, body) {
   emit(res, { type: "RUN_STARTED", threadId, runId });
 
   // A run the server cancels: RUN_FINISHED with a cancelled outcome, as
-  // pydantic-ai's adapter sends when the agent cancels its own run or a deadline
+  // an agent's adapter sends when the agent cancels its own run or a deadline
   // passes. The chat ends it as a stop, so the call it streamed never settles.
   if (/\bcancel\b/i.test(prompt)) {
     const parent = id("msg");
@@ -232,7 +232,7 @@ async function handleAgent(res, body) {
     return;
   }
 
-  // An MCP App view, in pydantic-ai's activity shape. With a server id it reaches
+  // An MCP App view, in the mcp-apps activity shape. With a server id it reaches
   // the ./mcp-apps entry's view mount; without one it is the notice either way.
   if (/\bmcp app\b/i.test(prompt)) {
     const named = !/\bwithout\b/i.test(prompt);
@@ -371,7 +371,8 @@ async function handleAgent(res, body) {
     // What this round's context carried, by description, so an entry a host
     // added with registerContext can be seen arriving.
     const context = Array.isArray(input.context) ? input.context : [];
-    const lines = context.map((item) => `- **${item.description}**: \`${String(item.value).slice(0, 60)}\``);
+    const clip = (text) => (text.length > 48 ? `${text.slice(0, 48)}…` : text);
+    const lines = context.map((item) => `- **${clip(item.description)}**: \`${clip(String(item.value))}\``);
     await streamText(res, id("msg"), [
       `This run carried ${context.length} context entries:\n\n`,
       lines.length === 0 ? "(none)" : lines.join("\n"),
@@ -609,9 +610,9 @@ async function handleAgent(res, body) {
       "The browser only ever sent the token — ",
       "the prompt behind it lives here.",
     ]);
-  } else if (/\badapter\b/i.test(prompt)) {
-    // The activities pydantic-ai's own AG-UI adapter sends, in the shapes it
-    // sends them. Four are records for the model and draw nothing; the
+  } else if (/\bbuilt-in activit/i.test(prompt)) {
+    // The bookkeeping activity types the element draws without a renderer, in
+    // the shapes they arrive in on the wire. Four are records for the model and draw nothing; the
     // enqueued message is a user bubble inside this answer, captioned; the MCP
     // App is a notice naming its view. None of them lands in
     // unhandledActivityTypes, which the page logs after the run.

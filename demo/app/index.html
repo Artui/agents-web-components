@@ -154,8 +154,8 @@
                 <option value="bar">bar</option>
                 <option value="none">none (host bar)</option>
                 <option value="none-corner">none (corner)</option>
-                <option value="none-header">none (host header)</option>
-                <option value="none-header-left">none (host header, button left)</option>
+                <option value="none-header">none (header)</option>
+                <option value="none-header-left">none (header, left)</option>
               </select></label
             >
             <label class="ctl"
@@ -283,7 +283,7 @@
             <label class="ctl check"
               ><span>Header icons (slots)</span> <input type="checkbox" id="cfg-icons"
             /></label>
-            <div class="ctl">
+            <div class="ctl wide">
               <span>--ag-ui-ring</span>
               <span class="inline">
                 <input type="checkbox" id="cfg-ring-on" aria-label="Set the ring colour" />
@@ -292,7 +292,7 @@
               </span>
             </div>
             <div class="ctl"><span>Ring</span><output id="cfg-ring-out">default</output></div>
-            <div class="ctl">
+            <div class="ctl wide">
               <span>--ag-ui-header-btn-hover</span>
               <span class="inline">
                 <input type="checkbox" id="cfg-hover-on" aria-label="Set the hover colour" />
@@ -472,7 +472,7 @@
           <h2>What to look at</h2>
           <ul>
             <li>
-              <strong>Threads.</strong> Send a message or two, press <em>newChat()</em>, then pick
+              <strong>Threads.</strong> <em>Start a thread</em>, press <em>newChat()</em>, then pick
               the first thread back. Each change fires one <code>ag-ui-thread</code> with a reason.
             </li>
             <li>
@@ -507,7 +507,8 @@
               (<code>data-message-actions</code>).
             </li>
             <li>
-              <strong>What a rating names.</strong> Send <em>Echo hello</em> twice and rate both:
+              <strong>What a rating names.</strong> Send <em>Echo hello</em>, type <em>echo hello</em> in the
+              composer, and rate both answers:
               they read the same, and the readout names two different messages, each with the run
               that streamed it. Reload the tab and rate the first again: same message, same thread,
               and <em>no run</em>, since a stored message carries none.
@@ -747,7 +748,8 @@
               Reload the tab and the form comes back inert, marked <em>from history</em>.
             </li>
             <li>
-              <strong>pydantic-ai's types.</strong> <em>Adapter activities</em>: a notice for an app
+              <strong>Built-in activity types.</strong> <em>Built-in activity types</em> sends the
+              activity types the element knows without a renderer: a notice for an app
               view, a user bubble captioned <em>Added during the run</em> (the tags drawn as text),
               and four more activities that draw nothing.
             </li>
@@ -860,7 +862,7 @@
         <div class="panel">
           <h2>chat.request</h2>
           <div class="controls">
-            <div class="ctl">
+            <div class="ctl wide">
               <span>Fetch</span>
               <button type="button" id="req-send">chat.request("/whoami/")</button>
             </div>
@@ -885,7 +887,7 @@
             </li>
             <li>
               <strong>Run context.</strong> <em>Show the context</em> lists what the run carried: the
-              place, the page map, and the entry registered here. Untick the box and send again: the
+              place, the page map, and the entry registered here. Untick the box and press it again: the
               function <code>registerContext</code> returned has removed it.
             </li>
           </ul>
