@@ -1571,6 +1571,24 @@ export class AgUiChat extends HTMLElement {
   }
 
   /**
+   * `fetch(url, init)` as this element authenticates: {@link headers} and
+   * {@link getHeaders} under `init.headers` (which win per key), and
+   * {@link credentials} unless `init` names its own. A foreign `url` outside
+   * {@link trustedOrigins} is reported, as the element's own requests are.
+   *
+   * The seam a separate entry (`./mcp-apps`) reaches the host's routes
+   * through, so the headers and the cookie policy stay one answer.
+   */
+  request(url: string, init: RequestInit = {}): Promise<Response> {
+    const headers = new Headers(this.#headersFor(url));
+    new Headers(init.headers).forEach((value, name) => {
+      headers.set(name, value);
+    });
+    const credentials = init.credentials ?? this.#requestCredentials();
+    return fetch(url, { ...init, headers, ...(credentials === undefined ? {} : { credentials }) });
+  }
+
+  /**
    * How much detail tool-call cards show, from the `data-tool-display`
    * attribute (`grouped` / `minimal` / `inline` / `compact` / `full`).
    * Defaults to `grouped`, for an absent attribute and for a value the
