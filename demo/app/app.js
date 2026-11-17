@@ -1,5 +1,5 @@
 // The demo page. One <ag-ui-chat> per page load, set up for the scenario the
-// URL names (/s/<slug>/) or for the start page (/). Each scenario is its own
+// URL names (/scenarios/<slug>/) or for the start page (/). Each scenario is its own
 // page so it gets its own element id, and so its own stored conversation: a
 // thread started in one scenario is not waiting in the next.
 //
@@ -77,7 +77,7 @@ const navGroups = $("nav-groups");
 for (const group of GROUPS) {
   const list = el("ul");
   for (const item of SCENARIOS.filter((s) => s.group === group)) {
-    const link = el("a", { href: `/s/${item.slug}/` }, item.title, el("small", {}, item.since));
+    const link = el("a", { href: `/scenarios/${item.slug}/` }, item.title, el("small", {}, item.since));
     if (item.slug === slug) {
       link.setAttribute("aria-current", "page");
     }
@@ -119,7 +119,7 @@ if (scenario === null) {
       cards.append(
         el(
           "a",
-          { className: "card", href: `/s/${item.slug}/` },
+          { className: "card", href: `/scenarios/${item.slug}/` },
           el("strong", {}, item.title, el("small", {}, item.since)),
           el("span", {}, item.summary),
         ),
@@ -131,7 +131,7 @@ if (scenario === null) {
   for (const item of SCENARIOS) {
     for (const [, text] of item.prompts) {
       rows.append(
-        el("tr", {}, el("td", {}, text), el("td", {}, el("a", { href: `/s/${item.slug}/` }, item.title))),
+        el("tr", {}, el("td", {}, text), el("td", {}, el("a", { href: `/scenarios/${item.slug}/` }, item.title))),
       );
     }
   }

@@ -29,12 +29,12 @@ const PORT = Number(process.env.PORT ?? 5173);
 const HOST = process.env.HOST ?? "::";
 
 const HTML = "text/html; charset=utf-8";
-// The scenario index is one page: `/` is the start page and `/s/<name>/` a
-// scenario, each its own URL and its own stored conversation (see app/shell.js).
+// The scenario index is one page: `/` is the start page and `/scenarios/<name>/` a
+// scenario, each its own URL and its own stored conversation (see app/app.js).
 // The full page is the chat as a route of its own (see page/index.html), which
 // is the layout the greeting on an empty conversation is for.
 const APP_PAGE = { path: "app/index.html", contentType: HTML };
-const SCENARIO_PATH = /^\/s\/[a-z0-9-]+\/$/;
+const SCENARIO_PATH = /^\/scenarios\/[a-z0-9-]+\/$/;
 // Static files are served from these directories only, by extension.
 const STATIC_DIRS = ["app", "page"];
 const TYPES = new Map([

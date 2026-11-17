@@ -1,6 +1,7 @@
 // Checks that every scenario's Try buttons and its Reset start over: the same
 // Try pressed twice leaves the same conversation as pressing it once, and Reset
-// leaves an empty conversation with every control at its default.
+// leaves an empty conversation with every control at its default. Also that
+// every visible select keeps room for its chevron.
 //
 // Serves the demo itself on a spare port; run it after `pnpm build`
 // (`make demo-check` does both). Exits non-zero naming each scenario that fails.
@@ -55,9 +56,16 @@ const settle = async () => {
 
 const failures = [];
 for (const scenario of SCENARIOS) {
-  await page.goto(`${BASE}/s/${scenario.slug}/`);
+  await page.goto(`${BASE}/scenarios/${scenario.slug}/`);
   await settle();
   const defaults = await controls();
+  // The chevron needs room: every visible select keeps its own inset arrow clear of the border.
+  const cramped = await page.evaluate(() =>
+    [...document.querySelectorAll("select")]
+      .filter((s) => s.offsetParent !== null && parseFloat(getComputedStyle(s).paddingRight) < 24)
+      .map((s) => s.id),
+  );
+  if (cramped.length > 0) failures.push(`${scenario.slug}: selects with no room for the chevron: ${cramped.join(", ")}`);
   for (const [label, text] of scenario.prompts) {
     await press(label);
     await settle();

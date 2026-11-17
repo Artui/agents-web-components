@@ -244,6 +244,6 @@ export const SCENARIOS = [
 
 /** The scenario a path names, or null for the start page. */
 export function scenarioFor(pathname) {
-  const match = /^\/s\/([a-z0-9-]+)\/$/.exec(pathname);
+  const match = /^\/scenarios\/([a-z0-9-]+)\/$/.exec(pathname);
   return match === null ? null : (SCENARIOS.find((s) => s.slug === match[1]) ?? null);
 }
