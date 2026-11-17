@@ -41,6 +41,10 @@ const PAGE_ASSETS = new Map([
   ["/page/", { path: "page/index.html", contentType: HTML }],
   ["/page/index.html", { path: "page/index.html", contentType: HTML }],
   ["/page/page.js", { path: "page/page.js", contentType: "text/javascript" }],
+  // The thread list in a host's own chrome: pills in a bar, rows in a rail.
+  ["/threads/", { path: "threads/index.html", contentType: HTML }],
+  ["/threads/index.html", { path: "threads/index.html", contentType: HTML }],
+  ["/threads/threads.js", { path: "threads/threads.js", contentType: "text/javascript" }],
   // Both pages load it; it does nothing unless the URL carries `?readout`.
   ["/viewport-readout.js", { path: "viewport-readout.js", contentType: "text/javascript" }],
 ]);
@@ -885,6 +889,7 @@ function networkUrls() {
 server.listen(PORT, HOST, () => {
   process.stdout.write(`agents-web-components demo: http://localhost:${PORT}\n`);
   process.stdout.write(`  full page: http://localhost:${PORT}/page/\n`);
+  process.stdout.write(`  thread list: http://localhost:${PORT}/threads/\n`);
   // Any wildcard bind reaches the LAN, so the addresses are worth printing for
   // both spellings rather than only the one this file happens to default to.
   if (HOST === "::" || HOST === "0.0.0.0") {

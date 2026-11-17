@@ -8,6 +8,7 @@ import * as chat from "../src/chat.js";
 import { ELEMENT_TAG } from "../src/constants.js";
 import * as index from "../src/index.js";
 import * as mcpApps from "../src/mcp_apps.js";
+import * as threads from "../src/threads.js";
 
 interface Manifest {
   readonly exports: Record<string, { readonly types?: string; readonly import: string }>;
@@ -22,14 +23,30 @@ describe("the package entries", () => {
     expect(Object.keys(index).filter((name) => name in chat)).toEqual([]);
   });
 
-  it("bundles every export of both entries", () => {
+  it("bundles every export of the chat, the root and the thread list", () => {
     expect(Object.keys(bundle).sort()).toEqual(
-      [...Object.keys(index), ...Object.keys(chat)].sort(),
+      [...Object.keys(index), ...Object.keys(chat), ...Object.keys(threads)].sort(),
     );
+  });
+
+  it("publishes the thread list as its own entry, carried by the main bundle", () => {
+    expect(Object.keys(threads).sort()).toEqual([
+      "AgUiThreads",
+      "THREADS_SELECT_EVENT",
+      "THREADS_TAG",
+      "THREAD_STATUS",
+      "defineThreads",
+    ]);
+    expect(Object.keys(index).filter((name) => name in threads)).toEqual([]);
+    expect(MANIFEST.exports["./threads"]).toEqual({
+      types: "./dist/threads.d.ts",
+      import: "./dist/threads.js",
+    });
   });
 
   it("defines nothing at import", () => {
     expect(customElements.get(ELEMENT_TAG)).toBeUndefined();
+    expect(customElements.get(threads.THREADS_TAG)).toBeUndefined();
   });
 
   it("declares itself free of import side effects", () => {

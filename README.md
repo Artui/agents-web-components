@@ -93,6 +93,7 @@ The package ships two builds (see [`package.json` exports](package.json)):
 | --- | --- | --- |
 | `@artooi/agents-web-components` | ESM library build; `@ag-ui/*` stay **external** | You bundle the app yourself (Vite, webpack, esbuild) and want to dedupe `@ag-ui/*`. |
 | `@artooi/agents-web-components/chat` | The same library build's `<ag-ui-chat>` entry: `AgUiChat` and `defineChat` | Beside the root entry; the two share one module instance, so import from both freely. |
+| `@artooi/agents-web-components/threads` | `<ag-ui-threads>`, the conversation list for your own bar or rail: `AgUiThreads` and `defineThreads` | Beside `./chat`, when you draw the list of conversations yourself. |
 | `@artooi/agents-web-components/bundle` | ESM bundle with `@ag-ui/*` **inlined**, minified | Drop in via a single `<script type="module">` with no build step. |
 
 ### The vendored-bundle story
@@ -2051,6 +2052,54 @@ chat.unhandledActivityTypes; // ["build_status", …]
 
 Note `"chart"` appears there until you call `enableCharts(["activity"])`, which
 is the honest answer to "I pushed a chart and nothing happened".
+
+## The conversation list in your own chrome
+
+`<ag-ui-threads>` lists a chat's conversations where you put it: as rows in a rail, or as pills
+in a bar. It keeps nothing of its own. It reads the chat's `conversationStore`, marks the thread
+on screen, and drives the chat through the [thread API](#driving-the-conversation-from-your-own-chrome).
+
+```html
+<header>
+  <ag-ui-threads for="chat" variant="pills"></ag-ui-threads>
+</header>
+<aside><ag-ui-threads for="chat"></ag-ui-threads></aside>
+<ag-ui-chat id="chat" endpoint="/agent/"></ag-ui-chat>
+
+<script type="module">
+  import { defineChat } from "@artooi/agents-web-components/chat";
+  import { defineThreads } from "@artooi/agents-web-components/threads";
+  defineChat();
+  defineThreads();
+</script>
+```
+
+- **Binding.** `for` names the chat's `id`, looked up in the list's own root, the document or the
+  shadow root it sits in; a chat added later is picked up when it first reports its thread. Or set
+  the `chat` property, which wins over `for` until it is set back to `null`.
+- **`variant`.** `list` (the default) draws rows, each with a delete behind an inline confirm, and
+  an empty text. `pills` draws a strip that stays on one line and scrolls sideways, with no delete.
+- **Picking a row** fires **`ag-ui-threads-select`** (`THREADS_SELECT_EVENT`, detail
+  `{ threadId }`, bubbling, composed and cancelable), then calls `chat.switchThread`, which
+  **cancels a run in flight**, as the built-in list does. Call `preventDefault()` to route to the
+  conversation yourself; otherwise it is the moment to close a popover the list sits in.
+- **Marks.** Each row carries `data-status`, one of `THREAD_STATUS`: `running`, `waiting`,
+  `failed`, `unread` or `idle`, most pressing first. From the chat in the page: running for the
+  thread whose run is in flight, failed after a run there fails (until it runs again), unread when
+  an answer lands while the panel is collapsed (until it is read). A store whose rows carry an
+  optional `status` (`idle`, `running`, `waiting`, `failed`) or `unread` adds the rest, across tabs
+  and reloads; no built-in store reports `status` yet, so `waiting` comes only from your own store.
+  A screen reader hears the mark after the title.
+- **`refresh()`** reads the store again. The list does so after every thread, title, run-finished
+  and unread event; call it when something else changed the store, such as another tab.
+- **`strings`** translates every piece of text (`label`, `untitled`, `empty`, `delete`,
+  `deleteConfirm`, `deleteYes`, `deleteNo`, and `status` per mark), merged over the English.
+- **Styling.** Parts `list`, `row` (plus `row-active` on the thread on screen), `row-button`,
+  `mark`, `delete`, `confirm`, `empty`. The chat's colour tokens apply, and
+  `--ag-ui-threads-running` and `--ag-ui-threads-waiting` colour those two marks. The host
+  carries `data-empty` when the chat has no conversations.
+
+The main `/bundle` carries the element too.
 
 ## A2UI surfaces
 

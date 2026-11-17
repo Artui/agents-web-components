@@ -66,6 +66,16 @@ const ENTRIES = ["src/index.ts", "src/chat.ts"]
 const README = readFileSync("README.md", "utf8");
 const ELEMENT = readFileSync("src/core/ag_ui_chat.ts", "utf8");
 
+function sourcePaths(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      return sourcePaths(path);
+    }
+    return entry.name.endsWith(".ts") ? [path] : [];
+  });
+}
+
 function sources(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name);
@@ -76,7 +86,12 @@ function sources(dir: string): string[] {
   });
 }
 
-const SOURCE = sources("src").join("\n");
+/** The thread list is its own element, with its own README section checked below. */
+const THREADS_DIR = join("src", "threads");
+
+const SOURCE = sources("src")
+  .filter((_, index) => !sourcePaths("src")[index]?.startsWith(THREADS_DIR))
+  .join("\n");
 
 /** Members of `HTMLElement` the README's `chat.…` examples legitimately call. */
 const INHERITED_DOM_MEMBERS = new Set(["addEventListener", "setAttribute", "remove"]);
@@ -648,5 +663,19 @@ describe("the README's element reference", () => {
       .sort();
 
     expect([...new Set(wrong)]).toEqual([]);
+  });
+});
+
+describe("the README's thread list section", () => {
+  it("names every attribute the thread list reads", () => {
+    const reference = section("## The conversation list in your own chrome");
+    const read = [
+      ...sources(THREADS_DIR)
+        .join("\n")
+        .matchAll(/getAttribute\("([a-z][a-z0-9-]*)"\)/g),
+    ].map((match) => match[1] ?? "");
+
+    expect(read.length).toBeGreaterThan(0);
+    expect([...new Set(read)].filter((name) => !reference.includes(`\`${name}\``))).toEqual([]);
   });
 });
