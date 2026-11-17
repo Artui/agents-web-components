@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `getHeaders()` under `init.headers` (which win per key) and `credentials` unless `init` names its
   own, and reports a destination outside `trustedOrigins` as the element's own requests do. Nothing
   changes for a host that does not call it.
+- **`chat.uiStrings`, the string table the element draws with**, read-only: the English defaults,
+  then `data-strings`, then `strings`, resolved on connect. A separate entry draws its text from
+  it, so a host localised through `data-strings` keeps its words. Nothing to opt into.
 - **A new `./mcp-apps` entry, `registerMcpApps(chat, {url, sandboxProxyUrl?})`.** It registers the
   `mcp-apps` activity renderer over the element's built-in notice. Activity content is pydantic-ai's
   `{resourceUri, toolInput, result, serverId?, serverHash?}`; `url` is the host's `mcp-apps/` route,

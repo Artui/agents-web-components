@@ -23,6 +23,8 @@ describe("readActivity", () => {
     ["an array", []],
     ["no resource URI", { ...BASE, resourceUri: undefined }],
     ["no tool input", { ...BASE, toolInput: null }],
+    ["an array tool input", { ...BASE, toolInput: [] }],
+    ["an array result", { ...BASE, result: [] }],
     ["a result that is not an object", { ...BASE, result: "done" }],
   ])("refuses %s", (_name, content) => {
     expect(readActivity(content)).toBeNull();

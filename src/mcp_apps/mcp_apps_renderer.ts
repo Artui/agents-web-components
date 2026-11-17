@@ -1,4 +1,3 @@
-import { MCP_APP_UNSUPPORTED_TEXT } from "../constants.js";
 import type { ActivityRenderer } from "../core/activity_renderer.js";
 import { renderMcpAppNotice } from "../ui/progress/mcp_app_notice.js";
 import { readActivity } from "./read_activity.js";
@@ -25,8 +24,7 @@ export function mcpAppsRenderer(
     }
     const { serverId } = activity;
     if (serverId === undefined) {
-      const template = services.host.strings.mcpAppUnsupported ?? MCP_APP_UNSUPPORTED_TEXT;
-      return renderMcpAppNotice(content, template);
+      return renderMcpAppNotice(content, services.host.uiStrings.mcpAppUnsupported);
     }
     return mount(
       { messageId: context.messageId, activity: { ...activity, serverId }, live: context.live },

@@ -90,7 +90,8 @@ inferred, so the published layout stays `dist/index.d.ts` rather than
    registry, route/page maps, state hook, schema predicates), and `skills/` (skill type,
    templating, parsing). `index.ts`, `constants.ts`, and `version.ts` stay at the `src/`
    root. `src/a2ui/` is a sixth group of its own (`core/`, `display/`, `functions/`,
-   `inputs/`), its own entry and in no other entry's tree.
+   `inputs/`), its own entry and in no other entry's tree; `src/mcp_apps/` is a seventh, the
+   same way.
 
    Every rule above this one governs a *file*, so a package can obey all eight and still
    put everything it owns in one flat directory — which is what `src/ui/` was at 37

@@ -4553,7 +4553,8 @@ are templates carrying `{token}` placeholders the widget fills in — e.g. `minu
 (`"{n}m ago"`), `confirmRun` (`"Run “{tool}”?"`), `tooLarge` (`"Too large (max {size})"`). Keep the
 token verbatim when translating. The full key list and English defaults live in
 [`src/ui/ui_strings.ts`](src/ui/ui_strings.ts) (exported as `DEFAULT_UI_STRINGS`); `mergeUiStrings`
-is exported too if you want to compute a complete table yourself.
+is exported too if you want to compute a complete table yourself. The read-only `uiStrings` property
+is the table the element draws with once connected (defaults, then `data-strings`, then `strings`).
 
 ---
 

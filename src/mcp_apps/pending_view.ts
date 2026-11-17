@@ -1,4 +1,3 @@
-import { MCP_APP_UNSUPPORTED_TEXT } from "../constants.js";
 import { renderMcpAppNotice } from "../ui/progress/mcp_app_notice.js";
 import type { McpAppViewMount } from "./types.js";
 
@@ -8,7 +7,4 @@ import type { McpAppViewMount } from "./types.js";
  * saw before rather than an empty box.
  */
 export const pendingView: McpAppViewMount = (view, services) =>
-  renderMcpAppNotice(
-    view.activity,
-    services.host.strings.mcpAppUnsupported ?? MCP_APP_UNSUPPORTED_TEXT,
-  );
+  renderMcpAppNotice(view.activity, services.host.uiStrings.mcpAppUnsupported);

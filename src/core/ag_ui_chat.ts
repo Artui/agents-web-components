@@ -515,6 +515,15 @@ export class AgUiChat extends HTMLElement {
   strings: Partial<UiStrings> = {};
 
   /**
+   * The string table the element draws with: the English defaults, then
+   * `data-strings`, then {@link strings}, resolved on connect. Read-only; a
+   * separate entry such as `./mcp-apps` draws its text from it.
+   */
+  get uiStrings(): UiStrings {
+    return this.#strings;
+  }
+
+  /**
    * Resolve a `scroll_to` / `drag_and_drop` target string to a host-page
    * element (or `null`). Defaults to a CSS-selector lookup; override to map
    * page-map element ids. The page-action tools are opt-in via the

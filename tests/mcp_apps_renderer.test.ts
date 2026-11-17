@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { mcpAppsRenderer } from "../src/mcp_apps/mcp_apps_renderer.js";
 import type { McpAppsServices, McpAppViewMount } from "../src/mcp_apps/types.js";
+import { DEFAULT_UI_STRINGS, type UiStrings } from "../src/ui/ui_strings.js";
 
 const CONTENT = {
   resourceUri: "ui://weather/view.html",
@@ -10,13 +11,13 @@ const CONTENT = {
   serverHash: "weather",
 };
 
-function services(strings: Record<string, string> = {}): McpAppsServices {
+function services(strings: Partial<UiStrings> = {}): McpAppsServices {
   return {
     host: {
       registerActivityRenderer: vi.fn(),
       request: vi.fn(),
       sendMessage: vi.fn(),
-      strings,
+      uiStrings: { ...DEFAULT_UI_STRINGS, ...strings },
     },
     route: vi.fn(),
     sandboxProxyUrl: "https://sandbox.example/proxy.html",

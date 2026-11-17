@@ -36,7 +36,7 @@ export interface McpAppsOptions {
 /** What `registerMcpApps` needs of the chat element: an `<ag-ui-chat>` has all of it. */
 export type McpAppsHost = Pick<
   AgUiChat,
-  "registerActivityRenderer" | "request" | "sendMessage" | "strings"
+  "registerActivityRenderer" | "request" | "sendMessage" | "uiStrings"
 >;
 
 /** The two MCP methods the route answers for a view. */
