@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   policy. An activity naming no server still draws the notice: give the pydantic-ai `MCPToolset` an
   `id`. `./mcp-apps/bundle` is the same entry as a third vendored file, which inlines none of the
   element. A host opts in by importing `./mcp-apps`; the main entries and bundle are unchanged.
+  **In this release every view still draws the notice:** the sandboxed frame and the view's bridge
+  are not in it, so registering the entry changes nothing a user sees yet. It fixes the seam the
+  frame and the bridge build on.
 
 ## [0.4.0] — 2026-11-16
 
