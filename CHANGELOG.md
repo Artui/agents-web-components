@@ -31,8 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `status` yet, so `waiting` shows only from a host's own store. Parts `list`, `row`,
   `row-active`, `row-button`, `mark`, `delete`, `confirm`, `empty`; tokens
   `--ag-ui-threads-running` and `--ag-ui-threads-waiting` beside the chat's own. `refresh()`
-  re-lists; `strings` translates. The main bundle carries it too. A host opts in by importing
-  `./threads` and placing the element; the chat is unchanged.
+  re-lists, `threads` holds the rows on screen, and `strings` translates. The main bundle carries
+  it too. A host opts in by importing `./threads` and placing the element; the chat is unchanged.
 
 ## [0.4.0] — 2026-11-16
 
