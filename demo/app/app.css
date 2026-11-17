@@ -71,6 +71,17 @@ input[type="text"] {
   max-width: 100%;
 }
 
+/* The native chevron sits against the border; this one is inset 12px. */
+select {
+  appearance: none;
+  padding-right: 32px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 17px) 50%, calc(100% - 12px) 50%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+}
+
 /* The widget sits under the page's own chrome (the nav, the phone's bar and
    its drawer), which the page tells it about rather than the widget guessing:
    the fixed placements stop at the nav on a wide window and below the bar on a
@@ -485,6 +496,10 @@ ol.log {
 .field input[type="text"],
 .field select {
   padding: 8px 10px;
+}
+
+.field select {
+  padding-right: 32px;
 }
 
 .field.checkbox {
