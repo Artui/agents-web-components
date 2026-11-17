@@ -41,6 +41,10 @@ const PAGE_ASSETS = new Map([
   ["/page/", { path: "page/index.html", contentType: HTML }],
   ["/page/index.html", { path: "page/index.html", contentType: HTML }],
   ["/page/page.js", { path: "page/page.js", contentType: "text/javascript" }],
+  // A static design study of the skills editor; it loads no bundle.
+  ["/skills/", { path: "skills/index.html", contentType: HTML }],
+  ["/skills/index.html", { path: "skills/index.html", contentType: HTML }],
+  ["/skills/skills.js", { path: "skills/skills.js", contentType: "text/javascript" }],
   // Both pages load it; it does nothing unless the URL carries `?readout`.
   ["/viewport-readout.js", { path: "viewport-readout.js", contentType: "text/javascript" }],
 ]);

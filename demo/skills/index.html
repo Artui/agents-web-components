@@ -1,0 +1,803 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Skills editor design</title>
+    <style>
+      /* A design study, not the element: every panel below is drawn by
+         skills.js with the Quiet theme's token defaults copied from
+         src/ui/shell/token_styles.ts, so it reads as the panel would. */
+      :root {
+        color-scheme: light dark;
+        --bg: light-dark(#ffffff, #161618);
+        --fg: light-dark(#1b1b1d, #ececee);
+        --accent: light-dark(#232326, #f0f0f2);
+        --ink-2: color-mix(in oklch, var(--fg) 78%, var(--bg));
+        --ink-3: color-mix(in oklch, var(--fg) 64%, var(--bg));
+        --line: color-mix(in oklch, var(--fg) 11%, var(--bg));
+        --line-strong: color-mix(in oklch, var(--fg) 20%, var(--bg));
+        --wash: color-mix(in oklch, var(--fg) 4.5%, var(--bg));
+        --hover: color-mix(in oklch, var(--fg) 6%, var(--bg));
+        --user-bg: color-mix(in oklch, var(--accent) 12%, var(--bg));
+        --ring: color-mix(in oklch, var(--accent) 40%, var(--fg));
+        --on-accent: light-dark(#ffffff, #111111);
+        --danger: light-dark(#b91c1c, #f87171);
+        --warn: light-dark(#a15c07, #fbbf24);
+        --success: light-dark(#15803d, #4ade80);
+        --page: light-dark(#f4f4f6, #0c0c0e);
+        --font: Inter, ui-sans-serif, system-ui, sans-serif;
+        --mono: ui-monospace, "SF Mono", Menlo, monospace;
+        --shadow: 0 1px 2px light-dark(rgb(0 0 0 / 0.05), rgb(255 255 255 / 0.04)),
+          0 12px 32px -16px light-dark(rgb(0 0 0 / 0.22), rgb(0 0 0 / 0.7));
+      }
+      :root[data-theme="light"] {
+        color-scheme: light;
+      }
+      :root[data-theme="dark"] {
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: var(--font);
+        font-size: 14px;
+        line-height: 1.55;
+        color: var(--fg);
+        background: var(--page);
+      }
+      header.bar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px 18px;
+        padding: 10px 16px;
+        background: var(--bg);
+        border-bottom: 1px solid var(--line);
+      }
+      header.bar strong {
+        font-size: 15px;
+      }
+      header.bar small {
+        color: var(--ink-3);
+      }
+      .seg {
+        display: inline-flex;
+        margin-left: auto;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .seg button {
+        font: inherit;
+        font-size: 12.5px;
+        padding: 4px 10px;
+        border: 0;
+        background: transparent;
+        color: var(--ink-2);
+        cursor: pointer;
+      }
+      .seg button[aria-pressed="true"] {
+        background: var(--accent);
+        color: var(--on-accent);
+      }
+      main {
+        max-width: 1640px;
+        margin: 0 auto;
+        padding: 20px 16px 48px;
+      }
+      .intro {
+        max-width: 760px;
+        color: var(--ink-2);
+      }
+      .intro h1 {
+        margin: 0 0 6px;
+        font-size: 20px;
+        color: var(--fg);
+      }
+      .intro p {
+        margin: 0 0 10px;
+      }
+      .frames {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(min(380px, 100%), 1fr));
+        gap: 28px 22px;
+        margin-top: 22px;
+      }
+      figure {
+        margin: 0;
+        min-width: 0;
+      }
+      figcaption {
+        margin-top: 10px;
+        font-size: 12.5px;
+        color: var(--ink-2);
+      }
+      figcaption b {
+        color: var(--fg);
+      }
+
+      /* The panel: the frame, header and body the element draws. */
+      .panel {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        height: 640px;
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+      .ph {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        min-height: 48px;
+        padding: 8px 8px 8px 10px;
+        border-bottom: 1px solid var(--line);
+      }
+      .ph .title {
+        flex: 1 1 auto;
+        min-width: 0;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .ph .title small {
+        font-weight: 400;
+        color: var(--ink-3);
+        margin-left: 4px;
+      }
+      .hb {
+        flex: 0 0 auto;
+        display: inline-grid;
+        place-items: center;
+        width: 30px;
+        height: 30px;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--ink-2);
+        cursor: pointer;
+      }
+      .hb:hover {
+        background: var(--hover);
+        color: var(--fg);
+      }
+      .hb[aria-pressed="true"] {
+        background: var(--hover);
+        color: var(--fg);
+      }
+      .hb svg,
+      .btn svg,
+      .row svg {
+        width: 17px;
+        height: 17px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.75;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .pb {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+      }
+      .pf {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+        border-top: 1px solid var(--line);
+      }
+      .pf .grow {
+        flex: 1 1 auto;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font: inherit;
+        font-size: 13px;
+        line-height: 1.3;
+        padding: 6px 11px;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--fg);
+        cursor: pointer;
+      }
+      .btn:hover {
+        background: var(--hover);
+      }
+      .btn.primary {
+        font-weight: 600;
+        border-color: var(--accent);
+        background: var(--accent);
+        color: var(--on-accent);
+      }
+      .btn.primary:hover {
+        opacity: 0.88;
+      }
+      .btn.ghost {
+        border-color: transparent;
+        background: transparent;
+        color: var(--ink-2);
+      }
+      .btn.ghost:hover {
+        background: var(--hover);
+        color: var(--fg);
+      }
+      .btn.quiet-danger {
+        border-color: transparent;
+        background: transparent;
+        color: var(--danger);
+      }
+      .btn.quiet-danger:hover {
+        background: color-mix(in oklch, var(--danger) 9%, var(--bg));
+      }
+      .btn.block {
+        width: 100%;
+        justify-content: center;
+      }
+      :is(.btn, .hb, .row, input, textarea, .switch input):focus-visible {
+        outline: 2px solid var(--ring);
+        outline-offset: 2px;
+      }
+
+      /* List */
+      .search {
+        padding: 10px 12px 4px;
+      }
+      .search input {
+        width: 100%;
+        font: inherit;
+        font-size: 13px;
+        padding: 6px 10px;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--fg);
+      }
+      .group {
+        padding: 10px 12px 2px;
+        font-size: 11.5px;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+        display: flex;
+        justify-content: space-between;
+      }
+      .group span:last-child {
+        text-transform: none;
+        letter-spacing: 0;
+        font-weight: 400;
+      }
+      .rows {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 4px 6px;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 2px 8px;
+        width: 100%;
+        text-align: left;
+        font: inherit;
+        color: inherit;
+        padding: 8px 8px;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        cursor: pointer;
+      }
+      .row:hover {
+        background: var(--hover);
+      }
+      .row .name {
+        font-family: var(--mono);
+        font-size: 13px;
+        font-weight: 600;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .row .when {
+        font-size: 11.5px;
+        color: var(--ink-3);
+        white-space: nowrap;
+      }
+      .row .desc {
+        grid-column: 1 / -1;
+        font-size: 12.5px;
+        color: var(--ink-2);
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .row .meta {
+        grid-column: 1 / -1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 10px;
+        margin-top: 2px;
+        font-size: 11.5px;
+        color: var(--ink-3);
+      }
+      .row .meta span {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .row .meta svg {
+        width: 13px;
+        height: 13px;
+      }
+      .row.off .name,
+      .row.off .desc {
+        opacity: 0.55;
+      }
+      .tag {
+        font-size: 11px;
+        line-height: 1.5;
+        padding: 0 7px;
+        border-radius: 999px;
+        border: 1px solid var(--line-strong);
+        color: var(--ink-2);
+      }
+      .tag.warn {
+        border-color: color-mix(in oklch, var(--warn) 45%, var(--bg));
+        color: var(--warn);
+      }
+      .tag.danger {
+        border-color: color-mix(in oklch, var(--danger) 45%, var(--bg));
+        color: var(--danger);
+      }
+      .empty {
+        display: grid;
+        place-items: center;
+        gap: 10px;
+        text-align: center;
+        padding: 56px 28px;
+        color: var(--ink-2);
+      }
+      .empty h3 {
+        margin: 0;
+        font-size: 15px;
+        color: var(--fg);
+      }
+      .empty p {
+        margin: 0;
+        font-size: 13px;
+      }
+
+      /* Editor */
+      .form {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 14px 14px 18px;
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .field label,
+      .field .label {
+        font-size: 12.5px;
+        font-weight: 600;
+      }
+      .field .hint {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        font-size: 11.5px;
+        color: var(--ink-3);
+      }
+      .field .hint .count {
+        flex: 0 0 auto;
+        font-variant-numeric: tabular-nums;
+      }
+      .field input[type="text"],
+      .field textarea {
+        width: 100%;
+        font: inherit;
+        font-size: 13px;
+        padding: 7px 10px;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--fg);
+        resize: vertical;
+      }
+      .slash {
+        display: flex;
+        align-items: stretch;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .slash span {
+        display: grid;
+        place-items: center;
+        padding: 0 4px 0 10px;
+        font-family: var(--mono);
+        color: var(--ink-3);
+        background: var(--wash);
+      }
+      .slash input[type="text"] {
+        border: 0;
+        border-radius: 0;
+        font-family: var(--mono);
+        background: var(--wash);
+      }
+      .field.bad .slash,
+      .field.bad textarea {
+        border-color: var(--danger);
+      }
+      .field .err {
+        font-size: 12px;
+        color: var(--danger);
+      }
+      .field textarea.body {
+        font-family: var(--mono);
+        font-size: 12.5px;
+        line-height: 1.5;
+        min-height: 180px;
+      }
+      .scope {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .scope label {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 400;
+        font-size: 13px;
+        padding: 5px 10px;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      .scope label:has(input:checked) {
+        border-color: var(--accent);
+        background: var(--user-bg);
+      }
+      .scope input {
+        margin: 0;
+        accent-color: var(--accent);
+      }
+      .switch {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 2px 12px;
+        padding: 9px 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+      .switch + .switch {
+        margin-top: -8px;
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+      }
+      .switch:has(+ .switch) {
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+      }
+      .switch b {
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .switch small {
+        grid-column: 1;
+        font-size: 11.5px;
+        color: var(--ink-3);
+      }
+      .switch input {
+        grid-row: 1 / 3;
+        grid-column: 2;
+        appearance: none;
+        width: 34px;
+        height: 20px;
+        margin: 0;
+        border-radius: 999px;
+        background: var(--line-strong);
+        position: relative;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+      .switch input::after {
+        content: "";
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--bg);
+        box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+        transition: transform 0.15s;
+      }
+      .switch input:checked {
+        background: var(--accent);
+      }
+      .switch input:checked::after {
+        transform: translateX(14px);
+      }
+      .notice {
+        display: flex;
+        gap: 8px;
+        padding: 8px 10px;
+        font-size: 12.5px;
+        border-radius: 8px;
+        border: 1px solid color-mix(in oklch, var(--warn) 40%, var(--bg));
+        background: color-mix(in oklch, var(--warn) 8%, var(--bg));
+        color: var(--fg);
+      }
+      .notice.info {
+        border-color: var(--line);
+        background: var(--wash);
+        color: var(--ink-2);
+      }
+      .notice svg {
+        flex: 0 0 auto;
+        width: 16px;
+        height: 16px;
+        margin-top: 1px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.75;
+      }
+
+      /* Transcript, for the draft-it-with-the-agent frame. */
+      .tx {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        padding: 14px;
+      }
+      .msg-user {
+        align-self: flex-end;
+        max-width: 85%;
+        padding: 8px 12px;
+        border-radius: 12px;
+        background: var(--user-bg);
+      }
+      .msg-ai {
+        max-width: 100%;
+      }
+      .msg-ai p {
+        margin: 0 0 6px;
+      }
+      .step {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12.5px;
+        color: var(--ink-3);
+      }
+      .step::before {
+        content: "\2713";
+        color: var(--success);
+      }
+      .chip {
+        font-family: var(--mono);
+        font-size: 12px;
+        padding: 1px 7px;
+        border-radius: 6px;
+        background: var(--wash);
+        border: 1px solid var(--line);
+      }
+      .approval {
+        border: 1px solid var(--line-strong);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .approval .ah {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        background: var(--wash);
+        border-bottom: 1px solid var(--line);
+      }
+      .approval .ab {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 10px 12px;
+        font-size: 12.5px;
+      }
+      .approval dl {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 4px 12px;
+        margin: 0;
+      }
+      .approval dt {
+        color: var(--ink-3);
+      }
+      .approval dd {
+        margin: 0;
+        min-width: 0;
+      }
+      .approval pre {
+        margin: 0;
+        max-height: 150px;
+        overflow: auto;
+        padding: 8px 10px;
+        font-family: var(--mono);
+        font-size: 12px;
+        white-space: pre-wrap;
+        border-radius: 8px;
+        background: var(--wash);
+        border: 1px solid var(--line);
+      }
+      .approval .aa {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+        padding: 0 12px 12px;
+      }
+      .composer {
+        margin: 0 12px 12px;
+        padding: 10px 12px;
+        border: 1px solid var(--line-strong);
+        border-radius: 12px;
+        color: var(--ink-3);
+        font-size: 13px;
+      }
+      .toast {
+        position: absolute;
+        left: 12px;
+        right: 12px;
+        bottom: 66px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        background: var(--fg);
+        color: var(--bg);
+        font-size: 12.5px;
+      }
+      section.open {
+        max-width: 860px;
+        margin-top: 36px;
+        color: var(--ink-2);
+      }
+      section.open h2 {
+        font-size: 16px;
+        color: var(--fg);
+        margin: 0 0 8px;
+      }
+      section.open li {
+        margin-bottom: 6px;
+      }
+      section.open code {
+        font-family: var(--mono);
+        font-size: 12.5px;
+      }
+      @media (max-width: 520px) {
+        .panel {
+          height: 600px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="bar">
+      <strong>Skills editor</strong>
+      <small>design study for the panel view; every frame is clickable</small>
+      <div class="seg" role="group" aria-label="Colour scheme">
+        <button type="button" data-theme-pick="light">Light</button>
+        <button type="button" data-theme-pick="dark">Dark</button>
+        <button type="button" data-theme-pick="system" aria-pressed="true">System</button>
+      </div>
+    </header>
+    <main>
+      <div class="intro">
+        <h1>Skills you write, inside the panel</h1>
+        <p>
+          An opt-in view beside the conversation, opened like the thread list. It lists the skills
+          the caller may write, creates and edits them (name, description, instructions and the two
+          switches), turns them off, and hands the drafting to the agent. The fields and limits are
+          the runtime's: a kebab-case name of at most 64 characters, a description of at most 1024,
+          instructions of at most 20&#8239;000. There is no delete, only off.
+        </p>
+      </div>
+      <div class="frames">
+        <figure>
+          <div class="panel" data-start="list"></div>
+          <figcaption>
+            <b>1. The list.</b> A full-panel view with a back arrow, grouped by where a skill is
+            saved. A personal skill that overrides a shared one of the same name says so. A skill
+            that is off stays listed, dimmed, with a way back on.
+          </figcaption>
+        </figure>
+        <figure>
+          <div class="panel" data-start="edit"></div>
+          <figcaption>
+            <b>2. The editor.</b> The two flags as plain words: "In the / menu" is
+            <code>user-invocable</code>, "Agent may load it on its own" is the negation of
+            <code>disable-model-invocation</code>. Turning both off warns that nobody can reach it.
+            Counters show the limits before the server refuses.
+          </figcaption>
+        </figure>
+        <figure>
+          <div class="panel" data-start="invalid"></div>
+          <figcaption>
+            <b>3. A refused save.</b> A new skill with a bad name: the server's own message lands
+            under the field it names, the rest of the draft is kept.
+          </figcaption>
+        </figure>
+        <figure>
+          <div class="panel" data-start="draft"></div>
+          <figcaption>
+            <b>4. Draft it with the agent.</b> The button closes the view and sends
+            <code>/create-skill</code> into the conversation. The agent interviews, then calls
+            <code>create_skill</code>, which waits on the approval card with the whole body shown.
+            On approval the catalog refetches and the list has the new row.
+          </figcaption>
+        </figure>
+        <figure>
+          <div class="panel" data-start="empty"></div>
+          <figcaption>
+            <b>5. Nothing written yet.</b> The empty state leads with the agent, since a blank body
+            field is the hard part.
+          </figcaption>
+        </figure>
+        <figure>
+          <div class="panel" data-start="routines"></div>
+          <figcaption>
+            <b>6. Routines, the same shell.</b> Scheduled runs reuse the view: rows with a name, a
+            status line and one primary action (here "Run now"), a full-panel editor behind each
+            row, pause in place of off, and a grant that can destroy marked as such.
+          </figcaption>
+        </figure>
+      </div>
+      <section class="open">
+        <h2>Open questions</h2>
+        <ol>
+          <li>
+            Where the list lives: a full-panel view (drawn here) or the left drawer the thread list
+            uses, with only the editor full-panel.
+          </li>
+          <li>
+            How it is opened: a header button, a "Manage skills" entry at the foot of the
+            <code>/</code> palette, or both.
+          </li>
+          <li>
+            Turning a skill back on: the runtime has <code>disable_skill</code> and no enable. Add
+            an enable to the runtime (drawn here as "Turn on"), let an update carry
+            <code>enabled</code>, or show off skills read-only.
+          </li>
+          <li>
+            Shared skills the caller cannot write: hidden (drawn here), or listed read-only so a
+            member can see what their personal skill overrides.
+          </li>
+        </ol>
+      </section>
+    </main>
+    <script src="skills.js"></script>
+  </body>
+</html>
