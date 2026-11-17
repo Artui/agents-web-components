@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>agents-web-components — thread list</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        color: #1a1a2e;
+        background: #f7f7fb;
+      }
+      /* The host's own bar: a brand, the conversations as pills, and its controls.
+         The pills take what is left and scroll sideways when they run out. */
+      header.bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px 16px;
+        padding: 10px 20px;
+        background: #15151f;
+        color: #fff;
+      }
+      header.bar strong {
+        flex: none;
+      }
+      header.bar ag-ui-threads {
+        flex: 1 1 240px;
+        --ag-ui-fg: #f0f0f2;
+        --ag-ui-bg: #15151f;
+        --ag-ui-accent: #9cc2ff;
+        --ag-ui-line: #3a3a48;
+        --ag-ui-hover: #262634;
+        --ag-ui-threads-running: #7aa7f5;
+      }
+      header.bar button {
+        flex: none;
+        padding: 5px 12px;
+        border: 1px solid #3a3a48;
+        border-radius: 6px;
+        background: #262634;
+        color: #fff;
+        font: inherit;
+        cursor: pointer;
+      }
+      main {
+        display: grid;
+        grid-template-columns: 260px minmax(0, 1fr);
+        gap: 16px;
+        padding: 16px 20px;
+        height: calc(100vh - 56px);
+        min-height: 420px;
+      }
+      aside {
+        overflow: auto;
+        padding: 8px;
+        border: 1px solid #e3e3ea;
+        border-radius: 12px;
+        background: #fff;
+      }
+      aside h2 {
+        margin: 4px 10px 8px;
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #6b6b7b;
+      }
+      ag-ui-chat {
+        height: 100%;
+      }
+      .try {
+        margin: 12px 10px 0;
+        font-size: 12px;
+        line-height: 1.5;
+        color: #6b6b7b;
+      }
+      @media (max-width: 720px) {
+        main {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        aside {
+          display: none;
+        }
+        header.bar ag-ui-threads {
+          order: 1;
+          flex-basis: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="bar">
+      <strong>Threads demo</strong>
+      <ag-ui-threads for="chat" variant="pills"></ag-ui-threads>
+      <button type="button" id="new-chat">New chat</button>
+      <button type="button" id="seed">Seed with marks</button>
+    </header>
+    <main>
+      <aside>
+        <h2>Conversations</h2>
+        <ag-ui-threads for="chat"></ag-ui-threads>
+        <p class="try">
+          Send anything to see its row marked running while it answers. Send "crash" to mark it
+          failed; the next answer there clears it. "Seed with marks" adds rows whose store reports
+          running, waiting, failed and unread, as a server with run status will.
+        </p>
+      </aside>
+      <ag-ui-chat id="chat" endpoint="/agent/" placement="embedded" data-start-open></ag-ui-chat>
+    </main>
+    <script type="module" src="/threads/threads.js"></script>
+  </body>
+</html>

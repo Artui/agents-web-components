@@ -36,7 +36,7 @@ const HTML = "text/html; charset=utf-8";
 const APP_PAGE = { path: "app/index.html", contentType: HTML };
 const SCENARIO_PATH = /^\/scenarios\/[a-z0-9-]+\/$/;
 // Static files are served from these directories only, by extension.
-const STATIC_DIRS = ["app", "page"];
+const STATIC_DIRS = ["app", "page", "threads"];
 const TYPES = new Map([
   [".html", HTML],
   [".js", "text/javascript"],
@@ -44,6 +44,8 @@ const TYPES = new Map([
 ]);
 const PAGE_ASSETS = new Map([
   ["/page/", { path: "page/index.html", contentType: HTML }],
+  // The thread list in a host's own chrome: pills in a bar, rows in a rail.
+  ["/threads/", { path: "threads/index.html", contentType: HTML }],
   // Every page loads it; it does nothing unless the URL carries `?readout`.
   ["/viewport-readout.js", { path: "viewport-readout.js", contentType: "text/javascript" }],
 ]);
@@ -1004,6 +1006,7 @@ function networkUrls() {
 server.listen(PORT, HOST, () => {
   process.stdout.write(`agents-web-components demo: http://localhost:${PORT}\n`);
   process.stdout.write(`  full page: http://localhost:${PORT}/page/\n`);
+  process.stdout.write(`  thread list: http://localhost:${PORT}/threads/\n`);
   // Any wildcard bind reaches the LAN, so the addresses are worth printing for
   // both spellings rather than only the one this file happens to default to.
   if (HOST === "::" || HOST === "0.0.0.0") {

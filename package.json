@@ -34,6 +34,10 @@
     "./mcp-apps/bundle": {
       "types": "./dist/mcp_apps.d.ts",
       "import": "./dist/agents-web-components.mcp-apps.bundle.js"
+    },
+    "./threads": {
+      "types": "./dist/threads.d.ts",
+      "import": "./dist/threads.js"
     }
   },
   "sideEffects": false,

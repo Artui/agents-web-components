@@ -86,7 +86,9 @@ keep it that way. `demo/page/` is the chat as a host's full-page route.
    tree, never a module moved under it. Internal modules import from leaf paths
    (`./fill_field.ts`), never from an entry file. A new entry is a line in `LIBRARY` in
    `esbuild.config.mjs`, an `exports` key in `package.json`, a re-export in `src/bundle.ts`,
-   and a row in `tests/entries.test.ts`. The exceptions are `src/a2ui/` and `src/mcp_apps/`: each
+   and a row in `tests/entries.test.ts`. `src/threads.ts` is the `./threads` entry
+   (`<ag-ui-threads>` and `defineThreads`, over `src/threads/`), and the main bundle carries it.
+   The exceptions are `src/a2ui/` and `src/mcp_apps/`: each
    its own entry (`./a2ui` and `./a2ui/bundle`, `./mcp-apps` and `./mcp-apps/bundle`),
    deliberately absent from `src/bundle.ts` so the main bundle carries neither, reaching the
    element only through the `chat` it is handed; `tests/entries.test.ts` enforces both.

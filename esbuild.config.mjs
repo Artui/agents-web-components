@@ -103,7 +103,7 @@ export const zodNamespaceImport = {
  */
 export const LIBRARY = {
   ...SHARED,
-  entryPoints: ["src/index.ts", "src/chat.ts", "src/a2ui.ts", "src/mcp_apps.ts"],
+  entryPoints: ["src/index.ts", "src/chat.ts", "src/a2ui.ts", "src/mcp_apps.ts", "src/threads.ts"],
   outdir: "dist",
   splitting: true,
   external: ["@ag-ui/client", "@ag-ui/core"],
