@@ -1,0 +1,928 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>agents-web-components demo</title>
+    <link rel="stylesheet" href="/app/app.css" />
+  </head>
+  <body>
+    <!-- The phone's bar: the nav is a drawer behind its button. -->
+    <header class="topbar">
+      <button type="button" class="menu" id="nav-toggle" aria-expanded="false" aria-controls="nav">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+        <span>Scenarios</span>
+      </button>
+      <a class="topbar-brand" href="/">agents-web-components</a>
+    </header>
+
+    <nav class="nav" id="nav" aria-label="Scenarios">
+      <a class="brand" href="/">
+        <span class="brand-name">agents-web-components</span>
+        <span class="brand-sub">demo <span id="version"></span></span>
+      </a>
+      <div id="nav-groups"></div>
+      <a class="nav-out" href="/page/">Full page route</a>
+    </nav>
+
+    <main id="main">
+      <!-- Drawn from scenarios.js: the start page, or the scenario's title, summary and Try row. -->
+      <div id="scenario-head"></div>
+
+      <!-- The start page. -->
+      <section data-scenario="start" hidden>
+        <div id="start-groups" class="start-groups"></div>
+        <div class="panel">
+          <h2>Every phrase the scripted agent answers</h2>
+          <p class="muted">
+            The demo runs against <code>demo/mock-server.mjs</code>, which answers a fixed set of
+            phrases. Anything else gets a short note pointing here.
+          </p>
+          <table class="prompt-index" id="prompt-index">
+            <thead>
+              <tr><th>Send</th><th>Scenario</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Layout -->
+      <section data-scenario="placements" hidden>
+        <div class="panel">
+          <h2>Controls</h2>
+          <div class="controls">
+            <label class="ctl"
+              ><span>Placement</span>
+              <select id="cfg-placement">
+                <optgroup label="documented">
+                  <option value="floating">floating</option>
+                  <option value="sidebar">sidebar (rail)</option>
+                  <option value="page">page (centred column)</option>
+                  <option value="embedded">embedded</option>
+                </optgroup>
+                <!-- Still parsed, styled and tested, but not in the README's four:
+                     this is the only place they can be looked at. -->
+                <optgroup label="supported, undocumented">
+                  <option value="bottom-left">bottom-left</option>
+                  <option value="side">side</option>
+                  <option value="full">full</option>
+                </optgroup>
+              </select></label
+            >
+            <!-- data-side: which edge a sidebar docks to; right removes the attribute. -->
+            <label class="ctl"
+              ><span>Side</span>
+              <select id="cfg-side">
+                <option value="" selected>right</option>
+                <option value="left">left</option>
+              </select></label
+            >
+            <!-- The page a sidebar or side column must leave beside it; unset caps nothing. -->
+            <label class="ctl"
+              ><span>Min page width</span>
+              <select id="cfg-min-page">
+                <option value="" selected>unset</option>
+                <option value="480px">480px</option>
+                <option value="800px">800px</option>
+              </select></label
+            >
+            <div class="ctl"><span>Maximize event</span><output id="cfg-maximized">maximized: false</output></div>
+            <div class="ctl">
+              <span>Size</span>
+              <button type="button" id="cfg-reset-size">resetSize()</button>
+            </div>
+            <div class="ctl">
+              <span>Host move</span>
+              <button type="button" id="cfg-move" title="moveTo('top-left'), and what describeSurface() says">
+                moveTo('top-left')
+              </button>
+            </div>
+            <div class="ctl wide"><span>describeSurface()</span><output id="cfg-move-out">-</output></div>
+          </div>
+        </div>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>Resize.</strong> Drag the panel's top-left grip. Switch placement to see the
+              axes change: <em>side</em> is width-only, <em>full</em> and <em>page</em> have no grip.
+            </li>
+            <li>
+              <strong>Maximize.</strong> On <em>sidebar</em> or <em>side</em>, the header's maximize
+              control widens the panel up to <em>Min page width</em>; the readout shows the event.
+            </li>
+            <li>
+              <strong>Embedded.</strong> The panel drops into the dashed slot below these notes,
+              in the page's flow.
+            </li>
+            <li>
+              <strong>The host's chrome.</strong> On a wide window the panel stops at this page's
+              navigation, and on a phone below its top bar: the page sets
+              <code>--ag-ui-viewport-inset-left</code> and <code>-top</code>.
+            </li>
+            <li>
+              <strong>Host move.</strong> Under <em>Collapse to: bar</em> or <em>none</em> a corner
+              panel moves on a wide window; on a phone it reports <code>movable: false</code>.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section data-scenario="collapse" hidden>
+        <div class="panel">
+          <h2>Controls</h2>
+          <div class="controls">
+            <!-- default removes the attribute so the placement's own mark shows. -->
+            <label class="ctl"
+              ><span>Collapse icon</span>
+              <select id="cfg-collapse-icon">
+                <option value="" selected>default (by placement)</option>
+                <option value="panel-close">panel-close</option>
+                <option value="chevron-down">chevron-down</option>
+                <option value="chevron-up">chevron-up</option>
+                <option value="chevron-left">chevron-left</option>
+                <option value="chevron-right">chevron-right</option>
+              </select></label
+            >
+            <!-- none shows the host bar and anchors the panel to its Agent button;
+                 none (corner) shows the bar without anchoring. -->
+            <label class="ctl"
+              ><span>Collapse to</span>
+              <select id="cfg-collapse-to">
+                <option value="" selected>auto</option>
+                <option value="bar">bar</option>
+                <option value="none">none (host bar)</option>
+                <option value="none-corner">none (corner)</option>
+                <option value="none-header">none (header)</option>
+                <option value="none-header-left">none (header, left)</option>
+              </select></label
+            >
+            <label class="ctl"
+              ><span>Anchor side</span>
+              <select id="cfg-anchor-side">
+                <option value="" selected>auto</option>
+                <option value="above">above</option>
+                <option value="below">below</option>
+              </select></label
+            >
+            <label class="ctl check"
+              ><span>Unread badge</span> <input type="checkbox" id="cfg-badge" checked
+            /></label>
+            <div class="ctl">
+              <span>Badge</span>
+              <button type="button" id="cfg-ping">Collapse + ping</button>
+            </div>
+          </div>
+        </div>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>Collapse.</strong> The header's chevron scales the panel into the round
+              launcher, and the launcher expands it again. Under <em>Placements</em>, a
+              <em>sidebar</em> slides to an edge rail instead. <em>Collapse icon</em> picks the
+              mark outright.
+            </li>
+            <li>
+              <strong>Bottom bar.</strong> <em>Collapse to: bar</em>, then collapse: the launcher
+              becomes a strip along the bottom with the title, the badge and a running mark, and
+              the page pads itself by the reported height. Its clock opens the history as a popover
+              over the bar.
+            </li>
+            <li>
+              <strong>Nothing.</strong> <em>none</em> hides the widget while collapsed and shows a
+              host toolbar; its <em>Agent</em> button toggles the panel, which rises above it (or
+              drops below it in the header variants).
+            </li>
+            <li>
+              <strong>Unread badge.</strong> <em>Collapse + ping</em> collapses and sends, so the
+              answer lands behind the launcher and the badge counts it. Untick the box for the
+              opt-out: the count still runs, only the dot is gone.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section data-scenario="greeting" hidden>
+        <div class="panel">
+          <h2>Controls</h2>
+          <div class="controls">
+            <!-- On by default for page and opt-in for embedded; default removes the attribute. -->
+            <label class="ctl"
+              ><span>Greeting</span>
+              <select id="cfg-greeting">
+                <option value="" selected>default (page only)</option>
+                <option value="on">on (embedded too)</option>
+                <option value="off">off</option>
+              </select></label
+            >
+            <label class="ctl"
+              ><span>User name</span> <input type="text" id="cfg-user-name" value="Ada" size="10"
+            /></label>
+          </div>
+        </div>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>The empty page.</strong> This scenario opens on <em>page</em>: press the
+              header's <em>New chat</em> and the empty conversation greets <em>User name</em> with
+              the composer centred under it. Sending slides it to the foot.
+            </li>
+            <li>
+              <strong>The name.</strong> Edit it on the empty page and the greeting follows as you
+              type; clear it for the nameless greeting. <em>off</em> is the layout from before.
+            </li>
+            <li>
+              <strong>The full page.</strong> <a href="/page/">The full page route</a> is the chat
+              with nothing else on it, with its own greeting slot, starters and the above-composer
+              slot travelling with the centred composer.
+            </li>
+            <li>
+              <strong>A phone.</strong> Open the address the demo server prints on this network,
+              focus the composer, and check it stays above the on-screen keyboard.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Look -->
+      <section data-scenario="themes" hidden>
+        <div class="panel">
+          <h2>Controls</h2>
+          <div class="controls">
+            <label class="ctl"
+              ><span>Theme</span>
+              <select id="cfg-theme">
+                <option value="">quiet (default)</option>
+                <option value="soft">soft</option>
+                <option value="ledger">ledger</option>
+                <option value="classic">classic</option>
+                <option value="code">code</option>
+              </select></label
+            >
+            <label class="ctl"
+              ><span>Scheme</span>
+              <select id="cfg-scheme">
+                <option value="">light (default)</option>
+                <option value="dark">dark</option>
+                <option value="auto">auto (OS)</option>
+              </select></label
+            >
+            <label class="ctl"
+              ><span>Density</span>
+              <select id="cfg-density">
+                <option value="comfortable">comfortable</option>
+                <option value="compact">compact</option>
+              </select></label
+            >
+            <label class="ctl check" title="The README's recipe for keeping a brand accent under any theme"
+              ><span>Accent recipe</span> <input type="checkbox" id="cfg-accent-recipe"
+            /></label>
+            <label class="ctl check"
+              ><span>Header icons (slots)</span> <input type="checkbox" id="cfg-icons"
+            /></label>
+            <div class="ctl wide">
+              <span>--ag-ui-ring</span>
+              <span class="inline">
+                <input type="checkbox" id="cfg-ring-on" aria-label="Set the ring colour" />
+                <input type="color" id="cfg-ring" value="#e11d48" aria-label="Ring colour" />
+                <button type="button" id="cfg-ring-focus">Focus a group head</button>
+              </span>
+            </div>
+            <div class="ctl"><span>Ring</span><output id="cfg-ring-out">default</output></div>
+            <div class="ctl wide">
+              <span>--ag-ui-header-btn-hover</span>
+              <span class="inline">
+                <input type="checkbox" id="cfg-hover-on" aria-label="Set the hover colour" />
+                <input type="color" id="cfg-hover" value="#fde68a" aria-label="Hover square colour" />
+                <output id="cfg-hover-out">default</output>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>Themes.</strong> Each of the five in light and dark; the header's toggle flips
+              the scheme and the <em>Scheme</em> picker follows it back. Under <em>auto</em> the
+              toggle's glyph follows the operating system as it switches (0.1.2), and setting the
+              scheme from here redraws the glyph too (0.1.0).
+            </li>
+            <li>
+              <strong>Accent recipe.</strong> Header, launcher and tool names in a brand blue under
+              any theme; the header buttons follow the header text.
+            </li>
+            <li>
+              <strong>Header icons.</strong> Light-DOM markup in the <code>icon-*</code> slots
+              replaces the glyphs without touching the shadow styles.
+            </li>
+            <li>
+              <strong>Tokens.</strong> <code>--ag-ui-ring</code> is a step group head's focus
+              outline: send the Try prompt first, then <em>Focus a group head</em>. The hover token
+              draws the square behind a hovered header button.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section data-scenario="text" hidden>
+        <div class="panel">
+          <h2>Controls</h2>
+          <div class="controls">
+            <label class="ctl"
+              ><span>Text animation</span>
+              <select id="cfg-text">
+                <option value="none">none</option>
+                <option value="fade" selected>fade</option>
+                <option value="word">word-by-word</option>
+              </select></label
+            >
+            <label class="ctl check"
+              ><span>Answer well</span> <input type="checkbox" id="cfg-well"
+            /></label>
+          </div>
+        </div>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>Reasoning.</strong> <em>Reason, then answer</em> streams a thinking region that
+              folds when the answer starts; the answer is markdown with a heading, a list, a quote
+              and a code block.
+            </li>
+            <li>
+              <strong>Nothing behind it.</strong> <em>Reason silently</em> reasons without text: the
+              block settles to a plain <em>Thought for 2s</em> with no toggle.
+            </li>
+            <li>
+              <strong>The well.</strong> Ticked, answers sit in a tinted well instead of on the bare
+              panel.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section data-scenario="strings" hidden>
+        <div class="panel">
+          <h2>Controls</h2>
+          <div class="controls">
+            <label class="ctl check" title="Reloads: data-strings is read once, on connect"
+              ><span>Deutsch (data-strings)</span> <input type="checkbox" id="cfg-i18n"
+            /></label>
+            <div class="ctl wide">
+              <span>chat.uiStrings</span>
+              <output id="strings-out">-</output>
+            </div>
+          </div>
+        </div>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>German.</strong> Tick the box (the page reloads): the title, the tool card's
+              labels and the confirmation buttons come from the table. <em>Fail a tool</em> shows
+              the error label.
+            </li>
+            <li>
+              <strong>Read back.</strong> <code>chat.uiStrings</code> (0.5.0) is the resolved table:
+              the English defaults, then <code>data-strings</code>, then <code>strings</code>. The
+              readout shows a few of its entries; a separate entry such as <code>./mcp-apps</code>
+              draws its text from it.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Conversation -->
+      <section data-scenario="composer" hidden>
+        <div class="panel">
+          <h2>Controls</h2>
+          <div class="controls">
+            <label class="ctl check"
+              ><span>Fill slot="above-composer"</span> <input type="checkbox" id="cfg-above"
+            /></label>
+            <div class="ctl"><span>Slot</span><output id="cfg-above-out">empty</output></div>
+          </div>
+        </div>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>Skills.</strong> Chips over the composer, and the same catalog behind
+              <code>/</code>. <em>Suggest a better title</em> is a template filled from the page
+              (here, empty, so it is blocked with a hint) and pre-fills rather than sends.
+            </li>
+            <li>
+              <strong>Server-resolved.</strong> <em>Triage this article</em> ships no prompt: it
+              sends <code>/triage</code> and the server answers. The wording never reaches the
+              page.
+            </li>
+            <li>
+              <strong>Attachments and voice.</strong> The paperclip uploads to the mock server (or
+              paste an image); the microphone records and transcribes to a fixed sentence.
+            </li>
+            <li>
+              <strong>Above the composer.</strong> Host markup directly above the composer, below
+              the chips. It takes no space while empty.
+            </li>
+            <li>
+              <strong>Quote a selection.</strong> Select a sentence on this page: an offer to quote
+              it into the composer appears. The same works inside an answer.
+            </li>
+            <li>
+              <strong>Queue.</strong> Send while a run is going: the turn waits under the composer
+              and goes when the run ends. ArrowUp recalls the last turn.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section data-scenario="threads" hidden>
+        <div class="panel">
+          <h2>The thread API</h2>
+          <div class="controls">
+            <div class="ctl"><span>threadId</span><output id="thr-id">-</output></div>
+            <div class="ctl"><span>running</span><output id="thr-running">-</output></div>
+            <div class="ctl"><span>New</span><button type="button" id="thr-new">newChat()</button></div>
+            <label class="ctl"
+              ><span>switchThread()</span>
+              <select id="thr-pick">
+                <option value="">(stored threads)</option>
+              </select></label
+            >
+            <div class="ctl"><span>Restore</span><button type="button" id="thr-reload">reload()</button></div>
+            <label class="ctl check" title="Every conversation load waits 3 seconds, as a slow data-threads-url would"
+              ><span>Slow store</span> <input type="checkbox" id="cfg-slow-store"
+            /></label>
+            <div class="ctl">
+              <span>reload() then send</span>
+              <span class="inline">
+                <button type="button" id="cfg-restore-send">Reload + send</button>
+                <output id="cfg-restore-out"></output>
+              </span>
+            </div>
+          </div>
+          <h3>ag-ui-thread events</h3>
+          <ol class="log" id="thr-log" aria-label="ag-ui-thread events"></ol>
+        </div>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>Threads.</strong> <em>Start a thread</em>, press <em>newChat()</em>, then pick
+              the first thread back. Each change fires one <code>ag-ui-thread</code> with a reason.
+            </li>
+            <li>
+              <strong>History drawer.</strong> The header's clock lists the stored threads and slides
+              over the panel.
+            </li>
+            <li>
+              <strong>Reloads.</strong> Reload the browser tab: the conversation comes back. With
+              <em>Slow store</em> ticked, type and send while it loads: the turn queues as
+              <em>Waiting to send</em> and goes under the restored conversation.
+            </li>
+            <li>
+              <strong>Resume and fork.</strong> The header's checkpoint control lists the server's
+              stored runs; continue one or fork from it.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section data-scenario="message-actions" hidden>
+        <div class="panel">
+          <h2>Readout</h2>
+          <div class="controls">
+            <div class="ctl wide"><span>ag-ui-feedback</span><output id="cfg-ratings-out">rate an answer</output></div>
+          </div>
+        </div>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>The row.</strong> Under each answer: copy, retry and the rating pair
+              (<code>data-message-actions</code>).
+            </li>
+            <li>
+              <strong>What a rating names.</strong> Send <em>Echo hello</em>, type <em>echo hello</em> in the
+              composer, and rate both answers:
+              they read the same, and the readout names two different messages, each with the run
+              that streamed it. Reload the tab and rate the first again: same message, same thread,
+              and <em>no run</em>, since a stored message carries none.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section data-scenario="failures" hidden>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>By code.</strong> <em>Time out</em>, <em>Interrupted</em> and <em>Crash</em>
+              each word the failed bubble by the <code>RUN_ERROR</code> code, not the server's
+              message.
+            </li>
+            <li>
+              <strong>Id too long.</strong> Shows the server's own message, which names the field
+              and limit, and an offer (part <code>run-error-offer</code>) to start a new
+              conversation.
+            </li>
+            <li>
+              <strong>Refused POST.</strong> The run POST is answered with a 400 before streaming:
+              the bubble shows <code>HTTP 400</code> and its body.
+            </li>
+            <li>
+              <strong>Server cancels.</strong> The server ends the run with a cancelled outcome: the
+              turn ends as a stop, with the Stopped note, no usage line, and the call it streamed
+              settled as not finished.
+            </li>
+            <li>
+              <strong>Usage.</strong> This chat sets <code>show-usage</code>, so a finished turn ends
+              with a muted token line; a failed or stopped one has none.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Tools and approvals -->
+      <section data-scenario="drive" hidden>
+        <div class="panel host-form" id="article-card">
+          <h2>Create Article</h2>
+          <p class="muted">The host's own form. The agent fills it through frontend tools.</p>
+          <form id="article-form">
+            <div class="field">
+              <label for="title">Title</label>
+              <input type="text" id="title" name="title" placeholder="Article title" />
+            </div>
+            <div class="field">
+              <label for="slug">Slug</label>
+              <input type="text" id="slug" name="slug" placeholder="article-slug" />
+            </div>
+            <div class="field">
+              <label for="status">Status</label>
+              <select id="status" name="status">
+                <option value="draft">Draft</option>
+                <option value="review">In review</option>
+                <option value="published">Published</option>
+              </select>
+            </div>
+            <div class="field checkbox">
+              <input type="checkbox" id="featured" name="featured" />
+              <label for="featured">Featured on homepage</label>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="primary" id="save">Save</button>
+              <span class="banner" id="banner">Article saved</span>
+              <button type="button" class="ghost" id="cfg-spotlight">Spotlight this form</button>
+            </div>
+          </form>
+        </div>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>The fill.</strong> <em>Fill the article</em>: the reasoning folds, then the
+              fields fill with the animated primitives (<code>fillField</code>,
+              <code>selectControl</code>, <code>toggleCheckbox</code>), each call a row in one step
+              group.
+            </li>
+            <li>
+              <strong>Confirmation.</strong> The run ends on a destructive <em>Save article</em>
+              (<code>x-destructive</code>, <code>x-confirm</code>): the prompt appears inside the
+              turn, and the card keeps the decision.
+            </li>
+            <li>
+              <strong>Spotlight.</strong> <code>showHighlightOverlay</code> dims the page around the
+              form for four seconds; the form stays usable underneath.
+            </li>
+            <li>
+              <strong>Skills.</strong> <em>Summarize the form</em> and the other chips are this
+              page's skills.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section data-scenario="tool-cards" hidden>
+        <div class="panel">
+          <h2>Controls</h2>
+          <div class="controls">
+            <label class="ctl"
+              ><span>Tool cards</span>
+              <select id="cfg-tools">
+                <option value="grouped" selected>grouped</option>
+                <option value="full">full</option>
+                <option value="compact">compact</option>
+                <option value="minimal">minimal</option>
+                <option value="inline">inline</option>
+              </select></label
+            >
+            <label class="ctl"
+              ><span>Group cards</span>
+              <select id="cfg-group-tools">
+                <option value="full" selected>full</option>
+                <option value="compact">compact</option>
+                <option value="minimal">minimal</option>
+                <option value="inline">inline</option>
+              </select></label
+            >
+            <label class="ctl check"
+              ><span>Style the status parts</span> <input type="checkbox" id="cfg-status-parts"
+            /></label>
+            <div class="ctl wide"><span>Census</span><output id="status-census">no tool cards yet</output></div>
+          </div>
+          <div class="legend" id="status-legend"></div>
+        </div>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>Step group.</strong> A run's calls fold into one row, <em>Worked through N
+              steps</em>, with the cards one click down. <em>Group cards</em> picks how an opened
+              group draws them.
+            </li>
+            <li>
+              <strong>Card modes.</strong> Flip <em>Tool cards</em>: it applies to cards already on
+              screen. A settled card separates <em>Arguments</em> from <em>Result</em>.
+            </li>
+            <li>
+              <strong>Failure.</strong> <em>A failing tool</em> settles to an Error region rather
+              than losing the turn.
+            </li>
+            <li>
+              <strong>Nothing to open.</strong> <em>Nothing to open</em> is one call with no
+              arguments and no result: no chevron in any mode.
+            </li>
+            <li>
+              <strong>Status parts.</strong> Every card carries
+              <code>tool-card-status-&lt;status&gt;</code> and every group
+              <code>tool-group-&lt;state&gt;</code>; tick the box to colour each from this page.
+              Press Stop mid-run for <em>interrupted</em>.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section data-scenario="approvals" hidden>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>Three approvals at once.</strong> The server defers three
+              <code>create_event</code> calls in one run; each is answered on its own, inside its own
+              card. Approve two and deny one: the cards settle differently, and while they wait they
+              read <em>waiting for you</em>.
+            </li>
+            <li>
+              <strong>Edit before approving.</strong> This page sets <code>approveWithEdits</code>, so
+              each card offers its arguments for editing; the answer echoes what was approved.
+            </li>
+            <li>
+              <strong>A question.</strong> <em>A question</em> reaches the built-in
+              <code>ask_user</code> card.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section data-scenario="subagents" hidden>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>Live rows.</strong> Each <code>delegate_task</code> card grows a row for the
+              child's work instead of sitting at <em>running</em> for the whole wait.
+            </li>
+            <li>
+              <strong>Inside.</strong> Open one for the child's own tool calls, including the one
+              that came back to it. The second delegation fails: the row says so and nothing more.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Server-drawn content -->
+      <section data-scenario="charts" hidden>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>Both routes.</strong> The agent asks the page to draw a chart through a tool,
+              then pushes one as an activity; this page calls
+              <code>enableCharts(["tool", "activity"])</code>.
+            </li>
+            <li>
+              <strong>Suggestions.</strong> The answer ends with follow-up suggestions, sent by the
+              server rather than the page's skill chips.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section data-scenario="activities" hidden>
+        <div class="panel">
+          <h2>Readout</h2>
+          <div class="controls">
+            <div class="ctl wide">
+              <span>unhandledActivityTypes</span>
+              <output id="act-unhandled">[]</output>
+            </div>
+          </div>
+        </div>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>Redrawn in place.</strong> <em>Release form</em> draws a host renderer's form,
+              then redraws it five seconds later. Type into it meanwhile: the field keeps its value
+              and focus, since the renderer updates the node it is handed.
+            </li>
+            <li>
+              <strong>A run from a button.</strong> Its Submit starts a run with
+              <code>chat.run</code>, forwarding the name as props with a user turn of its own. Name
+              the release <em>refuse</em>: refused once, its Retry sends the same action and run id.
+              Reload the tab and the form comes back inert, marked <em>from history</em>.
+            </li>
+            <li>
+              <strong>Built-in activity types.</strong> <em>Built-in activity types</em> sends the
+              activity types the element knows without a renderer: a notice for an app
+              view, a user bubble captioned <em>Added during the run</em> (the tags drawn as text),
+              and four more activities that draw nothing.
+            </li>
+            <li>
+              <strong>Nothing by design.</strong> <em>Nothing to draw</em> sends two activities: one
+              this page's renderer answers with an empty fragment, which stays out of the readout,
+              and one nobody registered, which lands in it.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section data-scenario="a2ui" hidden>
+        <div class="panel">
+          <h2>onError</h2>
+          <ol class="log" id="a2ui-errors" aria-label="A2UI errors"></ol>
+          <p class="muted" id="a2ui-errors-empty">No A2UI error reported yet.</p>
+        </div>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>A form from data.</strong> <em>A2UI form</em> draws a Card of a Text field, a
+              ChoicePicker, a CheckBox and a Button through <code>registerA2ui</code>, loaded from
+              the second vendored file. The name is required: the button stays disabled with the
+              rule's message until you type one.
+            </li>
+            <li>
+              <strong>The action.</strong> The button sends
+              <code>forwardedProps.a2uiAction</code>, and the answer echoes what arrived. Reload and
+              the form comes back inert.
+            </li>
+            <li>
+              <strong>Errors go to the host.</strong> <em>Broken surface</em> speaks protocol
+              version 0.9: the surface draws a notice, no run starts, and the error lands in the
+              list above.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section data-scenario="mcp-apps" hidden>
+        <div class="panel">
+          <h2>Readout</h2>
+          <div class="controls">
+            <div class="ctl wide"><span>Entry</span><output id="mcp-out">-</output></div>
+          </div>
+        </div>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>The notice, on purpose.</strong> This page imports the third vendored file and
+              calls <code>registerMcpApps(chat, { url: "/mcp-apps/" })</code>. Both prompts draw
+              the run notice naming <code>ui://sales/week.html</code>: in 0.5.0 the entry fixes the
+              seam, and the sandboxed frame and its bridge arrive in a later release.
+            </li>
+            <li>
+              <strong>With and without a server.</strong> A view whose toolset has an id reaches the
+              entry's view mount, which draws the notice until the frame exists; a view without one
+              draws the notice whatever is registered.
+            </li>
+            <li>
+              <strong>Strings.</strong> The notice's words come from <code>chat.uiStrings</code>, so a
+              host localised through <code>data-strings</code> keeps them.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Host seams -->
+      <section data-scenario="place" hidden>
+        <div class="panel">
+          <h2>Controls</h2>
+          <div class="controls">
+            <label class="ctl"
+              ><span>getPlace()</span>
+              <select id="cfg-place">
+                <option value="article" selected>Create Article</option>
+                <option value="billing">Billing settings</option>
+                <option value="long">A long one</option>
+                <option value="none">None (null)</option>
+              </select></label
+            >
+            <div class="ctl"><span>Chip</span><output id="cfg-place-out">-</output></div>
+            <div class="ctl"><span>Ask</span><button type="button" id="cfg-place-ask">Where am I?</button></div>
+          </div>
+        </div>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>The chip.</strong> It sits in the composer's tool row; the select stands in for
+              the host's router and calls <code>refreshPlace()</code>.
+            </li>
+            <li>
+              <strong>What was sent.</strong> <em>Where am I?</em> quotes the <code>place</code>
+              entry the run carried, and says whether the page map came too.
+            </li>
+            <li>
+              <strong>Withholding.</strong> The eye on the chip withholds the place (dashed, struck
+              through) and the page map with it. <em>A long one</em> truncates before Send;
+              <em>None</em> takes no space.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section data-scenario="requests" hidden>
+        <div class="panel">
+          <h2>chat.request</h2>
+          <div class="controls">
+            <div class="ctl wide">
+              <span>Fetch</span>
+              <button type="button" id="req-send">chat.request("/whoami/")</button>
+            </div>
+            <div class="ctl wide"><span>The server saw</span><output id="req-out">-</output></div>
+          </div>
+          <h2>chat.registerContext</h2>
+          <div class="controls">
+            <label class="ctl check"
+              ><span>Register an entry</span> <input type="checkbox" id="ctx-on" checked
+            /></label>
+            <div class="ctl wide"><span>Entry</span><output id="ctx-out">-</output></div>
+          </div>
+        </div>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>The element's headers.</strong> This page sets <code>chat.headers</code> and
+              <code>chat.getHeaders</code>. <code>chat.request</code> is <code>fetch</code> as the
+              element authenticates, so the mock server's echo shows both on a request the host
+              made itself.
+            </li>
+            <li>
+              <strong>Run context.</strong> <em>Show the context</em> lists what the run carried: the
+              place, the page map, and the entry registered here. Untick the box and press it again: the
+              function <code>registerContext</code> returned has removed it.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Where the widget renders under placement="embedded". -->
+      <div class="embed-slot">
+        <ag-ui-chat
+          id="chat"
+          endpoint="/agent/"
+          title-text="Admin Copilot"
+          user-name="Ada"
+          data-start-open
+          data-text-animation="fade"
+          data-tool-display="grouped"
+          data-slash-commands="true"
+          data-prompt-chips="true"
+          data-transcribe-url="/transcribe/"
+          data-attachments-url="/attachments/"
+          data-runs-url="/runs/"
+          data-theme-toggle=""
+          show-usage
+        ></ag-ui-chat>
+      </div>
+    </main>
+
+    <!-- A host's own toolbar for collapse-to="none". -->
+    <nav class="host-bar" id="host-bar" hidden aria-label="Host toolbar">
+      <span>Host toolbar</span>
+      <span class="spacer"></span>
+      <button type="button" id="host-agent" aria-pressed="false">Agent</button>
+    </nav>
+
+    <script type="module" src="/app/app.js"></script>
+    <script type="module" src="/viewport-readout.js"></script>
+  </body>
+</html>

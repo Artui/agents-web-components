@@ -44,6 +44,7 @@ The AG-UI stack design doc (`django-ag-ui-plan.md`) lives in the private ecosyst
 | `make lint` | `biome check .` + `tsc --noEmit` |
 | `make format` | `biome format --write .` |
 | `make build` | esbuild library (split per entry) and vendored bundle + `tsc` declarations into `dist/` |
+| `make demo` | install, build and serve the demo on port 5173, in one command from a clean checkout |
 
 `tsconfig.build.json` sets `rootDir: "./src"` explicitly: TypeScript 7 no longer
 infers it from the common source directory (TS5011). It is the value 5.x
@@ -52,6 +53,17 @@ inferred, so the published layout stays `dist/index.d.ts` rather than
 `check-json` parses them as strict JSON, not JSONC.
 | `make release-bump VERSION=X.Y.Z` | rewrite `src/version.ts` + `package.json` + CHANGELOG |
 | `make release-publish` | end-to-end workstation release |
+
+## Every feature has a place in the demo
+
+A feature a host can see or call gets a place in `demo/` in the change that adds
+it: a row in `demo/app/scenarios.js` (its own scenario, or a prompt on an
+existing one), its controls in that scenario's `<section data-scenario>` in
+`demo/app/index.html`, and, if it needs one, a branch in `demo/mock-server.mjs`
+that the scenario's prompt reaches. A feature that cannot be shown (packaging, a
+removed API, console-only output) is named as left out, with its reason, in the
+PR. `make demo` builds and serves the demo in one command from a clean checkout;
+keep it that way. `demo/page/` is the chat as a host's full-page route.
 
 ## Structural rules
 

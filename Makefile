@@ -1,4 +1,4 @@
-.PHONY: help init test lint lint-fix format format-check type-check deps-bump build demo release-bump release-publish release-publish-prepare release-publish-finalize
+.PHONY: help init test lint lint-fix format format-check type-check deps-bump build demo demo-check release-bump release-publish release-publish-prepare release-publish-finalize
 
 help:
 	@echo "Available targets:"
@@ -45,8 +45,16 @@ deps-bump:
 build:
 	pnpm build
 
-demo: build
+# One command from a clean checkout: install (no hooks), build the bundles the
+# demo imports, then serve it.
+demo:
+	pnpm install --frozen-lockfile
+	pnpm build
 	node demo/mock-server.mjs
+
+# Every scenario's Try buttons and Reset start over (headless Chromium).
+demo-check: build
+	node demo/check-reset.mjs
 
 # Release pipeline. Version lives in src/version.ts; package.json mirrors via
 # scripts/release-bump.mjs (driven by `make release-bump VERSION=X.Y.Z`).
