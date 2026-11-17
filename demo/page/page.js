@@ -1,10 +1,8 @@
 // The full-page route: the chat as a host's dedicated chat page, which is the
-// layout the greeting exists for. The playground can switch its panel to
-// `placement="page"` too, but there the chat covers an article form it was
-// built to drive; here nothing else is on the route, so what you see is what a
-// host's /chat page shows.
+// layout the greeting exists for. Nothing else is on the route, so what you
+// see is what a host's /chat page shows.
 //
-// Only prompts the mock agent answers without the playground's form tools are
+// Only prompts the mock agent answers without the article form's tools are
 // offered as starters: a chart, three approvals, a delegation and a question.
 import { defineChat } from "/bundle.js";
 
@@ -69,7 +67,7 @@ $("cfg-user-name").addEventListener("input", syncSlot);
 
 // The above-composer slot: host markup directly above the composer. On the
 // empty page it has to travel with the centred composer, which is the reason
-// to look at it here rather than only in the playground.
+// to look at it here rather than only in the composer scenario.
 let strip = null;
 $("cfg-above").addEventListener("change", (event) => {
   if (event.target.checked) {
@@ -86,7 +84,7 @@ $("cfg-above").addEventListener("change", (event) => {
 
 // The bar is fixed chrome the widget knows nothing about, and it wraps at
 // narrow widths, so publish its height for the placement to subtract -- the
-// same answer the playground gives, for the same reason.
+// same answer the scenario pages give, for the same reason.
 const bar = document.querySelector("header.bar");
 const publishBarHeight = () => {
   document.documentElement.style.setProperty("--bar-h", `${Math.ceil(bar.getBoundingClientRect().height)}px`);

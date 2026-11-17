@@ -15,13 +15,12 @@
         background: #f7f7fb;
       }
 
-      /* The same dark bar as the playground, so the two pages read as one demo.
-         It is the only chrome here: the rest of the route is the chat, which is
+      /* A bar with a way back to the scenarios. It is the only chrome here: the rest of the route is the chat, which is
          what a host's dedicated chat page looks like.
 
          Stacked over the chat rather than under it. A page placement is fixed
-         at the element's own very high z-index, so at the playground's value
-         the "What to try" list opened behind the conversation. */
+         at the element's own very high z-index, so at a lower value the
+         "What to try" list opened behind the conversation. */
       header.bar {
         position: sticky;
         top: 0;
@@ -112,7 +111,7 @@
 
       /* A page placement fills the viewport; the bar is fixed chrome the widget
          knows nothing about, so hand it the height that is left, the same way
-         the playground does. The greeting's slot content below is the host's
+         the scenario pages do. The greeting's slot content below is the host's
          own markup, styled from here like any slotted node. */
       ag-ui-chat {
         --ag-ui-viewport-inset-top: var(--bar-h, 0px);
@@ -145,7 +144,7 @@
   <body>
     <header class="bar">
       <span class="brand"
-        >ag-ui full page <a href="/">back to the playground</a></span
+        >Full page route <a href="/s/greeting/">back to the scenarios</a></span
       >
       <label
         >User name
@@ -212,8 +211,8 @@
       </details>
     </header>
 
-    <!-- Its own id, because the stored conversation is keyed on it: under the
-         playground's, a conversation started there was waiting here, and this
+    <!-- Its own id, because the stored conversation is keyed on it: under a
+         scenario's, a conversation started there was waiting here, and this
          route never opened on its greeting. -->
     <ag-ui-chat
       id="page-chat"

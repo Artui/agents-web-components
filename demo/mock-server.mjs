@@ -1,13 +1,12 @@
-// Self-contained demo server. No build step beyond `pnpm build` (which emits
-// the vendored bundle the page loads). Run: `node demo/mock-server.mjs`, then
-// open http://localhost:5173 — the playground (themes/index.html) lets you flip
-// theme / density / placement / text-animation / tool-display live.
+// Self-contained demo server. `make demo` installs, builds the vendored bundles
+// the pages load, and runs this; then open http://localhost:5173 for the
+// scenario index (app/index.html), one page per feature.
 //
 // It binds every interface, so the addresses it prints are reachable from other
 // devices on the same network — which is the only way to look at the
 // small-viewport layout on a real phone, keyboard and all, rather than at a
 // resized desktop window pretending to be one. It serves a scripted mock agent
-// and the playground, and holds nothing but what the page puts in the browser's
+// and the demo pages, and holds nothing but what the page puts in the browser's
 // own storage. Set HOST=127.0.0.1 to keep it to this machine.
 //
 // Speaks just enough of the AG-UI wire protocol for @ag-ui/client's HttpAgent:
@@ -30,20 +29,46 @@ const PORT = Number(process.env.PORT ?? 5173);
 const HOST = process.env.HOST ?? "::";
 
 const HTML = "text/html; charset=utf-8";
-// Two pages. The playground flips every option live over an article form the
-// agent drives (see themes/index.html), and replaces the old per-theme pages.
+// The scenario index is one page: `/` is the start page and `/s/<name>/` a
+// scenario, each its own URL and its own stored conversation (see app/shell.js).
 // The full page is the chat as a route of its own (see page/index.html), which
 // is the layout the greeting on an empty conversation is for.
+const APP_PAGE = { path: "app/index.html", contentType: HTML };
+const SCENARIO_PATH = /^\/s\/[a-z0-9-]+\/$/;
+// Static files are served from these directories only, by extension.
+const STATIC_DIRS = ["app", "page"];
+const TYPES = new Map([
+  [".html", HTML],
+  [".js", "text/javascript"],
+  [".css", "text/css; charset=utf-8"],
+]);
 const PAGE_ASSETS = new Map([
-  ["/themes/", { path: "themes/index.html", contentType: HTML }],
-  ["/themes/index.html", { path: "themes/index.html", contentType: HTML }],
-  ["/themes/demo.js", { path: "themes/demo.js", contentType: "text/javascript" }],
   ["/page/", { path: "page/index.html", contentType: HTML }],
-  ["/page/index.html", { path: "page/index.html", contentType: HTML }],
-  ["/page/page.js", { path: "page/page.js", contentType: "text/javascript" }],
-  // Both pages load it; it does nothing unless the URL carries `?readout`.
+  // Every page loads it; it does nothing unless the URL carries `?readout`.
   ["/viewport-readout.js", { path: "viewport-readout.js", contentType: "text/javascript" }],
 ]);
+// The vendored bundles the pages import, each under a short name.
+const BUNDLES = new Map([
+  ["/bundle.js", "agents-web-components.bundle.js"],
+  ["/a2ui.bundle.js", "agents-web-components.a2ui.bundle.js"],
+  ["/mcp-apps.bundle.js", "agents-web-components.mcp-apps.bundle.js"],
+]);
+
+/** The page or file a GET path names, or undefined. */
+function pageAsset(path) {
+  if (path === "/" || path === "/index.html" || SCENARIO_PATH.test(path)) {
+    return APP_PAGE;
+  }
+  const known = PAGE_ASSETS.get(path);
+  if (known !== undefined) {
+    return known;
+  }
+  const match = /^\/([a-z]+)\/([a-z0-9-]+(\.[a-z]+))$/.exec(path);
+  if (match === null || !STATIC_DIRS.includes(match[1]) || !TYPES.has(match[3])) {
+    return undefined;
+  }
+  return { path: `${match[1]}/${match[2]}`, contentType: TYPES.get(match[3]) };
+}
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -152,7 +177,7 @@ const RUN_ERROR_PROMPTS = [
 /**
  * The scripted agent.
  *
- * Dispatches on the latest user turn so the playground can exercise each
+ * Dispatches on the latest user turn so each scenario can exercise its
  * surface on its own, rather than replaying one canned script for everything.
  */
 async function handleAgent(res, body) {
@@ -183,6 +208,47 @@ async function handleAgent(res, body) {
   });
   emit(res, { type: "RUN_STARTED", threadId, runId });
 
+  // A run the server cancels: RUN_FINISHED with a cancelled outcome, as
+  // pydantic-ai's adapter sends when the agent cancels its own run or a deadline
+  // passes. The chat ends it as a stop, so the call it streamed never settles.
+  if (/\bcancel\b/i.test(prompt)) {
+    const parent = id("msg");
+    await streamText(res, parent, ["Looking that up… "]);
+    emitToolCall(res, id("call"), "lookup_docs", { query: "deadline" }, parent);
+    await sleep(900);
+    emit(res, { type: "RUN_FINISHED", threadId, runId, outcome: { type: "cancelled" } });
+    res.end();
+    return;
+  }
+
+  // Two activities: one a host renderer answers with an empty fragment (nothing
+  // to draw, by design), one nobody registered, which unhandledActivityTypes names.
+  if (/\bnothing to draw\b/i.test(prompt)) {
+    emit(res, { type: "ACTIVITY_SNAPSHOT", messageId: id("m"), activityType: "host_marker", content: { at: "nothing-to-draw" } });
+    emit(res, { type: "ACTIVITY_SNAPSHOT", messageId: id("m"), activityType: "mystery_widget", content: { shape: "unknown" } });
+    await streamText(res, id("msg"), ["Two activities arrived before this line, and neither drew anything."]);
+    emit(res, { type: "RUN_FINISHED", threadId, runId });
+    res.end();
+    return;
+  }
+
+  // An MCP App view, in pydantic-ai's activity shape. With a server id it reaches
+  // the ./mcp-apps entry's view mount; without one it is the notice either way.
+  if (/\bmcp app\b/i.test(prompt)) {
+    const named = !/\bwithout\b/i.test(prompt);
+    const content = {
+      resourceUri: "ui://sales/week.html",
+      toolInput: { week: "current" },
+      result: { content: [{ type: "text", text: "12 orders this week" }] },
+      ...(named ? { serverId: "sales", serverHash: "sales" } : {}),
+    };
+    await streamText(res, id("msg"), [named ? "The sales app's weekly view:" : "A view from a toolset with no id:"]);
+    emit(res, { type: "ACTIVITY_SNAPSHOT", messageId: id("m"), activityType: "mcp-apps", content });
+    emit(res, { type: "RUN_FINISHED", threadId, runId });
+    res.end();
+    return;
+  }
+
   // A RUN_ERROR with each code django-ag-ui sends; the bubble words each one.
   const code = RUN_ERROR_PROMPTS.find(([pattern]) => pattern.test(prompt))?.[1];
   if (code !== undefined) {
@@ -210,6 +276,21 @@ async function handleAgent(res, body) {
   if (a2uiAction !== undefined) {
     const { name, context } = a2uiAction;
     await streamText(res, id("msg"), [`Action "${name}" arrived with `, `${JSON.stringify(context)}.`]);
+    emit(res, { type: "RUN_FINISHED", threadId, runId });
+    res.end();
+    return;
+  }
+  // A surface that breaks the protocol: the renderer reports it to the host's
+  // onError, draws a notice, and starts no run.
+  if (/\ba2ui\b/i.test(prompt) && /\bbroken\b/i.test(prompt)) {
+    await streamText(res, id("msg"), ["This surface speaks the wrong protocol version."]);
+    emit(res, {
+      type: "ACTIVITY_SNAPSHOT",
+      messageId: id("a2ui-surface"),
+      activityType: "a2ui-surface",
+      replace: true,
+      content: { a2ui_operations: [{ version: "0.9", createSurface: { surfaceId: id("broken"), catalogId: "x" } }] },
+    });
     emit(res, { type: "RUN_FINISHED", threadId, runId });
     res.end();
     return;
@@ -285,6 +366,31 @@ async function handleAgent(res, body) {
     await streamText(res, id("msg"), [
       `${where}. `,
       page ? "I was given the page map too." : "I was not given the page map.",
+    ]);
+  } else if (/\bshow context\b/i.test(prompt)) {
+    // What this round's context carried, by description, so an entry a host
+    // added with registerContext can be seen arriving.
+    const context = Array.isArray(input.context) ? input.context : [];
+    const lines = context.map((item) => `- **${item.description}**: \`${String(item.value).slice(0, 60)}\``);
+    await streamText(res, id("msg"), [
+      `This run carried ${context.length} context entries:\n\n`,
+      lines.length === 0 ? "(none)" : lines.join("\n"),
+    ]);
+  } else if (/\breason\b/i.test(prompt)) {
+    // Reasoning first, then an answer in markdown: the thinking region folds
+    // when the answer starts, and the answer shows what the renderer draws.
+    await streamReasoning(res, id("reasoning"), [
+      "A short answer would do, ",
+      "but a heading, a list and some code ",
+      "show more of the renderer.",
+    ]);
+    await streamText(res, id("msg"), [
+      "### Release checklist\n\n",
+      "1. Bump the version in `src/version.ts`\n",
+      "2. Fill the **CHANGELOG** section\n",
+      "3. Open the PR\n\n",
+      "> Merging to main publishes it.\n\n",
+      "```bash\nmake release-bump VERSION=0.6.0\n```\n",
     ]);
   } else if (/\becho\b/i.test(prompt)) {
     // A plain answer and nothing else, which is the shape most turns have and
@@ -474,6 +580,8 @@ async function handleAgent(res, body) {
       "The line, scatter and stacked views are one chart redrawn in place. ",
       "I can only discuss the first — the pushed ones never reached me.",
     ]);
+  } else if (isFollowUp && /\bfail|error|break\b/i.test(prompt)) {
+    await streamText(res, id("msg"), ["It failed, so I stopped there."]);
   } else if (isFollowUp) {
     await streamText(res, id("msg"), ["Done — ", "the article ", "is filled in ", "and saved. ✅"]);
     // Follow-up chips, pushed after the work rather than configured up front --
@@ -570,6 +678,13 @@ async function handleAgent(res, body) {
     await sleep(600);
     emitToolResult(res, call, "");
     await streamText(res, id("msg"), ["Pinged."]);
+  } else if (!/\b(article|form|fill|save|summari[sz]e)/i.test(prompt)) {
+    // Anything else gets the list of what this scripted agent answers, rather
+    // than the article run, whose tools drive a form only one scenario shows.
+    await streamText(res, id("msg"), [
+      "I am the demo's scripted agent, so I answer a few phrases. ",
+      "Each scenario's **Try** buttons send them; the full list is on the demo's start page.",
+    ]);
   } else {
     await streamReasoning(res, id("reasoning"), [
       "The user wants the article filled. ",
@@ -847,19 +962,22 @@ const server = createServer((req, res) => {
     });
     return;
   }
-  if (req.method === "GET" && (path === "/" || path === "/index.html")) {
-    serveFile(res, join(HERE, "themes", "index.html"), "text/html; charset=utf-8");
+  // What chat.request sent, so the scenario can show the element's headers
+  // arriving on a request the host made.
+  if (req.method === "GET" && path === "/whoami/") {
+    const sent = Object.fromEntries(
+      Object.entries(req.headers).filter(([name]) => name.startsWith("x-") || name === "cookie"),
+    );
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ headers: sent }));
     return;
   }
-  if (req.method === "GET" && req.url === "/a2ui.bundle.js") {
-    serveFile(res, join(ROOT, "dist", "agents-web-components.a2ui.bundle.js"), "text/javascript");
+  const bundle = req.method === "GET" && BUNDLES.get(path);
+  if (bundle) {
+    serveFile(res, join(ROOT, "dist", bundle), "text/javascript");
     return;
   }
-  if (req.method === "GET" && req.url === "/bundle.js") {
-    serveFile(res, join(ROOT, "dist", "agents-web-components.bundle.js"), "text/javascript");
-    return;
-  }
-  const asset = req.method === "GET" && PAGE_ASSETS.get(path);
+  const asset = req.method === "GET" && pageAsset(path);
   if (asset) {
     serveFile(res, join(HERE, asset.path), asset.contentType);
     return;

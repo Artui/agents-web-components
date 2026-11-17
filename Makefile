@@ -45,7 +45,11 @@ deps-bump:
 build:
 	pnpm build
 
-demo: build
+# One command from a clean checkout: install (no hooks), build the bundles the
+# demo imports, then serve it.
+demo:
+	pnpm install --frozen-lockfile
+	pnpm build
 	node demo/mock-server.mjs
 
 # Release pipeline. Version lives in src/version.ts; package.json mirrors via

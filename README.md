@@ -476,8 +476,11 @@ continuation's included, and are filtered like `getContext`'s while the place is
 when a piece of your page has something to say for as long as it is on screen, without taking
 `getContext` over from whatever else set it.
 
-A self-contained live playground lives in [`demo/`](demo/) — run `make demo` to serve it against a
-mock AG-UI server.
+A self-contained demo lives in [`demo/`](demo/). Run `make demo` from a clean checkout: it
+installs, builds and serves the demo against a scripted AG-UI server on port 5173. Every feature
+has its own scenario page, grouped in the left nav; each page has the controls for that feature
+and **Try** buttons that send the prompts the scripted agent answers. The start page lists every
+prompt, and `/page/` is the chat as a host's own full-page route.
 
 ---
 
@@ -4238,11 +4241,10 @@ fix belongs to the containing element, not to the widget:
 
 See [`src/ui/shell/token_styles.ts`](src/ui/shell/token_styles.ts) for the full variable list and
 [`src/ui/placement/`](src/ui/placement/) for the placement presets. The
-[`demo/`](demo/) live playground (`node demo/mock-server.mjs`) flips theme, density, placement,
-text-animation, tool-display, and the answer well live from a single page, and demos the
-streamed thoughts region, the mic, and the header theme toggle.
+[`demo/`](demo/) (`make demo`) has a scenario for each: placements, themes and tokens, answers and
+reasoning, tool display, and the rest, each switched live on its own page.
 
-It binds every interface and prints the addresses this machine can be reached on, so you can open the playground on a phone — which is the only way to see the small-viewport layout with a real on-screen keyboard rather than a resized desktop window. `HOST=127.0.0.1` keeps it to this machine.
+The demo server binds every interface and prints the addresses this machine can be reached on, so you can open the demo on a phone — which is the only way to see the small-viewport layout with a real on-screen keyboard rather than a resized desktop window. `HOST=127.0.0.1` keeps it to this machine.
 
 ### Parts and slots
 
@@ -4587,7 +4589,7 @@ Other workflow targets (all identical in name to the sibling Python packages):
 | `make test` | Vitest with a 100% line + branch + function + statement coverage gate. |
 | `make lint` | `biome check .` + `tsc --noEmit`. |
 | `make format` | `biome format --write .`. |
-| `make demo` | Build, then serve the live playground (`demo/themes/index.html`) on port 5173 via `demo/mock-server.mjs`. |
+| `make demo` | Install, build, then serve the demo (`demo/app/`, one page per feature) on port 5173 via `demo/mock-server.mjs`. |
 
 ---
 

@@ -1,0 +1,682 @@
+/* The demo's own chrome. The widget is styled by its themes and tokens; this
+   sheet styles the host page around it, as a real host's would. */
+
+:root {
+  --nav-w: 272px;
+  --topbar-h: 0px;
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --line: #e4e6eb;
+  --text: #111827;
+  --muted: #5b6472;
+  --accent: #4f46e5;
+  --accent-soft: #eef0ff;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  /* collapse-to: the page pads itself by the bar the widget reports, or by the
+     host bar under none. The widget never writes the host's CSS. */
+  padding-bottom: var(--chat-bar-height, 0px);
+  padding-top: var(--chat-header-height, 0px);
+}
+
+a {
+  color: var(--accent);
+}
+
+code {
+  font: 0.86em/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: var(--accent-soft);
+  padding: 1px 5px;
+  border-radius: 5px;
+}
+
+button,
+select,
+input[type="text"] {
+  font: inherit;
+  font-size: 14px;
+}
+
+button {
+  cursor: pointer;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px 12px;
+}
+
+button:hover {
+  border-color: #c9ccd4;
+  background: #fafafb;
+}
+
+select,
+input[type="text"] {
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px 8px;
+  max-width: 100%;
+}
+
+/* The widget sits under the page's own chrome (the nav, the phone's bar and
+   its drawer), which the page tells it about rather than the widget guessing:
+   the fixed placements stop at the nav on a wide window and below the bar on a
+   phone. */
+ag-ui-chat {
+  --ag-ui-z-index: 5;
+  --ag-ui-viewport-inset-left: var(--nav-w);
+  --ag-ui-viewport-inset-top: var(--topbar-h);
+  /* The panel rises from the host bar's Agent button under collapse-to none. */
+  --ag-ui-anchor-gap: 15px;
+}
+
+/* ── Navigation ─────────────────────────────────────────────────────────── */
+
+.nav {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 20;
+  width: var(--nav-w);
+  overflow-y: auto;
+  padding: 20px 14px 24px;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  padding: 2px 10px 18px;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.brand-name {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.brand-sub {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.nav h2 {
+  margin: 16px 10px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nav li a {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  font-size: 14px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.nav li a:hover {
+  background: #f1f2f5;
+}
+
+.nav li a[aria-current="page"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.nav li a small {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.nav-out {
+  display: block;
+  margin: 18px 10px 0;
+  font-size: 13px;
+}
+
+.topbar {
+  display: none;
+}
+
+/* ── Content ────────────────────────────────────────────────────────────── */
+
+main {
+  margin-left: var(--nav-w);
+  padding: 36px 44px 96px;
+  max-width: 780px;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+h1 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 4px 0 8px;
+  font-size: 28px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.since {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.summary {
+  margin: 0 0 18px;
+  max-width: 62ch;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.try {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 28px;
+}
+
+.try > span {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-right: 4px;
+}
+
+.try button,
+.try a {
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 14px;
+  border: 1px solid #d6d9f5;
+  background: var(--surface);
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.try button:hover,
+.try a:hover {
+  background: var(--accent-soft);
+}
+
+.panel,
+.notes {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: 18px;
+}
+
+.notes {
+  background: transparent;
+}
+
+.panel h2,
+.notes h2 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.panel h2 + .controls {
+  margin-top: 0;
+}
+
+.panel .controls + h2 {
+  margin-top: 22px;
+}
+
+.panel h3 {
+  margin: 18px 0 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.notes ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.notes li {
+  margin-bottom: 8px;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* A control is a label beside its input: two columns on a wide window, one on a phone. */
+.controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px 24px;
+}
+
+.ctl {
+  display: grid;
+  grid-template-columns: 9.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  font-size: 14px;
+}
+
+.ctl > span:first-child {
+  color: var(--muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.ctl.wide {
+  grid-column: 1 / -1;
+}
+
+.ctl.check input {
+  justify-self: start;
+  width: 18px;
+  height: 18px;
+}
+
+.ctl .inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+output {
+  font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow-wrap: anywhere;
+}
+
+ol.log {
+  margin: 0;
+  padding-left: 20px;
+  font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #374151;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.legend span {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 2px solid var(--swatch);
+}
+
+/* ── The start page ─────────────────────────────────────────────────────── */
+
+.start-groups {
+  display: grid;
+  gap: 22px;
+  margin-bottom: 28px;
+}
+
+.start-groups h2 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.card:hover {
+  border-color: #c4c8f4;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.08);
+}
+
+.card strong {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 15px;
+}
+
+.card strong small {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.card span {
+  font-size: 13px;
+  color: var(--muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.prompt-index {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.prompt-index th,
+.prompt-index td {
+  text-align: left;
+  padding: 7px 8px;
+  border-top: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.prompt-index th {
+  font-size: 12px;
+  color: var(--muted);
+  border-top: none;
+}
+
+.prompt-index td:first-child {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+/* ── The host's form, for the driving scenario ──────────────────────────── */
+
+.host-form p {
+  margin: -6px 0 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 14px;
+}
+
+.field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.field input[type="text"],
+.field select {
+  padding: 8px 10px;
+}
+
+.field.checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  padding: 8px 18px;
+}
+
+button.ghost {
+  margin-left: auto;
+}
+
+.banner {
+  color: #047857;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.banner.show {
+  opacity: 1;
+}
+
+/* ── Host markup the widget projects ────────────────────────────────────── */
+
+.context-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: #374151;
+  background: var(--accent-soft);
+  border: 1px solid #c7d2fe;
+  border-radius: 8px;
+}
+
+.context-strip button {
+  margin-left: auto;
+  font-size: 12px;
+  padding: 2px 8px;
+}
+
+/* The embedded placement's slot: it takes room only while the widget is in
+   the flow, so the other placements leave no gap under the notes. A document
+   rule naming the element would beat the widget's own :host rule, so the cap
+   below is scoped to the placement that is in the flow. */
+.embed-slot {
+  display: flex;
+}
+
+.embed-slot:has(> ag-ui-chat[placement="embedded"]) {
+  position: relative;
+  height: 68vh;
+  min-height: 420px;
+  border: 1px dashed #c7c9d6;
+  border-radius: 14px;
+}
+
+ag-ui-chat[placement="embedded"] {
+  flex: 0 1 auto;
+  max-width: 100%;
+}
+
+ag-ui-chat[collapsed] {
+  flex: 0 0 auto;
+  align-self: flex-start;
+}
+
+/* A host's own toolbar for collapse-to="none": fixed to the bottom edge, under
+   the widget's z-index so a full-bleed panel on a phone still covers it. */
+.host-bar {
+  position: fixed;
+  inset: auto 0 0 var(--nav-w);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 40px;
+  padding: 0 16px;
+  font-size: 13px;
+  color: #374151;
+  background: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+}
+
+.host-bar[hidden] {
+  display: none;
+}
+
+.host-bar[data-edge="top"] {
+  inset: var(--topbar-h) 0 auto var(--nav-w);
+  border-top: none;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.host-bar[data-align="left"] button {
+  order: -1;
+}
+
+.host-bar .spacer {
+  flex: 1;
+}
+
+.host-bar button {
+  height: 28px;
+  padding: 0 12px;
+}
+
+.host-bar button[aria-pressed="true"] {
+  background: #e0e7ff;
+}
+
+/* ── A phone: the nav is a drawer behind the top bar's button ───────────── */
+
+@media (max-width: 899px) {
+  :root {
+    --nav-w: 0px;
+    --topbar-h: 52px;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 21;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: var(--topbar-h);
+    padding: 0 12px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .topbar .menu {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+  }
+
+  .topbar .menu svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  .topbar-brand {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text);
+    text-decoration: none;
+  }
+
+  .nav {
+    top: var(--topbar-h);
+    width: min(320px, 86vw);
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition:
+      transform 0.2s ease,
+      visibility 0.2s;
+    box-shadow: 0 12px 32px rgba(17, 24, 39, 0.18);
+  }
+
+  body.nav-open .nav {
+    transform: none;
+    visibility: visible;
+  }
+
+  .nav .brand {
+    display: none;
+  }
+
+  main {
+    padding: 22px 16px 120px;
+  }
+
+  h1 {
+    font-size: 24px;
+  }
+
+  .summary {
+    font-size: 15px;
+  }
+
+  .panel,
+  .notes {
+    padding: 16px;
+  }
+
+  .ctl {
+    grid-template-columns: 8rem minmax(0, 1fr);
+  }
+}
