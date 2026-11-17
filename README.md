@@ -300,7 +300,7 @@ element after the fact.
 `approveWithEdits`, `agentFactory`, `getTools`, `getContext`, `routeMap`, `navigate`, `getPageMap`,
 `autoInjectPageMap`, `getPlace`, `conversationStore`, `uploadHandler`, `transcribeHandler`, `navigationResult`,
 `skillContext`, `toolSummaries`, `formatToolPayload`, `formatRelativeTime`, `strings`,
-`resolvePageTarget`, `sharedState`, `anchor` (an element, which wins over the attribute's selector), `extraStyles` ([unstable](#d-extrastyles-the-last-mile)), plus the read-only `unread`, `unhandledActivityTypes`, `threadId`, `threadTitle`, `running`, `barHeight` and `dockWidth`, and
+`resolvePageTarget`, `sharedState`, `anchor` (an element, which wins over the attribute's selector), `extraStyles` ([unstable](#d-extrastyles-the-last-mile)), plus the read-only `unread`, `unhandledActivityTypes`, `threadId`, `threadTitle`, `running`, `barHeight`, `dockWidth` and `uiStrings`, and
 the attribute mirrors `endpoint` / `userKey` / `userName` / `toolDisplay` / `toolGroupDisplay` / `collapsed` /
 `maximized` / `credentials`.
 
@@ -336,7 +336,12 @@ the `copyCode` / `copied` / `copyFailed` strings.
 `setSkills`, `sendMessage`, `run`, `attachFile`, `appendMessage`, `retryLastTurn`, `quote`, `offerQuoteInPage`,
 `enableCharts`, `newChat`, `setCollapsed`, `toggleCollapsed`, `setMaximized`, `toggleMaximized`,
 `describeSurface`, `moveTo`, `resetSize`, `toggleTheme`, `openThreads`, `closeThreads`, `switchThread`, `deleteThread`,
-`openCheckpoints`, `closeCheckpoints`, `toggleCheckpoints`, `refreshPlace` and `reload`.
+`openCheckpoints`, `closeCheckpoints`, `toggleCheckpoints`, `refreshPlace`, `request` and `reload`.
+
+`request(url, init?)` is `fetch` as the element authenticates: `headers` and `getHeaders()` under
+`init.headers` (which win per key), and `credentials` unless `init` names its own. A destination
+outside `trustedOrigins` is reported as the element's own requests are. It is the seam a separate
+entry such as `./mcp-apps` reaches the host's routes through.
 
 ### Sending from your own UI
 
@@ -4548,7 +4553,8 @@ are templates carrying `{token}` placeholders the widget fills in — e.g. `minu
 (`"{n}m ago"`), `confirmRun` (`"Run “{tool}”?"`), `tooLarge` (`"Too large (max {size})"`). Keep the
 token verbatim when translating. The full key list and English defaults live in
 [`src/ui/ui_strings.ts`](src/ui/ui_strings.ts) (exported as `DEFAULT_UI_STRINGS`); `mergeUiStrings`
-is exported too if you want to compute a complete table yourself.
+is exported too if you want to compute a complete table yourself. The read-only `uiStrings` property
+is the table the element draws with once connected (defaults, then `data-strings`, then `strings`).
 
 ---
 

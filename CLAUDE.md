@@ -74,9 +74,10 @@ inferred, so the published layout stays `dist/index.d.ts` rather than
    tree, never a module moved under it. Internal modules import from leaf paths
    (`./fill_field.ts`), never from an entry file. A new entry is a line in `LIBRARY` in
    `esbuild.config.mjs`, an `exports` key in `package.json`, a re-export in `src/bundle.ts`,
-   and a row in `tests/entries.test.ts`. The exception is `src/a2ui/`: its own entry (`./a2ui`,
-   `./a2ui/bundle`), deliberately absent from `src/bundle.ts` so the main bundle carries no A2UI
-   code, and `tests/entries.test.ts` enforces it.
+   and a row in `tests/entries.test.ts`. The exceptions are `src/a2ui/` and `src/mcp_apps/`: each
+   its own entry (`./a2ui` and `./a2ui/bundle`, `./mcp-apps` and `./mcp-apps/bundle`),
+   deliberately absent from `src/bundle.ts` so the main bundle carries neither, reaching the
+   element only through the `chat` it is handed; `tests/entries.test.ts` enforces both.
 7. **Use `.js` extensions in import specifiers** (`import { x } from "./x.js"`) even though the
    source file is `x.ts` — NodeNext convention. tsc, esbuild, and Vitest all resolve `.js` →
    `.ts`/`.d.ts` correctly, and the emitted `.d.ts` keeps `./x.js`, so consumers resolve
@@ -89,7 +90,8 @@ inferred, so the published layout stays `dist/index.d.ts` rather than
    registry, route/page maps, state hook, schema predicates), and `skills/` (skill type,
    templating, parsing). `index.ts`, `constants.ts`, and `version.ts` stay at the `src/`
    root. `src/a2ui/` is a sixth group of its own (`core/`, `display/`, `functions/`,
-   `inputs/`), its own entry and in no other entry's tree.
+   `inputs/`), its own entry and in no other entry's tree; `src/mcp_apps/` is a seventh, the
+   same way.
 
    Every rule above this one governs a *file*, so a package can obey all eight and still
    put everything it owns in one flat directory — which is what `src/ui/` was at 37

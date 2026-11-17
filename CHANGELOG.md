@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-11-17
+
+### Added
+
+- **`chat.request(url, init?)`, `fetch` as the element authenticates.** It sends `headers` and
+  `getHeaders()` under `init.headers` (which win per key) and `credentials` unless `init` names its
+  own, and reports a destination outside `trustedOrigins` as the element's own requests do. Nothing
+  changes for a host that does not call it.
+- **`chat.uiStrings`, the string table the element draws with**, read-only: the English defaults,
+  then `data-strings`, then `strings`, resolved on connect. A separate entry draws its text from
+  it, so a host localised through `data-strings` keeps its words. Nothing to opt into.
+- **A new `./mcp-apps` entry, `registerMcpApps(chat, {url, sandboxProxyUrl?})`.** It registers the
+  `mcp-apps` activity renderer over the element's built-in notice. Activity content is pydantic-ai's
+  `{resourceUri, toolInput, result, serverId?, serverHash?}`; `url` is the host's `mcp-apps/` route,
+  reached through `chat.request`, so a view's requests carry the element's headers and cookie
+  policy. An activity naming no server still draws the notice: give the pydantic-ai `MCPToolset` an
+  `id`. `./mcp-apps/bundle` is the same entry as a third vendored file, which inlines none of the
+  element. A host opts in by importing `./mcp-apps`; the main entries and bundle are unchanged.
+  **In this release every view still draws the notice:** the sandboxed frame and the view's bridge
+  are not in it, so registering the entry changes nothing a user sees yet. It fixes the seam the
+  frame and the bridge build on.
+
 ## [0.4.0] — 2026-11-16
 
 ### Added
@@ -256,7 +278,8 @@ move page walks a host over. Each entry below says whether a host opts in.
   kept offering the moon under `theme="dark"`. Only the toggle's own click redrew it before. A host
   opts in to nothing.
 
-[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/Artui/agents-web-components/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/Artui/agents-web-components/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Artui/agents-web-components/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/Artui/agents-web-components/compare/v0.2.0...v0.2.1

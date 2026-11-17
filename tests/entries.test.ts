@@ -1,12 +1,13 @@
 import { readFileSync } from "node:fs";
 import { build } from "esbuild";
 import { describe, expect, it } from "vitest";
-import { A2UI_BUNDLE, LIBRARY, VENDORED_BUNDLE } from "../esbuild.config.mjs";
+import { A2UI_BUNDLE, LIBRARY, MCP_APPS_BUNDLE, VENDORED_BUNDLE } from "../esbuild.config.mjs";
 import * as a2ui from "../src/a2ui.js";
 import * as bundle from "../src/bundle.js";
 import * as chat from "../src/chat.js";
 import { ELEMENT_TAG } from "../src/constants.js";
 import * as index from "../src/index.js";
+import * as mcpApps from "../src/mcp_apps.js";
 
 interface Manifest {
   readonly exports: Record<string, { readonly types?: string; readonly import: string }>;
@@ -85,6 +86,43 @@ describe("the package entries", () => {
           path === "src/index.ts" ||
           path === "src/chat.ts" ||
           path === "src/core/ag_ui_chat.ts" ||
+          path.includes("@ag-ui"),
+      ),
+    ).toEqual([]);
+  });
+
+  it("publishes the MCP Apps host as its own entry and its own vendored file", () => {
+    expect(Object.keys(mcpApps)).toEqual(["registerMcpApps"]);
+    expect(MANIFEST.exports["./mcp-apps"]).toEqual({
+      types: "./dist/mcp_apps.d.ts",
+      import: "./dist/mcp_apps.js",
+    });
+    expect(MCP_APPS_BUNDLE.entryPoints).toEqual(["src/mcp_apps.ts"]);
+    expect(MANIFEST.exports["./mcp-apps/bundle"]).toEqual({
+      types: "./dist/mcp_apps.d.ts",
+      import: `./${MCP_APPS_BUNDLE.outfile}`,
+    });
+  });
+
+  it("keeps MCP Apps out of the main bundle", async () => {
+    expect(Object.keys(bundle)).not.toContain("registerMcpApps");
+    const result = await build({ ...VENDORED_BUNDLE, write: false, metafile: true });
+    const inputs = Object.keys(result.metafile.inputs);
+    expect(inputs.filter((path) => path.startsWith("src/mcp_apps"))).toEqual([]);
+  });
+
+  it("keeps the element, its string table and the protocol packages out of the MCP Apps bundle", async () => {
+    const result = await build({ ...MCP_APPS_BUNDLE, write: false, metafile: true });
+    const inputs = Object.keys(result.metafile.inputs);
+    expect(inputs).toContain("src/mcp_apps.ts");
+    expect(
+      inputs.filter(
+        (path) =>
+          path === "src/index.ts" ||
+          path === "src/chat.ts" ||
+          path === "src/core/ag_ui_chat.ts" ||
+          path === "src/ui/ui_strings.ts" ||
+          path.startsWith("src/a2ui") ||
           path.includes("@ag-ui"),
       ),
     ).toEqual([]);

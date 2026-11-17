@@ -515,6 +515,15 @@ export class AgUiChat extends HTMLElement {
   strings: Partial<UiStrings> = {};
 
   /**
+   * The string table the element draws with: the English defaults, then
+   * `data-strings`, then {@link strings}, resolved on connect. Read-only; a
+   * separate entry such as `./mcp-apps` draws its text from it.
+   */
+  get uiStrings(): UiStrings {
+    return this.#strings;
+  }
+
+  /**
    * Resolve a `scroll_to` / `drag_and_drop` target string to a host-page
    * element (or `null`). Defaults to a CSS-selector lookup; override to map
    * page-map element ids. The page-action tools are opt-in via the
@@ -1568,6 +1577,24 @@ export class AgUiChat extends HTMLElement {
   /** The `fetch` init for the element's own plain GETs (catalogs). */
   #fetchInit(url: string): RequestInit | undefined {
     return withCredentials({ headers: this.#headersFor(url) }, this.#requestCredentials());
+  }
+
+  /**
+   * `fetch(url, init)` as this element authenticates: {@link headers} and
+   * {@link getHeaders} under `init.headers` (which win per key), and
+   * {@link credentials} unless `init` names its own. A foreign `url` outside
+   * {@link trustedOrigins} is reported, as the element's own requests are.
+   *
+   * The seam a separate entry (`./mcp-apps`) reaches the host's routes
+   * through, so the headers and the cookie policy stay one answer.
+   */
+  request(url: string, init: RequestInit = {}): Promise<Response> {
+    const headers = new Headers(this.#headersFor(url));
+    new Headers(init.headers).forEach((value, name) => {
+      headers.set(name, value);
+    });
+    const credentials = init.credentials ?? this.#requestCredentials();
+    return fetch(url, { ...init, headers, ...(credentials === undefined ? {} : { credentials }) });
   }
 
   /**
