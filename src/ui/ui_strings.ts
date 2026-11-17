@@ -1,3 +1,5 @@
+import { MCP_APP_UNSUPPORTED_TEXT } from "../constants.js";
+
 /**
  * The flat table of every user-facing string the chat shell renders — labels,
  * placeholders, `aria-label`s, and `title` tooltips. A localizable seam, not a
@@ -453,7 +455,7 @@ export const DEFAULT_UI_STRINGS: UiStrings = {
   historyCompacted: "Earlier turns condensed to fit the context window ({count} removed)",
   usingSkill: "Using skill {name}",
   enqueuedMessages: "Added during the run",
-  mcpAppUnsupported: "An app view can't be shown here: {uri}",
+  mcpAppUnsupported: MCP_APP_UNSUPPORTED_TEXT,
   runInterrupted: "The previous response didn’t finish — the page changed before it arrived.",
   pageMoved:
     "The page changed since you last looked at it. Call read_page to see the current page, then retry.",

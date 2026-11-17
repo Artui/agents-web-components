@@ -26,6 +26,14 @@
     "./a2ui/bundle": {
       "types": "./dist/a2ui.d.ts",
       "import": "./dist/agents-web-components.a2ui.bundle.js"
+    },
+    "./mcp-apps": {
+      "types": "./dist/mcp_apps.d.ts",
+      "import": "./dist/mcp_apps.js"
+    },
+    "./mcp-apps/bundle": {
+      "types": "./dist/mcp_apps.d.ts",
+      "import": "./dist/agents-web-components.mcp-apps.bundle.js"
     }
   },
   "sideEffects": false,

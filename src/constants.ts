@@ -612,6 +612,13 @@ export const PYDANTIC_AI_ACTIVITY_TYPE = {
 } as const;
 
 /**
+ * The English notice drawn for an MCP App view that cannot be shown, the
+ * default of the string table's `mcpAppUnsupported`. A constant of its own so
+ * the `./mcp-apps` entry can draw it without inlining the whole table.
+ */
+export const MCP_APP_UNSUPPORTED_TEXT = "An app view can't be shown here: {uri}";
+
+/**
  * The gutter a floating panel *rests* at, before anyone has touched it.
  *
  * It matches the default `--ag-ui-inset` and the stylesheet's

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`chat.request(url, init?)`, `fetch` as the element authenticates.** It sends `headers` and
+  `getHeaders()` under `init.headers` (which win per key) and `credentials` unless `init` names its
+  own, and reports a destination outside `trustedOrigins` as the element's own requests do. Nothing
+  changes for a host that does not call it.
+- **A new `./mcp-apps` entry, `registerMcpApps(chat, {url, sandboxProxyUrl?})`.** It registers the
+  `mcp-apps` activity renderer over the element's built-in notice. Activity content is pydantic-ai's
+  `{resourceUri, toolInput, result, serverId?, serverHash?}`; `url` is the host's `mcp-apps/` route,
+  reached through `chat.request`, so a view's requests carry the element's headers and cookie
+  policy. An activity naming no server still draws the notice: give the pydantic-ai `MCPToolset` an
+  `id`. `./mcp-apps/bundle` is the same entry as a third vendored file, which inlines none of the
+  element. A host opts in by importing `./mcp-apps`; the main entries and bundle are unchanged.
+
 ## [0.4.0] — 2026-11-16
 
 ### Added

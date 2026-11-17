@@ -336,7 +336,12 @@ the `copyCode` / `copied` / `copyFailed` strings.
 `setSkills`, `sendMessage`, `run`, `attachFile`, `appendMessage`, `retryLastTurn`, `quote`, `offerQuoteInPage`,
 `enableCharts`, `newChat`, `setCollapsed`, `toggleCollapsed`, `setMaximized`, `toggleMaximized`,
 `describeSurface`, `moveTo`, `resetSize`, `toggleTheme`, `openThreads`, `closeThreads`, `switchThread`, `deleteThread`,
-`openCheckpoints`, `closeCheckpoints`, `toggleCheckpoints`, `refreshPlace` and `reload`.
+`openCheckpoints`, `closeCheckpoints`, `toggleCheckpoints`, `refreshPlace`, `request` and `reload`.
+
+`request(url, init?)` is `fetch` as the element authenticates: `headers` and `getHeaders()` under
+`init.headers` (which win per key), and `credentials` unless `init` names its own. A destination
+outside `trustedOrigins` is reported as the element's own requests are. It is the seam a separate
+entry such as `./mcp-apps` reaches the host's routes through.
 
 ### Sending from your own UI
 

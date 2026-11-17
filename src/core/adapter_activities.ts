@@ -1,6 +1,5 @@
 import { PYDANTIC_AI_ACTIVITY_TYPE } from "../constants.js";
-import { fillUiString } from "../ui/fill_ui_string.js";
-import { renderRunNotice } from "../ui/progress/run_notice.js";
+import { renderMcpAppNotice } from "../ui/progress/mcp_app_notice.js";
 import { renderEnqueuedMessages } from "../ui/transcript/enqueued_messages.js";
 import type { UiStrings } from "../ui/ui_strings.js";
 import type { ActivityRegistration } from "./activity_registration.js";
@@ -23,14 +22,7 @@ export function adapterActivities(strings: () => UiStrings): readonly ActivityRe
     },
     {
       type: PYDANTIC_AI_ACTIVITY_TYPE.MCP_APPS,
-      render: (content) => {
-        const uri = (content as { readonly resourceUri?: unknown } | null)?.resourceUri;
-        return renderRunNotice(
-          "\u{1F5BC}",
-          fillUiString(strings().mcpAppUnsupported, { uri: typeof uri === "string" ? uri : "" }),
-          "mcp-app",
-        );
-      },
+      render: (content) => renderMcpAppNotice(content, strings().mcpAppUnsupported),
     },
     { type: PYDANTIC_AI_ACTIVITY_TYPE.COMPACTION, render: nothing },
     { type: PYDANTIC_AI_ACTIVITY_TYPE.TOOL_AVAILABILITY_DELTA, render: nothing },
