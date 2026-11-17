@@ -13,5 +13,6 @@ export type {
   ThreadsChat,
   ThreadsSelectDetail,
   ThreadsStrings,
+  ThreadsStringsInput,
   ThreadsVariant,
 } from "./threads/types.js";

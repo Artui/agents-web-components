@@ -51,3 +51,8 @@ export interface ThreadsStrings {
   /** What a screen reader hears for each mark; idle says nothing. */
   readonly status: Readonly<Record<Exclude<ThreadStatus, "idle">, string>>;
 }
+
+/** What the `strings` setter takes: any of {@link ThreadsStrings}, `status` per mark too. */
+export type ThreadsStringsInput = Partial<Omit<ThreadsStrings, "status">> & {
+  readonly status?: Partial<ThreadsStrings["status"]>;
+};

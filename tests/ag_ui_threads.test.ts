@@ -363,6 +363,48 @@ describe("driving the chat", () => {
     expect(await chat.conversationStore.listThreads()).toEqual([]);
   });
 
+  it("keeps focus on a picked row through the redraw the switch causes", async () => {
+    const { chat, list } = mount();
+    await flush();
+    saved(chat.conversationStore, "t1");
+    await list.refresh();
+    const pick = row(list, "t1").querySelector<HTMLButtonElement>(".row-main");
+    pick?.focus();
+
+    pick?.click();
+    await flush();
+
+    expect(chat.threadId).toBe("t1");
+    const focused = list.shadowRoot?.activeElement as HTMLElement | null;
+    expect(focused?.className).toBe("row-main");
+    expect(focused?.closest<HTMLElement>(".row")?.dataset["threadId"]).toBe("t1");
+  });
+
+  it("keeps focus in an open confirm through a redraw", async () => {
+    const { chat, list } = mount();
+    await flush();
+    saved(chat.conversationStore, "t1");
+    await list.refresh();
+    row(list, "t1").querySelector<HTMLButtonElement>(".delete")?.click();
+
+    await list.refresh();
+
+    expect(list.shadowRoot?.activeElement?.className).toBe("no");
+    expect(row(list, "t1").querySelector(".confirm")).not.toBeNull();
+  });
+
+  it("re-reads nothing when only the unread marks change", async () => {
+    const { chat } = mount();
+    await flush();
+    const listThreads = vi.spyOn(chat.conversationStore, "listThreads");
+
+    chat.setCollapsed(true);
+    chat.setCollapsed(false);
+    await flush();
+
+    expect(listThreads).not.toHaveBeenCalled();
+  });
+
   it("names the delete button after its row", async () => {
     const { chat, list } = mount();
     await flush();
@@ -475,7 +517,7 @@ describe("strings", () => {
     await send(chat);
 
     list.strings = { label: "Gespräche", status: { ...list.strings.status, failed: "Fehler" } };
-    list.strings = { label: "Gespräche", untitled: "Neu", status: { failed: "Fehler" } as never };
+    list.strings = { label: "Gespräche", untitled: "Neu", status: { failed: "Fehler" } };
 
     expect(list.shadowRoot?.querySelector(".list")?.getAttribute("aria-label")).toBe("Gespräche");
     expect(list.strings.empty).toBe("No conversations yet");

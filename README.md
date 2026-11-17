@@ -2093,10 +2093,13 @@ on screen, and drives the chat through the [thread API](#driving-the-conversatio
   optional `status` (`idle`, `running`, `waiting`, `failed`) or `unread` adds the rest, across tabs
   and reloads; no built-in store reports `status` yet, so `waiting` comes only from your own store.
   A screen reader hears the mark after the title.
-- **`refresh()`** reads the store again. The list does so after every thread, title, run-finished
-  and unread event; call it when something else changed the store, such as another tab.
+- **`refresh()`** reads the store again. The list does so after every thread, title and
+  run-finished event (an unread change only redraws the marks); call it when something else
+  changed the store, such as another tab. **`threads`** *(read-only)* is the rows on screen, as the
+  store last listed them. A redraw keeps keyboard focus on the row, delete or confirm it was on.
 - **`strings`** translates every piece of text (`label`, `untitled`, `empty`, `delete`,
-  `deleteConfirm`, `deleteYes`, `deleteNo`, and `status` per mark), merged over the English.
+  `deleteConfirm`, `deleteYes`, `deleteNo`, and `status` per mark), merged over the English, so
+  `{ status: { failed: "Fehler" } }` changes that one string.
 - **Styling.** Parts `list`, `row` (plus `row-active` on the thread on screen), `row-button`,
   `mark`, `delete`, `confirm`, `empty`. The chat's colour tokens apply, and
   `--ag-ui-threads-running` and `--ag-ui-threads-waiting` colour those two marks. The host

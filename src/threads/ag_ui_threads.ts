@@ -17,11 +17,12 @@ import type {
   ThreadsChat,
   ThreadsSelectDetail,
   ThreadsStrings,
+  ThreadsStringsInput,
   ThreadsVariant,
 } from "./types.js";
 
-/** The chat events after which the list is read again. */
-const RELIST_ON = [THREAD_EVENT, THREAD_TITLE_EVENT, RUN_FINISHED_EVENT, UNREAD_EVENT] as const;
+/** The chat events the list redraws on; all but the unread one also re-list. */
+const LISTEN_TO = [THREAD_EVENT, THREAD_TITLE_EVENT, RUN_FINISHED_EVENT, UNREAD_EVENT] as const;
 
 /**
  * `<ag-ui-threads>`: the conversations of one `<ag-ui-chat>`, as a list or as
@@ -101,7 +102,7 @@ export class AgUiThreads extends HTMLElement {
     return this.#strings;
   }
 
-  set strings(strings: Partial<ThreadsStrings>) {
+  set strings(strings: ThreadsStringsInput) {
     this.#strings = {
       ...DEFAULT_THREADS_STRINGS,
       ...strings,
@@ -183,7 +184,7 @@ export class AgUiThreads extends HTMLElement {
     }
     this.#chat = chat;
     this.#marks = new LiveMarks(chat.unread);
-    for (const type of RELIST_ON) {
+    for (const type of LISTEN_TO) {
       chat.addEventListener(type, this.#onChatEvent);
     }
     this.#watch.observe(chat, { attributes: true, attributeFilter: ["data-running"] });
@@ -196,7 +197,7 @@ export class AgUiThreads extends HTMLElement {
     if (chat === null) {
       return;
     }
-    for (const type of RELIST_ON) {
+    for (const type of LISTEN_TO) {
       chat.removeEventListener(type, this.#onChatEvent);
     }
     this.#watch.disconnect();
@@ -231,7 +232,10 @@ export class AgUiThreads extends HTMLElement {
     if (event.type === RUN_FINISHED_EVENT) {
       this.#marks.runFinished(detail as RunFinishedDetail);
     } else if (event.type === UNREAD_EVENT) {
+      // Only this page's marks moved: the chat reports one on every collapse toggle.
       this.#marks.unreadChanged(detail as UnreadDetail);
+      this.#render();
+      return;
     }
     this.#syncRunning();
     void this.refresh();
@@ -258,12 +262,30 @@ export class AgUiThreads extends HTMLElement {
     const pills = this.variant === "pills";
     const activeId = this.#chat?.threadId ?? null;
     const items = this.#rows.map((row) => this.#row(row, row.threadId === activeId, pills));
+    const focused = this.#focused();
     this.#list.replaceChildren(...items);
+    if (focused !== null) {
+      this.#list
+        .querySelector<HTMLElement>(
+          `.row[data-thread-id="${CSS.escape(focused.threadId)}"] .${focused.control}`,
+        )
+        ?.focus();
+    }
     const empty = this.#chat !== null && this.#rows.length === 0;
     this.#list.hidden = empty;
     this.#empty.hidden = !empty || pills;
     this.#empty.textContent = this.#strings.empty;
     this.toggleAttribute("data-empty", empty);
+  }
+
+  /** The row and control holding focus, so a redraw can hand it to their replacement. */
+  #focused(): { readonly threadId: string; readonly control: string } | null {
+    const active = (this.shadowRoot as ShadowRoot).activeElement;
+    const threadId = active?.closest<HTMLElement>(".row")?.dataset["threadId"];
+    if (active === null || threadId === undefined) {
+      return null;
+    }
+    return { threadId, control: active.className };
   }
 
   #row(row: ThreadRow, active: boolean, pills: boolean): HTMLLIElement {
