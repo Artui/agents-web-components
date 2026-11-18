@@ -108,6 +108,9 @@ describe("the sandbox proxy page", () => {
     win.postMessage({ method: RESOURCE, params: { html: 42 } }, "*");
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(inner().srcdoc).toBe("");
+    const third = (entry: Received): boolean =>
+      (entry.data?.["params"] as { html?: unknown } | undefined)?.html === "<p>third</p>";
+    expect(received.filter(third)).toHaveLength(0);
 
     win.postMessage({ method: RESOURCE, params: { html: VIEW } }, "*");
     await find(received, "booted");

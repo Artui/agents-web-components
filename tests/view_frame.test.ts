@@ -416,3 +416,50 @@ describe("viewFrame", () => {
     expect(disconnect).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("viewFrame's removal watch", () => {
+  class Tracked extends MutationObserver {
+    static readonly live = new Set<Tracked>();
+    override observe(target: Node, options?: MutationObserverInit): void {
+      Tracked.live.add(this);
+      super.observe(target, options);
+    }
+    override disconnect(): void {
+      Tracked.live.delete(this);
+      super.disconnect();
+    }
+  }
+
+  beforeEach(() => {
+    Tracked.live.clear();
+    vi.stubGlobal("MutationObserver", Tracked);
+  });
+
+  it("stops watching once the node leaves", async () => {
+    const node = await shown(services());
+    expect(Tracked.live.size).toBe(1);
+
+    node.remove();
+    await flush();
+
+    expect(Tracked.live.size).toBe(0);
+  });
+
+  it("stops watching when the resource cannot be read", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const node = await shown(services(vi.fn(async () => Promise.reject(new Error("down")))));
+
+    expect(node.isConnected).toBe(true);
+    expect(Tracked.live.size).toBe(0);
+  });
+
+  it("stops watching once the view is closed to the notice", async () => {
+    const connect = vi.fn((_channel: McpAppViewChannel) => vi.fn());
+    const node = await shown(services(), connect);
+
+    connect.mock.calls[0]?.[0].close();
+
+    expect(node.isConnected).toBe(true);
+    expect(Tracked.live.size).toBe(0);
+  });
+});
