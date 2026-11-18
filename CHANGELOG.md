@@ -53,7 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   view's `serverId`, and a route's coded `error` reaches the view with its own code (`-32000` for
   any other failure); `ui/message` (an array of content blocks or one block) is sent as the user's
   next message; `ui/open-link` opens an `http(s)` URL in a `noopener` tab; all three are refused
-  while the view is drawn from a stored conversation. `ui/request-display-mode` is answered
+  while the view is drawn from a stored conversation, and once it has asked to be torn down. `ui/request-display-mode` is answered
   `inline`; a view that sends `ui/notifications/request-teardown` is sent `ui/resource-teardown`
   and closed to the notice; any other request is answered `-32601`. Tested against
   django-spec-mcp's own view bridge. **A host that called `registerMcpApps` gets this with nothing

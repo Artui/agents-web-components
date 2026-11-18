@@ -2260,7 +2260,8 @@ from the view's own frame:
 | anything else | answers `-32601` |
 
 `tools/call`, `ui/message` and `ui/open-link` are refused while the view is
-drawn from a stored conversation rather than a live run. Once initialised, the
+drawn from a stored conversation rather than a live run, and once it has asked
+to be torn down. Once initialised, the
 view is sent `ui/notifications/host-context-changed` with what changed when the
 `theme` attribute, the system scheme or the frame's width does.
 

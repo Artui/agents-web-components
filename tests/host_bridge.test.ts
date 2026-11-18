@@ -427,6 +427,26 @@ describe("hostBridge", () => {
     expect(fixture.posted).toHaveLength(1);
   });
 
+  it.each([
+    ["tools/call", { name: "forecast" }],
+    ["ui/message", { content: { type: "text", text: "hi" } }],
+    ["ui/open-link", { url: "https://example.com/" }],
+  ])("refuses %s from a view that asked to be torn down", async (method, params) => {
+    const fixture = connected();
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    initialised(fixture);
+    notify(fixture, "ui/notifications/request-teardown");
+    fixture.posted.length = 0;
+
+    request(fixture, 4, method, params);
+    await settled();
+
+    expect(fixture.posted[0]).toMatchObject({ id: 4, error: { code: -32000 } });
+    expect(fixture.services.route).not.toHaveBeenCalled();
+    expect(fixture.host.sendMessage).not.toHaveBeenCalled();
+    expect(open).not.toHaveBeenCalled();
+  });
+
   it("closes a view that never answers its teardown after a wait", async () => {
     vi.useFakeTimers();
     const fixture = connected();
