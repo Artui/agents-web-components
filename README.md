@@ -348,9 +348,9 @@ entry such as `./mcp-apps` reaches the host's routes through.
 
 `colorScheme` is the scheme the panel is drawn in now (`"light"` or `"dark"`); a change of the
 `theme` attribute fires `ag-ui-theme` with `{ scheme }`. `locale` is the nearest `lang` attribute,
-else the browser's language. `tokenValues(names)` returns the values the panel computes for the
-custom properties `names` (a colour resolved in the current scheme), leaving out any it does not
-declare. `./mcp-apps` hands a view the theme through these three.
+looked for past any shadow root the element is in, else the browser's language.
+`tokenValues(names)` returns the values the panel computes for the custom properties `names` (a
+colour resolved in the current scheme), leaving out any it does not declare. `./mcp-apps` hands a view the theme through these three.
 
 ### Sending from your own UI
 

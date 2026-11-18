@@ -59,9 +59,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   django-spec-mcp's own view bridge. **A host that called `registerMcpApps` gets this with nothing
   to opt into.**
 - **`<ag-ui-chat>` reports its theme to a separate entry**: the read-only `colorScheme` (`"light"`
-  or `"dark"`, the scheme drawn now) and `locale` (the nearest `lang`, else the browser's), a
-  `tokenValues(names)` method resolving custom properties as the panel computes them, and an
-  `ag-ui-theme` event (`THEME_EVENT`, `{ scheme }`) when the `theme` attribute changes.
+  or `"dark"`, the scheme drawn now) and `locale` (the nearest `lang`, looked for past any shadow
+  root the element is in, else the browser's), a `tokenValues(names)` method resolving custom
+  properties as the panel computes them, and an `ag-ui-theme` event (`THEME_EVENT`, `{ scheme }`)
+  when the `theme` attribute changes.
 
 ### Fixed
 

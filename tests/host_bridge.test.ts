@@ -514,6 +514,32 @@ describe("what the bridge reads of <ag-ui-chat>", () => {
     expect(el.locale).toBe("de-AT");
   });
 
+  it("reads the locale from a lang outside the shadow root the chat is drawn in", () => {
+    const page = document.createElement("div");
+    page.lang = "de";
+    const app = document.createElement("div");
+    const root = app.attachShadow({ mode: "open" });
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    root.append(el);
+    page.append(app);
+    document.body.append(page);
+
+    expect(el.locale).toBe("de");
+  });
+
+  it("keeps the browser's language for an empty lang nearest the chat", () => {
+    const page = document.createElement("div");
+    page.lang = "de";
+    const app = document.createElement("div");
+    app.setAttribute("lang", "");
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    app.attachShadow({ mode: "open" }).append(el);
+    page.append(app);
+    document.body.append(page);
+
+    expect(el.locale).toBe(navigator.language);
+  });
+
   it("fires ag-ui-theme with the drawn scheme when the theme attribute changes", () => {
     const el = document.createElement(ELEMENT_TAG) as AgUiChat;
     document.body.append(el);
