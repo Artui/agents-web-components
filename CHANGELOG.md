@@ -21,6 +21,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `strings` translates. `./threads/bundle` is the same entry as a fourth vendored file, inlining
   none of the element; the main entries and bundle are unchanged. A host opts in by importing
   `./threads` and placing the element.
+- **`./mcp-apps` draws a view's sandboxed frame instead of the notice.** Once the view first scrolls
+  into sight it reads its HTML through `resources/read` on `url` (once per server and URI for the
+  page; a failed read draws the notice, warns, and is read again next time) and frames it. Without
+  `sandboxProxyUrl` the frame is `srcdoc` with `sandbox="allow-scripts"` and the view's CSP as the
+  first `<meta>` of its `<head>`: `_meta.ui.csp`'s domains, or the MCP Apps restrictive default,
+  plus `font-src 'self' data:`, `object-src 'none'`, `frame-src` and `base-uri`, with any declared
+  domain holding whitespace, `;`, a quote or a comma dropped. With it, the frame is the proxy on its
+  own origin (`allow-scripts allow-same-origin`, the cleaned CSP also on the URL as `?csp=`), sent
+  the view in `ui/notifications/sandbox-resource-ready` once it says
+  `ui/notifications/sandbox-proxy-ready`. A view that navigates its frame is torn down to the
+  notice; one the page moves reloads and boots again, and one that leaves the document is framed
+  again from the cache when it returns. No `allow` permissions are granted.
+  **A host that called `registerMcpApps` on 0.5.0 now shows live frames with nothing to opt into,
+  but a `srcdoc` frame inherits the host page's CSP:** under a strict `script-src` the view stays
+  blank, so such a host sets `sandboxProxyUrl` and lets its own `frame-src` reach the proxy's
+  origin. `registerMcpApps` now throws for a `sandboxProxyUrl` on the page's own origin, where
+  `allow-same-origin` would leave the view unsandboxed. The view's bridge is not in this change: a
+  view that waits for `ui/initialize` to be answered draws its document and goes no further.
 
 ### Fixed
 
@@ -29,6 +47,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   content) was centred in the transcript, a screen-height from the field it starts. It now rests at
   the foot, directly over the composer, so slotted empty content moves down with it. The greeting
   layout and the phone breakpoint are unchanged.
+- **A redraw of an `mcp-apps` activity reuses only a view node `./mcp-apps` drew**, passing the
+  redraw's `live` to it; any other previous node, such as the built-in notice, is replaced.
 
 ## [0.5.0] — 2026-11-17
 

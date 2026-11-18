@@ -76,6 +76,29 @@ export interface McpAppsServices {
   readonly host: McpAppsHost;
   readonly route: McpAppsRoute;
   readonly sandboxProxyUrl: string | undefined;
+  /**
+   * The view nodes this registration drew. The renderer reuses only these on a
+   * redraw, and passes the redraw's `live` through their state.
+   */
+  readonly views: WeakMap<Node, McpAppViewState>;
+  /**
+   * Each view resource read on this page, keyed by `JSON.stringify([serverId, uri])`.
+   * A read that fails is dropped, so a later draw reads it again.
+   */
+  readonly resources: Map<string, Promise<McpAppResource>>;
+}
+
+/** What a drawn view's redraw can change. */
+export interface McpAppViewState {
+  /** Whether the view may act: see {@link McpAppView.live}. */
+  live: boolean;
+}
+
+/** A view's HTML resource, as `resources/read` gave it. */
+export interface McpAppResource {
+  readonly html: string;
+  /** `contents[0]._meta.ui.csp`, unchecked: the frame cleans it. */
+  readonly csp: unknown;
 }
 
 /**
