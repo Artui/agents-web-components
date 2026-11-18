@@ -690,18 +690,3 @@ export const THREADS_TAG = "ag-ui-threads";
  * alone. Otherwise it is the moment to close a popover the list sits in.
  */
 export const THREADS_SELECT_EVENT = "ag-ui-threads-select";
-
-/**
- * The mark `<ag-ui-threads>` draws on a row, as `data-status`, most pressing
- * first: a row that is both failed and unread reads as failed.
- */
-export const THREAD_STATUS = {
-  RUNNING: "running",
-  WAITING: "waiting",
-  FAILED: "failed",
-  UNREAD: "unread",
-  IDLE: "idle",
-} as const;
-
-/** One of {@link THREAD_STATUS}. */
-export type ThreadStatus = (typeof THREAD_STATUS)[keyof typeof THREAD_STATUS];

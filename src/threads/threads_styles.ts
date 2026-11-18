@@ -12,8 +12,6 @@ export const THREADS_STYLES: string = `
   --_hover: var(--ag-ui-hover, color-mix(in oklch, var(--_fg) 6%, var(--_bg)));
   --_ring: var(--ag-ui-ring, color-mix(in oklch, var(--_accent) 40%, var(--_fg)));
   --_danger: var(--ag-ui-danger, light-dark(#b42318, #f97066));
-  --_working: var(--ag-ui-threads-running, light-dark(#1d64d8, #7aa7f5));
-  --_waiting: var(--ag-ui-threads-waiting, light-dark(#b54708, #fdb022));
   --_radius: var(--ag-ui-radius, 8px);
   --_font: var(--ag-ui-font, inherit);
   display: block;
@@ -87,44 +85,6 @@ export const THREADS_STYLES: string = `
 .row[data-active] .title {
   font-weight: 600;
 }
-.mark {
-  flex: none;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: transparent;
-}
-.mark[data-status="running"] {
-  background: var(--_working);
-  animation: ag-ui-threads-pulse 1.4s ease-in-out infinite;
-}
-.mark[data-status="waiting"] {
-  background: var(--_waiting);
-}
-.mark[data-status="failed"] {
-  background: var(--_danger);
-}
-.mark[data-status="unread"] {
-  background: var(--_accent);
-}
-@media (prefers-reduced-motion: reduce) {
-  .mark[data-status="running"] {
-    animation: none;
-  }
-}
-@keyframes ag-ui-threads-pulse {
-  50% {
-    opacity: 0.35;
-  }
-}
-.sr {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
 .delete {
   flex: none;
   display: inline-grid;
@@ -195,5 +155,23 @@ export const THREADS_STYLES: string = `
 :host([variant="pills"]) .row-main {
   gap: 6px;
   padding: 4px 12px;
+}
+:host([variant="pills"]) .delete {
+  width: 22px;
+  height: 22px;
+  margin-inline: -6px 4px;
+  border-radius: 50%;
+}
+:host([variant="pills"]) .row[data-confirming] {
+  max-width: none;
+}
+:host([variant="pills"]) .confirm {
+  flex-wrap: nowrap;
+  padding: 3px 4px 3px 12px;
+  white-space: nowrap;
+}
+:host([variant="pills"]) .confirm button {
+  padding: 1px 8px;
+  border-radius: 999px;
 }
 `;

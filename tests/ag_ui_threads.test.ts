@@ -1,12 +1,12 @@
 /**
  * `<ag-ui-threads>` over a real `<ag-ui-chat>`: the list it draws from the
  * chat's store, the thread it marks, the chat it drives, and the run marks it
- * reads from the live chat and from rows that carry their own status.
+ * does not draw yet.
  */
 
 import type { Message } from "@ag-ui/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ELEMENT_TAG, THREAD_STATUS, THREADS_SELECT_EVENT, THREADS_TAG } from "../src/constants.js";
+import { ELEMENT_TAG, THREADS_SELECT_EVENT, THREADS_TAG } from "../src/constants.js";
 import type { AgUiChat } from "../src/core/ag_ui_chat.js";
 import type { ClientConversationStore } from "../src/core/conversation_store.js";
 import { SessionStorageStore } from "../src/core/conversation_store.js";
@@ -57,7 +57,6 @@ function mount(
     if (options.gated === true) {
       await new Promise<void>((resolve) => gates.push(resolve));
     }
-    // Only the first run fails, so a second one can show the mark clearing.
     if (options.failing === true && runs === 1) {
       emit.error("boom");
       return;
@@ -108,8 +107,8 @@ async function send(chat: AgUiChat): Promise<void> {
   await flush();
 }
 
-/** A store whose rows the test writes, status and all, over a real one. */
-function rowStore(listed: ThreadRow[]): ClientConversationStore {
+/** A store whose rows the test writes, extra keys and all, over a real one. */
+function rowStore(listed: (ThreadRow & Record<string, unknown>)[]): ClientConversationStore {
   const inner = new SessionStorageStore("rows");
   return {
     threadId: () => inner.threadId(),
@@ -416,17 +415,27 @@ describe("driving the chat", () => {
     );
   });
 
-  it("draws pills without a delete, and no empty text", async () => {
+  it("draws pills with no empty text, and deletes from a pill after the inline confirm", async () => {
     const { chat, list } = mount();
     list.variant = "pills";
     await flush();
     expect(list.shadowRoot?.querySelector<HTMLElement>(".empty")?.hidden).toBe(true);
     expect(list.hasAttribute("data-empty")).toBe(true);
-    saved(chat.conversationStore, "t1");
+    saved(chat.conversationStore, "t1", "Taxes");
     await list.refresh();
-
     expect(list.variant).toBe("pills");
-    expect(row(list, "t1").querySelector(".delete")).toBeNull();
+    expect(row(list, "t1").querySelector(".delete")?.getAttribute("aria-label")).toBe(
+      "Delete Taxes",
+    );
+
+    row(list, "t1").querySelector<HTMLButtonElement>(".delete")?.click();
+    expect(row(list, "t1").hasAttribute("data-confirming")).toBe(true);
+    expect(list.shadowRoot?.activeElement?.className).toBe("no");
+    row(list, "t1").querySelector<HTMLButtonElement>(".yes")?.click();
+    await flush();
+
+    expect(titles(list)).toEqual([]);
+    expect(await chat.conversationStore.listThreads()).toEqual([]);
   });
 
   it("says when there is nothing to list", async () => {
@@ -440,89 +449,73 @@ describe("driving the chat", () => {
   });
 });
 
-describe("marks", () => {
-  it("marks the thread on screen running while its run is in flight", async () => {
+describe("no run marks", () => {
+  function marked(list: AgUiThreads): boolean {
+    const root = list.shadowRoot as ShadowRoot;
+    return (
+      root.querySelector("[data-status], .mark, [part~='mark'], .sr") !== null ||
+      rows(list).some(
+        (item) =>
+          item.querySelector(".row-main")?.textContent !==
+          item.querySelector(".title")?.textContent,
+      )
+    );
+  }
+
+  it("draws no mark on a thread running here, or one whose run failed", async () => {
     const { chat, list, release } = mount({ gated: true });
     await flush();
     const threadId = chat.threadId as string;
 
     await send(chat);
     expect(chat.running).toBe(true);
-    expect(row(list, threadId).dataset["status"]).toBe(THREAD_STATUS.RUNNING);
-    expect(row(list, threadId).querySelector(".sr")?.textContent).toBe(", Working");
-
+    expect(row(list, threadId)).toBeDefined();
+    expect(marked(list)).toBe(false);
     release();
     await flush();
-    expect(row(list, threadId).dataset["status"]).toBe(THREAD_STATUS.IDLE);
-    expect(row(list, threadId).querySelector(".sr")).toBeNull();
+
+    const failing = mount({ failing: true });
+    await flush();
+    await send(failing.chat);
+    expect(marked(failing.list)).toBe(false);
   });
 
-  it("marks a thread whose run failed, until it runs again", async () => {
-    const { chat, list } = mount({ failing: true });
-    await flush();
-    const threadId = chat.threadId as string;
-
-    await send(chat);
-    expect(row(list, threadId).dataset["status"]).toBe(THREAD_STATUS.FAILED);
-
-    await send(chat);
-    expect(row(list, threadId).dataset["status"]).toBe(THREAD_STATUS.IDLE);
-  });
-
-  it("marks an answer that landed unseen, and clears it once read", async () => {
-    const { chat, list } = mount();
-    await flush();
-    const threadId = chat.threadId as string;
-    saved(chat.conversationStore, "tB");
-    chat.setCollapsed(true);
-    await send(chat);
-    await chat.switchThread("tB");
-    await flush();
-
-    expect(row(list, threadId).dataset["status"]).toBe(THREAD_STATUS.UNREAD);
-    expect(row(list, "tB").dataset["status"]).toBe(THREAD_STATUS.IDLE);
-
-    chat.setCollapsed(false);
-    await chat.switchThread(threadId);
-    await flush();
-    expect(row(list, threadId).dataset["status"]).toBe(THREAD_STATUS.IDLE);
-  });
-
-  it("reads the status a store's rows carry, most pressing first", async () => {
-    const listed: ThreadRow[] = [
+  it("draws no mark from what a store's rows carry", async () => {
+    const listed = [
       { threadId: "a", title: "A", updatedAt: 1, preview: "", status: "running" },
       { threadId: "w", title: "W", updatedAt: 1, preview: "", status: "waiting", unread: true },
-      { threadId: "f", title: "F", updatedAt: 1, preview: "", status: "failed", unread: true },
-      { threadId: "u", title: "U", updatedAt: 1, preview: "", status: "idle", unread: true },
-      { threadId: "i", title: "", updatedAt: 1, preview: "" },
+      { threadId: "u", title: "", updatedAt: 1, preview: "", unread: true },
     ];
     const { list } = mount({ store: rowStore(listed) });
     await flush();
 
-    expect(rows(list).map((item) => item.dataset["status"])).toEqual([
-      "running",
-      "waiting",
-      "failed",
-      "unread",
-      "idle",
-    ]);
-    expect(titles(list)[4]).toBe("New conversation");
+    expect(titles(list)).toEqual(["A", "W", "New conversation"]);
+    expect(marked(list)).toBe(false);
+  });
+
+  it("re-lists when a run finishes, so a thread the run touched moves", async () => {
+    const { chat, list } = mount();
+    await flush();
+    const listThreads = vi.spyOn(chat.conversationStore, "listThreads");
+
+    await send(chat);
+
+    expect(listThreads).toHaveBeenCalled();
+    expect(row(list, chat.threadId as string)).toBeDefined();
   });
 });
 
 describe("strings", () => {
   it("merges a host's strings over the defaults and redraws", async () => {
-    const { chat, list } = mount({ failing: true });
+    const listed = [{ threadId: "i", title: "", updatedAt: 1, preview: "" }];
+    const { list } = mount({ store: rowStore(listed) });
     await flush();
-    await send(chat);
 
-    list.strings = { label: "Gespräche", status: { ...list.strings.status, failed: "Fehler" } };
-    list.strings = { label: "Gespräche", untitled: "Neu", status: { failed: "Fehler" } };
+    list.strings = { label: "Gespräche", untitled: "Neu" };
 
     expect(list.shadowRoot?.querySelector(".list")?.getAttribute("aria-label")).toBe("Gespräche");
     expect(list.strings.empty).toBe("No conversations yet");
-    expect(list.strings.status.running).toBe("Working");
-    expect(rows(list)[0]?.querySelector(".sr")?.textContent).toBe(", Fehler");
+    expect(titles(list)).toEqual(["Neu"]);
   });
 });
 

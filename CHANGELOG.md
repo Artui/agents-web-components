@@ -11,17 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **A new `./threads` entry: `<ag-ui-threads>`, the conversation list for a host's own bar or
   rail.** `defineThreads()` registers it; `for="<chat id>"` (looked up in the list's own root) or
-  the `chat` property binds it to an `<ag-ui-chat>`. `variant="list"` (the default) draws rows with
-  an inline-confirmed delete, `variant="pills"` a strip that scrolls sideways. A row picked fires a
-  cancelable `ag-ui-threads-select` (`{threadId}`) and then calls `switchThread`, which cancels a
-  run in flight as the built-in list does. Each row carries `data-status` (`running`, `waiting`,
-  `failed`, `unread` or `idle`): running, failed and unread come from the chat in the page, and a
-  store whose rows carry an optional `status` or `unread` adds the rest. No built-in store reports
-  `status` yet, so `waiting` shows only from a host's own store. Parts `list`, `row`,
-  `row-active`, `row-button`, `mark`, `delete`, `confirm`, `empty`; tokens
-  `--ag-ui-threads-running` and `--ag-ui-threads-waiting` beside the chat's own. `refresh()`
-  re-lists, `threads` holds the rows on screen, and `strings` translates. The main bundle carries
-  it too. A host opts in by importing `./threads` and placing the element; the chat is unchanged.
+  the `chat` property, which wins over `for`, binds it to an `<ag-ui-chat>`. `variant="list"` (the
+  default) draws rows, `variant="pills"` a strip that scrolls sideways; both delete a conversation
+  behind an inline confirm. A row picked fires a cancelable `ag-ui-threads-select` (`{threadId}`)
+  and then calls `switchThread`, which cancels a run in flight as the built-in list does. It draws
+  no run marks (running, waiting, failed, unread) yet: those wait for a store that reports run
+  status. Parts `list`, `row`, `row-active`, `row-button`, `delete`, `confirm`, `empty`; the chat's
+  tokens apply. `refresh()` re-lists; `strings` translates. `./threads/bundle` is the same entry
+  as a fourth vendored file, inlining none of the element; the main entries and bundle are
+  unchanged. A host opts in by importing `./threads` and placing the element.
 
 ## [0.5.0] — 2026-11-17
 

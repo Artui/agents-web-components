@@ -5,6 +5,7 @@
 //   - dist/agents-web-components.bundle.js  — ESM, @ag-ui/* INLINED (vendored-bundle build)
 //   - dist/agents-web-components.a2ui.bundle.js — the A2UI renderer alone, vendored beside it
 //   - dist/agents-web-components.mcp-apps.bundle.js — the MCP Apps host alone, likewise
+//   - dist/agents-web-components.threads.bundle.js — the thread list alone, likewise
 //
 // The vendored bundle is what django-admin-agent ships under its
 // static/ directory. Its options are exported so the browser test that loads
@@ -153,6 +154,20 @@ export const MCP_APPS_BUNDLE = {
 };
 
 /**
+ * The thread list as a fourth vendored file, loaded beside the main bundle by
+ * a host that draws its own bar or rail. It drives the element only through
+ * the `chat` it is bound to, so it inlines none of it (tests/entries.test.ts).
+ *
+ * @type {import("esbuild").BuildOptions}
+ */
+export const THREADS_BUNDLE = {
+  ...SHARED,
+  entryPoints: ["src/threads.ts"],
+  outfile: "dist/agents-web-components.threads.bundle.js",
+  minify: true,
+};
+
+/**
  * zod's JSON Schema modules that contribute code to a vendored bundle.
  *
  * zod is a peer of the protocol packages this package does not declare, and
@@ -181,6 +196,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
     build({ ...VENDORED_BUNDLE, metafile: true }),
     build(A2UI_BUNDLE),
     build(MCP_APPS_BUNDLE),
+    build(THREADS_BUNDLE),
   ]);
   const jsonSchema = zodJsonSchemaInputs(vendored.metafile);
   if (jsonSchema.length > 0) {

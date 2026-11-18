@@ -35,7 +35,6 @@
         --ag-ui-accent: #9cc2ff;
         --ag-ui-line: #3a3a48;
         --ag-ui-hover: #262634;
-        --ag-ui-threads-running: #7aa7f5;
       }
       header.bar button {
         flex: none;
@@ -95,18 +94,18 @@
   <body>
     <header class="bar">
       <strong>Threads demo</strong>
-      <ag-ui-threads for="chat" variant="pills"></ag-ui-threads>
+      <ag-ui-threads id="pills" variant="pills"></ag-ui-threads>
       <button type="button" id="new-chat">New chat</button>
-      <button type="button" id="seed">Seed with marks</button>
+      <button type="button" id="seed">Seed conversations</button>
     </header>
     <main>
       <aside>
         <h2>Conversations</h2>
         <ag-ui-threads for="chat"></ag-ui-threads>
         <p class="try">
-          Send anything to see its row marked running while it answers. Send "crash" to mark it
-          failed; the next answer there clears it. "Seed with marks" adds rows whose store reports
-          running, waiting, failed and unread, as a server with run status will.
+          The rail is bound by <code>for="chat"</code>, the pills in the bar by setting their
+          <code>chat</code> property. Pick a row or a pill to switch; hover one for its delete,
+          which asks first. "Seed conversations" adds a few to pick from.
         </p>
       </aside>
       <ag-ui-chat id="chat" endpoint="/agent/" placement="embedded" data-start-open></ag-ui-chat>

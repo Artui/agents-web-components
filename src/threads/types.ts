@@ -1,29 +1,17 @@
-import type { ThreadStatus } from "../constants.js";
 import type { AgUiChat } from "../core/ag_ui_chat.js";
 import type { ThreadMeta } from "../core/conversation_store.js";
 
-/**
- * A row as `<ag-ui-threads>` reads it: the store's {@link ThreadMeta}, plus
- * the run state a store may carry. Every extra key is optional, so a store that
- * knows nothing of runs (the built-in ones today) still renders, marked only
- * from what the chat in this page saw.
- */
-export interface ThreadRow extends ThreadMeta {
-  /** The thread's run as the store knows it, across tabs and reloads. */
-  readonly status?: "idle" | "running" | "waiting" | "failed";
-}
+/** A row as `<ag-ui-threads>` lists it: the chat store's {@link ThreadMeta}. */
+export type ThreadRow = ThreadMeta;
 
 /**
  * The part of `<ag-ui-chat>` the list drives: its public thread API and the
  * store it lists from. Typed from the element itself so the two cannot drift.
  */
 export type ThreadsChat = HTMLElement &
-  Pick<
-    AgUiChat,
-    "threadId" | "running" | "unread" | "conversationStore" | "switchThread" | "deleteThread"
-  >;
+  Pick<AgUiChat, "threadId" | "conversationStore" | "switchThread" | "deleteThread">;
 
-/** How the list is drawn: rows with a delete, or a strip of pills for a bar. */
+/** How the list is drawn: rows down a rail, or a strip of pills for a bar; both delete. */
 export type ThreadsVariant = "list" | "pills";
 
 /** `detail` shape of the {@link THREADS_SELECT_EVENT} CustomEvent. */
@@ -48,11 +36,7 @@ export interface ThreadsStrings {
   readonly deleteYes: string;
   /** The inline confirm's no. */
   readonly deleteNo: string;
-  /** What a screen reader hears for each mark; idle says nothing. */
-  readonly status: Readonly<Record<Exclude<ThreadStatus, "idle">, string>>;
 }
 
-/** What the `strings` setter takes: any of {@link ThreadsStrings}, `status` per mark too. */
-export type ThreadsStringsInput = Partial<Omit<ThreadsStrings, "status">> & {
-  readonly status?: Partial<ThreadsStrings["status"]>;
-};
+/** What the `strings` setter takes: any of {@link ThreadsStrings}. */
+export type ThreadsStringsInput = Partial<ThreadsStrings>;

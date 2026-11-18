@@ -1,15 +1,9 @@
 import {
   RUN_FINISHED_EVENT,
   THREAD_EVENT,
-  THREAD_STATUS,
   THREAD_TITLE_EVENT,
   THREADS_SELECT_EVENT,
-  UNREAD_EVENT,
 } from "../constants.js";
-import type { RunFinishedDetail } from "../core/events/run_finished_detail.js";
-import type { UnreadDetail } from "../core/events/unread_detail.js";
-import { LiveMarks } from "./live_marks.js";
-import { rowStatus } from "./row_status.js";
 import { DEFAULT_THREADS_STRINGS } from "./threads_strings.js";
 import { THREADS_STYLES } from "./threads_styles.js";
 import type {
@@ -21,8 +15,8 @@ import type {
   ThreadsVariant,
 } from "./types.js";
 
-/** The chat events the list redraws on; all but the unread one also re-list. */
-const LISTEN_TO = [THREAD_EVENT, THREAD_TITLE_EVENT, RUN_FINISHED_EVENT, UNREAD_EVENT] as const;
+/** The chat events the list re-lists on: a switch, a new title, a run that moved a thread up. */
+const LISTEN_TO = [THREAD_EVENT, THREAD_TITLE_EVENT, RUN_FINISHED_EVENT] as const;
 
 /**
  * `<ag-ui-threads>`: the conversations of one `<ag-ui-chat>`, as a list or as
@@ -31,9 +25,8 @@ const LISTEN_TO = [THREAD_EVENT, THREAD_TITLE_EVENT, RUN_FINISHED_EVENT, UNREAD_
  * It holds no conversations of its own. It lists the chat's
  * `conversationStore`, marks the thread on screen, and drives the chat's public
  * thread API: a row picked calls `switchThread` (which cancels a run in flight,
- * as the chat's own list does), a delete calls `deleteThread`. Each row is
- * marked running, waiting, failed or unread, from the live chat and from what
- * the store's rows carry.
+ * as the chat's own list does), a delete (behind an inline confirm, in both
+ * variants) calls `deleteThread`.
  *
  * Bound by `for="<chat id>"`, looked up in the list's own root (the document,
  * or the shadow root it sits in), or by setting {@link chat}. A chat that is
@@ -47,16 +40,13 @@ export class AgUiThreads extends HTMLElement {
   #chat: ThreadsChat | null = null;
   /** The chat set by property, which wins over `for`. */
   #explicit: ThreadsChat | null = null;
-  #marks = new LiveMarks(0);
   #rows: readonly ThreadRow[] = [];
   #strings: ThreadsStrings = DEFAULT_THREADS_STRINGS;
   #confirming: string | null = null;
-  #runningId: string | null = null;
   /** Bumped per listing, so a slow response that lands after a newer one is dropped. */
   #listing = 0;
   #pending: Promise<void> | null = null;
   #root: Node | null = null;
-  readonly #watch = new MutationObserver(() => this.#syncRunning());
 
   constructor() {
     super();
@@ -88,7 +78,7 @@ export class AgUiThreads extends HTMLElement {
     this.#bind();
   }
 
-  /** `list` (the default: rows with a delete) or `pills` (select only, for a bar). */
+  /** `list` (the default: rows down a rail) or `pills` (a strip that scrolls sideways, for a bar). */
   get variant(): ThreadsVariant {
     return this.getAttribute("variant") === "pills" ? "pills" : "list";
   }
@@ -103,11 +93,7 @@ export class AgUiThreads extends HTMLElement {
   }
 
   set strings(strings: ThreadsStringsInput) {
-    this.#strings = {
-      ...DEFAULT_THREADS_STRINGS,
-      ...strings,
-      status: { ...DEFAULT_THREADS_STRINGS.status, ...strings.status },
-    };
+    this.#strings = { ...DEFAULT_THREADS_STRINGS, ...strings };
     this.#label();
     this.#render();
   }
@@ -183,12 +169,9 @@ export class AgUiThreads extends HTMLElement {
       return;
     }
     this.#chat = chat;
-    this.#marks = new LiveMarks(chat.unread);
     for (const type of LISTEN_TO) {
       chat.addEventListener(type, this.#onChatEvent);
     }
-    this.#watch.observe(chat, { attributes: true, attributeFilter: ["data-running"] });
-    this.#syncRunning();
     void this.refresh();
   }
 
@@ -200,9 +183,7 @@ export class AgUiThreads extends HTMLElement {
     for (const type of LISTEN_TO) {
       chat.removeEventListener(type, this.#onChatEvent);
     }
-    this.#watch.disconnect();
     this.#chat = null;
-    this.#runningId = null;
     this.#listing += 1;
     this.#rows = [];
     this.#render();
@@ -227,32 +208,9 @@ export class AgUiThreads extends HTMLElement {
     }
   };
 
-  readonly #onChatEvent = (event: Event): void => {
-    const detail = (event as CustomEvent<unknown>).detail;
-    if (event.type === RUN_FINISHED_EVENT) {
-      this.#marks.runFinished(detail as RunFinishedDetail);
-    } else if (event.type === UNREAD_EVENT) {
-      // Only this page's marks moved: the chat reports one on every collapse toggle.
-      this.#marks.unreadChanged(detail as UnreadDetail);
-      this.#render();
-      return;
-    }
-    this.#syncRunning();
+  readonly #onChatEvent = (): void => {
     void this.refresh();
   };
-
-  #syncRunning(): void {
-    const chat = this.#chat;
-    const running = chat?.running ? chat.threadId : null;
-    if (running === this.#runningId) {
-      return;
-    }
-    if (running !== null) {
-      this.#marks.runStarted(running);
-    }
-    this.#runningId = running;
-    this.#render();
-  }
 
   #label(): void {
     this.#list.setAttribute("aria-label", this.#strings.label);
@@ -261,7 +219,7 @@ export class AgUiThreads extends HTMLElement {
   #render(): void {
     const pills = this.variant === "pills";
     const activeId = this.#chat?.threadId ?? null;
-    const items = this.#rows.map((row) => this.#row(row, row.threadId === activeId, pills));
+    const items = this.#rows.map((row) => this.#row(row, row.threadId === activeId));
     const focused = this.#focused();
     this.#list.replaceChildren(...items);
     if (focused !== null) {
@@ -288,13 +246,11 @@ export class AgUiThreads extends HTMLElement {
     return { threadId, control: active.className };
   }
 
-  #row(row: ThreadRow, active: boolean, pills: boolean): HTMLLIElement {
+  #row(row: ThreadRow, active: boolean): HTMLLIElement {
     const item = document.createElement("li");
     item.className = "row";
     item.setAttribute("part", active ? "row row-active" : "row");
     item.dataset["threadId"] = row.threadId;
-    const status = rowStatus(row, this.#runningId, this.#marks);
-    item.dataset["status"] = status;
     item.toggleAttribute("data-active", active);
     const title = row.title === "" ? this.#strings.untitled : row.title;
 
@@ -305,27 +261,13 @@ export class AgUiThreads extends HTMLElement {
     if (active) {
       main.setAttribute("aria-current", "true");
     }
-    const mark = document.createElement("span");
-    mark.className = "mark";
-    mark.setAttribute("part", "mark");
-    mark.dataset["status"] = status;
-    mark.setAttribute("aria-hidden", "true");
     const text = document.createElement("span");
     text.className = "title";
     text.textContent = title;
-    main.append(mark, text);
-    if (status !== THREAD_STATUS.IDLE) {
-      const said = document.createElement("span");
-      said.className = "sr";
-      said.textContent = `, ${this.#strings.status[status]}`;
-      main.append(said);
-    }
+    main.append(text);
     main.addEventListener("click", () => this.#select(row.threadId));
     item.append(main);
-
-    if (!pills) {
-      this.#addDelete(item, main, row.threadId, title);
-    }
+    this.#addDelete(item, main, row.threadId, title);
     return item;
   }
 
@@ -347,6 +289,7 @@ export class AgUiThreads extends HTMLElement {
     if (this.#confirming !== threadId) {
       return;
     }
+    item.toggleAttribute("data-confirming", true);
     main.hidden = true;
     remove.hidden = true;
     const confirm = document.createElement("div");

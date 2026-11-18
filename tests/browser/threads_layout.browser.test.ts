@@ -12,7 +12,7 @@ import type { ThreadRow } from "../../src/threads/types.js";
  * The thread list's boxes, which happy-dom does not lay out: pills that stay
  * inside a narrow bar and scroll rather than wrap, titles cut with an ellipsis
  * inside their own pill, rows hidden by the inline confirm taking no space, and
- * a mark per status that actually paints.
+ * a pill's delete and confirm that stay on the pill's one line.
  */
 
 const LONG = "A conversation about the quarterly numbers and what to do next";
@@ -61,13 +61,12 @@ function all(list: AgUiThreads, selector: string): HTMLElement[] {
   return [...(list.shadowRoot as ShadowRoot).querySelectorAll<HTMLElement>(selector)];
 }
 
-function rows(count: number, status?: ThreadRow["status"]): ThreadRow[] {
+function rows(count: number): ThreadRow[] {
   return Array.from({ length: count }, (_, index) => ({
     threadId: `t${index}`,
     title: `${LONG} ${index}`,
     updatedAt: index,
     preview: "",
-    ...(status === undefined ? {} : { status }),
   }));
 }
 
@@ -145,20 +144,44 @@ describe("rows in a narrow rail", () => {
   });
 });
 
-describe("marks", () => {
-  it("paint a distinct colour per status and nothing when idle", async () => {
-    const listed: ThreadRow[] = [
-      { threadId: "r", title: "r", updatedAt: 1, preview: "", status: "running" },
-      { threadId: "w", title: "w", updatedAt: 1, preview: "", status: "waiting" },
-      { threadId: "f", title: "f", updatedAt: 1, preview: "", status: "failed" },
-      { threadId: "u", title: "u", updatedAt: 1, preview: "", unread: true },
-      { threadId: "i", title: "i", updatedAt: 1, preview: "" },
-    ];
-    const list = await mount("list", 320, listed);
-    const colours = all(list, ".mark").map((mark) => getComputedStyle(mark).backgroundColor);
+describe("a pill's delete", () => {
+  it("sits inside the pill beside its title", async () => {
+    const list = await mount("pills", 320, rows(2));
+    const pill = (all(list, ".row")[0] as HTMLElement).getBoundingClientRect();
+    const remove = all(list, ".delete")[0] as HTMLElement;
+    const box = remove.getBoundingClientRect();
 
-    expect(colours[4]).toBe("rgba(0, 0, 0, 0)");
-    expect(new Set(colours.slice(0, 4)).size).toBe(4);
-    expect(colours.slice(0, 4)).not.toContain("rgba(0, 0, 0, 0)");
+    expect(remove.offsetWidth).toBeGreaterThan(0);
+    expect(box.left).toBeGreaterThanOrEqual(pill.left);
+    expect(box.right).toBeLessThanOrEqual(pill.right + 0.5);
+    expect(box.top).toBeGreaterThanOrEqual(pill.top);
+    expect(box.bottom).toBeLessThanOrEqual(pill.bottom + 0.5);
+  });
+
+  it("opens its confirm on the pill's one line, inside the strip", async () => {
+    const list = await mount("pills", 320, rows(3));
+    const host = list.getBoundingClientRect();
+    const strip = all(list, ".list")[0] as HTMLElement;
+    const before = all(list, ".row")[0] as HTMLElement;
+    const height = before.offsetHeight;
+    const top = Math.round(before.getBoundingClientRect().top);
+
+    (all(list, ".delete")[0] as HTMLElement).click();
+    const pill = all(list, ".row")[0] as HTMLElement;
+    const confirm = all(list, ".confirm")[0] as HTMLElement;
+    const box = pill.getBoundingClientRect();
+
+    expect(Math.abs(pill.offsetHeight - height)).toBeLessThanOrEqual(2);
+    expect(Math.round(box.top)).toBe(top);
+    expect(strip.getBoundingClientRect().right).toBeLessThanOrEqual(host.right + 0.5);
+    for (const button of [...confirm.querySelectorAll<HTMLElement>("button")]) {
+      const edge = button.getBoundingClientRect();
+      expect(edge.right).toBeLessThanOrEqual(box.right + 0.5);
+      expect(edge.bottom).toBeLessThanOrEqual(box.bottom + 0.5);
+    }
+    const tops = new Set(
+      all(list, ".row").map((row) => Math.round(row.getBoundingClientRect().top)),
+    );
+    expect(tops.size).toBe(1);
   });
 });

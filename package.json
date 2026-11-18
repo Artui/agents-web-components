@@ -38,6 +38,10 @@
     "./threads": {
       "types": "./dist/threads.d.ts",
       "import": "./dist/threads.js"
+    },
+    "./threads/bundle": {
+      "types": "./dist/threads.d.ts",
+      "import": "./dist/agents-web-components.threads.bundle.js"
     }
   },
   "sideEffects": false,
