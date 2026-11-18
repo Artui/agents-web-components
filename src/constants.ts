@@ -52,6 +52,12 @@ export const DOCK_WIDTH_EVENT = "ag-ui-dock-width";
 export const UNREAD_EVENT = "ag-ui-unread";
 
 /**
+ * The `theme` attribute changed. `detail` is `{ scheme }`, the scheme the panel
+ * is drawn in now (`chat.colorScheme`): `"light"` or `"dark"`.
+ */
+export const THEME_EVENT = "ag-ui-theme";
+
+/**
  * AG-UI shared state changed — a streamed `STATE_SNAPSHOT` / `STATE_DELTA`, or
  * a host assignment to `sharedState`. `detail` is {@link StateDetail}.
  *
@@ -690,3 +696,9 @@ export const THREADS_TAG = "ag-ui-threads";
  * alone. Otherwise it is the moment to close a popover the list sits in.
  */
 export const THREADS_SELECT_EVENT = "ag-ui-threads-select";
+
+/**
+ * The tallest an MCP App view's frame grows inline, in CSS pixels: a view that
+ * asks for more through `ui/notifications/size-changed` gets this and scrolls.
+ */
+export const MCP_APP_MAX_HEIGHT = 640;

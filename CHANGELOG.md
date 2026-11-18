@@ -37,8 +37,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   but a `srcdoc` frame inherits the host page's CSP:** under a strict `script-src` the view stays
   blank, so such a host sets `sandboxProxyUrl` and lets its own `frame-src` reach the proxy's
   origin. `registerMcpApps` now throws for a `sandboxProxyUrl` on the page's own origin, where
-  `allow-same-origin` would leave the view unsandboxed. The view's bridge is not in this change: a
-  view that waits for `ui/initialize` to be answered draws its document and goes no further.
+  `allow-same-origin` would leave the view unsandboxed.
+- **`./mcp-apps` speaks the host's end of the MCP Apps bridge**, so a view initialises, shows its
+  tool's input and result, and acts. JSON-RPC over `postMessage` (2026-01-26), read only from the
+  view's own frame. `ui/initialize` is answered with `hostContext`: the chat's scheme as `theme`,
+  its tokens resolved in that scheme as `styles.variables` under the MCP Apps names, `locale`,
+  `displayMode: "inline"`, `availableDisplayModes: ["inline"]`, the frame's width with a
+  `maxHeight` of 640 as `containerDimensions`, and `platform: "web"`. Only after
+  `ui/notifications/initialized` does the view get `tool-input` then `tool-result`, and from then
+  `host-context-changed` when the `theme` attribute, the system scheme or the frame's width changes.
+  `size-changed` sets the frame's height, at most 640px. `tools/call` goes to the route with the
+  view's `serverId`; `ui/message` (an array of content blocks or one block) is sent as the user's
+  next message; `ui/open-link` opens an `http(s)` URL in a `noopener` tab; all three are refused
+  while the view is drawn from a stored conversation. `ui/request-display-mode` is answered
+  `inline`; a view that sends `ui/notifications/request-teardown` is sent `ui/resource-teardown`
+  and closed to the notice; any other request is answered `-32601`. Tested against
+  django-spec-mcp's own view bridge. **A host that called `registerMcpApps` gets this with nothing
+  to opt into.**
+- **`<ag-ui-chat>` reports its theme to a separate entry**: the read-only `colorScheme` (`"light"`
+  or `"dark"`, the scheme drawn now) and `locale` (the nearest `lang`, else the browser's), a
+  `tokenValues(names)` method resolving custom properties as the panel computes them, and an
+  `ag-ui-theme` event (`THEME_EVENT`, `{ scheme }`) when the `theme` attribute changes.
 
 ### Fixed
 

@@ -36,7 +36,15 @@ export interface McpAppsOptions {
 /** What `registerMcpApps` needs of the chat element: an `<ag-ui-chat>` has all of it. */
 export type McpAppsHost = Pick<
   AgUiChat,
-  "registerActivityRenderer" | "request" | "sendMessage" | "uiStrings"
+  | "registerActivityRenderer"
+  | "request"
+  | "sendMessage"
+  | "uiStrings"
+  | "colorScheme"
+  | "locale"
+  | "tokenValues"
+  | "addEventListener"
+  | "removeEventListener"
 >;
 
 /** The two MCP methods the route answers for a view. */
@@ -108,3 +116,27 @@ export interface McpAppResource {
  * returns the same node on every redraw, since moving an iframe reloads it.
  */
 export type McpAppViewMount = (view: McpAppView, services: McpAppsServices) => HTMLElement;
+
+/** How an MCP Apps view is shown: the MCP Apps `McpUiDisplayMode`. */
+export type McpAppDisplayMode = "inline" | "fullscreen" | "pip";
+
+/**
+ * The context a view is told about its host in `ui/initialize`, the subset of
+ * MCP Apps' `McpUiHostContext` this host fills, and patched in
+ * `ui/notifications/host-context-changed`.
+ */
+export interface McpAppHostContext {
+  readonly theme: "light" | "dark";
+  readonly styles: { readonly variables: Readonly<Record<string, string>> };
+  readonly locale: string;
+  readonly displayMode: McpAppDisplayMode;
+  readonly availableDisplayModes: readonly McpAppDisplayMode[];
+  readonly containerDimensions: { readonly width: number; readonly maxHeight: number };
+  readonly platform: "web";
+}
+
+/**
+ * Answers a view's `ui/request-display-mode` with the mode it is shown in
+ * after the request, which is the current one when the request is refused.
+ */
+export type McpAppDisplayModeRequest = (requested: unknown) => McpAppDisplayMode;

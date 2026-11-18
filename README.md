@@ -56,6 +56,7 @@ This package is the successor of `@artooi/ag-ui-web-component`. Coming from it? 
   - [Collapsing to the launcher](#collapsing-to-the-launcher)
   - [Collapsing to a bottom bar](#collapsing-to-a-bottom-bar)
 - [A2UI surfaces](#a2ui-surfaces)
+- [MCP Apps views](#mcp-apps-views)
 - [Tool-call display modes](#tool-call-display-modes)
 - [Delegated sub-agents](#delegated-sub-agents)
 - [Markdown rendering](#markdown-rendering)
@@ -302,7 +303,7 @@ element after the fact.
 `approveWithEdits`, `agentFactory`, `getTools`, `getContext`, `routeMap`, `navigate`, `getPageMap`,
 `autoInjectPageMap`, `getPlace`, `conversationStore`, `uploadHandler`, `transcribeHandler`, `navigationResult`,
 `skillContext`, `toolSummaries`, `formatToolPayload`, `formatRelativeTime`, `strings`,
-`resolvePageTarget`, `sharedState`, `anchor` (an element, which wins over the attribute's selector), `extraStyles` ([unstable](#d-extrastyles-the-last-mile)), plus the read-only `unread`, `unhandledActivityTypes`, `threadId`, `threadTitle`, `running`, `barHeight`, `dockWidth` and `uiStrings`, and
+`resolvePageTarget`, `sharedState`, `anchor` (an element, which wins over the attribute's selector), `extraStyles` ([unstable](#d-extrastyles-the-last-mile)), plus the read-only `unread`, `unhandledActivityTypes`, `threadId`, `threadTitle`, `running`, `barHeight`, `dockWidth`, `uiStrings`, `colorScheme` and `locale`, and
 the attribute mirrors `endpoint` / `userKey` / `userName` / `toolDisplay` / `toolGroupDisplay` / `collapsed` /
 `maximized` / `credentials`.
 
@@ -338,12 +339,18 @@ the `copyCode` / `copied` / `copyFailed` strings.
 `setSkills`, `sendMessage`, `run`, `attachFile`, `appendMessage`, `retryLastTurn`, `quote`, `offerQuoteInPage`,
 `enableCharts`, `newChat`, `setCollapsed`, `toggleCollapsed`, `setMaximized`, `toggleMaximized`,
 `describeSurface`, `moveTo`, `resetSize`, `toggleTheme`, `openThreads`, `closeThreads`, `switchThread`, `deleteThread`,
-`openCheckpoints`, `closeCheckpoints`, `toggleCheckpoints`, `refreshPlace`, `request` and `reload`.
+`openCheckpoints`, `closeCheckpoints`, `toggleCheckpoints`, `refreshPlace`, `request`, `tokenValues` and `reload`.
 
 `request(url, init?)` is `fetch` as the element authenticates: `headers` and `getHeaders()` under
 `init.headers` (which win per key), and `credentials` unless `init` names its own. A destination
 outside `trustedOrigins` is reported as the element's own requests are. It is the seam a separate
 entry such as `./mcp-apps` reaches the host's routes through.
+
+`colorScheme` is the scheme the panel is drawn in now (`"light"` or `"dark"`); a change of the
+`theme` attribute fires `ag-ui-theme` with `{ scheme }`. `locale` is the nearest `lang` attribute,
+else the browser's language. `tokenValues(names)` returns the values the panel computes for the
+custom properties `names` (a colour resolved in the current scheme), leaving out any it does not
+declare. `./mcp-apps` hands a view the theme through these three.
 
 ### Sending from your own UI
 
@@ -2204,6 +2211,62 @@ lands on the component's native control where it has one (the `<button>`, the
 The surfaces read the element's theme tokens, so a theme set on `<ag-ui-chat>`
 reaches them.
 
+## MCP Apps views
+
+A tool on an MCP server can come with a view: an HTML resource the
+[MCP Apps](https://github.com/modelcontextprotocol/ext-apps) extension draws
+beside its result. The agent pushes an `mcp-apps` activity naming the view and
+its server; the `./mcp-apps` entry frames the view and speaks the host's end of
+its bridge. Without it the element draws a notice that the view cannot be shown.
+
+```js
+import { registerMcpApps } from "@artooi/agents-web-components/mcp-apps";
+
+const chat = document.querySelector("ag-ui-chat");
+registerMcpApps(chat, {
+  url: "/agent/mcp-apps/", // the host's route
+  sandboxProxyUrl: "https://sandbox.example.com/proxy.html", // optional, another origin
+});
+```
+
+The route takes a JSON `POST` of `{ serverId, method, params }`, sent through
+`chat.request` so it carries the element's headers and credentials, and answers
+the MCP result object. `method` is `resources/read` (the view's HTML, read once
+per server and URI for the page) or `tools/call` (a tool the view calls). A
+toolset with no `id` sends no `serverId`, and its views draw the notice.
+
+The view is framed once it first scrolls into sight: in a `srcdoc` frame with
+`sandbox="allow-scripts"` and the view's CSP as the first `<meta>` of its head,
+or, with `sandboxProxyUrl`, in the proxy on its own origin. A `srcdoc` frame
+inherits the host page's CSP, so a host with a strict `script-src` sets a proxy.
+
+**The bridge** is JSON-RPC over `postMessage` (MCP Apps 2026-01-26), read only
+from the view's own frame:
+
+| The view sends | The host |
+| --- | --- |
+| `ui/initialize` | answers with `hostContext`: `theme`, `styles.variables`, `locale`, `displayMode: "inline"`, `availableDisplayModes: ["inline"]`, `containerDimensions` (the frame's width and a `maxHeight` of 640) and `platform: "web"` |
+| `ui/notifications/initialized` | sends `ui/notifications/tool-input` (the call's arguments), then `ui/notifications/tool-result` |
+| `ui/notifications/size-changed` | sets the frame's height, at most 640px; the view scrolls past it |
+| `tools/call` | sends it to the route with the view's `serverId` and answers the result |
+| `ui/message` | sends its text as the user's next message (`chat.sendMessage`); `isError` when nothing was sent |
+| `ui/open-link` | opens an `http(s)` URL in a `noopener` tab; `isError` for any other |
+| `ui/request-display-mode` | answers `inline`, the only mode a view is shown in |
+| `ui/notifications/request-teardown` | sends `ui/resource-teardown`, then closes the view to the notice |
+| anything else | answers `-32601` |
+
+`tools/call`, `ui/message` and `ui/open-link` are refused while the view is
+drawn from a stored conversation rather than a live run. Once initialised, the
+view is sent `ui/notifications/host-context-changed` with what changed when the
+`theme` attribute, the system scheme or the frame's width does.
+
+`styles.variables` are the element's own tokens, resolved in the scheme drawn
+now, under the MCP Apps names: `--color-background-primary` (`--ag-ui-bg`),
+`--color-text-primary` (`--ag-ui-fg`), `--color-border-primary`
+(`--ag-ui-border`), `--font-sans` (`--ag-ui-font`), `--border-radius-md`
+(`--ag-ui-radius`) and the shades between them, so a view themed from them
+follows the chat's theme.
+
 ## Tool-call display modes
 
 How tool calls are drawn is set via the `data-tool-display` attribute (or `toolDisplay`
@@ -3778,6 +3841,7 @@ paths.
 | `BAR_HEIGHT_EVENT` | The bottom bar's height CustomEvent name (`ag-ui-bar-height`). |
 | `DOCK_WIDTH_EVENT` | The docked panel's width CustomEvent name (`ag-ui-dock-width`). |
 | `UNREAD_EVENT` | The unread-count CustomEvent name (`ag-ui-unread`). |
+| `THEME_EVENT` | The theme-change CustomEvent name (`ag-ui-theme`), `detail` `{ scheme }`. |
 | `RUN_FINISHED_EVENT` | The interaction-finished CustomEvent name (`ag-ui-run-finished`). |
 | `CUSTOM_AGENT_EVENT` | The agent-`CUSTOM` CustomEvent name (`ag-ui-custom`). |
 | `INVALIDATE_EVENT` | The resource-invalidation CustomEvent name (`ag-ui-invalidate`). |

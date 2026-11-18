@@ -802,15 +802,20 @@
           <h2>What to look at</h2>
           <ul>
             <li>
-              <strong>The notice, on purpose.</strong> This page imports the third vendored file and
-              calls <code>registerMcpApps(chat, { url: "/mcp-apps/" })</code>. Both prompts draw
-              the run notice naming <code>ui://sales/week.html</code>: in 0.5.0 the entry fixes the
-              seam, and the sandboxed frame and its bridge arrive in a later release.
+              <strong>A live view.</strong> This page imports the third vendored file and calls
+              <code>registerMcpApps(chat, { url: "/mcp-apps/" })</code>. "A view with a server"
+              draws <code>ui://sales/week.html</code> in a sandboxed frame once it scrolls into
+              sight; the view says who initialised it and shows its tool input and result.
             </li>
             <li>
-              <strong>With and without a server.</strong> A view whose toolset has an id reaches the
-              entry's view mount, which draws the notice until the frame exists; a view without one
-              draws the notice whatever is registered.
+              <strong>The bridge.</strong> "Refresh" sends <code>tools/call</code> through the
+              route and the result updates; "Ask the agent" sends <code>ui/message</code>, which
+              arrives as your next message. Toggle the theme: the view is told, and recolours
+              from the chat's tokens. The frame takes the view's height.
+            </li>
+            <li>
+              <strong>Without a server.</strong> A view whose toolset has no id draws the notice,
+              whatever is registered.
             </li>
             <li>
               <strong>Strings.</strong> The notice's words come from <code>chat.uiStrings</code>, so a
