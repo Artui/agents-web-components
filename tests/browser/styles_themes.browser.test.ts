@@ -940,3 +940,61 @@ describe("extraStyles (real browser)", () => {
     expect(plain.extraStyles).toEqual([]);
   });
 });
+
+describe("the checkpoints panel's fill (real browser)", () => {
+  beforeAll(() => {
+    defineChat();
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  /** The panel's own colour, then the theme's tint over it, as the eye sees them. */
+  function painted(el: AgUiChat, element: HTMLElement): Rgba {
+    const style = getComputedStyle(element);
+    const base = rgba(style.backgroundColor);
+    const tint = style.backgroundImage === "none" ? base : tokenColour(el, "--_assistant-bg");
+    return base[3] === 1 ? over(tint, base) : base;
+  }
+
+  it.each(["", "dark", "soft", "ledger", "classic", "classic dark", "code"])(
+    "paints the panel and its branch badge opaquely over the transcript under theme=%j",
+    (theme) => {
+      const el = mount({ theme, "data-runs-url": "/runs/" });
+      const panel = part(el, ".checkpoints");
+      const badge = document.createElement("span");
+      badge.className = "checkpoint-branch";
+      panel.appendChild(badge);
+
+      expect(painted(el, panel)[3]).toBe(1);
+      expect(painted(el, badge)[3]).toBe(1);
+    },
+  );
+
+  it("spaces its rows apart, as it spaces the title from the list", () => {
+    const el = mount({ "data-runs-url": "/runs/" });
+    el.openCheckpoints();
+    const list = part(el, ".checkpoints-list");
+    const row = (): HTMLElement => {
+      const made = document.createElement("div");
+      made.className = "checkpoint-row";
+      made.textContent = "run";
+      list.appendChild(made);
+      return made;
+    };
+    const first = row();
+    const second = row();
+
+    // Layout offsets, which the panel's opening scale does not touch.
+    expect(second.offsetTop - (first.offsetTop + first.offsetHeight)).toBe(
+      Number.parseFloat(getComputedStyle(part(el, ".checkpoints")).rowGap),
+    );
+  });
+
+  it("keeps classic's tinted surface on the panel", () => {
+    const el = mount({ theme: "classic", "data-runs-url": "/runs/" });
+
+    expect(painted(el, part(el, ".checkpoints"))).toEqual(tokenColour(el, "--_assistant-bg"));
+  });
+});

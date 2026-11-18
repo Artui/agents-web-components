@@ -7,6 +7,91 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-11-18
+
+### Added
+
+- **The package ships an MCP Apps sandbox proxy page, `./mcp-apps/sandbox-proxy.html`
+  (`dist/sandbox-proxy.html`).** One static file with its script inline, for a host to serve on a
+  second origin and name as `sandboxProxyUrl`. It answers the frame's
+  `ui/notifications/sandbox-proxy-ready` and `sandbox-resource-ready`, puts the view in an inner
+  `sandbox="allow-scripts"` frame (whatever `sandbox` the message asks) with the view's CSP as the
+  first `<meta>` of its head, takes only the first resource and only from its parent, and relays
+  messages both ways. Opt-in: a host that wants a proxy serves this file, with no CSP header of its
+  own, and sets `sandboxProxyUrl`; a host without one is unchanged.
+- **A new `./threads` entry: `<ag-ui-threads>`, the conversation list for a host's own bar or
+  rail.** `defineThreads()` registers it; `for="<chat id>"` (looked up in the list's own root) or
+  the `chat` property, which wins over `for`, binds it to an `<ag-ui-chat>`. `variant="list"` (the
+  default) draws rows, `variant="pills"` a strip that scrolls sideways; both delete a conversation
+  behind an inline confirm. A row picked fires a cancelable `ag-ui-threads-select` (`{threadId}`)
+  and then calls `switchThread`, which cancels a run in flight as the built-in list does. It draws
+  no run marks (running, waiting, failed, unread) yet: those wait for a store that reports run
+  status. Parts `list`, `row`, `row-active`, `row-button`, `delete`, `confirm`, `empty`; the chat's
+  tokens apply, in the light or dark half the page's own `color-scheme` picks. `refresh()` re-lists;
+  `strings` translates. `./threads/bundle` is the same entry as a fourth vendored file, inlining
+  none of the element; the main entries and bundle are unchanged. A host opts in by importing
+  `./threads` and placing the element.
+- **`./mcp-apps` draws a view's sandboxed frame instead of the notice.** Once the view first scrolls
+  into sight it reads its HTML through `resources/read` on `url` (once per server and URI for the
+  page; a failed read draws the notice, warns, and is read again next time) and frames it. The
+  route is read as django-ag-ui 0.80.0's answers: `200` with `{"result": ...}`, the MCP result,
+  or `{"error": {"code", "message"}}` for a call it cannot relay. **A host serving its own route
+  wraps its answer in `result`**; a bare result object now fails the read. Without
+  `sandboxProxyUrl` the frame is `srcdoc` with `sandbox="allow-scripts"` and the view's CSP as the
+  first `<meta>` of its `<head>`: `_meta.ui.csp`'s domains, or the MCP Apps restrictive default,
+  plus `font-src 'self' data:`, `object-src 'none'`, `frame-src` and `base-uri`, with any declared
+  domain holding whitespace, `;`, a quote or a comma dropped. With it, the frame is the proxy on its
+  own origin (`allow-scripts allow-same-origin`, the cleaned CSP also on the URL as `?csp=`), sent
+  the view in `ui/notifications/sandbox-resource-ready` once it says
+  `ui/notifications/sandbox-proxy-ready`. A view that navigates its frame is torn down to the
+  notice; one the page moves reloads and boots again, and one that leaves the document, in sight or
+  not (scrolled away, under `display: none`, or with the chat it is in), has its bridge stopped and
+  is framed again from the cache if it returns. A view closed to the notice is not framed again. No `allow` permissions are granted.
+  **A host that called `registerMcpApps` on 0.5.0 now shows live frames with nothing to opt into,
+  but a `srcdoc` frame inherits the host page's CSP:** under a strict `script-src` the view stays
+  blank, so such a host sets `sandboxProxyUrl` and lets its own `frame-src` reach the proxy's
+  origin. `registerMcpApps` now throws for a `sandboxProxyUrl` on the page's own origin, where
+  `allow-same-origin` would leave the view unsandboxed.
+- **`./mcp-apps` speaks the host's end of the MCP Apps bridge**, so a view initialises, shows its
+  tool's input and result, and acts. JSON-RPC over `postMessage` (2026-01-26), read only from the
+  view's own frame. `ui/initialize` is answered with `hostContext`: the chat's scheme as `theme`,
+  its tokens resolved in that scheme as `styles.variables` under the MCP Apps names, `locale`,
+  `displayMode: "inline"`, `availableDisplayModes: ["inline"]`, the frame's width with a
+  `maxHeight` of 640 as `containerDimensions`, and `platform: "web"`. Only after
+  `ui/notifications/initialized` does the view get `tool-input` then `tool-result`, and from then
+  `host-context-changed` when the `theme` attribute, the system scheme or the frame's width changes.
+  `size-changed` sets the frame's height, at most 640px. `tools/call` goes to the route with the
+  view's `serverId`, and a route's coded `error` reaches the view with its own code (`-32000` for
+  any other failure); `ui/message` (an array of content blocks or one block) is sent as the user's
+  next message; `ui/open-link` opens an `http(s)` URL in a `noopener` tab; all three are refused
+  while the view is drawn from a stored conversation, and once it has asked to be torn down. `ui/request-display-mode` is answered
+  `inline`; a view that sends `ui/notifications/request-teardown` is sent `ui/resource-teardown`
+  and closed to the notice; any other request is answered `-32601`. Tested against
+  django-spec-mcp's own view bridge. **A host that called `registerMcpApps` gets this with nothing
+  to opt into.**
+- **`<ag-ui-chat>` reports its theme to a separate entry**: the read-only `colorScheme` (`"light"`
+  or `"dark"`, the scheme drawn now) and `locale` (the nearest `lang`, looked for past any shadow
+  root the element is in, else the browser's), a `tokenValues(names)` method resolving custom
+  properties as the panel computes them, and an `ag-ui-theme` event (`THEME_EVENT`, `{ scheme }`)
+  when the `theme` attribute changes.
+
+### Fixed
+
+- **The checkpoint panel ("Continue a run") is opaque.** It took its fill from the answer tint,
+  which the default, soft and ledger themes leave transparent, so the transcript showed through the
+  open panel and the "branched" badge drew no pill. It is now the chat's own colour with the
+  theme's tint over it; classic and code look as before. Its rows are also 4px apart now: they sat
+  in a list the panel's gap did not reach, so each row's surface ran into the next. A host opts in to
+  nothing.
+
+- **Starter prompts sit against the composer without a greeting.** With `data-greeting="off"` on a
+  page, or in any panel placement, the empty region (the starter chips and any host `slot="empty"`
+  content) was centred in the transcript, a screen-height from the field it starts. It now rests at
+  the foot, directly over the composer, so slotted empty content moves down with it. The greeting
+  layout and the phone breakpoint are unchanged.
+- **A redraw of an `mcp-apps` activity reuses only a view node `./mcp-apps` drew**, passing the
+  redraw's `live` to it; any other previous node, such as the built-in notice, is replaced.
+
 ## [0.5.0] — 2026-11-17
 
 ### Added
@@ -278,7 +363,8 @@ move page walks a host over. Each entry below says whether a host opts in.
   kept offering the moon under `theme="dark"`. Only the toggle's own click redrew it before. A host
   opts in to nothing.
 
-[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/Artui/agents-web-components/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/Artui/agents-web-components/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/Artui/agents-web-components/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Artui/agents-web-components/compare/v0.2.1...v0.3.0

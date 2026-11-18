@@ -215,7 +215,7 @@ export const SCENARIOS = [
     title: "MCP Apps",
     since: "0.5.0",
     summary:
-      "The ./mcp-apps entry registered over the built-in notice. In 0.5.0 every view still draws the notice: the sandboxed frame comes in a later release.",
+      "The ./mcp-apps entry frames a view in a sandbox and answers its bridge: the view initialises, shows its tool input and result, calls a tool and sends a message.",
     prompts: [
       ["A view with a server", "mcp app"],
       ["A view without one", "mcp app without a server"],

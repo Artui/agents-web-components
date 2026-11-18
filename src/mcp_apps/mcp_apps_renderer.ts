@@ -6,7 +6,8 @@ import type { McpAppsServices, McpAppViewMount } from "./types.js";
 /**
  * The `mcp-apps` renderer. Pure: it builds the view's node through `mount` and
  * touches no network, the node loading its own frame. A redraw of the same
- * message returns `context.previous`, since moving an iframe reloads it. An
+ * message returns `context.previous` when it is a view this registration drew,
+ * since moving an iframe reloads it, and passes the redraw's `live` to it. An
  * activity naming no server draws the notice; content that is not an
  * activity draws nothing (`null`).
  */
@@ -15,7 +16,9 @@ export function mcpAppsRenderer(
   services: McpAppsServices,
 ): ActivityRenderer {
   return (content, context) => {
-    if (context.previous !== null) {
+    const kept = context.previous === null ? undefined : services.views.get(context.previous);
+    if (kept !== undefined) {
+      kept.live = context.live;
       return context.previous;
     }
     const activity = readActivity(content);

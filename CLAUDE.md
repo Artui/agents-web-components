@@ -43,7 +43,7 @@ The AG-UI stack design doc (`django-ag-ui-plan.md`) lives in the private ecosyst
 | `make test` | Vitest with 100% line+branch+function+statement coverage gate |
 | `make lint` | `biome check .` + `tsc --noEmit` |
 | `make format` | `biome format --write .` |
-| `make build` | esbuild library (split per entry) and vendored bundle + `tsc` declarations into `dist/` |
+| `make build` | esbuild library (split per entry), vendored bundles, the MCP Apps sandbox proxy page + `tsc` declarations into `dist/` |
 | `make demo` | install, build and serve the demo on port 5173, in one command from a clean checkout |
 
 `tsconfig.build.json` sets `rootDir: "./src"` explicitly: TypeScript 7 no longer
@@ -86,10 +86,11 @@ keep it that way. `demo/page/` is the chat as a host's full-page route.
    tree, never a module moved under it. Internal modules import from leaf paths
    (`./fill_field.ts`), never from an entry file. A new entry is a line in `LIBRARY` in
    `esbuild.config.mjs`, an `exports` key in `package.json`, a re-export in `src/bundle.ts`,
-   and a row in `tests/entries.test.ts`. The exceptions are `src/a2ui/` and `src/mcp_apps/`: each
-   its own entry (`./a2ui` and `./a2ui/bundle`, `./mcp-apps` and `./mcp-apps/bundle`),
-   deliberately absent from `src/bundle.ts` so the main bundle carries neither, reaching the
-   element only through the `chat` it is handed; `tests/entries.test.ts` enforces both.
+   and a row in `tests/entries.test.ts`. The exceptions are `src/a2ui/`, `src/mcp_apps/` and
+   `src/threads/`: each its own entry (`./a2ui` and `./a2ui/bundle`, `./mcp-apps` and
+   `./mcp-apps/bundle`, `./threads` and `./threads/bundle`), deliberately absent from
+   `src/bundle.ts` so the main bundle carries none of them, reaching the element only through
+   the `chat` it is handed or bound to; `tests/entries.test.ts` enforces all three.
 7. **Use `.js` extensions in import specifiers** (`import { x } from "./x.js"`) even though the
    source file is `x.ts` — NodeNext convention. tsc, esbuild, and Vitest all resolve `.js` →
    `.ts`/`.d.ts` correctly, and the emitted `.d.ts` keeps `./x.js`, so consumers resolve
@@ -102,8 +103,8 @@ keep it that way. `demo/page/` is the chat as a host's full-page route.
    registry, route/page maps, state hook, schema predicates), and `skills/` (skill type,
    templating, parsing). `index.ts`, `constants.ts`, and `version.ts` stay at the `src/`
    root. `src/a2ui/` is a sixth group of its own (`core/`, `display/`, `functions/`,
-   `inputs/`), its own entry and in no other entry's tree; `src/mcp_apps/` is a seventh, the
-   same way.
+   `inputs/`), its own entry and in no other entry's tree; `src/mcp_apps/` is a seventh, and
+   `src/threads/` an eighth, the same way.
 
    Every rule above this one governs a *file*, so a package can obey all eight and still
    put everything it owns in one flat directory — which is what `src/ui/` was at 37

@@ -56,6 +56,7 @@ This package is the successor of `@artooi/ag-ui-web-component`. Coming from it? 
   - [Collapsing to the launcher](#collapsing-to-the-launcher)
   - [Collapsing to a bottom bar](#collapsing-to-a-bottom-bar)
 - [A2UI surfaces](#a2ui-surfaces)
+- [MCP Apps views](#mcp-apps-views)
 - [Tool-call display modes](#tool-call-display-modes)
 - [Delegated sub-agents](#delegated-sub-agents)
 - [Markdown rendering](#markdown-rendering)
@@ -93,6 +94,8 @@ The package ships two builds (see [`package.json` exports](package.json)):
 | --- | --- | --- |
 | `@artooi/agents-web-components` | ESM library build; `@ag-ui/*` stay **external** | You bundle the app yourself (Vite, webpack, esbuild) and want to dedupe `@ag-ui/*`. |
 | `@artooi/agents-web-components/chat` | The same library build's `<ag-ui-chat>` entry: `AgUiChat` and `defineChat` | Beside the root entry; the two share one module instance, so import from both freely. |
+| `@artooi/agents-web-components/threads` | `<ag-ui-threads>`, the conversation list for your own bar or rail: `AgUiThreads` and `defineThreads` | Beside `./chat`, when you draw the list of conversations yourself. |
+| `@artooi/agents-web-components/threads/bundle` | The same entry as a vendored file, minified, inlining none of the element | Beside `/bundle` with no build step; the main bundle does not carry the list. |
 | `@artooi/agents-web-components/bundle` | ESM bundle with `@ag-ui/*` **inlined**, minified | Drop in via a single `<script type="module">` with no build step. |
 
 ### The vendored-bundle story
@@ -300,7 +303,7 @@ element after the fact.
 `approveWithEdits`, `agentFactory`, `getTools`, `getContext`, `routeMap`, `navigate`, `getPageMap`,
 `autoInjectPageMap`, `getPlace`, `conversationStore`, `uploadHandler`, `transcribeHandler`, `navigationResult`,
 `skillContext`, `toolSummaries`, `formatToolPayload`, `formatRelativeTime`, `strings`,
-`resolvePageTarget`, `sharedState`, `anchor` (an element, which wins over the attribute's selector), `extraStyles` ([unstable](#d-extrastyles-the-last-mile)), plus the read-only `unread`, `unhandledActivityTypes`, `threadId`, `threadTitle`, `running`, `barHeight`, `dockWidth` and `uiStrings`, and
+`resolvePageTarget`, `sharedState`, `anchor` (an element, which wins over the attribute's selector), `extraStyles` ([unstable](#d-extrastyles-the-last-mile)), plus the read-only `unread`, `unhandledActivityTypes`, `threadId`, `threadTitle`, `running`, `barHeight`, `dockWidth`, `uiStrings`, `colorScheme` and `locale`, and
 the attribute mirrors `endpoint` / `userKey` / `userName` / `toolDisplay` / `toolGroupDisplay` / `collapsed` /
 `maximized` / `credentials`.
 
@@ -336,12 +339,18 @@ the `copyCode` / `copied` / `copyFailed` strings.
 `setSkills`, `sendMessage`, `run`, `attachFile`, `appendMessage`, `retryLastTurn`, `quote`, `offerQuoteInPage`,
 `enableCharts`, `newChat`, `setCollapsed`, `toggleCollapsed`, `setMaximized`, `toggleMaximized`,
 `describeSurface`, `moveTo`, `resetSize`, `toggleTheme`, `openThreads`, `closeThreads`, `switchThread`, `deleteThread`,
-`openCheckpoints`, `closeCheckpoints`, `toggleCheckpoints`, `refreshPlace`, `request` and `reload`.
+`openCheckpoints`, `closeCheckpoints`, `toggleCheckpoints`, `refreshPlace`, `request`, `tokenValues` and `reload`.
 
 `request(url, init?)` is `fetch` as the element authenticates: `headers` and `getHeaders()` under
 `init.headers` (which win per key), and `credentials` unless `init` names its own. A destination
 outside `trustedOrigins` is reported as the element's own requests are. It is the seam a separate
 entry such as `./mcp-apps` reaches the host's routes through.
+
+`colorScheme` is the scheme the panel is drawn in now (`"light"` or `"dark"`); a change of the
+`theme` attribute fires `ag-ui-theme` with `{ scheme }`. `locale` is the nearest `lang` attribute,
+looked for past any shadow root the element is in, else the browser's language.
+`tokenValues(names)` returns the values the panel computes for the custom properties `names` (a
+colour resolved in the current scheme), leaving out any it does not declare. `./mcp-apps` hands a view the theme through these three.
 
 ### Sending from your own UI
 
@@ -2055,6 +2064,65 @@ chat.unhandledActivityTypes; // ["build_status", …]
 Note `"chart"` appears there until you call `enableCharts(["activity"])`, which
 is the honest answer to "I pushed a chart and nothing happened".
 
+## The conversation list in your own chrome
+
+`<ag-ui-threads>` lists a chat's conversations where you put it: as rows in a rail, or as pills
+in a bar. It keeps nothing of its own. It reads the chat's `conversationStore`, marks the thread
+on screen as current, and drives the chat through the [thread API](#driving-the-conversation-from-your-own-chrome).
+
+```html
+<header>
+  <ag-ui-threads for="chat" variant="pills"></ag-ui-threads>
+</header>
+<aside><ag-ui-threads for="chat"></ag-ui-threads></aside>
+<ag-ui-chat id="chat" endpoint="/agent/"></ag-ui-chat>
+
+<script type="module">
+  import { defineChat } from "@artooi/agents-web-components/chat";
+  import { defineThreads } from "@artooi/agents-web-components/threads";
+  defineChat();
+  defineThreads();
+</script>
+```
+
+- **Binding.** `for` names the chat's `id`, looked up in the list's own root, the document or the
+  shadow root it sits in; a chat added later is picked up when it first reports its thread. Or set
+  the `chat` property, which wins over `for` until it is set back to `null`.
+- **`variant`.** `list` (the default) draws rows and an empty text. `pills` draws a strip that
+  stays on one line and scrolls sideways, and no empty text. Both give each conversation a delete
+  behind an inline confirm, which calls `chat.deleteThread`; in a pill the confirm opens on the
+  pill's own line.
+- **Picking a row** fires **`ag-ui-threads-select`** (`THREADS_SELECT_EVENT`, detail
+  `{ threadId }`, bubbling, composed and cancelable), then calls `chat.switchThread`, which
+  **cancels a run in flight**, as the built-in list does. Call `preventDefault()` to route to the
+  conversation yourself; otherwise it is the moment to close a popover the list sits in.
+- **No run marks yet.** A row shows its title and whether it is the thread on screen, nothing
+  about its runs: running, waiting, failed and unread marks wait for a store that reports run
+  status across tabs.
+- **`refresh()`** reads the store again. The list does so after every thread, title and
+  run-finished event; call it when something else
+  changed the store, such as another tab. **`threads`** *(read-only)* is the rows on screen, as the
+  store last listed them. A redraw keeps keyboard focus on the row, delete or confirm it was on.
+- **`strings`** translates every piece of text (`label`, `untitled`, `empty`, `delete`,
+  `deleteConfirm`, `deleteYes`, `deleteNo`), merged over the English, so `{ deleteNo: "Abbrechen" }`
+  changes that one string.
+- **Styling.** Parts `list`, `row` (plus `row-active` on the thread on screen), `row-button`,
+  `delete`, `confirm`, `empty`. The chat's colour tokens apply, and the list takes the light or
+  dark half of each from the page's own `color-scheme`, since it sits in your chrome rather than
+  in the chat's. The host carries `data-empty` when the chat has no conversations.
+
+The main `/bundle` does not carry the element. Without a build step, load
+`/threads/bundle` beside it:
+
+```html
+<script type="module">
+  import { defineChat } from "./agents-web-components.bundle.js";
+  import { defineThreads } from "./agents-web-components.threads.bundle.js";
+  defineChat();
+  defineThreads();
+</script>
+```
+
 ## A2UI surfaces
 
 An agent can describe a small interface as A2UI 1.0 components: a form, a
@@ -2142,6 +2210,89 @@ lands on the component's native control where it has one (the `<button>`, the
 
 The surfaces read the element's theme tokens, so a theme set on `<ag-ui-chat>`
 reaches them.
+
+## MCP Apps views
+
+A tool on an MCP server can come with a view: an HTML resource the
+[MCP Apps](https://github.com/modelcontextprotocol/ext-apps) extension draws
+beside its result. The agent pushes an `mcp-apps` activity naming the view and
+its server; the `./mcp-apps` entry frames the view and speaks the host's end of
+its bridge. Without it the element draws a notice that the view cannot be shown.
+
+```js
+import { registerMcpApps } from "@artooi/agents-web-components/mcp-apps";
+
+const chat = document.querySelector("ag-ui-chat");
+registerMcpApps(chat, {
+  url: "/agent/mcp-apps/", // the host's route
+  sandboxProxyUrl: "https://sandbox.example.com/proxy.html", // optional, another origin
+});
+```
+
+The route takes a JSON `POST` of `{ serverId, method, params }`, sent through
+`chat.request` so it carries the element's headers and credentials, and answers
+as django-ag-ui's does: `200` with `{ "result": ... }`, the MCP result object
+(a tool result with `isError` is still a `result`), or `{ "error": { "code",
+"message" } }` with a JSON-RPC code for a call it cannot relay, which a view's
+`tools/call` is answered with as it is. Any other status or body fails the call
+with `-32000`. `method` is `resources/read` (the view's HTML, read once per
+server and URI for the page) or `tools/call` (a tool the view calls). A toolset
+with no `id` sends no `serverId`, and its views draw the notice.
+
+The view is framed once it first scrolls into sight: in a `srcdoc` frame with
+`sandbox="allow-scripts"` and the view's CSP as the first `<meta>` of its head,
+or, with `sandboxProxyUrl`, in the proxy on its own origin. When the view leaves
+the document, in sight or not (a thread switch, a cleared conversation, or the
+chat itself removed), its frame and bridge go, and it is framed again if it
+returns. A `srcdoc` frame
+inherits the host page's CSP, so a host with a strict `script-src` sets a proxy.
+
+The package ships a proxy page, `@artooi/agents-web-components/mcp-apps/sandbox-proxy.html`
+(`dist/sandbox-proxy.html`): one static file with its script inline. Serve it as is on a
+second origin, one the page's own origin is not, and name its URL as `sandboxProxyUrl`. It
+puts the view in an inner `sandbox="allow-scripts"` frame with the view's CSP as the first
+`<meta>` of its head, so serve it with no CSP header of its own (an inner `srcdoc` frame
+inherits one) and let the host page's `frame-src` reach that origin.
+
+```sh
+# The static site served at https://sandbox.example.com, not the chat's origin.
+cp node_modules/@artooi/agents-web-components/dist/sandbox-proxy.html sandbox-site/proxy.html
+```
+
+```js
+registerMcpApps(chat, {
+  url: "/agent/mcp-apps/",
+  sandboxProxyUrl: "https://sandbox.example.com/proxy.html",
+});
+```
+
+**The bridge** is JSON-RPC over `postMessage` (MCP Apps 2026-01-26), read only
+from the view's own frame:
+
+| The view sends | The host |
+| --- | --- |
+| `ui/initialize` | answers with `hostContext`: `theme`, `styles.variables`, `locale`, `displayMode: "inline"`, `availableDisplayModes: ["inline"]`, `containerDimensions` (the frame's width and a `maxHeight` of 640) and `platform: "web"` |
+| `ui/notifications/initialized` | sends `ui/notifications/tool-input` (the call's arguments), then `ui/notifications/tool-result` |
+| `ui/notifications/size-changed` | sets the frame's height, at most 640px; the view scrolls past it |
+| `tools/call` | sends it to the route with the view's `serverId` and answers its `result`, or its `error` with the route's code |
+| `ui/message` | sends its text as the user's next message (`chat.sendMessage`); `isError` when nothing was sent |
+| `ui/open-link` | opens an `http(s)` URL in a `noopener` tab; `isError` for any other |
+| `ui/request-display-mode` | answers `inline`, the only mode a view is shown in |
+| `ui/notifications/request-teardown` | sends `ui/resource-teardown`, then closes the view to the notice |
+| anything else | answers `-32601` |
+
+`tools/call`, `ui/message` and `ui/open-link` are refused while the view is
+drawn from a stored conversation rather than a live run, and once it has asked
+to be torn down. Once initialised, the
+view is sent `ui/notifications/host-context-changed` with what changed when the
+`theme` attribute, the system scheme or the frame's width does.
+
+`styles.variables` are the element's own tokens, resolved in the scheme drawn
+now, under the MCP Apps names: `--color-background-primary` (`--ag-ui-bg`),
+`--color-text-primary` (`--ag-ui-fg`), `--color-border-primary`
+(`--ag-ui-border`), `--font-sans` (`--ag-ui-font`), `--border-radius-md`
+(`--ag-ui-radius`) and the shades between them, so a view themed from them
+follows the chat's theme.
 
 ## Tool-call display modes
 
@@ -3717,6 +3868,7 @@ paths.
 | `BAR_HEIGHT_EVENT` | The bottom bar's height CustomEvent name (`ag-ui-bar-height`). |
 | `DOCK_WIDTH_EVENT` | The docked panel's width CustomEvent name (`ag-ui-dock-width`). |
 | `UNREAD_EVENT` | The unread-count CustomEvent name (`ag-ui-unread`). |
+| `THEME_EVENT` | The theme-change CustomEvent name (`ag-ui-theme`), `detail` `{ scheme }`. |
 | `RUN_FINISHED_EVENT` | The interaction-finished CustomEvent name (`ag-ui-run-finished`). |
 | `CUSTOM_AGENT_EVENT` | The agent-`CUSTOM` CustomEvent name (`ag-ui-custom`). |
 | `INVALIDATE_EVENT` | The resource-invalidation CustomEvent name (`ag-ui-invalidate`). |

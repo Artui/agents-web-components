@@ -52,6 +52,12 @@ export const DOCK_WIDTH_EVENT = "ag-ui-dock-width";
 export const UNREAD_EVENT = "ag-ui-unread";
 
 /**
+ * The `theme` attribute changed. `detail` is `{ scheme }`, the scheme the panel
+ * is drawn in now (`chat.colorScheme`): `"light"` or `"dark"`.
+ */
+export const THEME_EVENT = "ag-ui-theme";
+
+/**
  * AG-UI shared state changed — a streamed `STATE_SNAPSHOT` / `STATE_DELTA`, or
  * a host assignment to `sharedState`. `detail` is {@link StateDetail}.
  *
@@ -678,3 +684,28 @@ export const PASTE_ATTACH_CHARS = 5000;
  * 24px inward the next time anything re-placed it.
  */
 export const SCREEN_EDGE_MARGIN = 8;
+
+/** The Custom Element tag name registered by {@link defineThreads}. */
+export const THREADS_TAG = "ag-ui-threads";
+
+/**
+ * A row of `<ag-ui-threads>` was picked. `detail` is {@link ThreadsSelectDetail}.
+ *
+ * Fires before the chat switches, and is cancelable: a host that routes to the
+ * conversation itself calls `preventDefault()` and the element leaves the chat
+ * alone. Otherwise it is the moment to close a popover the list sits in.
+ */
+export const THREADS_SELECT_EVENT = "ag-ui-threads-select";
+
+/**
+ * The tallest an MCP App view's frame grows inline, in CSS pixels: a view that
+ * asks for more through `ui/notifications/size-changed` gets this and scrolls.
+ */
+export const MCP_APP_MAX_HEIGHT = 640;
+
+/**
+ * The `name` of the error the mcp-apps route rejects with when it answers a
+ * coded `{ error }`: the bridge forwards that error's `code` to the view only
+ * under this name, since a `DOMException` carries a numeric `code` of its own.
+ */
+export const MCP_APPS_ROUTE_ERROR = "McpAppsRouteError";

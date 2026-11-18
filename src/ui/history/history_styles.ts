@@ -53,7 +53,10 @@ export const HISTORY_STYLES: string = `
   padding: 0.5rem;
   border: 1px solid var(--_border);
   border-radius: 0.5rem;
-  background: var(--_assistant-bg);
+  /* It floats over the transcript, so it is the panel's own colour first, with
+     the theme's answer tint over it; a theme that draws answers with no bubble
+     leaves that tint transparent, and the panel showed what it covered. */
+  background: linear-gradient(var(--_assistant-bg), var(--_assistant-bg)) var(--_bg);
   box-shadow: 0 6px 24px rgb(0 0 0 / 12%);
   max-height: 60%;
   overflow-y: auto;
@@ -89,6 +92,14 @@ export const HISTORY_STYLES: string = `
   font-size: 0.75rem;
   font-weight: 600;
   opacity: 0.7;
+}
+
+/* The rows sit in this list, not in the panel, so the panel's gap only parted
+   the title from them and each row's surface ran into the next. */
+.checkpoints-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .checkpoints-empty {
@@ -153,7 +164,7 @@ export const HISTORY_STYLES: string = `
   font-size: 0.6875rem;
   padding: 0 0.375rem;
   border-radius: 999px;
-  background: var(--_assistant-bg);
+  background: linear-gradient(var(--_assistant-bg), var(--_assistant-bg)) var(--_bg);
   opacity: 0.8;
 }
 

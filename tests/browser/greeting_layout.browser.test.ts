@@ -90,9 +90,8 @@ function transcriptBox(el: AgUiChat): { top: number; bottom: number } {
 const middleOf = (box: { top: number; bottom: number }): number => (box.top + box.bottom) / 2;
 
 /**
- * How far the empty region sits from the middle of the transcript. Zero is
- * where it has always been without a greeting; the greeting layout moves it
- * down to sit over the composer.
+ * How far the empty region sits from the middle of the transcript. It is
+ * zero only when centred, which no layout does now: it sits over the composer.
  */
 function emptyOffCentre(el: AgUiChat): number {
   const middle = (box: DOMRect): number => box.top + box.height / 2;
@@ -197,9 +196,8 @@ describe("the greeting layout on a full page", () => {
     expect(halves(el).below).toBeLessThanOrEqual(1);
     expect(greetingShown(el)).toBe(false);
     expect(getComputedStyle(part(el, ".input-row")).borderTopColor).not.toBe(TRANSPARENT);
-    // And the starters stay in the middle of the transcript, where they were
-    // before there was a greeting to sit under.
-    expect(emptyOffCentre(el)).toBeLessThanOrEqual(1);
+    // And the starters sit against the composer they start, not mid-transcript.
+    expect(emptyOffCentre(el)).toBeGreaterThan(20);
   });
 
   it("follows a placement switch with nothing from script", async () => {
@@ -356,7 +354,7 @@ describe("the greeting layout elsewhere", () => {
     expect(greetingShown(el)).toBe(false);
     expect(halves(el).below).toBeLessThanOrEqual(1);
     expect(getComputedStyle(part(el, ".input-row")).borderTopColor).not.toBe(TRANSPARENT);
-    expect(emptyOffCentre(el)).toBeLessThanOrEqual(1);
+    expect(emptyOffCentre(el)).toBeGreaterThan(20);
   });
 
   it("is off for an embedded panel whose data-greeting says off", async () => {
@@ -367,7 +365,7 @@ describe("the greeting layout elsewhere", () => {
     expect(greetingShown(el)).toBe(false);
     expect(halves(el).below).toBeLessThanOrEqual(1);
     expect(getComputedStyle(part(el, ".input-row")).borderTopColor).not.toBe(TRANSPARENT);
-    expect(emptyOffCentre(el)).toBeLessThanOrEqual(1);
+    expect(emptyOffCentre(el)).toBeGreaterThan(20);
   });
 
   it.each(["floating", "sidebar"])(
@@ -379,7 +377,7 @@ describe("the greeting layout elsewhere", () => {
       expect(greetingShown(el)).toBe(false);
       expect(halves(el).below).toBeLessThanOrEqual(1);
       expect(getComputedStyle(part(el, ".input-row")).borderTopColor).not.toBe(TRANSPARENT);
-      expect(emptyOffCentre(el)).toBeLessThanOrEqual(1);
+      expect(emptyOffCentre(el)).toBeGreaterThan(20);
     },
   );
 

@@ -1,13 +1,24 @@
 import { readFileSync } from "node:fs";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { build } from "esbuild";
 import { describe, expect, it } from "vitest";
-import { A2UI_BUNDLE, LIBRARY, MCP_APPS_BUNDLE, VENDORED_BUNDLE } from "../esbuild.config.mjs";
+import * as buildConfig from "../esbuild.config.mjs";
+import {
+  A2UI_BUNDLE,
+  LIBRARY,
+  MCP_APPS_BUNDLE,
+  THREADS_BUNDLE,
+  VENDORED_BUNDLE,
+} from "../esbuild.config.mjs";
 import * as a2ui from "../src/a2ui.js";
 import * as bundle from "../src/bundle.js";
 import * as chat from "../src/chat.js";
 import { ELEMENT_TAG } from "../src/constants.js";
 import * as index from "../src/index.js";
 import * as mcpApps from "../src/mcp_apps.js";
+import * as threads from "../src/threads.js";
 
 interface Manifest {
   readonly exports: Record<string, { readonly types?: string; readonly import: string }>;
@@ -28,8 +39,54 @@ describe("the package entries", () => {
     );
   });
 
+  it("publishes the thread list as its own entry and its own vendored file", () => {
+    expect(Object.keys(threads).sort()).toEqual([
+      "AgUiThreads",
+      "THREADS_SELECT_EVENT",
+      "THREADS_TAG",
+      "defineThreads",
+    ]);
+    expect(Object.keys(index).filter((name) => name in threads)).toEqual([]);
+    expect(MANIFEST.exports["./threads"]).toEqual({
+      types: "./dist/threads.d.ts",
+      import: "./dist/threads.js",
+    });
+    expect(THREADS_BUNDLE.entryPoints).toEqual(["src/threads.ts"]);
+    expect(MANIFEST.exports["./threads/bundle"]).toEqual({
+      types: "./dist/threads.d.ts",
+      import: `./${THREADS_BUNDLE.outfile}`,
+    });
+  });
+
+  it("keeps the thread list out of the main bundle", async () => {
+    expect(Object.keys(bundle)).not.toContain("defineThreads");
+    expect(Object.keys(bundle)).not.toContain("AgUiThreads");
+    const result = await build({ ...VENDORED_BUNDLE, write: false, metafile: true });
+    const inputs = Object.keys(result.metafile.inputs);
+    expect(inputs.filter((path) => path.startsWith("src/threads"))).toEqual([]);
+  });
+
+  it("keeps the element, its string table and the protocol packages out of the threads bundle", async () => {
+    const result = await build({ ...THREADS_BUNDLE, write: false, metafile: true });
+    const inputs = Object.keys(result.metafile.inputs);
+    expect(inputs).toContain("src/threads.ts");
+    expect(
+      inputs.filter(
+        (path) =>
+          path === "src/index.ts" ||
+          path === "src/chat.ts" ||
+          path === "src/core/ag_ui_chat.ts" ||
+          path === "src/ui/ui_strings.ts" ||
+          path.startsWith("src/a2ui") ||
+          path.startsWith("src/mcp_apps") ||
+          path.includes("@ag-ui"),
+      ),
+    ).toEqual([]);
+  });
+
   it("defines nothing at import", () => {
     expect(customElements.get(ELEMENT_TAG)).toBeUndefined();
+    expect(customElements.get(threads.THREADS_TAG)).toBeUndefined();
   });
 
   it("declares itself free of import side effects", () => {
@@ -104,6 +161,22 @@ describe("the package entries", () => {
     });
   });
 
+  it("ships the sandbox proxy page as one static file under its own export", async () => {
+    const exported: unknown = MANIFEST.exports["./mcp-apps/sandbox-proxy.html"];
+    expect(exported).toBe(`./${buildConfig.SANDBOX_PROXY_PAGE}`);
+    const dir = await mkdtemp(join(tmpdir(), "sandbox-proxy-"));
+    try {
+      await buildConfig.buildSandboxProxyPage(join(dir, "page.html"));
+      const page = await readFile(join(dir, "page.html"), "utf8");
+      expect(page.startsWith("<!doctype html>")).toBe(true);
+      expect(page).not.toMatch(/<script[^>]*\ssrc=/);
+      expect(page.match(/<script>/g)).toHaveLength(1);
+      expect(page).toContain("ui/notifications/sandbox-proxy-ready");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
   it("keeps MCP Apps out of the main bundle", async () => {
     expect(Object.keys(bundle)).not.toContain("registerMcpApps");
     const result = await build({ ...VENDORED_BUNDLE, write: false, metafile: true });
@@ -122,7 +195,8 @@ describe("the package entries", () => {
           path === "src/chat.ts" ||
           path === "src/core/ag_ui_chat.ts" ||
           path === "src/ui/ui_strings.ts" ||
-          path.startsWith("src/a2ui") ||
+          // A view's ui/open-link goes through A2UI's URL check, a leaf with no imports.
+          (path.startsWith("src/a2ui") && path !== "src/a2ui/safe_url.ts") ||
           path.includes("@ag-ui"),
       ),
     ).toEqual([]);

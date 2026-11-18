@@ -1,10 +1,11 @@
 // The empty state: the greeting over an empty conversation, and the
 // composer's travel from the centre to the foot on the first send.
 export const GREETING_STYLES: string = `
-/* Empty-state region (slot): centred while it's the only thing in the
-   list, hidden as soon as a message, card, or pending indicator renders. */
+/* Empty-state region (slot): at the foot of the transcript, over the composer
+   it starts, while it's the only thing in the list; hidden as soon as a
+   message, card, or pending indicator renders. */
 .empty {
-  margin: auto;
+  margin: auto auto 0;
   text-align: center;
   color: var(--_muted);
 }
@@ -87,15 +88,6 @@ export const GREETING_STYLES: string = `
 
 :host([data-composer-settling]) .input-row {
   transition: border-color var(--_motion) var(--_ease);
-}
-
-/* The greeting and whatever the host slotted sit at the foot of the upper
-   half, directly over the composer, rather than floating in its middle. The
-   region is hidden once the conversation has content, so this needs no state
-   of its own. */
-:host([placement="page"]:not([data-greeting="off"]):not([data-restoring])) .empty,
-:host([placement="embedded"][data-greeting]:not([data-greeting="off"]):not([data-restoring])) .empty {
-  margin: auto auto 0;
 }
 
 /* The rule over the composer separates it from a transcript. Over nothing it

@@ -17,6 +17,7 @@ import {
   STORAGE_ROOT,
   SUBMIT_EVENT,
   SUGGESTIONS_ACTIVITY_TYPE,
+  THEME_EVENT,
   THREAD_EVENT,
   THREAD_TITLE_EVENT,
   TOGGLE_EVENT,
@@ -521,6 +522,60 @@ export class AgUiChat extends HTMLElement {
    */
   get uiStrings(): UiStrings {
     return this.#strings;
+  }
+
+  /**
+   * The scheme the panel is drawn in now. A change of the `theme` attribute
+   * fires `ag-ui-theme` with it; a scheme that follows the system changes with
+   * the system's, unannounced.
+   */
+  get colorScheme(): "light" | "dark" {
+    return this.#drawnScheme();
+  }
+
+  /**
+   * The language the element is in: its nearest `lang` attribute, looked for
+   * past every shadow root it is drawn in, else the browser's.
+   */
+  get locale(): string {
+    let node: Element | null = this;
+    while (node !== null) {
+      const lang = node.closest<HTMLElement>("[lang]");
+      if (lang !== null) {
+        return lang.lang || navigator.language;
+      }
+      // closest() stops at a shadow root, so the walk goes on from its host.
+      const root = node.getRootNode();
+      node = root instanceof ShadowRoot ? root.host : null;
+    }
+    return navigator.language;
+  }
+
+  /**
+   * The values the panel computes for the custom properties `names`, keyed by
+   * name: a colour resolved in the scheme drawn now, anything else as
+   * computed. A name the panel does not declare is left out. A separate entry
+   * such as `./mcp-apps` hands the theme on with it.
+   */
+  tokenValues(names: readonly string[]): Readonly<Record<string, string>> {
+    const style = getComputedStyle(this);
+    const probe = document.createElement("span");
+    this.#root.append(probe);
+    const values: Record<string, string> = {};
+    for (const name of names) {
+      const value = style.getPropertyValue(name).trim();
+      if (value === "") {
+        continue;
+      }
+      if (CSS.supports("color", value)) {
+        probe.style.color = `var(${name})`;
+        values[name] = getComputedStyle(probe).color;
+      } else {
+        values[name] = value;
+      }
+    }
+    probe.remove();
+    return values;
   }
 
   /**
@@ -1260,6 +1315,7 @@ export class AgUiChat extends HTMLElement {
       if (this.#themeToggle.isConnected) {
         this.#syncThemeGlyph();
       }
+      this.#emit<{ readonly scheme: "light" | "dark" }>(THEME_EVENT, { scheme: this.colorScheme });
       return;
     }
     if (name === "anchor-side" || name === "data-side" || name === "data-small-viewport") {

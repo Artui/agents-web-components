@@ -36,7 +36,7 @@ const HTML = "text/html; charset=utf-8";
 const APP_PAGE = { path: "app/index.html", contentType: HTML };
 const SCENARIO_PATH = /^\/scenarios\/[a-z0-9-]+\/$/;
 // Static files are served from these directories only, by extension.
-const STATIC_DIRS = ["app", "page"];
+const STATIC_DIRS = ["app", "page", "threads"];
 const TYPES = new Map([
   [".html", HTML],
   [".js", "text/javascript"],
@@ -44,6 +44,8 @@ const TYPES = new Map([
 ]);
 const PAGE_ASSETS = new Map([
   ["/page/", { path: "page/index.html", contentType: HTML }],
+  // The thread list in a host's own chrome: pills in a bar, rows in a rail.
+  ["/threads/", { path: "threads/index.html", contentType: HTML }],
   // Every page loads it; it does nothing unless the URL carries `?readout`.
   ["/viewport-readout.js", { path: "viewport-readout.js", contentType: "text/javascript" }],
 ]);
@@ -52,6 +54,7 @@ const BUNDLES = new Map([
   ["/bundle.js", "agents-web-components.bundle.js"],
   ["/a2ui.bundle.js", "agents-web-components.a2ui.bundle.js"],
   ["/mcp-apps.bundle.js", "agents-web-components.mcp-apps.bundle.js"],
+  ["/threads.bundle.js", "agents-web-components.threads.bundle.js"],
 ]);
 
 /** The page or file a GET path names, or undefined. */
@@ -232,8 +235,8 @@ async function handleAgent(res, body) {
     return;
   }
 
-  // An MCP App view, in the mcp-apps activity shape. With a server id it reaches
-  // the ./mcp-apps entry's view mount; without one it is the notice either way.
+  // An MCP App view, in the mcp-apps activity shape. With a server id the
+  // ./mcp-apps entry frames it from /mcp-apps/; without one it is the notice.
   if (/\bmcp app\b/i.test(prompt)) {
     const named = !/\bwithout\b/i.test(prompt);
     const content = {
@@ -772,6 +775,126 @@ function a2uiSurface(context) {
   ];
 }
 
+// The sales app's view, as an MCP server would serve it: a page that speaks the
+// view's end of the MCP Apps bridge by hand, so the demo shows what the host's
+// end answers. It themes itself from the host context's style variables.
+const MCP_APP_VIEW = `<!doctype html>
+<html><head><style>
+  body { margin: 0; font: 14px var(--font-sans, system-ui); color: var(--color-text-primary, #222);
+    background: var(--color-background-primary, #fff); }
+  #root { padding: 12px 14px; display: grid; gap: 8px; }
+  h3 { margin: 0; font-size: 15px; }
+  .muted { color: var(--color-text-secondary, #666); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  button { font: inherit; padding: 6px 10px; border-radius: var(--border-radius-md, 8px);
+    border: 1px solid var(--color-border-primary, #ccc); background: var(--color-background-secondary, #f4f4f4);
+    color: inherit; cursor: pointer; }
+  pre { margin: 0; white-space: pre-wrap; font-size: 12px; }
+</style></head>
+<body><div id="root">
+  <h3>Weekly sales</h3>
+  <div id="status" class="muted">Waiting for ui/initialize...</div>
+  <div>Input: <code id="input">-</code></div>
+  <div>Result: <strong id="result">-</strong></div>
+  <div class="row">
+    <button id="refresh">Refresh (tools/call)</button>
+    <button id="ask">Ask the agent (ui/message)</button>
+  </div>
+  <pre id="log" class="muted"></pre>
+</div>
+<script>
+  let next = 1;
+  const waiting = new Map();
+  const $ = (id) => document.getElementById(id);
+  const post = (message) => parent.postMessage({ jsonrpc: "2.0", ...message }, "*");
+  const call = (method, params) =>
+    new Promise((resolve, reject) => {
+      const id = next++;
+      waiting.set(id, { resolve, reject });
+      post({ id, method, params });
+    });
+  const text = (result) => (result.content || []).map((block) => block.text).join(" ");
+  const size = () =>
+    post({ method: "ui/notifications/size-changed",
+      params: { width: $("root").scrollWidth, height: $("root").scrollHeight } });
+  const theme = (context) => {
+    for (const [name, value] of Object.entries((context.styles || {}).variables || {})) {
+      document.documentElement.style.setProperty(name, value);
+    }
+    if (context.theme) document.documentElement.style.colorScheme = context.theme;
+  };
+  addEventListener("message", (event) => {
+    const data = event.data;
+    if (!data || data.jsonrpc !== "2.0") return;
+    if (data.method === undefined) {
+      const entry = waiting.get(data.id);
+      waiting.delete(data.id);
+      if (data.error) entry?.reject(data.error); else entry?.resolve(data.result);
+      return;
+    }
+    if (data.method === "ui/notifications/tool-input") $("input").textContent = JSON.stringify(data.params.arguments);
+    if (data.method === "ui/notifications/tool-result") $("result").textContent = text(data.params);
+    if (data.method === "ui/notifications/host-context-changed") theme(data.params);
+    if (data.method === "ui/resource-teardown") post({ id: data.id, result: {} });
+    size();
+  });
+  $("refresh").addEventListener("click", async () => {
+    try {
+      const result = await call("tools/call", { name: "weekly_sales", arguments: { week: "current" } });
+      $("result").textContent = text(result);
+      $("log").textContent = "tools/call answered at " + new Date().toLocaleTimeString();
+    } catch (error) {
+      $("log").textContent = "tools/call refused (" + error.code + "): " + error.message;
+    }
+    size();
+  });
+  $("ask").addEventListener("click", async () => {
+    try {
+      const result = await call("ui/message",
+        { role: "user", content: [{ type: "text", text: "What sold best this week?" }] });
+      $("log").textContent = result.isError ? "ui/message was not sent" : "ui/message sent";
+    } catch (error) {
+      $("log").textContent = "ui/message refused: " + error.message;
+    }
+    size();
+  });
+  call("ui/initialize", { appInfo: { name: "sales", version: "1.0.0" }, appCapabilities: {},
+    protocolVersion: "2026-01-26" }).then((result) => {
+      theme(result.hostContext);
+      $("status").textContent = "Initialised by " + result.hostInfo.name + " " + result.hostInfo.version +
+        " (" + result.hostContext.theme + ", " + result.hostContext.locale + ")";
+      post({ method: "ui/notifications/initialized", params: {} });
+      size();
+    });
+</script></body></html>`;
+
+let salesCalls = 0;
+
+// The host's mcp-apps/ route: the view's resource, and the tool it calls. It
+// answers as django-ag-ui does: 200 with { result }, or { error: { code, message } }.
+function handleMcpApps(res, body) {
+  const { method, params } = JSON.parse(body || "{}");
+  const json = (payload) => {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify(payload));
+  };
+  if (method === "resources/read") {
+    json({ result: { contents: [{ uri: params?.uri, mimeType: "text/html;profile=mcp-app", text: MCP_APP_VIEW }] } });
+    return;
+  }
+  if (method === "tools/call") {
+    salesCalls += 1;
+    // Every third refresh is refused with a code, which the view shows as it came.
+    if (salesCalls % 3 === 0) {
+      json({ error: { code: -32602, message: "weekly_sales is busy in the demo: refresh again" } });
+      return;
+    }
+    json({ result: { content: [{ type: "text", text: `${12 + salesCalls} orders this week (refreshed ${salesCalls}x)` }] } });
+    return;
+  }
+  json({ error: { code: -32601, message: `no ${method} here` } });
+}
+
 async function serveFile(res, path, contentType) {
   try {
     const data = await readFile(path);
@@ -894,6 +1017,14 @@ const server = createServer((req, res) => {
     });
     return;
   }
+  if (req.method === "POST" && req.url === "/mcp-apps/") {
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk;
+    });
+    req.on("end", () => handleMcpApps(res, body));
+    return;
+  }
   if (req.method === "POST" && req.url === "/attachments/") {
     // Uploads: a real backend would store the file and hand back a durable
     // ref; the demo buffers the body and echoes one, so the composer's
@@ -1004,6 +1135,7 @@ function networkUrls() {
 server.listen(PORT, HOST, () => {
   process.stdout.write(`agents-web-components demo: http://localhost:${PORT}\n`);
   process.stdout.write(`  full page: http://localhost:${PORT}/page/\n`);
+  process.stdout.write(`  thread list: http://localhost:${PORT}/threads/\n`);
   // Any wildcard bind reaches the LAN, so the addresses are worth printing for
   // both spellings rather than only the one this file happens to default to.
   if (HOST === "::" || HOST === "0.0.0.0") {
