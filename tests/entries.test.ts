@@ -1,6 +1,10 @@
 import { readFileSync } from "node:fs";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { build } from "esbuild";
 import { describe, expect, it } from "vitest";
+import * as buildConfig from "../esbuild.config.mjs";
 import {
   A2UI_BUNDLE,
   LIBRARY,
@@ -155,6 +159,22 @@ describe("the package entries", () => {
       types: "./dist/mcp_apps.d.ts",
       import: `./${MCP_APPS_BUNDLE.outfile}`,
     });
+  });
+
+  it("ships the sandbox proxy page as one static file under its own export", async () => {
+    const exported: unknown = MANIFEST.exports["./mcp-apps/sandbox-proxy.html"];
+    expect(exported).toBe(`./${buildConfig.SANDBOX_PROXY_PAGE}`);
+    const dir = await mkdtemp(join(tmpdir(), "sandbox-proxy-"));
+    try {
+      await buildConfig.buildSandboxProxyPage(join(dir, "page.html"));
+      const page = await readFile(join(dir, "page.html"), "utf8");
+      expect(page.startsWith("<!doctype html>")).toBe(true);
+      expect(page).not.toMatch(/<script[^>]*\ssrc=/);
+      expect(page.match(/<script>/g)).toHaveLength(1);
+      expect(page).toContain("ui/notifications/sandbox-proxy-ready");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 
   it("keeps MCP Apps out of the main bundle", async () => {

@@ -68,3 +68,17 @@ export function viewCsp(declared: unknown): McpAppViewCsp {
   ].join("; ");
   return { domains: cleaned, policy };
 }
+
+/**
+ * `html` with `policy` as the first element of its `<head>`. Parsed rather than
+ * spliced, so a script before `<head>`, or a `<head>` inside a comment, cannot
+ * run ahead of the policy.
+ */
+export function withCspMeta(html: string, policy: string): string {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const meta = doc.createElement("meta");
+  meta.setAttribute("http-equiv", "Content-Security-Policy");
+  meta.setAttribute("content", policy);
+  doc.head.prepend(meta);
+  return `<!doctype html>${doc.documentElement.outerHTML}`;
+}

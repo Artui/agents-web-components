@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The package ships an MCP Apps sandbox proxy page, `./mcp-apps/sandbox-proxy.html`
+  (`dist/sandbox-proxy.html`).** One static file with its script inline, for a host to serve on a
+  second origin and name as `sandboxProxyUrl`. It answers the frame's
+  `ui/notifications/sandbox-proxy-ready` and `sandbox-resource-ready`, puts the view in an inner
+  `sandbox="allow-scripts"` frame (whatever `sandbox` the message asks) with the view's CSP as the
+  first `<meta>` of its head, takes only the first resource and only from its parent, and relays
+  messages both ways. Opt-in: a host that wants a proxy serves this file, with no CSP header of its
+  own, and sets `sandboxProxyUrl`; a host without one is unchanged.
 - **A new `./threads` entry: `<ag-ui-threads>`, the conversation list for a host's own bar or
   rail.** `defineThreads()` registers it; `for="<chat id>"` (looked up in the list's own root) or
   the `chat` property, which wins over `for`, binds it to an `<ag-ui-chat>`. `variant="list"` (the

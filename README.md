@@ -2240,6 +2240,25 @@ The view is framed once it first scrolls into sight: in a `srcdoc` frame with
 or, with `sandboxProxyUrl`, in the proxy on its own origin. A `srcdoc` frame
 inherits the host page's CSP, so a host with a strict `script-src` sets a proxy.
 
+The package ships a proxy page, `@artooi/agents-web-components/mcp-apps/sandbox-proxy.html`
+(`dist/sandbox-proxy.html`): one static file with its script inline. Serve it as is on a
+second origin, one the page's own origin is not, and name its URL as `sandboxProxyUrl`. It
+puts the view in an inner `sandbox="allow-scripts"` frame with the view's CSP as the first
+`<meta>` of its head, so serve it with no CSP header of its own (an inner `srcdoc` frame
+inherits one) and let the host page's `frame-src` reach that origin.
+
+```sh
+# The static site served at https://sandbox.example.com, not the chat's origin.
+cp node_modules/@artooi/agents-web-components/dist/sandbox-proxy.html sandbox-site/proxy.html
+```
+
+```js
+registerMcpApps(chat, {
+  url: "/agent/mcp-apps/",
+  sandboxProxyUrl: "https://sandbox.example.com/proxy.html",
+});
+```
+
 **The bridge** is JSON-RPC over `postMessage` (MCP Apps 2026-01-26), read only
 from the view's own frame:
 

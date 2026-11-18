@@ -6,13 +6,14 @@
 //   - dist/agents-web-components.a2ui.bundle.js — the A2UI renderer alone, vendored beside it
 //   - dist/agents-web-components.mcp-apps.bundle.js — the MCP Apps host alone, likewise
 //   - dist/agents-web-components.threads.bundle.js — the thread list alone, likewise
+//   - dist/sandbox-proxy.html — the MCP Apps sandbox proxy page, its script inlined
 //
 // The vendored bundle is what django-admin-agent ships under its
 // static/ directory. Its options are exported so the browser test that loads
 // the built bundle (tests/browser/vendored_bundle.browser.test.ts) builds it
 // exactly as this file does, rather than from a copy that could drift.
-import { readFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
 
@@ -167,6 +168,57 @@ export const THREADS_BUNDLE = {
   minify: true,
 };
 
+/** Where the build writes the sandbox proxy page, as `package.json` exports it. */
+export const SANDBOX_PROXY_PAGE = "dist/sandbox-proxy.html";
+
+/**
+ * Build the MCP Apps sandbox proxy page into `outfile`: one static HTML file
+ * with its script inlined, for a host to serve on another origin as its
+ * `sandboxProxyUrl`. The browser tests build it with this same function, so
+ * the page they load is the page that ships.
+ *
+ * @param {string} outfile
+ * @param {string} [root] the repository root, where `src/` is
+ */
+export async function buildSandboxProxyPage(outfile, root = process.cwd()) {
+  const absRoot = resolve(root);
+  const result = await build({
+    ...SHARED,
+    format: "iife",
+    sourcemap: false,
+    minify: true,
+    write: false,
+    absWorkingDir: absRoot,
+    stdin: {
+      contents:
+        'import { runSandboxProxy } from "./src/mcp_apps/sandbox_proxy_page.ts";\n' +
+        "runSandboxProxy(window);\n",
+      resolveDir: absRoot,
+      loader: "ts",
+    },
+  });
+  const script = result.outputFiles[0].text;
+  if (/<\/script/i.test(script)) {
+    throw new Error("the sandbox proxy page's script would close its own <script> element");
+  }
+  const page = [
+    "<!doctype html>",
+    '<html lang="en">',
+    "<head>",
+    '<meta charset="utf-8">',
+    "<title>MCP App view</title>",
+    "<style>html,body{margin:0;height:100%}iframe{display:block;width:100%;height:100%;border:0}</style>",
+    "</head>",
+    "<body>",
+    `<script>${script}</script>`,
+    "</body>",
+    "</html>",
+    "",
+  ].join("\n");
+  await mkdir(dirname(resolve(absRoot, outfile)), { recursive: true });
+  await writeFile(resolve(absRoot, outfile), page);
+}
+
 /**
  * zod's JSON Schema modules that contribute code to a vendored bundle.
  *
@@ -197,6 +249,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
     build(A2UI_BUNDLE),
     build(MCP_APPS_BUNDLE),
     build(THREADS_BUNDLE),
+    buildSandboxProxyPage(SANDBOX_PROXY_PAGE),
   ]);
   const jsonSchema = zodJsonSchemaInputs(vendored.metafile);
   if (jsonSchema.length > 0) {
