@@ -9,6 +9,8 @@ const SANDBOX_RESOURCE_READY = "ui/notifications/sandbox-resource-ready";
 export interface SandboxProxy {
   /** Posts a message to the proxy, which relays it to the view: only to the proxy's origin. */
   post(message: unknown): void;
+  /** The proxy's origin, which its messages carry. */
+  readonly origin: string;
   /** Stops answering the proxy. */
   dispose(): void;
 }
@@ -52,6 +54,7 @@ export function sandboxProxy(
   frame.setAttribute("sandbox", "allow-scripts allow-same-origin");
   frame.src = url.href;
   return {
+    origin,
     post: (message) => frame.contentWindow?.postMessage(message, origin),
     dispose: () => window.removeEventListener("message", onMessage),
   };

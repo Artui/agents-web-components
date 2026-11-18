@@ -14,11 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   for the page; a failed read draws the notice, warns, and is read again next time) and frames it.
   Without `sandboxProxyUrl` the frame is `srcdoc` with `sandbox="allow-scripts"` and the view's CSP
   as the first `<meta>` of its `<head>`: `_meta.ui.csp`'s domains, or the MCP Apps restrictive
-  default, plus `object-src 'none'`, `frame-src` and `base-uri`, with any declared domain holding
+  default, plus `font-src 'self' data:`, `object-src 'none'`, `frame-src` and `base-uri`, with any declared domain holding
   whitespace, `;`, a quote or a comma dropped. With it, the frame is the proxy on its own origin
   (`allow-scripts allow-same-origin`, the cleaned CSP also on the URL as `?csp=`), sent the view in
   `ui/notifications/sandbox-resource-ready` once it says `ui/notifications/sandbox-proxy-ready`. A
-  view that navigates its frame is torn down to the notice. No `allow` permissions are granted.
+  view that navigates its frame is torn down to the notice; one the page moves reloads and boots
+  again, and one that leaves the document is framed again from the cache when it returns. No
+  `allow` permissions are granted.
   **A host that called `registerMcpApps` on 0.5.0 now shows live frames with nothing to opt into,
   but a `srcdoc` frame inherits the host page's CSP:** under a strict `script-src` the view stays
   blank, so such a host sets `sandboxProxyUrl` and lets its own `frame-src` reach the proxy's

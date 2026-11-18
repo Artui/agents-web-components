@@ -221,6 +221,49 @@ describe("viewFrame", () => {
     );
   });
 
+  it("keeps the view framed when the page moves it, and the view boots again", async () => {
+    const disconnect = vi.fn();
+    const connect = vi.fn((_channel: McpAppViewChannel) => disconnect);
+    const { node, frame } = await drawn(
+      services(`<script>parent.postMessage({ kind: "booted" }, "*")</script>`),
+      connect,
+    );
+    await message("booted");
+    const before = frame.contentWindow;
+    const elsewhere = document.createElement("section");
+    document.body.append(elsewhere);
+
+    elsewhere.append(node);
+    await until(
+      () =>
+        received.filter((entry) => entry.data?.["kind"] === "booted").length > 1 ? true : undefined,
+      "a second boot",
+    );
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    const channel = connect.mock.calls[0]?.[0] as McpAppViewChannel;
+    expect(node.querySelector("iframe")).toBe(frame);
+    expect(frame.contentWindow === before).toBe(false);
+    expect(channel.source === frame.contentWindow).toBe(true);
+    expect(node.querySelector(".run-notice")).toBeNull();
+    expect(disconnect).not.toHaveBeenCalled();
+  });
+
+  it("frames the view again when it returns to the document", async () => {
+    const disconnect = vi.fn();
+    const connect = vi.fn((_channel: McpAppViewChannel) => disconnect);
+    const deps = services("<p>view</p>");
+    const { node } = await drawn(deps, connect);
+
+    node.remove();
+    await until(() => (disconnect.mock.calls.length > 0 ? true : undefined), "disconnect");
+    document.body.append(node);
+    await until(() => (connect.mock.calls.length > 1 ? true : undefined), "a second frame");
+
+    expect(node.querySelectorAll("iframe")).toHaveLength(1);
+    expect(deps.route).toHaveBeenCalledTimes(1);
+  });
+
   it("stops the bridge when the view leaves the document", async () => {
     const disconnect = vi.fn();
     const { node } = await drawn(
@@ -257,6 +300,7 @@ describe("viewFrame", () => {
     const echo = await message("echo");
 
     expect(frame.getAttribute("sandbox")).toBe("allow-scripts allow-same-origin");
+    expect(connect.mock.calls[0]?.[0].origin).toBe(new URL(proxyUrl).origin);
     expect(frame.src.startsWith(`${proxyUrl}?csp=`)).toBe(true);
     expect(proxied.data["params"]).toMatchObject({
       csp: { connectDomains: ["https://api.example"] },

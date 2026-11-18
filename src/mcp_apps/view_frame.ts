@@ -14,11 +14,14 @@ import { viewCsp } from "./view_csp.js";
 export interface McpAppViewChannel {
   readonly iframe: HTMLIFrameElement;
   /**
-   * The window the view's messages arrive from: match `event.source` against
-   * it. Through a proxy it is the proxy's window, whose own
-   * `ui/notifications/sandbox-` messages the frame answers.
+   * The window the view's messages arrive from now: match `event.source`
+   * against it. Through a proxy it is the proxy's window, whose own
+   * `ui/notifications/sandbox-` messages the frame answers. A move of the
+   * frame in the page reloads it in a new window, whose view initialises again.
    */
-  readonly source: Window;
+  readonly source: Window | null;
+  /** The origin those messages carry: `"null"` for a `srcdoc` frame, the proxy's otherwise. */
+  readonly origin: string;
   /** Posts a message to the view, through the proxy when there is one. */
   post(message: unknown): void;
   /** Whether the view may act now: a redraw of its message can change it. */
@@ -115,6 +118,7 @@ async function openView(
   services: McpAppsServices,
   state: McpAppViewState,
   connect: McpAppViewConnect,
+  current: () => boolean,
 ): Promise<(notice: boolean) => void> {
   const uri = view.activity.resourceUri;
   let resource: McpAppResource;
@@ -125,7 +129,7 @@ async function openView(
     showNotice(node, view, services);
     return noop;
   }
-  if (!node.isConnected) {
+  if (!current()) {
     return noop;
   }
   const csp = viewCsp(resource.csp);
@@ -140,6 +144,7 @@ async function openView(
   });
   const proxyUrl = services.sandboxProxyUrl;
   let post: (message: unknown) => void;
+  let origin = "null";
   let dispose: () => void = noop;
   if (proxyUrl === undefined) {
     iframe.setAttribute("sandbox", "allow-scripts");
@@ -148,6 +153,7 @@ async function openView(
   } else {
     const proxy = sandboxProxy(iframe, proxyUrl, resource.html, csp.domains);
     post = proxy.post;
+    origin = proxy.origin;
     dispose = proxy.dispose;
   }
   let closed = false;
@@ -164,21 +170,26 @@ async function openView(
       showNotice(node, view, services);
     }
   };
-  // The src is set before the frame is placed, so its document loads once. A
-  // second load is the view navigating its frame, which a CSP cannot forbid.
-  let loads = 0;
+  // The src is set before the frame is placed, so each window loads once. A
+  // second load in one window is the view navigating its frame, which a CSP
+  // cannot forbid; a load in a new window is the frame moved in the page.
+  let loaded: Window | null = null;
   iframe.addEventListener("load", () => {
-    loads += 1;
-    if (loads > 1) {
-      console.warn(`ag-ui-chat: the MCP App view ${uri} navigated its frame and was closed`);
-      close(true);
+    if (loaded !== iframe.contentWindow) {
+      loaded = iframe.contentWindow;
+      return;
     }
+    console.warn(`ag-ui-chat: the MCP App view ${uri} navigated its frame and was closed`);
+    close(true);
   });
   node.replaceChildren(iframe);
   disconnect = connect(
     {
       iframe,
-      source: iframe.contentWindow as Window,
+      get source() {
+        return iframe.contentWindow;
+      },
+      origin,
       post,
       get live() {
         return state.live;
@@ -194,7 +205,8 @@ async function openView(
 /**
  * The mount `registerMcpApps` draws views with: a node that reads the view's
  * resource and puts its sandboxed frame in itself once it first scrolls into
- * view, and tears the frame down when it leaves the document.
+ * view, and takes the frame down when it leaves the document. A view that
+ * navigates its own frame is torn down to the notice.
  *
  * Without a sandbox proxy the frame is `srcdoc` with `sandbox="allow-scripts"`
  * (an opaque origin) and the view's CSP as the first `<meta>` of its `<head>`.
@@ -208,15 +220,21 @@ export function viewFrame(connect: McpAppViewConnect): McpAppViewMount {
     node.className = "mcp-app-view";
     const state: McpAppViewState = { live: view.live };
     services.views.set(node, state);
+    // Each time the node leaves the document its frame goes, and the next
+    // time it is in view it is framed again, from the cached resource.
     let opening: Promise<(notice: boolean) => void> | null = null;
+    let visits = 0;
     const observer = new IntersectionObserver((entries) => {
       if (!node.isConnected) {
-        observer.disconnect();
-        void opening?.then((close) => close(false));
+        visits += 1;
+        const leaving = opening;
+        opening = null;
+        void leaving?.then((close) => close(false));
         return;
       }
       if (opening === null && entries.some((entry) => entry.isIntersecting)) {
-        opening = openView(node, view, services, state, connect);
+        const visit = visits;
+        opening = openView(node, view, services, state, connect, () => visit === visits);
       }
     });
     observer.observe(node);

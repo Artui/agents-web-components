@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { mcpAppsRenderer } from "../src/mcp_apps/mcp_apps_renderer.js";
 import type { McpAppsServices, McpAppView } from "../src/mcp_apps/types.js";
 import {
   type McpAppViewChannel,
@@ -194,7 +195,7 @@ describe("viewFrame", () => {
     expect(connect).not.toHaveBeenCalled();
   });
 
-  it("stops watching a node that leaves the document before it was ever shown", () => {
+  it("reads nothing for a node that left the document before it was ever shown", () => {
     const deps = services();
     const node = viewFrame(vi.fn())(view(), deps);
     document.body.append(node);
@@ -203,7 +204,6 @@ describe("viewFrame", () => {
     FakeIntersectionObserver.report(node, false);
     FakeIntersectionObserver.show(node);
 
-    expect(FakeIntersectionObserver.observers[0]?.disconnected).toBe(true);
     expect(deps.route).not.toHaveBeenCalled();
   });
 
@@ -217,6 +217,7 @@ describe("viewFrame", () => {
 
     expect(channel.iframe).toBe(frame);
     expect(channel.source).toBe(frame.contentWindow);
+    expect(channel.origin).toBe("null");
     expect(connect.mock.calls[0]?.slice(1)).toEqual([view(), deps]);
 
     node.remove();
@@ -228,6 +229,49 @@ describe("viewFrame", () => {
     expect(node.querySelector(".run-notice")).toBeNull();
   });
 
+  it("frames the view again from the cache when the node comes back into view", async () => {
+    const connect = vi.fn((_channel: McpAppViewChannel) => vi.fn());
+    const deps = services();
+    const node = await shown(deps, connect);
+
+    node.remove();
+    FakeIntersectionObserver.report(node, false);
+    await flush();
+    expect(node.querySelector("iframe")).toBeNull();
+    document.body.append(node);
+    FakeIntersectionObserver.show(node);
+    await flush();
+
+    expect(node.querySelectorAll("iframe")).toHaveLength(1);
+    expect(connect).toHaveBeenCalledTimes(2);
+    expect(deps.route).toHaveBeenCalledTimes(1);
+  });
+
+  it("frames a view once when it leaves and returns while its resource is read", async () => {
+    let answer: (value: Record<string, unknown>) => void = () => undefined;
+    const route = vi.fn(
+      () =>
+        new Promise<Record<string, unknown>>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const connect = vi.fn(() => vi.fn());
+    const node = viewFrame(connect)(view(), services(route));
+    document.body.append(node);
+    FakeIntersectionObserver.show(node);
+
+    node.remove();
+    FakeIntersectionObserver.report(node, false);
+    document.body.append(node);
+    FakeIntersectionObserver.show(node);
+    answer({ contents: [{ text: "<p>v</p>" }] });
+    await flush();
+
+    expect(node.querySelectorAll("iframe")).toHaveLength(1);
+    expect(connect).toHaveBeenCalledTimes(1);
+    expect(route).toHaveBeenCalledTimes(1);
+  });
+
   it("gives the bridge the view's live state as a redraw changes it", async () => {
     const connect = vi.fn((_channel: McpAppViewChannel) => vi.fn());
     const deps = services();
@@ -236,6 +280,22 @@ describe("viewFrame", () => {
 
     expect(channel.live).toBe(true);
     (deps.views.get(node) as { live: boolean }).live = false;
+    expect(channel.live).toBe(false);
+  });
+
+  it("turns a drawn view's channel not live when the renderer redraws it from a replay", async () => {
+    const connect = vi.fn((_channel: McpAppViewChannel) => vi.fn());
+    const render = mcpAppsRenderer(viewFrame(connect), services());
+    const content = view().activity;
+    const node = render(content, { messageId: "m1", previous: null, live: true }) as HTMLElement;
+    document.body.append(node);
+    FakeIntersectionObserver.show(node);
+    await flush();
+    const channel = connect.mock.calls[0]?.[0] as McpAppViewChannel;
+
+    const redrawn = render(content, { messageId: "m1", previous: node, live: false });
+
+    expect(redrawn).toBe(node);
     expect(channel.live).toBe(false);
   });
 
