@@ -92,6 +92,24 @@ async function drawn(
 }
 
 /**
+ * Resolves once an IntersectionObserver has seen `node` out of sight, and a
+ * while after, so the view's own has too: a removal before then is still a
+ * change in sight, which the view's observer would report.
+ */
+async function outOfSight(node: Element): Promise<void> {
+  await new Promise<void>((resolve) => {
+    const probe = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => !entry.isIntersecting)) {
+        probe.disconnect();
+        resolve();
+      }
+    });
+    probe.observe(node);
+  });
+  await new Promise((resolve) => setTimeout(resolve, 300));
+}
+
+/**
  * The same server under another loopback name, so another origin. Which names
  * the server listens on depends on how the machine resolves localhost, so the
  * first that answers is used.
@@ -279,6 +297,43 @@ describe("viewFrame", () => {
     );
 
     node.remove();
+
+    await until(() => (disconnect.mock.calls.length > 0 ? true : undefined), "disconnect");
+    expect(disconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops the bridge when a view scrolled out of sight leaves the document", async () => {
+    const disconnect = vi.fn();
+    const connect = vi.fn((_channel: McpAppViewChannel) => disconnect);
+    const transcript = document.createElement("div");
+    Object.assign(transcript.style, { height: "200px", overflow: "auto" });
+    document.body.append(transcript);
+    const node = viewFrame(connect)(view(), services("<p>view</p>"));
+    const spacer = document.createElement("div");
+    spacer.style.height = "2000px";
+    transcript.append(node, spacer);
+    await until(() => (connect.mock.calls.length > 0 ? true : undefined), "the frame");
+
+    transcript.scrollTop = transcript.scrollHeight;
+    await outOfSight(node);
+    transcript.replaceChildren();
+
+    await until(() => (disconnect.mock.calls.length > 0 ? true : undefined), "disconnect");
+    expect(disconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops the bridge when a view under display:none leaves the document", async () => {
+    const disconnect = vi.fn();
+    const connect = vi.fn((_channel: McpAppViewChannel) => disconnect);
+    const pane = document.createElement("div");
+    document.body.append(pane);
+    const node = viewFrame(connect)(view(), services("<p>view</p>"));
+    pane.append(node);
+    await until(() => (connect.mock.calls.length > 0 ? true : undefined), "the frame");
+
+    pane.style.display = "none";
+    await outOfSight(node);
+    pane.remove();
 
     await until(() => (disconnect.mock.calls.length > 0 ? true : undefined), "disconnect");
     expect(disconnect).toHaveBeenCalledTimes(1);

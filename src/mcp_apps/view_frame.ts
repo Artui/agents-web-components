@@ -111,6 +111,16 @@ function withCsp(html: string, policy: string): string {
   return `<!doctype html>${doc.documentElement.outerHTML}`;
 }
 
+/** What one visit of a view's node is told by the node: see {@link openView}. */
+interface Visit {
+  /** Whether the node is still on the visit that opened the view. */
+  readonly current: () => boolean;
+  /** Stops watching for the node's removal: no frame was opened. */
+  readonly unwatch: () => void;
+  /** Stops watching the node for good: the view was closed to the notice. */
+  readonly end: () => void;
+}
+
 /** Puts the view's frame in `node`; resolves to what tears it down. */
 async function openView(
   node: HTMLElement,
@@ -118,8 +128,9 @@ async function openView(
   services: McpAppsServices,
   state: McpAppViewState,
   connect: McpAppViewConnect,
-  current: () => boolean,
+  visit: Visit,
 ): Promise<(notice: boolean) => void> {
+  const { current } = visit;
   const uri = view.activity.resourceUri;
   let resource: McpAppResource;
   try {
@@ -127,6 +138,7 @@ async function openView(
   } catch (error) {
     console.warn(`ag-ui-chat: the MCP App view ${uri} could not be read`, error);
     showNotice(node, view, services);
+    visit.unwatch();
     return noop;
   }
   if (!current()) {
@@ -168,6 +180,7 @@ async function openView(
     iframe.remove();
     if (notice) {
       showNotice(node, view, services);
+      visit.end();
     }
   };
   // The src is set before the frame is placed, so each window loads once. A
@@ -205,8 +218,9 @@ async function openView(
 /**
  * The mount `registerMcpApps` draws views with: a node that reads the view's
  * resource and puts its sandboxed frame in itself once it first scrolls into
- * view, and takes the frame down when it leaves the document. A view that
- * navigates its own frame is torn down to the notice.
+ * view, and takes the frame down when it leaves the document, in or out of
+ * sight. A view that navigates its own frame, or asks to be torn down, is
+ * closed to the notice and not framed again.
  *
  * Without a sandbox proxy the frame is `srcdoc` with `sandbox="allow-scripts"`
  * (an opaque origin) and the view's CSP as the first `<meta>` of its `<head>`.
@@ -224,20 +238,44 @@ export function viewFrame(connect: McpAppViewConnect): McpAppViewMount {
     // time it is in view it is framed again, from the cached resource.
     let opening: Promise<(notice: boolean) => void> | null = null;
     let visits = 0;
-    const observer = new IntersectionObserver((entries) => {
+    const leave = (): void => {
+      removal.disconnect();
+      visits += 1;
+      const leaving = opening;
+      opening = null;
+      void leaving?.then((close) => close(false));
+    };
+    // A removal out of sight, or under display:none, changes no intersection,
+    // so it is watched for in every root the node is in, up to the document.
+    const removal = new MutationObserver(() => (node.isConnected ? watch() : leave()));
+    const watch = (): void => {
+      removal.disconnect();
+      let root = node.getRootNode();
+      removal.observe(root, { childList: true, subtree: true });
+      while (root instanceof ShadowRoot) {
+        root = root.host.getRootNode();
+        removal.observe(root, { childList: true, subtree: true });
+      }
+    };
+    const sight = new IntersectionObserver((entries) => {
       if (!node.isConnected) {
-        visits += 1;
-        const leaving = opening;
-        opening = null;
-        void leaving?.then((close) => close(false));
+        leave();
         return;
       }
       if (opening === null && entries.some((entry) => entry.isIntersecting)) {
         const visit = visits;
-        opening = openView(node, view, services, state, connect, () => visit === visits);
+        watch();
+        opening = openView(node, view, services, state, connect, {
+          current: () => visit === visits,
+          unwatch: () => removal.disconnect(),
+          end: () => {
+            removal.disconnect();
+            sight.disconnect();
+          },
+        });
       }
     });
-    observer.observe(node);
+    sight.observe(node);
     return node;
   };
 }

@@ -2241,7 +2241,10 @@ with no `id` sends no `serverId`, and its views draw the notice.
 
 The view is framed once it first scrolls into sight: in a `srcdoc` frame with
 `sandbox="allow-scripts"` and the view's CSP as the first `<meta>` of its head,
-or, with `sandboxProxyUrl`, in the proxy on its own origin. A `srcdoc` frame
+or, with `sandboxProxyUrl`, in the proxy on its own origin. When the view leaves
+the document, in sight or not (a thread switch, a cleared conversation, or the
+chat itself removed), its frame and bridge go, and it is framed again if it
+returns. A `srcdoc` frame
 inherits the host page's CSP, so a host with a strict `script-src` sets a proxy.
 
 **The bridge** is JSON-RPC over `postMessage` (MCP Apps 2026-01-26), read only

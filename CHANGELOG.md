@@ -34,8 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   own origin (`allow-scripts allow-same-origin`, the cleaned CSP also on the URL as `?csp=`), sent
   the view in `ui/notifications/sandbox-resource-ready` once it says
   `ui/notifications/sandbox-proxy-ready`. A view that navigates its frame is torn down to the
-  notice; one the page moves reloads and boots again, and one that leaves the document is framed
-  again from the cache when it returns. No `allow` permissions are granted.
+  notice; one the page moves reloads and boots again, and one that leaves the document, in sight or
+  not (scrolled away, under `display: none`, or with the chat it is in), has its bridge stopped and
+  is framed again from the cache if it returns. A view closed to the notice is not framed again. No `allow` permissions are granted.
   **A host that called `registerMcpApps` on 0.5.0 now shows live frames with nothing to opt into,
   but a `srcdoc` frame inherits the host page's CSP:** under a strict `script-src` the view stays
   blank, so such a host sets `sandboxProxyUrl` and lets its own `frame-src` reach the proxy's

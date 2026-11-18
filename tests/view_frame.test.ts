@@ -234,6 +234,39 @@ describe("viewFrame", () => {
     expect(node.querySelector(".run-notice")).toBeNull();
   });
 
+  it("stops the bridge when the node leaves with no change in sight to report it", async () => {
+    const disconnect = vi.fn();
+    const node = await shown(
+      services(),
+      vi.fn(() => disconnect),
+    );
+
+    node.remove();
+    await flush();
+
+    expect(disconnect).toHaveBeenCalledTimes(1);
+    expect(node.querySelector("iframe")).toBeNull();
+  });
+
+  it("stops the bridge when the shadow root the node was moved into leaves", async () => {
+    const disconnect = vi.fn();
+    const node = await shown(
+      services(),
+      vi.fn(() => disconnect),
+    );
+    const chat = document.createElement("div");
+    const root = chat.attachShadow({ mode: "open" });
+    document.body.append(chat);
+
+    root.append(node);
+    await flush();
+    expect(disconnect).not.toHaveBeenCalled();
+    chat.remove();
+    await flush();
+
+    expect(disconnect).toHaveBeenCalledTimes(1);
+  });
+
   it("frames the view again from the cache when the node comes back into view", async () => {
     const connect = vi.fn((_channel: McpAppViewChannel) => vi.fn());
     const deps = services();
@@ -315,6 +348,24 @@ describe("viewFrame", () => {
     expect(post).toHaveBeenCalledWith(
       { jsonrpc: "2.0", method: "ui/notifications/tool-input" },
       "*",
+    );
+  });
+
+  it("frames a view closed to the notice never again, and stops watching it", async () => {
+    const connect = vi.fn((_channel: McpAppViewChannel) => vi.fn());
+    const node = await shown(services(), connect);
+
+    connect.mock.calls[0]?.[0].close();
+    node.remove();
+    await flush();
+    document.body.append(node);
+    FakeIntersectionObserver.show(node);
+    await flush();
+
+    expect(connect).toHaveBeenCalledTimes(1);
+    expect(node.querySelector("iframe")).toBeNull();
+    expect(FakeIntersectionObserver.observers.every((observer) => observer.disconnected)).toBe(
+      true,
     );
   });
 
