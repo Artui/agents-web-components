@@ -248,6 +248,40 @@ describe("viewFrame", () => {
     expect(node.querySelector("iframe")).toBeNull();
   });
 
+  it("stops the bridge when the shadow root it is framed in drops it", async () => {
+    const disconnect = vi.fn();
+    const chat = document.createElement("div");
+    const root = chat.attachShadow({ mode: "open" });
+    document.body.append(chat);
+    const node = viewFrame(vi.fn(() => disconnect))(view(), services());
+    root.append(node);
+    FakeIntersectionObserver.show(node);
+    await flush();
+
+    root.replaceChildren();
+    await flush();
+
+    expect(disconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops the bridge when the shadow root it was moved into drops it", async () => {
+    const disconnect = vi.fn();
+    const node = await shown(
+      services(),
+      vi.fn(() => disconnect),
+    );
+    const chat = document.createElement("div");
+    const root = chat.attachShadow({ mode: "open" });
+    document.body.append(chat);
+
+    root.append(node);
+    await flush();
+    root.replaceChildren();
+    await flush();
+
+    expect(disconnect).toHaveBeenCalledTimes(1);
+  });
+
   it("stops the bridge when the shadow root the node was moved into leaves", async () => {
     const disconnect = vi.fn();
     const node = await shown(
@@ -351,7 +385,7 @@ describe("viewFrame", () => {
     );
   });
 
-  it("frames a view closed to the notice never again, and stops watching it", async () => {
+  it("frames a view closed to the notice never again, and stops its sight observer", async () => {
     const connect = vi.fn((_channel: McpAppViewChannel) => vi.fn());
     const node = await shown(services(), connect);
 
