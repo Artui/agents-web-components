@@ -3,6 +3,7 @@ import { ELEMENT_TAG, MCP_APP_MAX_HEIGHT, THEME_EVENT } from "../src/constants.j
 import type { AgUiChat } from "../src/core/ag_ui_chat.js";
 import { defineChat } from "../src/core/define_chat.js";
 import { hostBridge } from "../src/mcp_apps/host_bridge.js";
+import { serverRoute } from "../src/mcp_apps/server_route.js";
 import type { McpAppsHost, McpAppsServices, McpAppView } from "../src/mcp_apps/types.js";
 import type { McpAppViewChannel } from "../src/mcp_apps/view_frame.js";
 import { DEFAULT_UI_STRINGS } from "../src/ui/ui_strings.js";
@@ -328,6 +329,32 @@ describe("hostBridge", () => {
     });
   });
 
+  it("answers a tool call django-ag-ui refuses with the route's own JSON-RPC code", async () => {
+    const fixture = connected();
+    // django-ag-ui's refusal, as docs/mcp-apps.md "The answer" documents it: 200, a coded error.
+    const refusal = { error: { code: -32602, message: "Tool forecast is not available to apps" } };
+    const post = vi.fn(async () => new Response(JSON.stringify(refusal)));
+    vi.mocked(fixture.services.route).mockImplementationOnce(serverRoute({ request: post }, "/r/"));
+
+    request(fixture, 3, "tools/call", { name: "forecast" });
+    await settled();
+
+    expect(fixture.posted[0]).toEqual({ jsonrpc: "2.0", id: 3, error: refusal.error });
+  });
+
+  it("answers -32000 for a failure whose numeric code is not the route's", async () => {
+    const fixture = connected();
+    // A browser's AbortError carries code 20; happy-dom's DOMException has none.
+    const aborted = new DOMException("The operation was aborted.", "AbortError");
+    Object.defineProperty(aborted, "code", { value: 20 });
+    vi.mocked(fixture.services.route).mockRejectedValueOnce(aborted);
+
+    request(fixture, 3, "tools/call", { name: "forecast" });
+    await settled();
+
+    expect(fixture.posted[0]).toMatchObject({ id: 3, error: { code: -32000 } });
+  });
+
   it("answers a failure that is not an Error with its text", async () => {
     const fixture = connected();
     fixture.host.sendMessage.mockRejectedValueOnce("offline");
@@ -400,6 +427,26 @@ describe("hostBridge", () => {
     expect(fixture.posted).toHaveLength(1);
   });
 
+  it.each([
+    ["tools/call", { name: "forecast" }],
+    ["ui/message", { content: { type: "text", text: "hi" } }],
+    ["ui/open-link", { url: "https://example.com/" }],
+  ])("refuses %s from a view that asked to be torn down", async (method, params) => {
+    const fixture = connected();
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    initialised(fixture);
+    notify(fixture, "ui/notifications/request-teardown");
+    fixture.posted.length = 0;
+
+    request(fixture, 4, method, params);
+    await settled();
+
+    expect(fixture.posted[0]).toMatchObject({ id: 4, error: { code: -32000 } });
+    expect(fixture.services.route).not.toHaveBeenCalled();
+    expect(fixture.host.sendMessage).not.toHaveBeenCalled();
+    expect(open).not.toHaveBeenCalled();
+  });
+
   it("closes a view that never answers its teardown after a wait", async () => {
     vi.useFakeTimers();
     const fixture = connected();
@@ -465,6 +512,32 @@ describe("what the bridge reads of <ag-ui-chat>", () => {
     wrapper.append(el);
     document.body.append(wrapper);
     expect(el.locale).toBe("de-AT");
+  });
+
+  it("reads the locale from a lang outside the shadow root the chat is drawn in", () => {
+    const page = document.createElement("div");
+    page.lang = "de";
+    const app = document.createElement("div");
+    const root = app.attachShadow({ mode: "open" });
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    root.append(el);
+    page.append(app);
+    document.body.append(page);
+
+    expect(el.locale).toBe("de");
+  });
+
+  it("keeps the browser's language for an empty lang nearest the chat", () => {
+    const page = document.createElement("div");
+    page.lang = "de";
+    const app = document.createElement("div");
+    app.setAttribute("lang", "");
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    app.attachShadow({ mode: "open" }).append(el);
+    page.append(app);
+    document.body.append(page);
+
+    expect(el.locale).toBe(navigator.language);
   });
 
   it("fires ag-ui-theme with the drawn scheme when the theme attribute changes", () => {

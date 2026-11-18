@@ -105,7 +105,10 @@ interface Drawn {
 }
 
 /** An `<ag-ui-chat>` whose run draws one view, once that view has its tool result. */
-async function drawn(attributes: Readonly<Record<string, string>> = {}): Promise<Drawn> {
+async function drawn(
+  attributes: Readonly<Record<string, string>> = {},
+  call: unknown = { result: CALL_RESULT },
+): Promise<Drawn> {
   const box = document.createElement("div");
   box.style.width = "600px";
   const el = document.createElement(ELEMENT_TAG) as AgUiChat;
@@ -124,12 +127,17 @@ async function drawn(attributes: Readonly<Record<string, string>> = {}): Promise
         ),
     }).agent;
   const request = vi.spyOn(el, "request").mockImplementation(async (_url, init) => {
+    // django-ag-ui's answer (docs/mcp-apps.md, "The answer"): { result } or a coded { error }.
     const body = JSON.parse(String(init?.body));
-    const result =
+    const answer =
       body.method === "resources/read"
-        ? { contents: [{ uri: URI, mimeType: "text/html;profile=mcp-app", text: viewHtml() }] }
-        : CALL_RESULT;
-    return new Response(JSON.stringify(result));
+        ? {
+            result: {
+              contents: [{ uri: URI, mimeType: "text/html;profile=mcp-app", text: viewHtml() }],
+            },
+          }
+        : call;
+    return new Response(JSON.stringify(answer));
   });
   registerMcpApps(el, { url: ROUTE });
   box.append(el);
@@ -190,6 +198,16 @@ describe("the host bridge, against django-spec-mcp's view bridge", () => {
       method: "tools/call",
       params: { name: "forecast", arguments: { day: "monday" } },
     });
+  });
+
+  it("gives the view the route's own JSON-RPC code when django-ag-ui refuses a tool call", async () => {
+    const refusal = { code: -32602, message: "Tool forecast is not available to apps" };
+    const { act } = await drawn({}, { error: refusal });
+
+    act("callTool", "forecast", {});
+    const done = (await report("done")) as Record<string, unknown>;
+
+    expect(done["error"]).toEqual(refusal);
   });
 
   it("sends a ui/message as the chat's own message", async () => {

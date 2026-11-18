@@ -2,6 +2,7 @@ import { afterEach, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { ELEMENT_TAG } from "../../src/constants.js";
 import type { AgUiChat } from "../../src/core/ag_ui_chat.js";
 import { defineChat } from "../../src/core/define_chat.js";
+import { sandboxProxy } from "../../src/mcp_apps/sandbox_proxy.js";
 import type { McpAppsServices, McpAppView } from "../../src/mcp_apps/types.js";
 import { viewCsp } from "../../src/mcp_apps/view_csp.js";
 import { type McpAppViewChannel, viewFrame } from "../../src/mcp_apps/view_frame.js";
@@ -93,6 +94,24 @@ async function drawn(
 }
 
 /**
+ * Resolves once an IntersectionObserver has seen `node` out of sight, and a
+ * while after, so the view's own has too: a removal before then is still a
+ * change in sight, which the view's observer would report.
+ */
+async function outOfSight(node: Element): Promise<void> {
+  await new Promise<void>((resolve) => {
+    const probe = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => !entry.isIntersecting)) {
+        probe.disconnect();
+        resolve();
+      }
+    });
+    probe.observe(node);
+  });
+  await new Promise((resolve) => setTimeout(resolve, 300));
+}
+
+/**
  * The same server under another loopback name, so another origin. Which names
  * the server listens on depends on how the machine resolves localhost, so the
  * first that answers is used.
@@ -151,12 +170,14 @@ describe("viewFrame", () => {
       async () =>
         new Response(
           JSON.stringify({
-            contents: [
-              {
-                uri: URI,
-                text: `<script>parent.postMessage({ kind: "booted", origin: String(window.origin) }, "*")</script>`,
-              },
-            ],
+            result: {
+              contents: [
+                {
+                  uri: URI,
+                  text: `<script>parent.postMessage({ kind: "booted", origin: String(window.origin) }, "*")</script>`,
+                },
+              ],
+            },
           }),
         ),
     );
@@ -283,6 +304,43 @@ describe("viewFrame", () => {
     expect(disconnect).toHaveBeenCalledTimes(1);
   });
 
+  it("stops the bridge when a view scrolled out of sight leaves the document", async () => {
+    const disconnect = vi.fn();
+    const connect = vi.fn((_channel: McpAppViewChannel) => disconnect);
+    const transcript = document.createElement("div");
+    Object.assign(transcript.style, { height: "200px", overflow: "auto" });
+    document.body.append(transcript);
+    const node = viewFrame(connect)(view(), services("<p>view</p>"));
+    const spacer = document.createElement("div");
+    spacer.style.height = "2000px";
+    transcript.append(node, spacer);
+    await until(() => (connect.mock.calls.length > 0 ? true : undefined), "the frame");
+
+    transcript.scrollTop = transcript.scrollHeight;
+    await outOfSight(node);
+    transcript.replaceChildren();
+
+    await until(() => (disconnect.mock.calls.length > 0 ? true : undefined), "disconnect");
+    expect(disconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops the bridge when a view under display:none leaves the document", async () => {
+    const disconnect = vi.fn();
+    const connect = vi.fn((_channel: McpAppViewChannel) => disconnect);
+    const pane = document.createElement("div");
+    document.body.append(pane);
+    const node = viewFrame(connect)(view(), services("<p>view</p>"));
+    pane.append(node);
+    await until(() => (connect.mock.calls.length > 0 ? true : undefined), "the frame");
+
+    pane.style.display = "none";
+    await outOfSight(node);
+    pane.remove();
+
+    await until(() => (disconnect.mock.calls.length > 0 ? true : undefined), "disconnect");
+    expect(disconnect).toHaveBeenCalledTimes(1);
+  });
+
   it("loads a view through the shipped sandbox proxy page, on the proxy's origin", async () => {
     const proxyUrl = `${await otherOrigin()}/${inject("sandboxProxyPage")}`;
     const connect = vi.fn((_channel: McpAppViewChannel) => vi.fn());
@@ -316,5 +374,32 @@ describe("viewFrame", () => {
 
     connect.mock.calls[0]?.[0].close();
     expect(frame.isConnected).toBe(false);
+  });
+
+  it("answers a proxy-ready from the proxy's window only on the proxy's origin", async () => {
+    const stand = document.createElement("iframe");
+    document.body.append(stand);
+    const win = stand.contentWindow as Window;
+    const answered = vi.spyOn(win, "postMessage").mockImplementation(() => undefined);
+    const frame = document.createElement("iframe");
+    Object.defineProperty(frame, "contentWindow", { get: () => win });
+    const proxy = sandboxProxy(
+      frame,
+      "https://proxy.example/sandbox.html",
+      "<p>view</p>",
+      viewCsp(undefined).domains,
+    );
+    const ready = { jsonrpc: "2.0", method: "ui/notifications/sandbox-proxy-ready" };
+    const from = (origin: string): void => {
+      window.dispatchEvent(new MessageEvent("message", { data: ready, source: win, origin }));
+    };
+
+    from("https://elsewhere.example");
+    expect(answered).not.toHaveBeenCalled();
+    from(proxy.origin);
+    expect(answered).toHaveBeenCalledTimes(1);
+
+    proxy.dispose();
+    stand.remove();
   });
 });

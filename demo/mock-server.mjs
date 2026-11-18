@@ -844,7 +844,7 @@ const MCP_APP_VIEW = `<!doctype html>
       $("result").textContent = text(result);
       $("log").textContent = "tools/call answered at " + new Date().toLocaleTimeString();
     } catch (error) {
-      $("log").textContent = "tools/call refused: " + error.message;
+      $("log").textContent = "tools/call refused (" + error.code + "): " + error.message;
     }
     size();
   });
@@ -870,23 +870,29 @@ const MCP_APP_VIEW = `<!doctype html>
 
 let salesCalls = 0;
 
-// The host's mcp-apps/ route: the view's resource, and the tool it calls.
+// The host's mcp-apps/ route: the view's resource, and the tool it calls. It
+// answers as django-ag-ui does: 200 with { result }, or { error: { code, message } }.
 function handleMcpApps(res, body) {
   const { method, params } = JSON.parse(body || "{}");
-  const json = (status, payload) => {
-    res.writeHead(status, { "Content-Type": "application/json" });
+  const json = (payload) => {
+    res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify(payload));
   };
   if (method === "resources/read") {
-    json(200, { contents: [{ uri: params?.uri, mimeType: "text/html;profile=mcp-app", text: MCP_APP_VIEW }] });
+    json({ result: { contents: [{ uri: params?.uri, mimeType: "text/html;profile=mcp-app", text: MCP_APP_VIEW }] } });
     return;
   }
   if (method === "tools/call") {
     salesCalls += 1;
-    json(200, { content: [{ type: "text", text: `${12 + salesCalls} orders this week (refreshed ${salesCalls}x)` }] });
+    // Every third refresh is refused with a code, which the view shows as it came.
+    if (salesCalls % 3 === 0) {
+      json({ error: { code: -32602, message: "weekly_sales is busy in the demo: refresh again" } });
+      return;
+    }
+    json({ result: { content: [{ type: "text", text: `${12 + salesCalls} orders this week (refreshed ${salesCalls}x)` }] } });
     return;
   }
-  json(404, { error: `no ${method} here` });
+  json({ error: { code: -32601, message: `no ${method} here` } });
 }
 
 async function serveFile(res, path, contentType) {

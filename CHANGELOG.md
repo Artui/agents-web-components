@@ -31,7 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `./threads` and placing the element.
 - **`./mcp-apps` draws a view's sandboxed frame instead of the notice.** Once the view first scrolls
   into sight it reads its HTML through `resources/read` on `url` (once per server and URI for the
-  page; a failed read draws the notice, warns, and is read again next time) and frames it. Without
+  page; a failed read draws the notice, warns, and is read again next time) and frames it. The
+  route is read as django-ag-ui 0.80.0's answers: `200` with `{"result": ...}`, the MCP result,
+  or `{"error": {"code", "message"}}` for a call it cannot relay. **A host serving its own route
+  wraps its answer in `result`**; a bare result object now fails the read. Without
   `sandboxProxyUrl` the frame is `srcdoc` with `sandbox="allow-scripts"` and the view's CSP as the
   first `<meta>` of its `<head>`: `_meta.ui.csp`'s domains, or the MCP Apps restrictive default,
   plus `font-src 'self' data:`, `object-src 'none'`, `frame-src` and `base-uri`, with any declared
@@ -39,8 +42,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   own origin (`allow-scripts allow-same-origin`, the cleaned CSP also on the URL as `?csp=`), sent
   the view in `ui/notifications/sandbox-resource-ready` once it says
   `ui/notifications/sandbox-proxy-ready`. A view that navigates its frame is torn down to the
-  notice; one the page moves reloads and boots again, and one that leaves the document is framed
-  again from the cache when it returns. No `allow` permissions are granted.
+  notice; one the page moves reloads and boots again, and one that leaves the document, in sight or
+  not (scrolled away, under `display: none`, or with the chat it is in), has its bridge stopped and
+  is framed again from the cache if it returns. A view closed to the notice is not framed again. No `allow` permissions are granted.
   **A host that called `registerMcpApps` on 0.5.0 now shows live frames with nothing to opt into,
   but a `srcdoc` frame inherits the host page's CSP:** under a strict `script-src` the view stays
   blank, so such a host sets `sandboxProxyUrl` and lets its own `frame-src` reach the proxy's
@@ -55,17 +59,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `ui/notifications/initialized` does the view get `tool-input` then `tool-result`, and from then
   `host-context-changed` when the `theme` attribute, the system scheme or the frame's width changes.
   `size-changed` sets the frame's height, at most 640px. `tools/call` goes to the route with the
-  view's `serverId`; `ui/message` (an array of content blocks or one block) is sent as the user's
+  view's `serverId`, and a route's coded `error` reaches the view with its own code (`-32000` for
+  any other failure); `ui/message` (an array of content blocks or one block) is sent as the user's
   next message; `ui/open-link` opens an `http(s)` URL in a `noopener` tab; all three are refused
-  while the view is drawn from a stored conversation. `ui/request-display-mode` is answered
+  while the view is drawn from a stored conversation, and once it has asked to be torn down. `ui/request-display-mode` is answered
   `inline`; a view that sends `ui/notifications/request-teardown` is sent `ui/resource-teardown`
   and closed to the notice; any other request is answered `-32601`. Tested against
   django-spec-mcp's own view bridge. **A host that called `registerMcpApps` gets this with nothing
   to opt into.**
 - **`<ag-ui-chat>` reports its theme to a separate entry**: the read-only `colorScheme` (`"light"`
-  or `"dark"`, the scheme drawn now) and `locale` (the nearest `lang`, else the browser's), a
-  `tokenValues(names)` method resolving custom properties as the panel computes them, and an
-  `ag-ui-theme` event (`THEME_EVENT`, `{ scheme }`) when the `theme` attribute changes.
+  or `"dark"`, the scheme drawn now) and `locale` (the nearest `lang`, looked for past any shadow
+  root the element is in, else the browser's), a `tokenValues(names)` method resolving custom
+  properties as the panel computes them, and an `ag-ui-theme` event (`THEME_EVENT`, `{ scheme }`)
+  when the `theme` attribute changes.
 
 ### Fixed
 

@@ -533,9 +533,22 @@ export class AgUiChat extends HTMLElement {
     return this.#drawnScheme();
   }
 
-  /** The language the element is in: its nearest `lang` attribute, else the browser's. */
+  /**
+   * The language the element is in: its nearest `lang` attribute, looked for
+   * past every shadow root it is drawn in, else the browser's.
+   */
   get locale(): string {
-    return this.closest<HTMLElement>("[lang]")?.lang || navigator.language;
+    let node: Element | null = this;
+    while (node !== null) {
+      const lang = node.closest<HTMLElement>("[lang]");
+      if (lang !== null) {
+        return lang.lang || navigator.language;
+      }
+      // closest() stops at a shadow root, so the walk goes on from its host.
+      const root = node.getRootNode();
+      node = root instanceof ShadowRoot ? root.host : null;
+    }
+    return navigator.language;
   }
 
   /**
