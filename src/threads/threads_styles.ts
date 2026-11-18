@@ -1,9 +1,9 @@
 // The list's shadow stylesheet. Public --ag-ui-* tokens are read into --_*
 // aliases on :host only, as the chat's token styles do, so a theme set on an
-// ancestor reaches the list too.
+// ancestor reaches the list too. It sets no color-scheme: it sits in the host's
+// own chrome, so it inherits the page's, and light-dark picks that half.
 export const THREADS_STYLES: string = `
 :host {
-  color-scheme: light dark;
   --_fg: var(--ag-ui-fg, light-dark(#1b1b1d, #ececee));
   --_bg: var(--ag-ui-bg, light-dark(#ffffff, #161618));
   --_accent: var(--ag-ui-accent, light-dark(#232326, #f0f0f2));

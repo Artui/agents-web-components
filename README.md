@@ -2100,8 +2100,9 @@ on screen as current, and drives the chat through the [thread API](#driving-the-
   `deleteConfirm`, `deleteYes`, `deleteNo`), merged over the English, so `{ deleteNo: "Abbrechen" }`
   changes that one string.
 - **Styling.** Parts `list`, `row` (plus `row-active` on the thread on screen), `row-button`,
-  `delete`, `confirm`, `empty`. The chat's colour tokens apply. The host carries `data-empty` when
-  the chat has no conversations.
+  `delete`, `confirm`, `empty`. The chat's colour tokens apply, and the list takes the light or
+  dark half of each from the page's own `color-scheme`, since it sits in your chrome rather than
+  in the chat's. The host carries `data-empty` when the chat has no conversations.
 
 The main `/bundle` does not carry the element. Without a build step, load
 `/threads/bundle` beside it:

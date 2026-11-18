@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and then calls `switchThread`, which cancels a run in flight as the built-in list does. It draws
   no run marks (running, waiting, failed, unread) yet: those wait for a store that reports run
   status. Parts `list`, `row`, `row-active`, `row-button`, `delete`, `confirm`, `empty`; the chat's
-  tokens apply. `refresh()` re-lists; `strings` translates. `./threads/bundle` is the same entry
+  tokens apply, in the light or dark half the page's own `color-scheme` picks. `refresh()` re-lists; `strings` translates. `./threads/bundle` is the same entry
   as a fourth vendored file, inlining none of the element; the main entries and bundle are
   unchanged. A host opts in by importing `./threads` and placing the element.
 

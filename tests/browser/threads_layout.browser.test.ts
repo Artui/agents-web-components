@@ -12,7 +12,8 @@ import type { ThreadRow } from "../../src/threads/types.js";
  * The thread list's boxes, which happy-dom does not lay out: pills that stay
  * inside a narrow bar and scroll rather than wrap, titles cut with an ellipsis
  * inside their own pill, rows hidden by the inline confirm taking no space, and
- * a pill's delete and confirm that stay on the pill's one line.
+ * a pill's delete and confirm that stay on the pill's one line, and colours
+ * that follow the host page's scheme.
  */
 
 const LONG = "A conversation about the quarterly numbers and what to do next";
@@ -183,5 +184,18 @@ describe("a pill's delete", () => {
       all(list, ".row").map((row) => Math.round(row.getBoundingClientRect().top)),
     );
     expect(tops.size).toBe(1);
+  });
+});
+
+describe("the scheme", () => {
+  it("follows the host page's color-scheme, not the system's", async () => {
+    const list = await mount("list", 320, rows(1));
+    const bar = list.parentElement as HTMLElement;
+    const title = (): string => getComputedStyle(all(list, ".title")[0] as HTMLElement).color;
+
+    bar.style.colorScheme = "light";
+    expect(title()).toBe("rgb(27, 27, 29)");
+    bar.style.colorScheme = "dark";
+    expect(title()).toBe("rgb(236, 236, 238)");
   });
 });
