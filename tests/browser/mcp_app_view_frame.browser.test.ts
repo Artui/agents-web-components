@@ -322,4 +322,31 @@ describe("viewFrame", () => {
     connect.mock.calls[0]?.[0].close();
     expect(frame.isConnected).toBe(false);
   });
+
+  it("answers a proxy-ready from the proxy's window only on the proxy's origin", async () => {
+    const proxyUrl = `${await otherOrigin()}/tests/browser/fixtures/sandbox_proxy.html`;
+    const { frame } = await drawn(services("<p>view</p>", undefined, proxyUrl));
+    await message("proxy-received");
+    const ready = { jsonrpc: "2.0", method: "ui/notifications/sandbox-proxy-ready" };
+    const from = (origin: string): void => {
+      window.dispatchEvent(
+        new MessageEvent("message", { data: ready, source: frame.contentWindow, origin }),
+      );
+    };
+
+    from("https://elsewhere.example");
+    // The control: the same message on the proxy's origin is answered, and the
+    // proxy reports answers in the order they were posted.
+    from(new URL(proxyUrl).origin);
+    await until(
+      () =>
+        received.filter((entry) => entry.data?.["kind"] === "proxy-received").length > 1
+          ? true
+          : undefined,
+      "the control's answer",
+    );
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(received.filter((entry) => entry.data?.["kind"] === "proxy-received")).toHaveLength(2);
+  });
 });
