@@ -21,6 +21,8 @@ function services(strings: Partial<UiStrings> = {}): McpAppsServices {
     },
     route: vi.fn(),
     sandboxProxyUrl: "https://sandbox.example/proxy.html",
+    views: new WeakMap(),
+    resources: new Map(),
   };
 }
 
@@ -55,11 +57,13 @@ describe("mcpAppsRenderer", () => {
     expect(calls.mock.calls[0]?.[0]).toMatchObject({ live: false });
   });
 
-  it("returns the node already drawn on a redraw, so its frame is not moved", () => {
+  it("returns the view node it drew on a redraw, so its frame is not moved", () => {
     const { mount, calls } = viewMount();
+    const deps = services();
     const previous = document.createElement("div");
+    deps.views.set(previous, { live: true });
 
-    const node = mcpAppsRenderer(mount, services())(CONTENT, {
+    const node = mcpAppsRenderer(mount, deps)(CONTENT, {
       messageId: "m1",
       previous,
       live: true,
@@ -67,6 +71,36 @@ describe("mcpAppsRenderer", () => {
 
     expect(node).toBe(previous);
     expect(calls).not.toHaveBeenCalled();
+  });
+
+  it("passes a redraw's live through to the view it keeps", () => {
+    const { mount } = viewMount();
+    const deps = services();
+    const previous = document.createElement("div");
+    const state = { live: true };
+    deps.views.set(previous, state);
+    const render = mcpAppsRenderer(mount, deps);
+
+    render(CONTENT, { messageId: "m1", previous, live: false });
+    expect(state.live).toBe(false);
+    render(CONTENT, { messageId: "m1", previous, live: true });
+    expect(state.live).toBe(true);
+  });
+
+  it("replaces a previous node it did not draw, such as the built-in notice", () => {
+    const { mount, calls } = viewMount();
+    const previous = document.createElement("div");
+    previous.className = "run-notice run-notice--mcp-app";
+
+    const node = mcpAppsRenderer(mount, services())(CONTENT, {
+      messageId: "m1",
+      previous,
+      live: true,
+    });
+
+    expect(calls).toHaveBeenCalledTimes(1);
+    expect(node).not.toBe(previous);
+    expect(node).toBe(calls.mock.results[0]?.value);
   });
 
   it("draws the notice for an activity that names no server", () => {
