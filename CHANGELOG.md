@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Starter prompts sit against the composer without a greeting.** With `data-greeting="off"` on a page,
+  or in any panel placement, the empty region (the starter chips and any host `slot="empty"` content)
+  was centred in the transcript, a screen-height from the field it starts. It now rests at the foot,
+  directly over the composer, so slotted empty content moves down with it. The greeting layout and
+  the phone breakpoint are unchanged.
+
 ## [0.5.0] — 2026-11-17
 
 ### Added

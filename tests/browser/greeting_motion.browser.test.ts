@@ -314,13 +314,12 @@ describe("the ways back to the centre, and out of it, that snap", () => {
     expect(belowComposer(el)).toBeLessThanOrEqual(1);
     expect(greetingPainted(el)).toBe(false);
     expect(ruleDrawn(el)).toBe(true);
-    // The starters stay where they are on a docked page, in the middle of the
-    // transcript, rather than moving down to sit under a greeting nobody sees.
+    // The starters sit against the composer while docked, as they do after it.
     const middle = (box: DOMRect): number => box.top + box.height / 2;
     const empty = part(el, ".empty").getBoundingClientRect();
     expect(
       Math.abs(middle(empty) - middle(part(el, ".messages").getBoundingClientRect())),
-    ).toBeLessThanOrEqual(1);
+    ).toBeGreaterThan(20);
     const held = rowTop(el);
 
     const tops = await sampleTops(el, 450);
@@ -348,7 +347,7 @@ describe("the ways back to the centre, and out of it, that snap", () => {
     const empty = part(el, ".empty").getBoundingClientRect();
     expect(
       Math.abs(middle(empty) - middle(part(el, ".messages").getBoundingClientRect())),
-    ).toBeLessThanOrEqual(1);
+    ).toBeGreaterThan(20);
 
     await wait(400);
     expect(belowComposer(el)).toBeGreaterThan(100);
