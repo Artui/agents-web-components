@@ -844,7 +844,7 @@ const MCP_APP_VIEW = `<!doctype html>
       $("result").textContent = text(result);
       $("log").textContent = "tools/call answered at " + new Date().toLocaleTimeString();
     } catch (error) {
-      $("log").textContent = "tools/call refused: " + error.message;
+      $("log").textContent = "tools/call refused (" + error.code + "): " + error.message;
     }
     size();
   });
@@ -884,6 +884,11 @@ function handleMcpApps(res, body) {
   }
   if (method === "tools/call") {
     salesCalls += 1;
+    // Every third refresh is refused with a code, which the view shows as it came.
+    if (salesCalls % 3 === 0) {
+      json({ error: { code: -32602, message: "weekly_sales is busy in the demo: refresh again" } });
+      return;
+    }
     json({ result: { content: [{ type: "text", text: `${12 + salesCalls} orders this week (refreshed ${salesCalls}x)` }] } });
     return;
   }
