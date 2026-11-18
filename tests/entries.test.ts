@@ -175,7 +175,8 @@ describe("the package entries", () => {
           path === "src/chat.ts" ||
           path === "src/core/ag_ui_chat.ts" ||
           path === "src/ui/ui_strings.ts" ||
-          path.startsWith("src/a2ui") ||
+          // A view's ui/open-link goes through A2UI's URL check, a leaf with no imports.
+          (path.startsWith("src/a2ui") && path !== "src/a2ui/safe_url.ts") ||
           path.includes("@ag-ui"),
       ),
     ).toEqual([]);

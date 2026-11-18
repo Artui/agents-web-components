@@ -1,4 +1,5 @@
 import { PYDANTIC_AI_ACTIVITY_TYPE } from "./constants.js";
+import { hostBridge } from "./mcp_apps/host_bridge.js";
 import { mcpAppsRenderer } from "./mcp_apps/mcp_apps_renderer.js";
 import { serverRoute } from "./mcp_apps/server_route.js";
 import type { McpAppsHost, McpAppsOptions } from "./mcp_apps/types.js";
@@ -45,7 +46,9 @@ export function registerMcpApps(chat: McpAppsHost, options: McpAppsOptions): voi
   chat.registerActivityRenderer({
     type: PYDANTIC_AI_ACTIVITY_TYPE.MCP_APPS,
     render: mcpAppsRenderer(
-      viewFrame(() => () => undefined),
+      // Inline is the only mode this host shows a view in, so a request for
+      // another is answered with it.
+      viewFrame(hostBridge(() => "inline")),
       services,
     ),
   });
