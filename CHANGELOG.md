@@ -17,9 +17,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and then calls `switchThread`, which cancels a run in flight as the built-in list does. It draws
   no run marks (running, waiting, failed, unread) yet: those wait for a store that reports run
   status. Parts `list`, `row`, `row-active`, `row-button`, `delete`, `confirm`, `empty`; the chat's
-  tokens apply, in the light or dark half the page's own `color-scheme` picks. `refresh()` re-lists; `strings` translates. `./threads/bundle` is the same entry
-  as a fourth vendored file, inlining none of the element; the main entries and bundle are
-  unchanged. A host opts in by importing `./threads` and placing the element.
+  tokens apply, in the light or dark half the page's own `color-scheme` picks. `refresh()` re-lists;
+  `strings` translates. `./threads/bundle` is the same entry as a fourth vendored file, inlining
+  none of the element; the main entries and bundle are unchanged. A host opts in by importing
+  `./threads` and placing the element.
+
+### Fixed
+
+- **Starter prompts sit against the composer without a greeting.** With `data-greeting="off"` on a
+  page, or in any panel placement, the empty region (the starter chips and any host `slot="empty"`
+  content) was centred in the transcript, a screen-height from the field it starts. It now rests at
+  the foot, directly over the composer, so slotted empty content moves down with it. The greeting
+  layout and the phone breakpoint are unchanged.
 
 ## [0.5.0] — 2026-11-17
 
