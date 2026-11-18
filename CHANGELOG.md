@@ -77,6 +77,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The checkpoint panel ("Continue a run") is opaque.** It took its fill from the answer tint,
+  which the default, soft and ledger themes leave transparent, so the transcript showed through the
+  open panel and the "branched" badge drew no pill. It is now the chat's own colour with the
+  theme's tint over it; classic and code look as before. Its rows are also 4px apart now: they sat
+  in a list the panel's gap did not reach, so each row's surface ran into the next. A host opts in to
+  nothing.
+
 - **Starter prompts sit against the composer without a greeting.** With `data-greeting="off"` on a
   page, or in any panel placement, the empty region (the starter chips and any host `slot="empty"`
   content) was centred in the transcript, a screen-height from the field it starts. It now rests at
