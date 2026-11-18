@@ -3,6 +3,7 @@ import { ELEMENT_TAG, MCP_APP_MAX_HEIGHT, THEME_EVENT } from "../src/constants.j
 import type { AgUiChat } from "../src/core/ag_ui_chat.js";
 import { defineChat } from "../src/core/define_chat.js";
 import { hostBridge } from "../src/mcp_apps/host_bridge.js";
+import { serverRoute } from "../src/mcp_apps/server_route.js";
 import type { McpAppsHost, McpAppsServices, McpAppView } from "../src/mcp_apps/types.js";
 import type { McpAppViewChannel } from "../src/mcp_apps/view_frame.js";
 import { DEFAULT_UI_STRINGS } from "../src/ui/ui_strings.js";
@@ -326,6 +327,32 @@ describe("hostBridge", () => {
       id: 3,
       error: { code: -32000, message: "the route answered 403" },
     });
+  });
+
+  it("answers a tool call django-ag-ui refuses with the route's own JSON-RPC code", async () => {
+    const fixture = connected();
+    // django-ag-ui's refusal, as docs/mcp-apps.md "The answer" documents it: 200, a coded error.
+    const refusal = { error: { code: -32602, message: "Tool forecast is not available to apps" } };
+    const post = vi.fn(async () => new Response(JSON.stringify(refusal)));
+    vi.mocked(fixture.services.route).mockImplementationOnce(serverRoute({ request: post }, "/r/"));
+
+    request(fixture, 3, "tools/call", { name: "forecast" });
+    await settled();
+
+    expect(fixture.posted[0]).toEqual({ jsonrpc: "2.0", id: 3, error: refusal.error });
+  });
+
+  it("answers -32000 for a failure whose numeric code is not the route's", async () => {
+    const fixture = connected();
+    // A browser's AbortError carries code 20; happy-dom's DOMException has none.
+    const aborted = new DOMException("The operation was aborted.", "AbortError");
+    Object.defineProperty(aborted, "code", { value: 20 });
+    vi.mocked(fixture.services.route).mockRejectedValueOnce(aborted);
+
+    request(fixture, 3, "tools/call", { name: "forecast" });
+    await settled();
+
+    expect(fixture.posted[0]).toMatchObject({ id: 3, error: { code: -32000 } });
   });
 
   it("answers a failure that is not an Error with its text", async () => {

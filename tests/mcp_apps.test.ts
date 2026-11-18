@@ -44,7 +44,7 @@ const VIEW = {
 
 function resourceResponse(): Response {
   return new Response(
-    JSON.stringify({ contents: [{ uri: VIEW.resourceUri, text: "<p>forecast</p>" }] }),
+    JSON.stringify({ result: { contents: [{ uri: VIEW.resourceUri, text: "<p>forecast</p>" }] } }),
     { status: 200, headers: { "Content-Type": "application/json" } },
   );
 }

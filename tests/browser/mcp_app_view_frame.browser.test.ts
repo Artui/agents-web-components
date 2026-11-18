@@ -150,12 +150,14 @@ describe("viewFrame", () => {
       async () =>
         new Response(
           JSON.stringify({
-            contents: [
-              {
-                uri: URI,
-                text: `<script>parent.postMessage({ kind: "booted", origin: String(window.origin) }, "*")</script>`,
-              },
-            ],
+            result: {
+              contents: [
+                {
+                  uri: URI,
+                  text: `<script>parent.postMessage({ kind: "booted", origin: String(window.origin) }, "*")</script>`,
+                },
+              ],
+            },
           }),
         ),
     );

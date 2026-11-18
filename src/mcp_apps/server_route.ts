@@ -1,9 +1,27 @@
+import { MCP_APPS_ROUTE_ERROR } from "../constants.js";
 import type { McpAppsHost, McpAppsRoute } from "./types.js";
+
+type Body = Readonly<Record<string, unknown>>;
+
+function isRecord(value: unknown): value is Body {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** The route's own refusal, carrying its JSON-RPC `code` for the bridge to forward. */
+function refusal(error: Body): Error | null {
+  const { code, message } = error;
+  if (!Number.isInteger(code) || typeof message !== "string") {
+    return null;
+  }
+  return Object.assign(new Error(message), { name: MCP_APPS_ROUTE_ERROR, code });
+}
 
 /**
  * The route a view's requests go through: a JSON POST of
  * {@link McpAppsRouteRequest} to `url` over `host.request`, so it carries the
- * element's headers (the CSRF token among them) and cookie policy.
+ * element's headers (the CSRF token among them) and cookie policy. The route
+ * answers `{ result }`, which this resolves to, or `{ error: { code, message } }`,
+ * which it rejects with as an error named {@link MCP_APPS_ROUTE_ERROR}.
  */
 export function serverRoute(host: Pick<McpAppsHost, "request">, url: string): McpAppsRoute {
   return async (request) => {
@@ -16,9 +34,13 @@ export function serverRoute(host: Pick<McpAppsHost, "request">, url: string): Mc
       throw new Error(`the mcp-apps route answered ${request.method} with ${response.status}`);
     }
     const body: unknown = await response.json();
-    if (typeof body !== "object" || body === null || Array.isArray(body)) {
-      throw new Error(`the mcp-apps route answered ${request.method} with no result object`);
+    if (isRecord(body) && isRecord(body["result"])) {
+      return body["result"];
     }
-    return body as Readonly<Record<string, unknown>>;
+    const refused = isRecord(body) && isRecord(body["error"]) ? refusal(body["error"]) : null;
+    if (refused !== null) {
+      throw refused;
+    }
+    throw new Error(`the mcp-apps route answered ${request.method} with no result object`);
   };
 }

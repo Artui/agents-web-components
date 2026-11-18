@@ -1,5 +1,5 @@
 import { safeUrl } from "../a2ui/safe_url.js";
-import { MCP_APP_MAX_HEIGHT, THEME_EVENT } from "../constants.js";
+import { MCP_APP_MAX_HEIGHT, MCP_APPS_ROUTE_ERROR, THEME_EVENT } from "../constants.js";
 import { VERSION } from "../version.js";
 import { hostContext } from "./host_context.js";
 import type { McpAppDisplayModeRequest, McpAppHostContext } from "./types.js";
@@ -32,6 +32,12 @@ function isRecord(value: unknown): value is Params {
 
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+/** The route's own JSON-RPC code for a refusal it answered, else {@link REFUSED}. */
+function codeOf(error: unknown): number {
+  const { name, code } = Object(error) as { readonly name?: unknown; readonly code?: number };
+  return name === MCP_APPS_ROUTE_ERROR ? (code as number) : REFUSED;
 }
 
 /**
@@ -167,7 +173,9 @@ export function hostBridge(requestDisplayMode: McpAppDisplayModeRequest): McpApp
           fail(id, REFUSED, `${method} is refused: this view is drawn from a stored conversation`);
           return;
         }
-        act(id, method, params).catch((error: unknown) => fail(id, REFUSED, messageOf(error)));
+        act(id, method, params).catch((error: unknown) =>
+          fail(id, codeOf(error), messageOf(error)),
+        );
         return;
       }
       fail(id, METHOD_NOT_FOUND, `this host does not implement ${method}`);

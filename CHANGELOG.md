@@ -23,7 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `./threads` and placing the element.
 - **`./mcp-apps` draws a view's sandboxed frame instead of the notice.** Once the view first scrolls
   into sight it reads its HTML through `resources/read` on `url` (once per server and URI for the
-  page; a failed read draws the notice, warns, and is read again next time) and frames it. Without
+  page; a failed read draws the notice, warns, and is read again next time) and frames it. The
+  route is read as django-ag-ui 0.80.0's answers: `200` with `{"result": ...}`, the MCP result,
+  or `{"error": {"code", "message"}}` for a call it cannot relay. **A host serving its own route
+  wraps its answer in `result`**; a bare result object now fails the read. Without
   `sandboxProxyUrl` the frame is `srcdoc` with `sandbox="allow-scripts"` and the view's CSP as the
   first `<meta>` of its `<head>`: `_meta.ui.csp`'s domains, or the MCP Apps restrictive default,
   plus `font-src 'self' data:`, `object-src 'none'`, `frame-src` and `base-uri`, with any declared
@@ -47,7 +50,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `ui/notifications/initialized` does the view get `tool-input` then `tool-result`, and from then
   `host-context-changed` when the `theme` attribute, the system scheme or the frame's width changes.
   `size-changed` sets the frame's height, at most 640px. `tools/call` goes to the route with the
-  view's `serverId`; `ui/message` (an array of content blocks or one block) is sent as the user's
+  view's `serverId`, and a route's coded `error` reaches the view with its own code (`-32000` for
+  any other failure); `ui/message` (an array of content blocks or one block) is sent as the user's
   next message; `ui/open-link` opens an `http(s)` URL in a `noopener` tab; all three are refused
   while the view is drawn from a stored conversation. `ui/request-display-mode` is answered
   `inline`; a view that sends `ui/notifications/request-teardown` is sent `ui/resource-teardown`

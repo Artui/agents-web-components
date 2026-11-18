@@ -2231,9 +2231,13 @@ registerMcpApps(chat, {
 
 The route takes a JSON `POST` of `{ serverId, method, params }`, sent through
 `chat.request` so it carries the element's headers and credentials, and answers
-the MCP result object. `method` is `resources/read` (the view's HTML, read once
-per server and URI for the page) or `tools/call` (a tool the view calls). A
-toolset with no `id` sends no `serverId`, and its views draw the notice.
+as django-ag-ui's does: `200` with `{ "result": ... }`, the MCP result object
+(a tool result with `isError` is still a `result`), or `{ "error": { "code",
+"message" } }` with a JSON-RPC code for a call it cannot relay, which a view's
+`tools/call` is answered with as it is. Any other status or body fails the call
+with `-32000`. `method` is `resources/read` (the view's HTML, read once per
+server and URI for the page) or `tools/call` (a tool the view calls). A toolset
+with no `id` sends no `serverId`, and its views draw the notice.
 
 The view is framed once it first scrolls into sight: in a `srcdoc` frame with
 `sandbox="allow-scripts"` and the view's CSP as the first `<meta>` of its head,
@@ -2248,7 +2252,7 @@ from the view's own frame:
 | `ui/initialize` | answers with `hostContext`: `theme`, `styles.variables`, `locale`, `displayMode: "inline"`, `availableDisplayModes: ["inline"]`, `containerDimensions` (the frame's width and a `maxHeight` of 640) and `platform: "web"` |
 | `ui/notifications/initialized` | sends `ui/notifications/tool-input` (the call's arguments), then `ui/notifications/tool-result` |
 | `ui/notifications/size-changed` | sets the frame's height, at most 640px; the view scrolls past it |
-| `tools/call` | sends it to the route with the view's `serverId` and answers the result |
+| `tools/call` | sends it to the route with the view's `serverId` and answers its `result`, or its `error` with the route's code |
 | `ui/message` | sends its text as the user's next message (`chat.sendMessage`); `isError` when nothing was sent |
 | `ui/open-link` | opens an `http(s)` URL in a `noopener` tab; `isError` for any other |
 | `ui/request-display-mode` | answers `inline`, the only mode a view is shown in |

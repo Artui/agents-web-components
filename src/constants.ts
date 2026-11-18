@@ -702,3 +702,10 @@ export const THREADS_SELECT_EVENT = "ag-ui-threads-select";
  * asks for more through `ui/notifications/size-changed` gets this and scrolls.
  */
 export const MCP_APP_MAX_HEIGHT = 640;
+
+/**
+ * The `name` of the error the mcp-apps route rejects with when it answers a
+ * coded `{ error }`: the bridge forwards that error's `code` to the view only
+ * under this name, since a `DOMException` carries a numeric `code` of its own.
+ */
+export const MCP_APPS_ROUTE_ERROR = "McpAppsRouteError";
