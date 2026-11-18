@@ -35,6 +35,7 @@
       "types": "./dist/mcp_apps.d.ts",
       "import": "./dist/agents-web-components.mcp-apps.bundle.js"
     },
+    "./mcp-apps/sandbox-proxy.html": "./dist/sandbox-proxy.html",
     "./threads": {
       "types": "./dist/threads.d.ts",
       "import": "./dist/threads.js"

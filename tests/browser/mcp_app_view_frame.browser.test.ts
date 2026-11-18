@@ -1,8 +1,9 @@
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { ELEMENT_TAG } from "../../src/constants.js";
 import type { AgUiChat } from "../../src/core/ag_ui_chat.js";
 import { defineChat } from "../../src/core/define_chat.js";
 import type { McpAppsServices, McpAppView } from "../../src/mcp_apps/types.js";
+import { viewCsp } from "../../src/mcp_apps/view_csp.js";
 import { type McpAppViewChannel, viewFrame } from "../../src/mcp_apps/view_frame.js";
 import { registerMcpApps } from "../../src/mcp_apps.js";
 import { DEFAULT_UI_STRINGS } from "../../src/ui/ui_strings.js";
@@ -104,7 +105,7 @@ async function otherOrigin(): Promise<string> {
     }
     const origin = `${protocol}//${host}:${port}`;
     try {
-      await fetch(`${origin}/tests/browser/fixtures/sandbox_proxy.html`, { mode: "no-cors" });
+      await fetch(`${origin}/`, { mode: "no-cors" });
       return origin;
     } catch {
       // Not listening under this name.
@@ -282,14 +283,15 @@ describe("viewFrame", () => {
     expect(disconnect).toHaveBeenCalledTimes(1);
   });
 
-  it("loads a view through the sandbox proxy, on the proxy's origin", async () => {
-    const proxyUrl = `${await otherOrigin()}/tests/browser/fixtures/sandbox_proxy.html`;
+  it("loads a view through the shipped sandbox proxy page, on the proxy's origin", async () => {
+    const proxyUrl = `${await otherOrigin()}/${inject("sandboxProxyPage")}`;
     const connect = vi.fn((_channel: McpAppViewChannel) => vi.fn());
     const { frame } = await drawn(
       services(
         `<script>
           addEventListener("message", (event) => parent.postMessage({ kind: "echo", data: event.data }, "*"));
-          parent.postMessage({ kind: "booted" }, "*");
+          const meta = document.head.firstElementChild;
+          parent.postMessage({ kind: "booted", csp: meta.getAttribute("content") }, "*");
         </script>`,
         { connectDomains: ["https://api.example", "https://x.example; script-src *"] },
         proxyUrl,
@@ -299,22 +301,17 @@ describe("viewFrame", () => {
 
     // A proxy-ready from anywhere but the proxy's frame is not answered.
     window.postMessage({ jsonrpc: "2.0", method: "ui/notifications/sandbox-proxy-ready" }, "*");
-    const proxied = await message("proxy-received");
     const booted = await message("booted");
     connect.mock.calls[0]?.[0].post({ jsonrpc: "2.0", method: "ui/notifications/tool-input" });
     const echo = await message("echo");
 
+    const cleaned = viewCsp({ connectDomains: ["https://api.example"] });
     expect(frame.getAttribute("sandbox")).toBe("allow-scripts allow-same-origin");
     expect(connect.mock.calls[0]?.[0].origin).toBe(new URL(proxyUrl).origin);
-    expect(frame.src.startsWith(`${proxyUrl}?csp=`)).toBe(true);
-    expect(proxied.data["params"]).toMatchObject({
-      csp: { connectDomains: ["https://api.example"] },
-    });
-    expect(new URLSearchParams(String(proxied.data["query"])).get("csp")).toBe(
-      JSON.stringify((proxied.data["params"] as { csp: unknown }).csp),
-    );
+    expect(new URL(frame.src).searchParams.get("csp")).toBe(JSON.stringify(cleaned.domains));
+    expect(booted.data["csp"]).toBe(cleaned.policy);
     expect(booted.source).toBe(frame.contentWindow);
-    expect(received.filter((entry) => entry.data?.["kind"] === "proxy-received")).toHaveLength(1);
+    expect(received.filter((entry) => entry.data?.["kind"] === "booted")).toHaveLength(1);
     expect(echo.data["data"]).toEqual({ jsonrpc: "2.0", method: "ui/notifications/tool-input" });
 
     connect.mock.calls[0]?.[0].close();
