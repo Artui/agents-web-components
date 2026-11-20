@@ -144,16 +144,6 @@ async function openView(
   let post: (message: unknown) => void;
   let origin = "null";
   let dispose: () => void = noop;
-  if (proxyUrl === undefined) {
-    iframe.setAttribute("sandbox", "allow-scripts");
-    iframe.srcdoc = withCspMeta(resource.html, csp.policy);
-    post = (message) => iframe.contentWindow?.postMessage(message, "*");
-  } else {
-    const proxy = sandboxProxy(iframe, proxyUrl, resource.html, csp.domains);
-    post = proxy.post;
-    origin = proxy.origin;
-    dispose = proxy.dispose;
-  }
   let closed = false;
   let disconnect: () => void = noop;
   const close = (notice: boolean): void => {
@@ -169,17 +159,31 @@ async function openView(
       visit.end();
     }
   };
+  const navigated = (): void => {
+    console.warn(`ag-ui-chat: the MCP App view ${uri} navigated its frame and was closed`);
+    close(true);
+  };
+  if (proxyUrl === undefined) {
+    iframe.setAttribute("sandbox", "allow-scripts");
+    iframe.srcdoc = withCspMeta(resource.html, csp.policy);
+    post = (message) => iframe.contentWindow?.postMessage(message, "*");
+  } else {
+    const proxy = sandboxProxy(iframe, proxyUrl, resource.html, csp.domains, navigated);
+    post = proxy.post;
+    origin = proxy.origin;
+    dispose = proxy.dispose;
+  }
   // The src is set before the frame is placed, so each window loads once. A
   // second load in one window is the view navigating its frame, which a CSP
   // cannot forbid; a load in a new window is the frame moved in the page.
+  // Through a proxy the view's own frame is inside the proxy, which reports it.
   let loaded: Window | null = null;
   iframe.addEventListener("load", () => {
     if (loaded !== iframe.contentWindow) {
       loaded = iframe.contentWindow;
       return;
     }
-    console.warn(`ag-ui-chat: the MCP App view ${uri} navigated its frame and was closed`);
-    close(true);
+    navigated();
   });
   node.replaceChildren(iframe);
   disconnect = connect(

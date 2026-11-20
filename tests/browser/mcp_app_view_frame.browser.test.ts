@@ -376,6 +376,29 @@ describe("viewFrame", () => {
     expect(frame.isConnected).toBe(false);
   });
 
+  it("tears a view down when it navigates the frame inside the shipped proxy page", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const disconnect = vi.fn();
+    const proxyUrl = `${await otherOrigin()}/${inject("sandboxProxyPage")}`;
+    const { node, frame } = await drawn(
+      services(
+        `<script>setTimeout(() => { location.href = "about:blank"; }, 30)</script>`,
+        undefined,
+        proxyUrl,
+      ),
+      vi.fn(() => disconnect),
+    );
+
+    await until(() => (node.querySelector("iframe") === null ? true : undefined), "teardown");
+
+    expect(frame.isConnected).toBe(false);
+    expect(node.textContent).toContain(`An app view can't be shown here: ${URI}`);
+    expect(disconnect).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith(
+      `ag-ui-chat: the MCP App view ${URI} navigated its frame and was closed`,
+    );
+  });
+
   it("answers a proxy-ready from the proxy's window only on the proxy's origin", async () => {
     const stand = document.createElement("iframe");
     document.body.append(stand);
@@ -383,11 +406,13 @@ describe("viewFrame", () => {
     const answered = vi.spyOn(win, "postMessage").mockImplementation(() => undefined);
     const frame = document.createElement("iframe");
     Object.defineProperty(frame, "contentWindow", { get: () => win });
+    const navigated = vi.fn();
     const proxy = sandboxProxy(
       frame,
       "https://proxy.example/sandbox.html",
       "<p>view</p>",
       viewCsp(undefined).domains,
+      navigated,
     );
     const ready = { jsonrpc: "2.0", method: "ui/notifications/sandbox-proxy-ready" };
     const from = (origin: string): void => {
@@ -397,6 +422,16 @@ describe("viewFrame", () => {
     from("https://elsewhere.example");
     expect(answered).not.toHaveBeenCalled();
     from(proxy.origin);
+    expect(answered).toHaveBeenCalledTimes(1);
+    const away = { jsonrpc: "2.0", method: "ui/notifications/sandbox-view-navigated" };
+    window.dispatchEvent(
+      new MessageEvent("message", { data: away, source: win, origin: "https://elsewhere.example" }),
+    );
+    expect(navigated).not.toHaveBeenCalled();
+    window.dispatchEvent(
+      new MessageEvent("message", { data: away, source: win, origin: proxy.origin }),
+    );
+    expect(navigated).toHaveBeenCalledTimes(1);
     expect(answered).toHaveBeenCalledTimes(1);
 
     proxy.dispose();

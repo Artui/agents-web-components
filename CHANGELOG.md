@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A view that navigates its frame inside the sandbox proxy is torn down, as a `srcdoc` view
+  already was.** With `sandboxProxyUrl` set the view's frame lives inside the proxy page, whose own
+  frame does not reload, so the navigation went unseen and the view stayed mounted. The shipped
+  proxy page now removes its inner frame on the view's second load and tells the host with
+  `ui/notifications/sandbox-view-navigated` (host-private: ext-apps 2.1.0 has no message for it);
+  the host closes the view to the notice and warns, as for `srcdoc`. Nothing to opt in to, but a
+  host serving its own copy of `sandbox-proxy.html` re-copies it from this release; a third-party
+  proxy that never sends the notification keeps the old behaviour.
+
 ## [0.6.0] — 2026-11-18
 
 ### Added
