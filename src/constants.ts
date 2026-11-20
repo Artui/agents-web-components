@@ -184,6 +184,16 @@ export const SUGGESTIONS_ACTIVITY_TYPE = "suggestions";
 export const INVALIDATE_CUSTOM_NAME = "ag_ui.invalidate";
 
 /**
+ * The AG-UI `CUSTOM` event `name` a run sends when it saved a stored skill.
+ *
+ * Matches django-ag-ui's `SKILLS_CHANGED_EVENT_NAME`; its value is
+ * `{ name }`, never a body. The element refetches its skill catalog (and the
+ * skill editor's list, when open) on it, and still forwards it to the page as
+ * {@link CUSTOM_AGENT_EVENT}, as it did before it knew the name.
+ */
+export const SKILLS_CHANGED_CUSTOM_NAME = "ag_ui.skills_changed";
+
+/**
  * The AG-UI `CUSTOM` event `name` carrying one step a delegated sub-agent took.
  *
  * Matched exactly, and namespaced the way {@link INVALIDATE_CUSTOM_NAME} is, so
@@ -540,6 +550,15 @@ export const ICON_NEW_CHAT = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden
 
 /** The history control's mark (a clock with a back arrow). */
 export const ICON_HISTORY = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 12A8.5 8.5 0 1 0 6 6L3.5 8.5"/><path d="M3.5 4v4.5H8"/><path d="M12 7.5V12l3 2"/></svg>`;
+
+/** The skill editor's header control (a page with lines). */
+export const ICON_SKILLS = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h10l4 4v12H5z"/><path d="M9 12h6M9 16h4"/></svg>`;
+
+/** The back arrow out of a full-panel view. */
+export const ICON_BACK = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>`;
+
+/** The add control in a full-panel view's bar. */
+export const ICON_PLUS = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>`;
 
 /** The checkpoints control's mark (an arrow turning back, counter-clockwise). */
 export const ICON_CHECKPOINTS = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>`;

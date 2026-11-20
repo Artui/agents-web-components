@@ -4,6 +4,7 @@ import {
   ICON_HISTORY,
   ICON_MAXIMIZE,
   ICON_NEW_CHAT,
+  ICON_SKILLS,
 } from "../../constants.js";
 import type { UiStrings } from "../ui_strings.js";
 import { headerButton } from "./header_button.js";
@@ -23,6 +24,8 @@ export interface HeaderOptions {
   /** The opt-in theme toggle, or `null` when the host did not ask for one. */
   readonly themeToggle: HTMLButtonElement | null;
   readonly signal: AbortSignal;
+  /** Opens the skill editor; `null` when the host did not configure one. */
+  readonly onSkills: (() => void) | null;
   readonly onHistory: () => void;
   readonly onCheckpoints: () => void;
   readonly onNewChat: () => void;
@@ -102,6 +105,12 @@ export function buildHeader(options: HeaderOptions): BuiltHeader {
     controls.append(history, checkpoints, newChat);
   } else {
     controls.append(history, newChat);
+  }
+  // Offered only with a skill editor endpoint: without one it would open nothing.
+  if (options.onSkills !== null) {
+    const skills = headerButton("skills", strings.skills, ICON_SKILLS);
+    skills.addEventListener("click", options.onSkills);
+    controls.prepend(skills);
   }
   // Optional built-in theme toggle: off unless the host opts in, so
   // it never competes with a host-supplied switch in `slot="header-actions"`.

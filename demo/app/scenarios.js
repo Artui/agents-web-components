@@ -93,6 +93,21 @@ export const SCENARIOS = [
     skills: true,
   },
   {
+    slug: "skill-editor",
+    group: "Conversation",
+    title: "The skill editor",
+    since: "0.7.0",
+    summary:
+      "A caller's own stored skills: the Skills button and the palette's Manage skills row open a full-panel editor, writes carry the live CSRF header, and a skill the agent saves reaches the palette without a reload (0.7.0).",
+    prompts: [["Draft one with the agent", "/create-skill"]],
+    attrs: {
+      "data-skills-url": "/skills/",
+      "data-skill-editor-url": "/skills/editor/",
+      "data-skill-editor-button": "",
+      "data-slash-commands": "true",
+    },
+  },
+  {
     slug: "threads",
     group: "Conversation",
     title: "Threads and durability",
