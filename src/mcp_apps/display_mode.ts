@@ -16,9 +16,11 @@ export interface McpAppViewDisplay {
  * Switches a view between `inline` and `fullscreen` by restyling `stage`, the
  * box that holds its frame, never by moving the frame, which would reload it.
  * Fullscreen stamps `data-display-mode="fullscreen"` on the stage, which the
- * shadow sheet fixes over the viewport (or over the box of an ancestor that
- * contains fixed descendants, such as the sidebar host), shows the stage's
- * close control and focuses it, and keeps the node's height in the transcript.
+ * shadow sheet sizes to the viewport, and shows it as a manual popover, so it
+ * is in the top layer above the host's stacking context and any containing
+ * ancestor; a top-layer element is not moved in the tree, so the frame stays.
+ * Without popover support it is a fixed box within the host's stacking context.
+ * It shows the stage's close control, focuses it, and keeps the node's height.
  * Escape anywhere in the document, or the close control, returns it inline.
  * `overlay` holds the one view of the registration shown fullscreen, so a
  * second view's request returns the first inline before it opens.
@@ -31,11 +33,17 @@ export function displayMode(
 ): McpAppViewDisplay {
   let mode: McpAppDisplayMode = "inline";
   let listener: () => void = () => undefined;
+  let popped = false;
   const doc = node.ownerDocument;
 
   const inline = (): void => {
     mode = "inline";
     delete stage.dataset["displayMode"];
+    if (popped) {
+      popped = false;
+      stage.hidePopover();
+      stage.removeAttribute("popover");
+    }
     close.hidden = true;
     node.style.minHeight = "";
     doc.removeEventListener("keydown", onKey, true);
@@ -69,6 +77,11 @@ export function displayMode(
         node.style.minHeight = `${node.offsetHeight}px`;
         mode = "fullscreen";
         stage.dataset["displayMode"] = "fullscreen";
+        if (typeof stage.showPopover === "function") {
+          stage.popover = "manual";
+          stage.showPopover();
+          popped = true;
+        }
         close.hidden = false;
         overlay.exit = byUser;
         doc.addEventListener("keydown", onKey, true);

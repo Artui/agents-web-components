@@ -18,8 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   context's `availableDisplayModes` now includes `fullscreen`** for a live view (a stored or
   torn-down view still gets `["inline"]` and its requests are answered `inline`), and `pip` is
   answered with the current mode, as the MCP Apps result allows. One view per registration is
-  fullscreen at a time. The overlay covers the viewport, or the host's box where the host contains
-  its layout (the `sidebar` placement, or a transformed host page ancestor). No opt-in: a host
+  fullscreen at a time. The overlay is a manual popover in the top layer, so it covers the viewport
+  above the host page's layers whatever `--ag-ui-z-index` is, in every placement; a browser without
+  popover (Firefox before 125) gets a fixed box inside the host's stacking context. No opt-in: a host
   already calling `registerMcpApps` gets it, and a host that re-vendors this release advertises
   the new mode to its views.
 

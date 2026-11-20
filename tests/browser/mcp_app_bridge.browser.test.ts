@@ -401,6 +401,7 @@ describe("fullscreen, against django-spec-mcp's view bridge", () => {
     await until(() => (reports("done").length > 2 ? true : undefined), "the third answer");
     expect(reports("done")[2]?.data["data"]).toMatchObject({ result: { mode: "inline" } });
     expect(stageOf(frame).dataset["displayMode"]).toBeUndefined();
+    expect(stageOf(frame).hasAttribute("popover")).toBe(false);
   });
 
   it("covers the viewport from a floating panel, above the chat's own layers", async () => {
@@ -418,6 +419,40 @@ describe("fullscreen, against django-spec-mcp's view bridge", () => {
       window.innerHeight - 4,
     );
     expect(hit === drawnView.frame || stage.contains(hit)).toBe(true);
+  });
+
+  it("covers the page above a host page layer that outranks the chat's z-index", async () => {
+    const drawnView = await drawn({ style: "--ag-ui-z-index: 5" });
+    const nav = document.createElement("nav");
+    Object.assign(nav.style, {
+      position: "fixed",
+      inset: "0 auto 0 0",
+      width: "200px",
+      zIndex: "20",
+    });
+    document.body.append(nav);
+    expect(document.elementFromPoint(100, 300)).toBe(nav);
+
+    await fullscreen(drawnView);
+
+    expect(stageOf(drawnView.frame).matches(":popover-open")).toBe(true);
+    expect(document.elementFromPoint(100, 300)).toBe(drawnView.el);
+  });
+
+  it("covers the viewport from the sidebar placement, which contains its layout", async () => {
+    const drawnView = await drawn({ placement: "sidebar" });
+    const chat = (drawnView.el.shadowRoot as ShadowRoot).querySelector(".chat") as HTMLElement;
+    await until(() => (getComputedStyle(chat).transform === "none" ? true : undefined), "open");
+
+    await fullscreen(drawnView);
+
+    const rect = stageOf(drawnView.frame).getBoundingClientRect();
+    expect([rect.left, rect.top, rect.width, rect.height]).toEqual([
+      0,
+      0,
+      window.innerWidth,
+      window.innerHeight,
+    ]);
   });
 
   it("tears down a fullscreen view to an inline notice", async () => {

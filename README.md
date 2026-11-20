@@ -2287,8 +2287,10 @@ to be torn down. Once initialised, the
 view is sent `ui/notifications/host-context-changed` with what changed when the
 `theme` attribute, the system scheme, the frame's width or its display mode does
 (`displayMode` and `containerDimensions`, however it was switched). Fullscreen
-covers the viewport, or the host's box where the host contains its layout: the
-`sidebar` placement does, as does a host page ancestor with a `transform`. One
+shows the view's box as a manual popover, in the top layer, so it covers the
+viewport above the host page's own layers whatever `--ag-ui-z-index` is and in
+every placement; a browser without popover (Firefox before 125) draws it as a
+fixed box inside the host's stacking context instead. One
 view per registration is fullscreen at a time; a second's request returns the
 first inline.
 

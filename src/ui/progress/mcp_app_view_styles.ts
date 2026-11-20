@@ -1,11 +1,20 @@
 // An MCP App view drawn by the mcp-apps entry: its stage, and the stage shown
 // fullscreen. The entry restyles the stage and never moves the frame, which
-// would reload it, so fullscreen is a fixed box over the viewport, or over the
-// host where the host contains its layout (the sidebar placement does).
+// would reload it, so fullscreen is the stage as a popover in the top layer,
+// sized to the viewport here, or a fixed box where popover is not supported.
 export const MCP_APP_VIEW_STYLES: string = `
 .mcp-app-view-stage[data-display-mode="fullscreen"] {
   position: fixed;
   inset: 0;
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  color: var(--_fg);
   z-index: var(--_z-index);
   display: flex;
   flex-direction: column;
