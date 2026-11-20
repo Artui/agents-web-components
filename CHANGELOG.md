@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   bridge sent on as a generic -32000. It now reads the body of a non-2xx reply and rejects with the
   route's code and message (-32001, -32006, -32005). A body that is not that envelope keeps the
   status error and -32000.
+- **A checkpoint row keeps Resume and Fork on one line.** In a narrow row Fork dropped onto its own
+  line under Resume, because each button was its own wrapping item. The pair now sits in one
+  `part="checkpoint-actions"` wrapper that wraps as a unit and rides the trailing edge. No host
+  opt-in; a host that styled `::part(checkpoint-row)` as a flat flex row sees the pair as one child.
 
 ## [0.6.0] — 2026-11-18
 
