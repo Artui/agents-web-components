@@ -171,13 +171,22 @@ describe("SkillsMenu's Manage skills row", () => {
     expect(m.palette.hidden).toBe(true);
   });
 
-  it("keeps the palette open on the row alone when nothing matches", () => {
+  it("shows the row alone under a bare slash when the catalog is empty", () => {
     const { menu: m } = managed();
-    m.onInput("/zzz");
+    m.setSkills([]);
+    m.onInput("/");
     expect(m.palette.hidden).toBe(false);
     expect([...m.palette.querySelectorAll(".skill-item")].map((n) => n.textContent)).toEqual([
       "Manage skills",
     ]);
+  });
+
+  it("closes on unmatched text and leaves Enter to the composer", () => {
+    const { menu: m, manages } = managed();
+    m.onInput("/weekly-report for last week");
+    expect(m.palette.hidden).toBe(true);
+    expect(m.onKeydown(key("Enter"))).toBe(false);
+    expect(manages).toEqual([]);
   });
 
   it("reaches the row with the arrows and opens it on Enter", () => {

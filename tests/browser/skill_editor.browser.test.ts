@@ -56,4 +56,23 @@ describe("the skill editor's full-panel view (real browser)", () => {
     expect(hidden()).toEqual(before);
     el.remove();
   });
+
+  it("gives way to the history drawer, which then has a box", async () => {
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("data-skill-editor-url", "/agent/skills/editor/");
+    document.body.append(el);
+    await settle();
+    const root = el.shadowRoot as ShadowRoot;
+
+    el.openSkillEditor();
+    await settle();
+    el.openThreads();
+    await settle();
+    const box = (root.querySelector(".drawer") as HTMLElement).getBoundingClientRect();
+    expect(box.width * box.height).toBeGreaterThan(0);
+    expect((root.querySelector(".chat") as HTMLElement).hasAttribute("data-panel-view")).toBe(
+      false,
+    );
+    el.remove();
+  });
 });

@@ -204,6 +204,7 @@ describe("the skill editor in <ag-ui-chat>", () => {
     const el = document.createElement(ELEMENT_TAG) as AgUiChat;
     el.setAttribute("data-slash-commands", "true");
     el.setAttribute("data-skill-editor-url", "");
+    el.setAttribute("data-skill-editor-button", "");
     document.body.appendChild(el);
     await flush();
 
@@ -257,6 +258,32 @@ describe("the skill editor in <ag-ui-chat>", () => {
     await flush();
 
     expect(q<HTMLElement>(el, ".panel-view").hidden).toBe(false);
+  });
+
+  it("sends an unmatched slash message on Enter rather than opening the editor", async () => {
+    server.skills = [{ ...WEEKLY, enabled: true, userInvocable: true }];
+    const el = mount();
+    await flush();
+    const input = q<HTMLTextAreaElement>(el, ".input");
+    input.value = "/weekly-report for last week";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    await flush();
+
+    expect(server.seen.filter((s) => s.url === "/agent/")).toHaveLength(1);
+    expect(q<HTMLElement>(el, ".panel-view").hidden).toBe(true);
+  });
+
+  it("closes for the checkpoints list and for a new chat", async () => {
+    const el = mount();
+    await flush();
+    const chat = q<HTMLElement>(el, ".chat");
+    el.openSkillEditor();
+    el.openCheckpoints();
+    expect(chat.hasAttribute("data-panel-view")).toBe(false);
+    el.openSkillEditor();
+    el.newChat();
+    expect(chat.hasAttribute("data-panel-view")).toBe(false);
   });
 
   it("puts a skill created in the editor into the palette without a reload", async () => {
@@ -335,7 +362,23 @@ describe("the skill editor in <ag-ui-chat>", () => {
     expect(q<HTMLElement>(el, ".panel-view-title").textContent).toBe("New skill");
   });
 
-  it("shows a refusal naming a field under that field", async () => {
+  it("shows the recorded missing-description refusal above the form, as it names no field", async () => {
+    server.refuse = recorded.answers.missingDescription;
+    const el = mount();
+    await flush();
+    el.openSkillEditor();
+    await flush();
+    buttonNamed(el, "Write it yourself").click();
+    buttonNamed(el, "Create").click();
+    await flush();
+
+    expect(q<HTMLElement>(el, ".skill-form-error").textContent).toBe(
+      recorded.answers.missingDescription.body.error,
+    );
+    expect(shadow(el).querySelector(".skill-field--bad")).toBeNull();
+  });
+
+  it("shows a refusal under the field a later server names", async () => {
     server.refuse = {
       status: 400,
       body: { error: "A skill needs a description.", field: "description" },
