@@ -121,7 +121,8 @@ export class SkillsMenu {
       (skill) =>
         skill.name.toLowerCase().includes(needle) || skill.title.toLowerCase().includes(needle),
     );
-    if (matches.length === 0 && this.#manage === null) {
+    // Unmatched text is a message to send, so the row stands alone only under a bare `/`.
+    if (matches.length === 0 && (this.#manage === null || needle !== "")) {
       this.close();
       return;
     }

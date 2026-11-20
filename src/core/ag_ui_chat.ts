@@ -2135,8 +2135,6 @@ export class AgUiChat extends HTMLElement {
     return url === null || url === "" ? null : url;
   }
 
-  /** A client for the editor endpoint over {@link request}, or `null` when none is set. */
-
   /** Whether the widget is collapsed (reflected as the `collapsed` attribute). */
   get collapsed(): boolean {
     return this.hasAttribute("collapsed");
@@ -2757,6 +2755,7 @@ export class AgUiChat extends HTMLElement {
    * {@link toggleCollapsed} and {@link toggleTheme}.
    */
   openThreads(options: { readonly anchor?: Element } = {}): void {
+    this.#dropSkillEditor();
     // Collapsed into the bar, the list opens as a popover over the bar rather
     // than expanding the panel: the same drawer, moved beside the bar, since
     // nothing inside the hidden panel can be drawn. Under the host's own bar it
@@ -2843,6 +2842,7 @@ export class AgUiChat extends HTMLElement {
    * an empty panel.
    */
   openCheckpoints(): void {
+    this.#dropSkillEditor();
     this.#history.openCheckpoints();
   }
 
@@ -2926,6 +2926,7 @@ export class AgUiChat extends HTMLElement {
     // Stop any in-flight run first — discarding the client mid-run would
     // leave the old agent streaming into a cleared transcript.
     this.#cancelRun();
+    this.#dropSkillEditor();
     this.#history.reapUnsent();
     this.#resetState();
     this.#history.startThread();

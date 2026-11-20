@@ -195,7 +195,7 @@ another origin, add `credentials="include"` too; see
 | `data-slash-commands` | — | Present (bare, or any value but `"false"`) to enable the `/`-command palette. |
 | `data-skills` | — | Inline JSON skill catalog. A value that will not parse is ignored and reported on the console, rather than reading as an empty catalog. |
 | `data-skills-url` | — | URL of a JSON skill catalog (fetched with the element's headers and cookie policy). |
-| `data-skill-editor-url` | — | URL of django-ag-ui's skill editor endpoint (`skills/editor/`). Opts into the [skill editor](#the-skill-editor), opened from a "Manage skills" row at the foot of the `/` palette. |
+| `data-skill-editor-url` | — | URL of django-ag-ui's skill editor endpoint (`skills/editor/`). Opts into the [skill editor](#the-skill-editor): a "Manage skills" row at the foot of the `/` palette under `data-slash-commands`, a header button with `data-skill-editor-button`, or `openSkillEditor()`. |
 | `data-skill-editor-button` | absent | With `data-skill-editor-url`, also puts a Skills button in the header. Off by default: with every header control on, the row needs about 262px. |
 | `data-tools-url` | — | URL of a server tool-label catalog (`[{ name, summary, description? }]`), fetched with the element's headers and cookie policy; labels tool-call cards for server-side tools. |
 | `user-key` | `userKey` | Who the stored conversation belongs to — any string identifying the signed-in principal. Joins the storage namespace, and **changing it purges what the previous principal left behind**. Live (not connect-time): a logout is the host's to announce. See [Who the stored conversation belongs to](#who-the-stored-conversation-belongs-to-user-key). |
@@ -3074,12 +3074,13 @@ mount's `skills/editor/` route:
 ```
 
 The editor opens in place of the conversation, below the header, from a "Manage skills" row at the foot of the
-`/` palette and, with `data-skill-editor-button`, from a Skills button in the header (`openSkillEditor()` and
+`/` palette (under `data-slash-commands`; alone under a bare `/` when nothing matches) and, with `data-skill-editor-button`, from a Skills button in the header (`openSkillEditor()` and
 `closeSkillEditor()` drive it from your own chrome). It lists the skills the server says the caller
 may write, off ones included, with "Turn on" on an off row; it creates, edits and turns skills off;
 and "Draft one with the agent" closes it and sends `/create-skill`, whose draft comes back as an
-approval card. The server keeps every rule: a refused save shows the server's message, under the
-field when the answer names one (`{"error", "field"}`) and above the form otherwise.
+approval card. History, Checkpoints and New chat close it first. The server keeps every rule: a
+refused save shows the server's message (`{"error"}`) above the form, since django-ag-ui 0.83.0
+names no field; an answer that adds `"field"` shows under that field.
 
 **Writes are CSRF-checked by default** on the server, and each one sends `headers` and
 `getHeaders()` as read at that moment, so a `getHeaders` returning the current CSRF token is all a
