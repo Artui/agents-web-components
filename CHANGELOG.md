@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A coded non-2xx answer from the mcp-apps route now reaches the view with its code and message.**
+  django-ag-ui answers an unauthenticated call 401 and a refused one 403 (and a throttled one 429)
+  with `{"error": {"code", "message"}}`; the element threw a bare status error for them, which the
+  bridge sent on as a generic -32000. It now reads the body of a non-2xx reply and rejects with the
+  route's code and message (-32001, -32006, -32005). A body that is not that envelope keeps the
+  status error and -32000.
+
 ## [0.6.0] — 2026-11-18
 
 ### Added
