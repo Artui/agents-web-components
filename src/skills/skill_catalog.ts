@@ -47,6 +47,8 @@ export class SkillCatalog {
   #embedSkills: readonly Skill[] = [];
   #clientSkills: readonly Skill[] = [];
   readonly #merged = new Map<string, Skill>();
+  // Bumped by every fetch and every forget: only the newest fetch may land.
+  #generation = 0;
 
   constructor(host: SkillCatalogHost) {
     this.#host = host;
@@ -70,19 +72,40 @@ export class SkillCatalog {
     this.#recompute();
   }
 
-  /** Fetch the backend skills catalog from `data-skills-url`, if set. */
+  /**
+   * Fetch the backend skills catalog from `data-skills-url`, if set.
+   *
+   * Called again whenever the catalog may have moved (a principal change, a
+   * stored skill saved); an answer overtaken by a later fetch or a
+   * {@link forget} is dropped, so a slow one cannot paint over a newer one.
+   */
   async fetch(): Promise<void> {
     const url = this.#host.element.getAttribute("data-skills-url");
     if (url === null) {
       return;
     }
+    this.#generation += 1;
+    const generation = this.#generation;
     try {
       const response = await fetch(url, this.#host.fetchInit(url));
-      this.#backendSkills = parseSkills(await response.json());
-      this.#recompute();
+      const skills = parseSkills(await response.json());
+      if (generation === this.#generation) {
+        this.#backendSkills = skills;
+        this.#recompute();
+      }
     } catch {
       // Network/parse failure: skills just stay as the embedded/client set.
     }
+  }
+
+  /**
+   * Drop the backend catalog and any fetch in flight: it was the previous
+   * principal's, and a stored skill is visible per caller.
+   */
+  forget(): void {
+    this.#generation += 1;
+    this.#backendSkills = [];
+    this.#recompute();
   }
 
   /**

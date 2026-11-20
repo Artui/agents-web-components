@@ -28,7 +28,7 @@ function mount(width?: string): AgUiChat {
 }
 
 function buttons(el: AgUiChat): HTMLElement[] {
-  return [...(el.shadowRoot?.querySelectorAll(".header-btn") ?? [])] as HTMLElement[];
+  return [...(el.shadowRoot?.querySelectorAll(".header .header-btn") ?? [])] as HTMLElement[];
 }
 
 describe("header controls (real browser)", () => {
@@ -71,6 +71,22 @@ describe("header controls (real browser)", () => {
       expect(rect.left).toBeGreaterThanOrEqual(box.left - 1);
       expect(rect.right).toBeLessThanOrEqual(box.right + 1);
     }
+  });
+
+  it("fits the opt-in Skills button too at the width the README names", () => {
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("placement", "floating");
+    el.setAttribute("data-start-open", "");
+    el.setAttribute("data-theme-toggle", "");
+    el.setAttribute("data-runs-url", "/runs/");
+    el.setAttribute("data-skill-editor-url", "/skills/editor/");
+    el.setAttribute("data-skill-editor-button", "");
+    el.style.setProperty("--ag-ui-width", "262px");
+    document.body.appendChild(el);
+    const header = el.shadowRoot?.querySelector(".header") as HTMLElement;
+
+    expect(buttons(el).map((b) => b.className)).toContain("header-btn header-btn--skills");
+    expect(header.scrollWidth).toBeLessThanOrEqual(header.clientWidth + 1);
   });
 
   it("takes a host's size for them", () => {

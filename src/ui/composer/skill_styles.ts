@@ -104,6 +104,17 @@ export const SKILL_STYLES: string = `
   font-weight: 600;
 }
 
+/* The way out to the skill editor, at the foot and set apart from the skills. */
+.skill-item--manage {
+  border-top: 1px solid var(--_border);
+  color: var(--_accent);
+  font-size: 0.9em;
+}
+
+.skill-item--manage:first-child {
+  border-top: none;
+}
+
 .skill-item-desc {
   font-size: 0.85em;
   color: var(--_muted);

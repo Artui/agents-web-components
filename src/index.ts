@@ -128,6 +128,7 @@ export {
   showHighlightOverlay,
 } from "./dom/highlight_overlay.js";
 export { setNativeChecked, setNativeValue } from "./dom/native_setter.js";
+export type { EditorSkill, EditorSkillDraft } from "./skills/editor_skill.js";
 export type { Skill } from "./skills/skill.js";
 export {
   CHAT_CORNERS,

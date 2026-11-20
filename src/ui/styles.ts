@@ -37,8 +37,10 @@ import { THOUGHTS_STYLES } from "./progress/thoughts_styles.js";
 import { TOOL_GROUP_STYLES } from "./progress/tool_group_styles.js";
 import { TOOL_STEP_STYLES } from "./progress/tool_step_styles.js";
 import { FRAME_STYLES } from "./shell/frame_styles.js";
+import { PANEL_VIEW_STYLES } from "./shell/panel_view_styles.js";
 import { THEME_STYLES } from "./shell/theme_styles.js";
 import { TOKEN_STYLES } from "./shell/token_styles.js";
+import { SKILL_EDITOR_STYLES } from "./skill_editor/skill_editor_styles.js";
 import { CLASSIC_STYLES } from "./themes/classic_styles.js";
 import { CLASSIC_TOKENS } from "./themes/classic_tokens.js";
 import { CODE_TOKENS } from "./themes/code_tokens.js";
@@ -94,6 +96,9 @@ export const STYLES: string = [
   QUESTION_STYLES,
   SKILL_STYLES,
   HISTORY_STYLES,
+  // New modules with no rule restated elsewhere; ahead of the themes like the rest.
+  PANEL_VIEW_STYLES,
+  SKILL_EDITOR_STYLES,
   // The step group restates, inside a group, card rules the modules above set
   // at rest; it outweighs them rather than relying on order, and sits ahead
   // of the themes so a theme restating a group rule at equal weight wins.

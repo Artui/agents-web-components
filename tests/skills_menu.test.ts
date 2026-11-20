@@ -154,3 +154,53 @@ describe("SkillsMenu palette", () => {
     expect(m.isOpen()).toBe(true);
   });
 });
+
+describe("SkillsMenu's Manage skills row", () => {
+  function managed(): { menu: SkillsMenu; manages: number[] } {
+    const { menu: m } = menu();
+    m.enableSlash(true);
+    const manages: number[] = [];
+    m.setManage("Manage skills", () => manages.push(1));
+    return { menu: m, manages };
+  }
+
+  it("closes the palette when nothing matches and there is no row to show", () => {
+    const { menu: m } = menu();
+    m.enableSlash(true);
+    m.onInput("/zzz");
+    expect(m.palette.hidden).toBe(true);
+  });
+
+  it("keeps the palette open on the row alone when nothing matches", () => {
+    const { menu: m } = managed();
+    m.onInput("/zzz");
+    expect(m.palette.hidden).toBe(false);
+    expect([...m.palette.querySelectorAll(".skill-item")].map((n) => n.textContent)).toEqual([
+      "Manage skills",
+    ]);
+  });
+
+  it("reaches the row with the arrows and opens it on Enter", () => {
+    const { menu: m, manages } = managed();
+    m.onInput("/sum");
+    m.onKeydown(key("ArrowDown"));
+    const manage = m.palette.querySelector(".skill-item--manage");
+    expect(manage?.getAttribute("aria-selected")).toBe("true");
+    expect(manage?.getAttribute("part")).toBe("skill-item skill-manage");
+
+    expect(m.onKeydown(key("Enter"))).toBe(true);
+    expect(manages).toEqual([1]);
+    expect(m.palette.hidden).toBe(true);
+  });
+
+  it("opens the row on a click, and drops it when the host withdraws it", () => {
+    const { menu: m, manages } = managed();
+    m.onInput("/");
+    (m.palette.querySelector(".skill-item--manage") as HTMLButtonElement).click();
+    expect(manages).toEqual([1]);
+
+    m.setManage(null, () => manages.push(2));
+    m.onInput("/");
+    expect(m.palette.querySelector(".skill-item--manage")).toBeNull();
+  });
+});

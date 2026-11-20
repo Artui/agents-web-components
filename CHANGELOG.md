@@ -19,6 +19,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   prefix, and a result without the key, render exactly as before. The mark is display only. No
   opt-in: the mark appears wherever django-ag-ui 0.81.0 or later stamps `answered_by`.
   `AgUiClientHandlers.onToolResult` takes the raw value as a fourth argument, `answeredBy`.
+- **A skill editor for a caller's own stored skills.** Opt in with `data-skill-editor-url`, set to
+  django-ag-ui's `SkillEditorView` mount (0.83.0 or later); without it nothing changes. The `/`
+  palette gains a Manage skills row at its foot, shown even when no skill matches, and
+  `data-skill-editor-button` also puts a Skills button in the header (off by default, since with
+  every header control on the row then needs about 262px). Either opens a full-panel view in place of the transcript and composer, with a
+  back arrow, a list, an empty state, and a form whose two switches read "In the / menu" and "Agent
+  may load it on its own". "Draft one with the agent" sends `/create-skill`. A refused save shows
+  the server's message, under the field when the answer names one and above the form otherwise.
+  Writes go through `chat.request`, so each carries the live `headers` and `getHeaders`: a host on
+  django-ag-ui 0.83.0, which checks CSRF by default, must return its CSRF header from
+  `getHeaders`. The palette's catalog refetches after an editor write, on a user-key change, and
+  on the `ag_ui.skills_changed` CUSTOM event, which is still dispatched as `ag-ui-custom`. New:
+  the methods `openSkillEditor()` and `closeSkillEditor()`, the types `EditorSkill` and
+  `EditorSkillDraft`, the parts `skills-button`, `skill-manage`, `panel-view`, `panel-view-bar`,
+  `panel-view-title`, `panel-view-body`, `panel-view-footer`, `back-button`, `skill-rows`,
+  `skill-row`, `skill-empty`, `skill-form` and `new-skill-button`, and the editor's strings keys
+  from `skills` to `skillSaveFailed`.
 
 ### Fixed
 
