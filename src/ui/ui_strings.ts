@@ -132,6 +132,8 @@ export interface UiStrings {
   enqueuedMessages: string;
   /** Notice in place of an MCP App's view, which this element cannot show. Token: `{uri}`. */
   mcpAppUnsupported: string;
+  /** Label of the control that returns a fullscreen MCP App view inline. */
+  mcpAppExitFullscreen: string;
   /** Notice shown on mount when the previous run never produced a response. */
   runInterrupted: string;
   /** Tool-result content (and card text) when the page moved mid-run. */
@@ -454,6 +456,7 @@ export const DEFAULT_UI_STRINGS: UiStrings = {
   usingSkill: "Using skill {name}",
   enqueuedMessages: "Added during the run",
   mcpAppUnsupported: "An app view can't be shown here: {uri}",
+  mcpAppExitFullscreen: "Exit full screen",
   runInterrupted: "The previous response didn’t finish — the page changed before it arrived.",
   pageMoved:
     "The page changed since you last looked at it. Call read_page to see the current page, then retry.",

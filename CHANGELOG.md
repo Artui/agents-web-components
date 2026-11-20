@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`./mcp-apps` shows a live view fullscreen when it asks.** `ui/request-display-mode` with
+  `fullscreen` fixes the view's box over the page without moving its frame, so the view keeps its
+  state rather than reloading; Escape, an "Exit full screen" control (focused on entry, string
+  `mcpAppExitFullscreen`) or a request for `inline` returns it to the transcript at the height it
+  had. Each switch, by the view or the user, sends `ui/notifications/host-context-changed` with
+  `displayMode` and `containerDimensions` (`width` and `height` while fullscreen). **The host
+  context's `availableDisplayModes` now includes `fullscreen`** for a live view (a stored or
+  torn-down view still gets `["inline"]` and its requests are answered `inline`), and `pip` is
+  answered with the current mode, as the MCP Apps result allows. One view per registration is
+  fullscreen at a time. The overlay covers the viewport, or the host's box where the host contains
+  its layout (the `sidebar` placement, or a transformed host page ancestor). No opt-in: a host
+  already calling `registerMcpApps` gets it, and a host that re-vendors this release advertises
+  the new mode to its views.
+
 ### Fixed
 
 - **A view that navigates its frame inside the sandbox proxy is torn down, as a `srcdoc` view

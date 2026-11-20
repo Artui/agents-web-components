@@ -41,6 +41,7 @@ function services(
     sandboxProxyUrl,
     views: new WeakMap(),
     resources: new Map(),
+    overlay: { exit: null },
   };
 }
 

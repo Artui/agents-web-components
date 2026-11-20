@@ -799,6 +799,7 @@ const MCP_APP_VIEW = `<!doctype html>
   <div class="row">
     <button id="refresh">Refresh (tools/call)</button>
     <button id="ask">Ask the agent (ui/message)</button>
+    <button id="mode">Full screen (ui/request-display-mode)</button>
   </div>
   <pre id="log" class="muted"></pre>
 </div>
@@ -835,6 +836,7 @@ const MCP_APP_VIEW = `<!doctype html>
     if (data.method === "ui/notifications/tool-input") $("input").textContent = JSON.stringify(data.params.arguments);
     if (data.method === "ui/notifications/tool-result") $("result").textContent = text(data.params);
     if (data.method === "ui/notifications/host-context-changed") theme(data.params);
+    if (data.params && data.params.displayMode) shown(data.params.displayMode);
     if (data.method === "ui/resource-teardown") post({ id: data.id, result: {} });
     size();
   });
@@ -847,6 +849,16 @@ const MCP_APP_VIEW = `<!doctype html>
       $("log").textContent = "tools/call refused (" + error.code + "): " + error.message;
     }
     size();
+  });
+  let mode = "inline";
+  const shown = (next) => {
+    mode = next;
+    $("mode").textContent = mode === "fullscreen" ? "Back inline (ui/request-display-mode)" : "Full screen (ui/request-display-mode)";
+  };
+  $("mode").addEventListener("click", async () => {
+    const result = await call("ui/request-display-mode", { mode: mode === "fullscreen" ? "inline" : "fullscreen" });
+    $("log").textContent = "ui/request-display-mode answered " + result.mode;
+    shown(result.mode);
   });
   $("ask").addEventListener("click", async () => {
     try {

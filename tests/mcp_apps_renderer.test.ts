@@ -28,6 +28,7 @@ function services(strings: Partial<UiStrings> = {}): McpAppsServices {
     sandboxProxyUrl: "https://sandbox.example/proxy.html",
     views: new WeakMap(),
     resources: new Map(),
+    overlay: { exit: null },
   };
 }
 

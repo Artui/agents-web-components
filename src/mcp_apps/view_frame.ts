@@ -1,4 +1,5 @@
 import { renderMcpAppNotice } from "../ui/progress/mcp_app_notice.js";
+import { displayMode, type McpAppViewDisplay } from "./display_mode.js";
 import { sandboxProxy } from "./sandbox_proxy.js";
 import type {
   McpAppResource,
@@ -28,6 +29,8 @@ export interface McpAppViewChannel {
   readonly live: boolean;
   /** Tears the view down, drawing the notice in its place. */
   close(): void;
+  /** How the view is shown, inline or fullscreen, and what switches it. */
+  readonly display: McpAppViewDisplay;
 }
 
 /**
@@ -140,6 +143,16 @@ async function openView(
     height: FRAME_HEIGHT,
     border: "0",
   });
+  // The frame's box, which fullscreen fixes over the page: restyled, never moved.
+  const stage = document.createElement("div");
+  stage.className = "mcp-app-view-stage";
+  const exit = document.createElement("button");
+  exit.type = "button";
+  exit.className = "mcp-app-view-exit";
+  exit.textContent = services.host.uiStrings.mcpAppExitFullscreen;
+  exit.hidden = true;
+  stage.append(exit, iframe);
+  const display = displayMode(node, stage, exit, services.overlay);
   const proxyUrl = services.sandboxProxyUrl;
   let post: (message: unknown) => void;
   let origin = "null";
@@ -153,7 +166,8 @@ async function openView(
     closed = true;
     disconnect();
     dispose();
-    iframe.remove();
+    display.dispose();
+    stage.remove();
     if (notice) {
       showNotice(node, view, services);
       visit.end();
@@ -185,7 +199,7 @@ async function openView(
     }
     navigated();
   });
-  node.replaceChildren(iframe);
+  node.replaceChildren(stage);
   disconnect = connect(
     {
       iframe,
@@ -198,6 +212,7 @@ async function openView(
         return state.live;
       },
       close: () => close(true),
+      display,
     },
     view,
     services,

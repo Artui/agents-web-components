@@ -79,6 +79,7 @@ function services(html: string, csp?: unknown, sandboxProxyUrl?: string): McpApp
     sandboxProxyUrl,
     views: new WeakMap(),
     resources: new Map(),
+    overlay: { exit: null },
   };
 }
 
