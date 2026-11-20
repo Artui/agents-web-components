@@ -32,6 +32,7 @@ import { PRESET_STYLES } from "./placement/preset_styles.js";
 import { RESIZE_STYLES } from "./placement/resize_styles.js";
 import { SIDEBAR_STYLES } from "./placement/sidebar_styles.js";
 import { SMALL_VIEWPORT_STYLES } from "./placement/small_viewport_styles.js";
+import { MCP_APP_VIEW_STYLES } from "./progress/mcp_app_view_styles.js";
 import { RUN_NOTICE_STYLES } from "./progress/run_notice_styles.js";
 import { THOUGHTS_STYLES } from "./progress/thoughts_styles.js";
 import { TOOL_GROUP_STYLES } from "./progress/tool_group_styles.js";
@@ -87,6 +88,7 @@ export const STYLES: string = [
   ATTACHMENT_STYLES,
   CHART_STYLES,
   RUN_NOTICE_STYLES,
+  MCP_APP_VIEW_STYLES,
   ATTACHMENT_CHIP_STYLES,
   CONFIRMATION_STYLES,
   MESSAGE_ACTION_STYLES,

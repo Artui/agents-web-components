@@ -92,6 +92,19 @@ function report(kind: string, match: (data: unknown) => boolean = () => true): P
   return until(() => reports(kind).find((entry) => match(entry.data["data"]))?.data["data"], kind);
 }
 
+/** Each host-context-changed the view was told that names its display mode. */
+function displayChanges(): Record<string, unknown>[] {
+  return reports("context")
+    .map((entry) => entry.data["data"] as Record<string, unknown>)
+    .filter((context) => "displayMode" in context)
+    .slice(1);
+}
+
+/** How many times the view has sent ui/initialize: once per window it boots in. */
+function initializes(): number {
+  return reports("got").filter((entry) => (entry.data["data"] as { id?: unknown }).id === 1).length;
+}
+
 function viewHtml(): string {
   return `<!doctype html><html><head><script>${bridge}</script><script>${VIEW_SCRIPT}</script></head>
     <body style="margin:0"><div id="mcp-app-root" style="height:120px">weather</div></body></html>`;
@@ -173,7 +186,7 @@ describe("the host bridge, against django-spec-mcp's view bridge", () => {
       theme: "dark",
       locale: "fr-CA",
       displayMode: "inline",
-      availableDisplayModes: ["inline"],
+      availableDisplayModes: ["inline", "fullscreen"],
       platform: "web",
       containerDimensions: { width: frame.clientWidth, maxHeight: MCP_APP_MAX_HEIGHT },
     });
@@ -241,14 +254,15 @@ describe("the host bridge, against django-spec-mcp's view bridge", () => {
     expect(refused["result"]).toEqual({ isError: true });
   });
 
-  it("answers a display mode request with inline, the only mode it shows", async () => {
+  it("answers pip with the mode the view is in, switching nothing", async () => {
     const { act } = await drawn();
 
-    act("requestDisplayMode", "fullscreen");
+    act("requestDisplayMode", "pip");
 
     expect(((await report("done")) as Record<string, unknown>)["result"]).toEqual({
       mode: "inline",
     });
+    expect(displayChanges()).toHaveLength(0);
   });
 
   it("sizes the frame to the view's height, up to the cap", async () => {
@@ -300,5 +314,165 @@ describe("the host bridge, against django-spec-mcp's view bridge", () => {
     await until(() => (frame.isConnected ? undefined : true), "the frame to go");
 
     expect((el.shadowRoot as ShadowRoot).querySelector(".mcp-app-view .run-notice")).not.toBeNull();
+  });
+});
+
+describe("fullscreen, against django-spec-mcp's view bridge", () => {
+  /** Asks for fullscreen and waits for both the answer and the context it is told. */
+  async function fullscreen(drawnView: Drawn): Promise<Record<string, unknown>> {
+    drawnView.act("requestDisplayMode", "fullscreen");
+    const done = (await report("done")) as Record<string, unknown>;
+    await until(() => (displayChanges().length > 0 ? true : undefined), "the fullscreen context");
+    return done;
+  }
+
+  function stageOf(frame: HTMLIFrameElement): HTMLElement {
+    return frame.parentElement as HTMLElement;
+  }
+
+  it("shows the view over the page in the same frame, and tells it its mode and box", async () => {
+    const drawnView = await drawn();
+    const { frame } = drawnView;
+    const before = frame.contentWindow;
+    const inlineHeight = frame.style.height;
+
+    const done = await fullscreen(drawnView);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    expect(done["result"]).toEqual({ mode: "fullscreen" });
+    const rect = stageOf(frame).getBoundingClientRect();
+    expect([rect.left, rect.top, rect.width, rect.height]).toEqual([
+      0,
+      0,
+      window.innerWidth,
+      window.innerHeight,
+    ]);
+    expect(frame.getBoundingClientRect().width).toBe(window.innerWidth);
+    expect(frame.clientHeight).toBeGreaterThan(window.innerHeight - 80);
+    expect(displayChanges()).toEqual([
+      expect.objectContaining({
+        displayMode: "fullscreen",
+        containerDimensions: { width: frame.clientWidth, height: frame.clientHeight },
+      }),
+    ]);
+    expect(frame.contentWindow === before).toBe(true);
+    expect(frame.style.height).toBe(inlineHeight);
+    expect(initializes()).toBe(1);
+  });
+
+  it("returns inline on Escape, focused on its close control, with the height it had", async () => {
+    const drawnView = await drawn();
+    const { el, frame } = drawnView;
+    await until(() => (frame.style.height === "120px" ? true : undefined), "the view's height");
+    await fullscreen(drawnView);
+    const exit = stageOf(frame).querySelector(".mcp-app-view-exit") as HTMLButtonElement;
+    expect((el.shadowRoot as ShadowRoot).activeElement).toBe(exit);
+    expect(getComputedStyle(exit).display).toBe("block");
+    const collapse = vi.fn();
+    el.shadowRoot?.addEventListener("keydown", collapse);
+
+    exit.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true, composed: true }),
+    );
+    await until(() => (displayChanges().length > 1 ? true : undefined), "the inline context");
+
+    expect(collapse).not.toHaveBeenCalled();
+    expect(displayChanges()[1]).toMatchObject({
+      displayMode: "inline",
+      containerDimensions: { width: frame.clientWidth, maxHeight: MCP_APP_MAX_HEIGHT },
+    });
+    expect(stageOf(frame).getBoundingClientRect().width).toBeLessThan(window.innerWidth);
+    expect(frame.getBoundingClientRect().height).toBe(120);
+    expect(getComputedStyle(exit).display).toBe("none");
+    expect(initializes()).toBe(1);
+  });
+
+  it("returns inline from its close control, or when the view asks", async () => {
+    const drawnView = await drawn();
+    const { frame } = drawnView;
+    await fullscreen(drawnView);
+
+    (stageOf(frame).querySelector(".mcp-app-view-exit") as HTMLButtonElement).click();
+    await until(() => (displayChanges().length > 1 ? true : undefined), "the inline context");
+    expect(displayChanges()[1]?.["displayMode"]).toBe("inline");
+
+    await fullscreen(drawnView);
+    drawnView.act("requestDisplayMode", "inline");
+    await until(() => (reports("done").length > 2 ? true : undefined), "the third answer");
+    expect(reports("done")[2]?.data["data"]).toMatchObject({ result: { mode: "inline" } });
+    expect(stageOf(frame).dataset["displayMode"]).toBeUndefined();
+    expect(stageOf(frame).hasAttribute("popover")).toBe(false);
+  });
+
+  it("covers the viewport from a floating panel, above the chat's own layers", async () => {
+    const drawnView = await drawn({ placement: "floating" });
+    drawnView.el.toggleCollapsed();
+    const chat = (drawnView.el.shadowRoot as ShadowRoot).querySelector(".chat") as HTMLElement;
+    await until(() => (getComputedStyle(chat).transform === "none" ? true : undefined), "open");
+    await fullscreen(drawnView);
+    const stage = stageOf(drawnView.frame);
+
+    const rect = stage.getBoundingClientRect();
+    expect([rect.width, rect.height]).toEqual([window.innerWidth, window.innerHeight]);
+    const hit = (drawnView.el.shadowRoot as ShadowRoot).elementFromPoint(
+      window.innerWidth / 2,
+      window.innerHeight - 4,
+    );
+    expect(hit === drawnView.frame || stage.contains(hit)).toBe(true);
+  });
+
+  it("covers the page above a host page layer that outranks the chat's z-index", async () => {
+    const drawnView = await drawn({ style: "--ag-ui-z-index: 5" });
+    const nav = document.createElement("nav");
+    Object.assign(nav.style, {
+      position: "fixed",
+      inset: "0 auto 0 0",
+      width: "200px",
+      zIndex: "20",
+    });
+    document.body.append(nav);
+    expect(document.elementFromPoint(100, 300)).toBe(nav);
+
+    await fullscreen(drawnView);
+
+    expect(stageOf(drawnView.frame).matches(":popover-open")).toBe(true);
+    expect(document.elementFromPoint(100, 300)).toBe(drawnView.el);
+  });
+
+  it("covers the viewport from the sidebar placement, which contains its layout", async () => {
+    const drawnView = await drawn({ placement: "sidebar" });
+    const chat = (drawnView.el.shadowRoot as ShadowRoot).querySelector(".chat") as HTMLElement;
+    await until(() => (getComputedStyle(chat).transform === "none" ? true : undefined), "open");
+
+    await fullscreen(drawnView);
+
+    const rect = stageOf(drawnView.frame).getBoundingClientRect();
+    expect([rect.left, rect.top, rect.width, rect.height]).toEqual([
+      0,
+      0,
+      window.innerWidth,
+      window.innerHeight,
+    ]);
+  });
+
+  it("tears down a fullscreen view to an inline notice", async () => {
+    const drawnView = await drawn();
+    const { el, frame } = drawnView;
+    await fullscreen(drawnView);
+    const node = stageOf(frame).parentElement as HTMLElement;
+
+    drawnView.act("raw", {
+      jsonrpc: "2.0",
+      method: "ui/notifications/request-teardown",
+      params: {},
+    });
+    await until(() => (frame.isConnected ? undefined : true), "the frame to go");
+
+    expect(node.querySelector(".run-notice")).not.toBeNull();
+    expect(node.style.minHeight).toBe("");
+    const reached = vi.fn();
+    el.shadowRoot?.addEventListener("keydown", reached);
+    node.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(reached).toHaveBeenCalledTimes(1);
   });
 });

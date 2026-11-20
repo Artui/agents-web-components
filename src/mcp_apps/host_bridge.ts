@@ -2,7 +2,7 @@ import { safeUrl } from "../a2ui/safe_url.js";
 import { MCP_APP_MAX_HEIGHT, MCP_APPS_ROUTE_ERROR, THEME_EVENT } from "../constants.js";
 import { VERSION } from "../version.js";
 import { hostContext } from "./host_context.js";
-import type { McpAppDisplayModeRequest, McpAppHostContext } from "./types.js";
+import type { McpAppDisplayMode, McpAppHostContext } from "./types.js";
 import type { McpAppViewConnect } from "./view_frame.js";
 
 /** The MCP Apps revision this host speaks (ext-apps `LATEST_PROTOCOL_VERSION`). */
@@ -15,6 +15,9 @@ const INVALID_PARAMS = -32602;
 const REFUSED = -32000;
 /** How long a view's `ui/notifications/request-teardown` waits for its teardown answer. */
 const TEARDOWN_WAIT_MS = 3000;
+
+/** The modes a live view may ask for; a stored one, or one being torn down, is shown inline. */
+const DISPLAY_MODES: readonly McpAppDisplayMode[] = ["inline", "fullscreen"];
 
 /** What the host answers, and so all it advertises. */
 const HOST_CAPABILITIES = {
@@ -76,14 +79,18 @@ function changed(previous: McpAppHostContext, next: McpAppHostContext): Params {
  * {@link MCP_APP_MAX_HEIGHT}. `tools/call` goes to the route, `ui/message` to
  * `chat.sendMessage`, `ui/open-link` (an `http(s)` URL only) to a `noopener`
  * tab; all three are refused while the view is not live, and once it has
- * asked to be torn down. `ui/request-display-mode` is answered by
- * `requestDisplayMode`; any other request is answered `-32601`. A view that
- * asks to be torn down is sent `ui/resource-teardown` and closed once it answers.
+ * asked to be torn down. `ui/request-display-mode` switches a live view
+ * between `inline` and `fullscreen` through the frame's display, answers the
+ * mode it is in after (the current one for `pip` or a refused request, as the
+ * schema's result allows), and tells the view `displayMode` and
+ * `containerDimensions` in `host-context-changed`, as it does when the user
+ * returns it inline. Any other request is answered `-32601`. A view that asks
+ * to be torn down is sent `ui/resource-teardown` and closed once it answers.
  */
-export function hostBridge(requestDisplayMode: McpAppDisplayModeRequest): McpAppViewConnect {
+export function hostBridge(): McpAppViewConnect {
   return (channel, view, services) => {
     const { host } = services;
-    const { iframe } = channel;
+    const { iframe, display } = channel;
     // Both reset by each ui/initialize: a frame moved in the page reloads
     // its view, which initialises again in its new window.
     let told: McpAppHostContext | null = null;
@@ -91,6 +98,13 @@ export function hostBridge(requestDisplayMode: McpAppDisplayModeRequest): McpApp
     let teardowns = 0;
     let tornDown = false;
     const answers = new Map<RequestId, () => void>();
+    const context = (): McpAppHostContext =>
+      hostContext(
+        host,
+        iframe,
+        display.mode,
+        channel.live && !tornDown ? DISPLAY_MODES : ["inline"],
+      );
 
     const send = (message: Params): void => channel.post({ jsonrpc: "2.0", ...message });
     const answer = (id: RequestId, result: Params): void => send({ id, result });
@@ -101,7 +115,7 @@ export function hostBridge(requestDisplayMode: McpAppDisplayModeRequest): McpApp
       if (!initialized || told === null) {
         return;
       }
-      const next = hostContext(host, iframe);
+      const next = context();
       const patch = changed(told, next);
       told = next;
       if (Object.keys(patch).length > 0) {
@@ -155,7 +169,7 @@ export function hostBridge(requestDisplayMode: McpAppDisplayModeRequest): McpApp
     const onRequest = (id: RequestId, method: string, params: Params): void => {
       if (method === "ui/initialize") {
         initialized = false;
-        told = hostContext(host, iframe);
+        told = context();
         answer(id, {
           protocolVersion: PROTOCOL_VERSION,
           hostInfo: { name: "agents-web-components", version: VERSION },
@@ -165,7 +179,9 @@ export function hostBridge(requestDisplayMode: McpAppDisplayModeRequest): McpApp
         return;
       }
       if (method === "ui/request-display-mode") {
-        answer(id, { mode: requestDisplayMode(params["mode"]) });
+        const mode = channel.live && !tornDown ? display.request(params["mode"]) : display.mode;
+        answer(id, { mode });
+        tellChanges();
         return;
       }
       if (method === "tools/call" || method === "ui/open-link" || method === "ui/message") {
@@ -188,7 +204,7 @@ export function hostBridge(requestDisplayMode: McpAppDisplayModeRequest): McpApp
     const onNotification = (method: string, params: Params): void => {
       if (method === "ui/notifications/initialized") {
         initialized = true;
-        told ??= hostContext(host, iframe);
+        told ??= context();
         send({
           method: "ui/notifications/tool-input",
           params: { arguments: view.activity.toolInput },
@@ -198,6 +214,7 @@ export function hostBridge(requestDisplayMode: McpAppDisplayModeRequest): McpApp
         return;
       }
       if (method === "ui/notifications/size-changed") {
+        // Kept while fullscreen, where the sheet overrides it, for the return inline.
         const height = params["height"];
         if (typeof height === "number" && Number.isFinite(height)) {
           const capped = Math.min(Math.max(Math.ceil(height), 0), MCP_APP_MAX_HEIGHT);
@@ -244,6 +261,7 @@ export function hostBridge(requestDisplayMode: McpAppDisplayModeRequest): McpApp
     host.addEventListener(THEME_EVENT, tellChanges);
     scheme.addEventListener("change", tellChanges);
     width.observe(iframe);
+    display.onUserSwitch(tellChanges);
     return () => {
       if (initialized && !tornDown && iframe.isConnected) {
         send({ id: "teardown", method: "ui/resource-teardown", params: {} });

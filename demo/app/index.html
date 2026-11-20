@@ -821,6 +821,12 @@
               from the chat's tokens. The frame takes the view's height.
             </li>
             <li>
+              <strong>Full screen.</strong> "Full screen" sends <code>ui/request-display-mode</code>:
+              the view covers the page in the same frame (its log and result stay, so it did not
+              reload), with an "Exit full screen" control. Escape, that control, or "Back inline"
+              returns it to the transcript at the height it had. A stored view stays inline.
+            </li>
+            <li>
               <strong>Without a server.</strong> A view whose toolset has no id draws the notice,
               whatever is registered.
             </li>

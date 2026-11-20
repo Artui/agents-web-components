@@ -4,6 +4,8 @@ import type { McpAppViewCspDomains } from "./view_csp.js";
 const SANDBOX_PROXY_READY = "ui/notifications/sandbox-proxy-ready";
 /** The host hands the proxy the view's HTML and CSP. */
 const SANDBOX_RESOURCE_READY = "ui/notifications/sandbox-resource-ready";
+/** The shipped proxy says the view navigated its frame, which ext-apps has no message for. */
+const SANDBOX_VIEW_NAVIGATED = "ui/notifications/sandbox-view-navigated";
 
 /** A view frame loaded through a sandbox proxy. */
 export interface SandboxProxy {
@@ -22,8 +24,10 @@ export interface SandboxProxy {
  * `ui/notifications/sandbox-proxy-ready` it is sent the view's HTML and CSP in
  * `ui/notifications/sandbox-resource-ready`. The CSP also rides on the URL as
  * `?csp=`, where the specification's reference proxy reads it to set its
- * header before its page loads. Only messages from the frame's window and the
- * proxy's origin are read.
+ * header before its page loads. `onNavigate` is called when the proxy sends
+ * `ui/notifications/sandbox-view-navigated`, which the shipped proxy page does
+ * when the view navigates its inner frame. Only messages from the frame's
+ * window and the proxy's origin are read.
  *
  * Call it before `frame` is in the document, so the proxy cannot be ready
  * before this listens.
@@ -33,6 +37,7 @@ export function sandboxProxy(
   proxyUrl: string,
   html: string,
   csp: McpAppViewCspDomains,
+  onNavigate: () => void,
 ): SandboxProxy {
   const url = new URL(proxyUrl, document.baseURI);
   url.searchParams.set("csp", JSON.stringify(csp));
@@ -41,8 +46,12 @@ export function sandboxProxy(
     if (event.source !== frame.contentWindow || event.origin !== origin) {
       return;
     }
-    const data: unknown = event.data;
-    if ((data as { readonly method?: unknown } | null)?.method !== SANDBOX_PROXY_READY) {
+    const method = (event.data as { readonly method?: unknown } | null)?.method;
+    if (method === SANDBOX_VIEW_NAVIGATED) {
+      onNavigate();
+      return;
+    }
+    if (method !== SANDBOX_PROXY_READY) {
       return;
     }
     (event.source as Window).postMessage(

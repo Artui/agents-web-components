@@ -94,6 +94,13 @@ export interface McpAppsServices {
    * A read that fails is dropped, so a later draw reads it again.
    */
   readonly resources: Map<string, Promise<McpAppResource>>;
+  /** The view of this registration shown fullscreen, if any. */
+  readonly overlay: McpAppsOverlay;
+}
+
+/** What returns the one fullscreen view of a registration inline: `null` while none is. */
+export interface McpAppsOverlay {
+  exit: (() => void) | null;
 }
 
 /** What a drawn view's redraw can change. */
@@ -131,12 +138,9 @@ export interface McpAppHostContext {
   readonly locale: string;
   readonly displayMode: McpAppDisplayMode;
   readonly availableDisplayModes: readonly McpAppDisplayMode[];
-  readonly containerDimensions: { readonly width: number; readonly maxHeight: number };
+  /** Inline, the frame's width and the height it may grow to; fullscreen, its fixed box. */
+  readonly containerDimensions:
+    | { readonly width: number; readonly maxHeight: number }
+    | { readonly width: number; readonly height: number };
   readonly platform: "web";
 }
-
-/**
- * Answers a view's `ui/request-display-mode` with the mode it is shown in
- * after the request, which is the current one when the request is refused.
- */
-export type McpAppDisplayModeRequest = (requested: unknown) => McpAppDisplayMode;

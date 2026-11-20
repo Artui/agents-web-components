@@ -2271,13 +2271,13 @@ from the view's own frame:
 
 | The view sends | The host |
 | --- | --- |
-| `ui/initialize` | answers with `hostContext`: `theme`, `styles.variables`, `locale`, `displayMode: "inline"`, `availableDisplayModes: ["inline"]`, `containerDimensions` (the frame's width and a `maxHeight` of 640) and `platform: "web"` |
+| `ui/initialize` | answers with `hostContext`: `theme`, `styles.variables`, `locale`, `displayMode` (`inline` until it asks), `availableDisplayModes` (`["inline", "fullscreen"]` for a live view, `["inline"]` for a stored one), `containerDimensions` (inline, the frame's width and a `maxHeight` of 640; fullscreen, its `width` and `height`) and `platform: "web"` |
 | `ui/notifications/initialized` | sends `ui/notifications/tool-input` (the call's arguments), then `ui/notifications/tool-result` |
 | `ui/notifications/size-changed` | sets the frame's height, at most 640px; the view scrolls past it |
 | `tools/call` | sends it to the route with the view's `serverId` and answers its `result`, or its `error` with the route's code |
 | `ui/message` | sends its text as the user's next message (`chat.sendMessage`); `isError` when nothing was sent |
 | `ui/open-link` | opens an `http(s)` URL in a `noopener` tab; `isError` for any other |
-| `ui/request-display-mode` | answers `inline`, the only mode a view is shown in |
+| `ui/request-display-mode` | `fullscreen` fixes the view over the page in the same frame, which does not reload, with an exit control (string `mcpAppExitFullscreen`); Escape, that control or `inline` returns it to the transcript at its height. Answers the mode it is in after: the current one for `pip`, and for a stored or torn-down view |
 | `ui/notifications/request-teardown` | sends `ui/resource-teardown`, then closes the view to the notice |
 | anything else | answers `-32601` |
 
@@ -2285,7 +2285,18 @@ from the view's own frame:
 drawn from a stored conversation rather than a live run, and once it has asked
 to be torn down. Once initialised, the
 view is sent `ui/notifications/host-context-changed` with what changed when the
-`theme` attribute, the system scheme or the frame's width does.
+`theme` attribute, the system scheme, the frame's width or its display mode does
+(`displayMode` and `containerDimensions`, however it was switched). Fullscreen
+shows the view's box as a manual popover, in the top layer, so it covers the
+viewport above the host page's own layers whatever `--ag-ui-z-index` is and in
+every placement; a browser without popover (Firefox before 125) draws it as a
+fixed box inside the host's stacking context instead. One
+view per registration is fullscreen at a time; a second's request returns the
+first inline.
+
+A view that navigates its own frame is closed to the notice: a `srcdoc` frame
+seen by the host, a proxied one reported by the shipped proxy page with
+`ui/notifications/sandbox-view-navigated`.
 
 `styles.variables` are the element's own tokens, resolved in the scheme drawn
 now, under the MCP Apps names: `--color-background-primary` (`--ag-ui-bg`),

@@ -19,6 +19,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   prefix, and a result without the key, render exactly as before. The mark is display only. No
   opt-in: the mark appears wherever django-ag-ui 0.81.0 or later stamps `answered_by`.
   `AgUiClientHandlers.onToolResult` takes the raw value as a fourth argument, `answeredBy`.
+- **`./mcp-apps` shows a live view fullscreen when it asks.** `ui/request-display-mode` with
+  `fullscreen` fixes the view's box over the page without moving its frame, so the view keeps its
+  state rather than reloading; Escape, an "Exit full screen" control (focused on entry, string
+  `mcpAppExitFullscreen`) or a request for `inline` returns it to the transcript at the height it
+  had. Each switch, by the view or the user, sends `ui/notifications/host-context-changed` with
+  `displayMode` and `containerDimensions` (`width` and `height` while fullscreen). **The host
+  context's `availableDisplayModes` now includes `fullscreen`** for a live view (a stored or
+  torn-down view still gets `["inline"]` and its requests are answered `inline`), and `pip` is
+  answered with the current mode, as the MCP Apps result allows. One view per registration is
+  fullscreen at a time. The overlay is a manual popover in the top layer, so it covers the viewport
+  above the host page's layers whatever `--ag-ui-z-index` is, in every placement; a browser without
+  popover (Firefox before 125) gets a fixed box inside the host's stacking context. No opt-in: a host
+  already calling `registerMcpApps` gets it, and a host that re-vendors this release advertises
+  the new mode to its views.
 
 ### Fixed
 
@@ -32,6 +46,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   line under Resume, because each button was its own wrapping item. The pair now sits in one
   `part="checkpoint-actions"` wrapper that wraps as a unit and rides the trailing edge. No host
   opt-in; a host that styled `::part(checkpoint-row)` as a flat flex row sees the pair as one child.
+- **A view that navigates its frame inside the sandbox proxy is torn down, as a `srcdoc` view
+  already was.** With `sandboxProxyUrl` set the view's frame lives inside the proxy page, whose own
+  frame does not reload, so the navigation went unseen and the view stayed mounted. The shipped
+  proxy page now removes its inner frame on the view's second load and tells the host with
+  `ui/notifications/sandbox-view-navigated` (host-private: ext-apps 2.1.0 has no message for it);
+  the host closes the view to the notice and warns, as for `srcdoc`. Nothing to opt in to, but a
+  host serving its own copy of `sandbox-proxy.html` re-copies it from this release; a third-party
+  proxy that never sends the notification keeps the old behaviour.
 
 ## [0.6.0] — 2026-11-18
 
