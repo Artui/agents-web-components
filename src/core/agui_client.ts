@@ -137,8 +137,12 @@ export interface AgUiClientHandlers {
    * states the outcome at the top level of the event, and 1.0 strips that key
    * before any subscriber runs, so from such a server this is `undefined` and
    * the card settles as done.
+   *
+   * `answeredBy` is the metadata's `answered_by` key, forwarded raw the same
+   * way: who approved the call when no person was asked (`reviewer:<model>`,
+   * `routine:<id>`), which the card reads and shows. Display only.
    */
-  onToolResult(toolCallId: string, content: string, outcome?: unknown): void;
+  onToolResult(toolCallId: string, content: string, outcome?: unknown, answeredBy?: unknown): void;
   /**
    * Fired for AG-UI activity events — ambient notices about what the *run* did,
    * as opposed to work the agent asked for. `django-ag-ui` emits one with
@@ -957,7 +961,12 @@ export class AgUiClient {
         // return an image beside its text. A card shows text, so the text parts
         // are joined and the rest left to the host store, which keeps the
         // message whole; a plain string passes through unchanged.
-        h.onToolResult(event.toolCallId, contentToText(event.content), outcome);
+        h.onToolResult(
+          event.toolCallId,
+          contentToText(event.content),
+          outcome,
+          event.metadata?.["answered_by"],
+        );
       },
       onActivitySnapshotEvent({ event, messages }) {
         // A snapshot for an id already in the list is a replacement, not a new

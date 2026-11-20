@@ -42,14 +42,10 @@ export function registerMcpApps(chat: McpAppsHost, options: McpAppsOptions): voi
     sandboxProxyUrl,
     views: new WeakMap(),
     resources: new Map(),
+    overlay: { exit: null },
   };
   chat.registerActivityRenderer({
     type: PYDANTIC_AI_ACTIVITY_TYPE.MCP_APPS,
-    render: mcpAppsRenderer(
-      // Inline is the only mode this host shows a view in, so a request for
-      // another is answered with it.
-      viewFrame(hostBridge(() => "inline")),
-      services,
-    ),
+    render: mcpAppsRenderer(viewFrame(hostBridge()), services),
   });
 }

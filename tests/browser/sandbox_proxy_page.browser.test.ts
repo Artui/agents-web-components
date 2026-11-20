@@ -9,6 +9,7 @@ import { viewCsp } from "../../src/mcp_apps/view_csp.js";
 
 const READY = "ui/notifications/sandbox-proxy-ready";
 const RESOURCE = "ui/notifications/sandbox-resource-ready";
+const NAVIGATED = "ui/notifications/sandbox-view-navigated";
 
 interface Received {
   readonly source: MessageEventSource | null;
@@ -123,5 +124,33 @@ describe("the sandbox proxy page", () => {
     expect(inner().srcdoc).toBe(first);
     expect(echo.data?.["data"]).toEqual({ jsonrpc: "2.0", method: "ui/notifications/tool-input" });
     expect(received.filter((entry) => entry.data?.["kind"] === "booted")).toHaveLength(1);
+  });
+
+  it("tells its parent the view navigated, and relays nothing from the page it reached", async () => {
+    const { win, inner, received, stop } = await proxy();
+    win.postMessage(
+      {
+        method: RESOURCE,
+        params: {
+          html: `<script>
+            parent.postMessage({ kind: "booted" }, "*");
+            setTimeout(() => { location.href = "data:text/html,<script>parent.postMessage({ kind: 'reached' }, '*')<\\/script>"; }, 30);
+          </script>`,
+        },
+      },
+      "*",
+    );
+    await find(received, "booted");
+    const navigated = await until(
+      () => received.find((entry) => entry.data?.["method"] === NAVIGATED),
+      "navigated",
+    );
+    win.postMessage({ jsonrpc: "2.0", method: "ui/notifications/tool-input" }, "*");
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    stop();
+
+    expect(navigated.data).toEqual({ jsonrpc: "2.0", method: NAVIGATED, params: {} });
+    expect(inner()).toBeNull();
+    expect(received.filter((entry) => entry.data?.["kind"] === "reached")).toHaveLength(0);
   });
 });

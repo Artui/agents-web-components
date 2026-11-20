@@ -4,7 +4,12 @@ import type { AgUiChat } from "../src/core/ag_ui_chat.js";
 import { defineChat } from "../src/core/define_chat.js";
 import { hostBridge } from "../src/mcp_apps/host_bridge.js";
 import { serverRoute } from "../src/mcp_apps/server_route.js";
-import type { McpAppsHost, McpAppsServices, McpAppView } from "../src/mcp_apps/types.js";
+import type {
+  McpAppDisplayMode,
+  McpAppsHost,
+  McpAppsServices,
+  McpAppView,
+} from "../src/mcp_apps/types.js";
 import type { McpAppViewChannel } from "../src/mcp_apps/view_frame.js";
 import { DEFAULT_UI_STRINGS } from "../src/ui/ui_strings.js";
 
@@ -28,7 +33,11 @@ interface Fixture {
   readonly view: McpAppView;
   readonly close: ReturnType<typeof vi.fn>;
   readonly disconnect: () => void;
-  readonly requestDisplayMode: ReturnType<typeof vi.fn>;
+  readonly display: {
+    mode: McpAppDisplayMode;
+    request: ReturnType<typeof vi.fn>;
+    onUserSwitch: ReturnType<typeof vi.fn<(listener: () => void) => void>>;
+  };
 }
 
 let fixtures: Fixture[] = [];
@@ -56,6 +65,15 @@ function connected(
   document.body.append(iframe);
   const source = new EventTarget() as unknown as Window;
   const close = vi.fn();
+  const display = {
+    mode: "inline" as McpAppDisplayMode,
+    request: vi.fn((requested: unknown) => {
+      display.mode = requested === "fullscreen" ? "fullscreen" : display.mode;
+      return display.mode;
+    }),
+    onUserSwitch: vi.fn<(listener: () => void) => void>(),
+    dispose: vi.fn(),
+  };
   const channel = {
     iframe,
     source,
@@ -63,6 +81,7 @@ function connected(
     post: (message: unknown) => posted.push(message as Record<string, unknown>),
     live: true,
     close,
+    display,
   };
   const events = new EventTarget();
   const host = {
@@ -82,6 +101,7 @@ function connected(
     sandboxProxyUrl: undefined,
     views: new WeakMap(),
     resources: new Map(),
+    overlay: { exit: null },
   };
   const view: McpAppView = {
     messageId: "m1",
@@ -93,8 +113,7 @@ function connected(
     },
     live: true,
   };
-  const requestDisplayMode = vi.fn(() => "inline" as const);
-  const disconnect = hostBridge(requestDisplayMode)(channel, view, services);
+  const disconnect = hostBridge()(channel, view, services);
   const fixture = {
     events,
     posted,
@@ -105,7 +124,7 @@ function connected(
     view,
     close,
     disconnect,
-    requestDisplayMode,
+    display,
   };
   fixtures.push(fixture);
   return fixture;
@@ -157,7 +176,7 @@ describe("hostBridge", () => {
           theme: "light",
           locale: "en",
           styles: { variables: { "--color-background-primary": "rgb(1, 2, 3)" } },
-          availableDisplayModes: ["inline"],
+          availableDisplayModes: ["inline", "fullscreen"],
           containerDimensions: { maxHeight: MCP_APP_MAX_HEIGHT },
         },
       },
@@ -251,12 +270,22 @@ describe("hostBridge", () => {
     expect(iframe.style.height).toBe("0px");
   });
 
-  it("answers ui/request-display-mode with what its hook decides", () => {
+  it("answers ui/request-display-mode of a live view with the mode its display switched to", () => {
     const fixture = connected();
 
     request(fixture, 4, "ui/request-display-mode", { mode: "fullscreen" });
 
-    expect(fixture.requestDisplayMode).toHaveBeenCalledWith("fullscreen");
+    expect(fixture.display.request).toHaveBeenCalledWith("fullscreen");
+    expect(fixture.posted).toEqual([{ jsonrpc: "2.0", id: 4, result: { mode: "fullscreen" } }]);
+  });
+
+  it("answers a stored view's ui/request-display-mode with its mode, switching nothing", () => {
+    const fixture = connected();
+    fixture.channel.live = false;
+
+    request(fixture, 4, "ui/request-display-mode", { mode: "fullscreen" });
+
+    expect(fixture.display.request).not.toHaveBeenCalled();
     expect(fixture.posted).toEqual([{ jsonrpc: "2.0", id: 4, result: { mode: "inline" } }]);
   });
 
@@ -458,6 +487,38 @@ describe("hostBridge", () => {
     await vi.advanceTimersByTimeAsync(1);
 
     expect(fixture.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("answers a torn-down view's display request with its mode, and no longer offers fullscreen", () => {
+    const fixture = connected();
+    initialised(fixture);
+    notify(fixture, "ui/notifications/request-teardown");
+    fixture.posted.length = 0;
+
+    request(fixture, 9, "ui/request-display-mode", { mode: "fullscreen" });
+    fixture.host.colorScheme = "dark";
+    fixture.events.dispatchEvent(new Event(THEME_EVENT));
+
+    expect(fixture.display.request).not.toHaveBeenCalled();
+    expect(fixture.posted[0]).toEqual({ jsonrpc: "2.0", id: 9, result: { mode: "inline" } });
+    expect(fixture.posted[1]?.["params"]).toMatchObject({ availableDisplayModes: ["inline"] });
+  });
+
+  it("tells the view its mode when the user switches it", () => {
+    const fixture = connected();
+    initialised(fixture);
+    fixture.posted.length = 0;
+
+    fixture.display.mode = "fullscreen";
+    fixture.display.onUserSwitch.mock.calls[0]?.[0]();
+
+    expect(fixture.posted).toEqual([
+      {
+        jsonrpc: "2.0",
+        method: "ui/notifications/host-context-changed",
+        params: { displayMode: "fullscreen", containerDimensions: { width: 0, height: 0 } },
+      },
+    ]);
   });
 
   it("ignores a teardown request from a view that has not initialised", () => {

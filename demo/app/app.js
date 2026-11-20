@@ -897,6 +897,12 @@ $("cfg-place-ask").addEventListener("click", () => send("Where am I?"));
 if (on("activities")) {
   chat.registerContext(() => [{ description: "demo_surface", value: "release_form" }]);
 }
+// The editor's writes go through chat.request, so the header read here is
+// sent with each one; untick it to see the server refuse a write.
+if (on("skill-editor")) {
+  chat.getHeaders = () => ($("skills-csrf").checked ? { "X-CSRFToken": "demo-token" } : {});
+  $("skills-open").addEventListener("click", () => chat.openSkillEditor());
+}
 if (on("requests")) {
   chat.headers = { "X-Demo-Static": "from chat.headers" };
   chat.getHeaders = () => ({ "X-Demo-Rotating": `token-${Math.floor(Date.now() / 1000) % 1000}` });

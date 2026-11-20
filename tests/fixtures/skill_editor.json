@@ -1,0 +1,125 @@
+{
+  "recordedBy": "record_skill_editor_fixture.py",
+  "djangoAgUi": "0.83.0",
+  "answers": {
+    "listEmpty": {
+      "status": 200,
+      "body": {
+        "skills": []
+      }
+    },
+    "created": {
+      "status": 201,
+      "body": {
+        "id": "1",
+        "name": "weekly-report",
+        "description": "Summarise the week.",
+        "body": "Collect the tickets.",
+        "userInvocable": true,
+        "modelInvocable": false,
+        "enabled": true
+      }
+    },
+    "list": {
+      "status": 200,
+      "body": {
+        "skills": [
+          {
+            "id": "1",
+            "name": "weekly-report",
+            "description": "Summarise the week.",
+            "body": "Collect the tickets.",
+            "userInvocable": true,
+            "modelInvocable": false,
+            "enabled": true
+          }
+        ]
+      }
+    },
+    "updated": {
+      "status": 200,
+      "body": {
+        "id": "1",
+        "name": "weekly-report",
+        "description": "Summarise the week per team.",
+        "body": "Collect the tickets.",
+        "userInvocable": true,
+        "modelInvocable": false,
+        "enabled": true
+      }
+    },
+    "disabled": {
+      "status": 200,
+      "body": {
+        "id": "1",
+        "name": "weekly-report",
+        "description": "Summarise the week per team.",
+        "body": "Collect the tickets.",
+        "userInvocable": true,
+        "modelInvocable": false,
+        "enabled": false
+      }
+    },
+    "enabled": {
+      "status": 200,
+      "body": {
+        "id": "1",
+        "name": "weekly-report",
+        "description": "Summarise the week per team.",
+        "body": "Collect the tickets.",
+        "userInvocable": true,
+        "modelInvocable": false,
+        "enabled": true
+      }
+    },
+    "invalidName": {
+      "status": 400,
+      "body": {
+        "error": "Skill name 'Late Delivery' must be kebab-case: lowercase ASCII letters and digits in words joined by single hyphens, at most 64 characters."
+      }
+    },
+    "missingDescription": {
+      "status": 400,
+      "body": {
+        "error": "A skill needs a description."
+      }
+    },
+    "notFound": {
+      "status": 404,
+      "body": {
+        "error": "not found"
+      }
+    },
+    "unsupportedMediaType": {
+      "status": 415,
+      "body": {
+        "error": "a write must be application/json"
+      }
+    },
+    "unauthenticated": {
+      "status": 401,
+      "body": {
+        "error": "authentication required"
+      }
+    },
+    "refused": {
+      "status": 403,
+      "body": {
+        "error": "The skill 'late-delivery' may not be written by this caller."
+      }
+    },
+    "limit": {
+      "status": 409,
+      "body": {
+        "error": "A caller sees at most 100 enabled skills."
+      }
+    }
+  },
+  "skillsChanged": {
+    "type": "CUSTOM",
+    "name": "ag_ui.skills_changed",
+    "value": {
+      "name": "weekly-report"
+    }
+  }
+}

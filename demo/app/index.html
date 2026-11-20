@@ -685,6 +685,13 @@
               <strong>A question.</strong> <em>A question</em> reaches the built-in
               <code>ask_user</code> card.
             </li>
+            <li>
+              <strong>Approved without asking.</strong> Two calls nobody was asked about: one a
+              reviewer model approved, one a routine's grant approved. Each card's head reads who
+              approved it (<code>data-answered-by</code>, part <code>tool-card-answered-by</code>);
+              a third, stamped with a prefix the chat does not know, shows no mark. Reload the page:
+              the marks come back from the stored thread.
+            </li>
           </ul>
         </div>
       </section>
@@ -814,6 +821,12 @@
               from the chat's tokens. The frame takes the view's height.
             </li>
             <li>
+              <strong>Full screen.</strong> "Full screen" sends <code>ui/request-display-mode</code>:
+              the view covers the page in the same frame (its log and result stay, so it did not
+              reload), with an "Exit full screen" control. Escape, that control, or "Back inline"
+              returns it to the transcript at the height it had. A stored view stays inline.
+            </li>
+            <li>
               <strong>Without a server.</strong> A view whose toolset has no id draws the notice,
               whatever is registered.
             </li>
@@ -863,6 +876,20 @@
         </div>
       </section>
 
+      <section data-scenario="skill-editor" hidden>
+        <div class="panel">
+          <h2>The skill editor</h2>
+          <div class="controls">
+            <div class="ctl wide">
+              <span>Open it</span>
+              <button type="button" id="skills-open">chat.openSkillEditor()</button>
+            </div>
+            <label class="ctl check"
+              ><span>Send the CSRF header</span> <input type="checkbox" id="skills-csrf" checked
+            /></label>
+          </div>
+        </div>
+      </section>
       <section data-scenario="requests" hidden>
         <div class="panel">
           <h2>chat.request</h2>

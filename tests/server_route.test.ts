@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { MCP_APPS_ROUTE_ERROR } from "../src/constants.js";
 import { serverRoute } from "../src/mcp_apps/server_route.js";
+import recorded from "./fixtures/mcp_apps_route_errors.json" with { type: "json" };
 
 function host(response: Response) {
   return { request: vi.fn((_url: string, _init?: RequestInit) => Promise.resolve(response)) };
@@ -57,6 +58,34 @@ describe("serverRoute", () => {
         code,
         message: "Unknown resource: ui://nope",
       });
+    },
+  );
+
+  it.each([
+    ["401", -32001, "authentication required"],
+    ["403", -32006, "forbidden"],
+  ] as const)(
+    "carries django-ag-ui's coded %s answer, recorded from its view, into the error",
+    async (key, code, message) => {
+      const { status, body } = recorded[key];
+      const chat = host(answer(body, status));
+
+      const error = await serverRoute(chat, "/r/")(READ).catch((caught: unknown) => caught);
+
+      expect(status).toBe(Number(key));
+      expect(error).toMatchObject({ name: MCP_APPS_ROUTE_ERROR, code, message });
+    },
+  );
+
+  it.each([["not json"], ["[]"], ['{"error": {"message": "no code"}}'], ["{}"]])(
+    "keeps the generic status error for a non-2xx body that is not the envelope: %s",
+    async (body) => {
+      const chat = host(new Response(body, { status: 502 }));
+
+      const error = await serverRoute(chat, "/r/")(READ).catch((caught: unknown) => caught);
+
+      expect(error).toMatchObject({ message: expect.stringContaining("with 502") });
+      expect(error).not.toHaveProperty("code");
     },
   );
 

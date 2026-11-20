@@ -278,10 +278,14 @@ export class CheckpointMenu {
       row.append(branch);
     }
 
-    row.append(
+    const actions = document.createElement("span");
+    actions.className = "checkpoint-actions";
+    actions.setAttribute("part", "checkpoint-actions");
+    actions.append(
       this.#action(run.run_id, "resume", this.#strings.resumeRun),
       this.#action(run.run_id, "fork", this.#strings.forkRun),
     );
+    row.append(actions);
     return row;
   }
 

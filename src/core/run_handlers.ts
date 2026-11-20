@@ -5,6 +5,7 @@ import {
   INVALIDATE_EVENT,
   MESSAGE_ROLE,
   RUN_FINISHED_EVENT,
+  SKILLS_CHANGED_CUSTOM_NAME,
   SUBAGENT_CUSTOM_NAME,
   TOOL_CALL_STATUS,
 } from "../constants.js";
@@ -55,6 +56,8 @@ export interface RunHandlersHost {
   readonly newChat: () => void;
   /** Whether `show-usage` is set, read when a turn settles. */
   readonly showUsage: () => boolean;
+  /** A run saved a stored skill: the skill catalog (and an open editor) refetch. */
+  readonly skillsChanged: () => void;
 }
 
 /** The `RUN_ERROR` code whose message names the field and limit, and is shown as sent. */
@@ -342,6 +345,11 @@ export class RunHandlers {
           this.#host.subagents.report(value);
           return;
         }
+        // Acted on, then forwarded like any other name: hosts saw it before
+        // the element knew it, and some may refetch their own lists on it.
+        if (name === SKILLS_CHANGED_CUSTOM_NAME) {
+          this.#host.skillsChanged();
+        }
         // Straight out to the host page, uninterpreted. This is the imperative
         // carrier: whatever it means, it means it to the page, not to the
         // transcript -- so it is dispatched and deliberately not rendered,
@@ -388,7 +396,7 @@ export class RunHandlers {
           "history-replaced",
         );
       },
-      onToolResult: (toolCallId, content, outcome) => {
+      onToolResult: (toolCallId, content, outcome, answeredBy) => {
         const card = this.#host.transcript.card(toolCallId);
         if (card === undefined) {
           return;
@@ -398,7 +406,7 @@ export class RunHandlers {
         // reads, at a glance, as a booking that was made. An absent or
         // unrecognised outcome still means DONE, so a server that never states
         // one renders every call as done.
-        card.settle(toolStatusFromOutcome(outcome), content);
+        card.settle(toolStatusFromOutcome(outcome), content, answeredBy);
         this.#host.transcript.markServerSettled(toolCallId);
         ledger.serverSettled.add(toolCallId);
         // The card stops being the live thing the moment it settles, and the

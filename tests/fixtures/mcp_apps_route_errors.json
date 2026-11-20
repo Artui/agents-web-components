@@ -1,0 +1,20 @@
+{
+  "401": {
+    "body": {
+      "error": {
+        "code": -32001,
+        "message": "authentication required"
+      }
+    },
+    "status": 401
+  },
+  "403": {
+    "body": {
+      "error": {
+        "code": -32006,
+        "message": "forbidden"
+      }
+    },
+    "status": 403
+  }
+}

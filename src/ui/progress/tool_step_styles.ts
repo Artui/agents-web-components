@@ -182,8 +182,12 @@ export const TOOL_STEP_STYLES: string = `
 }
 
 /* The lasting record of a human decision on a gated call — without it an
-   approved call looks exactly like one that was never gated. */
-.tool-call-decision {
+   approved call looks exactly like one that was never gated. The answered-by
+   mark is the same record for a call a reviewer model or a routine approved
+   with no person asked, so it wears the same note. Neither declares a display,
+   so the hidden attribute on the decision still hides it. */
+.tool-call-decision,
+.tool-call-answered-by {
   flex: none;
   font-size: 11px;
   font-style: italic;

@@ -1,0 +1,42 @@
+{
+  "generator": "scripts/record_answered_by_fixture.py",
+  "djangoAgUi": "0.83.0",
+  "agUiProtocol": "1.0.0",
+  "canonicalized": [
+    "id"
+  ],
+  "frames": {
+    "reviewer": "data: {\"type\":\"TOOL_CALL_RESULT\",\"metadata\":{\"answered_by\":\"reviewer:openai:gpt-5\"},\"messageId\":\"m1\",\"toolCallId\":\"tc1\",\"content\":\"ok\"}\n\n",
+    "routine": "data: {\"type\":\"TOOL_CALL_RESULT\",\"metadata\":{\"answered_by\":\"routine:42\"},\"messageId\":\"m1\",\"toolCallId\":\"tc1\",\"content\":\"ok\"}\n\n",
+    "unknown": "data: {\"type\":\"TOOL_CALL_RESULT\",\"metadata\":{\"answered_by\":\"oracle:x\"},\"messageId\":\"m1\",\"toolCallId\":\"tc1\",\"content\":\"ok\"}\n\n"
+  },
+  "messages": {
+    "reviewer": {
+      "id": "t1",
+      "role": "tool",
+      "content": "ok",
+      "toolCallId": "tc1",
+      "metadata": {
+        "answered_by": "reviewer:openai:gpt-5"
+      }
+    },
+    "routine": {
+      "id": "t1",
+      "role": "tool",
+      "content": "ok",
+      "toolCallId": "tc1",
+      "metadata": {
+        "answered_by": "routine:42"
+      }
+    },
+    "unknown": {
+      "id": "t1",
+      "role": "tool",
+      "content": "ok",
+      "toolCallId": "tc1",
+      "metadata": {
+        "answered_by": "oracle:x"
+      }
+    }
+  }
+}

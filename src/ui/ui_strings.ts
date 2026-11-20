@@ -132,6 +132,8 @@ export interface UiStrings {
   enqueuedMessages: string;
   /** Notice in place of an MCP App's view, which this element cannot show. Token: `{uri}`. */
   mcpAppUnsupported: string;
+  /** Label of the control that returns a fullscreen MCP App view inline. */
+  mcpAppExitFullscreen: string;
   /** Notice shown on mount when the previous run never produced a response. */
   runInterrupted: string;
   /** Tool-result content (and card text) when the page moved mid-run. */
@@ -203,6 +205,10 @@ export interface UiStrings {
   decisionApproved: string;
   /** Note on a tool card whose call a human declined. */
   decisionDeclined: string;
+  /** Note on a tool card whose call a reviewer model approved, with no person asked. */
+  answeredByReviewer: string;
+  /** Note on a tool card whose call a routine's standing grant approved. */
+  answeredByRoutine: string;
   /** Heading over a tool card's arguments region. */
   argumentsLabel: string;
   /** Heading over a tool card's result region when the call succeeded. */
@@ -340,6 +346,72 @@ export interface UiStrings {
   /** Inline delete-confirm prompt. */
   deletePrompt: string;
 
+  // ── Skill editor ────────────────────────────────────────────────────────────
+  /** The header button and the list view's title. */
+  skills: string;
+  /** The row at the foot of the / palette that opens the editor. */
+  manageSkills: string;
+  /** The back arrow out of a full-panel view. */
+  backToConversation: string;
+  /** The list view's add button. */
+  newSkill: string;
+  /** The editor's title for a new skill. */
+  newSkillTitle: string;
+  /** The editor's title for an existing skill. */
+  editSkillTitle: string;
+  /** Empty-state heading. */
+  noSkills: string;
+  /** Empty-state explanation. Token: `{example}`. */
+  noSkillsBody: string;
+  /** Sends `/create-skill`: the agent drafts one onto an approval card. */
+  draftSkill: string;
+  /** Opens a blank editor. */
+  writeSkill: string;
+  /** Field label. */
+  skillName: string;
+  /** Under the name field. */
+  skillNameHint: string;
+  /** Field label. */
+  skillDescription: string;
+  /** Under the description field. */
+  skillDescriptionHint: string;
+  /** Field label. */
+  skillBody: string;
+  /** Under the instructions field. */
+  skillBodyHint: string;
+  /** The group of the two reach flags. */
+  skillReach: string;
+  /** The user-invocable flag. */
+  skillInMenu: string;
+  /** Under the user-invocable flag. */
+  skillInMenuHint: string;
+  /** The model-invocable flag. */
+  skillAgentMayLoad: string;
+  /** Under the model-invocable flag. */
+  skillAgentMayLoadHint: string;
+  /** Shown when both flags are off. */
+  skillUnreachable: string;
+  /** Tag on a skill that is off. */
+  skillOff: string;
+  /** Turns an off skill back on, in its list row. */
+  turnOn: string;
+  /** Turns a skill off, in the editor. */
+  turnOff: string;
+  /** Saves a new skill. */
+  create: string;
+  /** Saves an edited skill. */
+  save: string;
+  /** Status line after a save. Token: `{name}`. */
+  skillSaved: string;
+  /** Status line after turning a skill on. Token: `{name}`. */
+  skillTurnedOn: string;
+  /** Status line after turning a skill off. Token: `{name}`. */
+  skillTurnedOff: string;
+  /** Shown when the list will not load. */
+  skillsUnavailable: string;
+  /** Shown for a refused write whose answer carried no message. */
+  skillSaveFailed: string;
+
   // ── Attachments ─────────────────────────────────────────────────────────────
   /** Oversize rejection. Token: `{size}`. */
   tooLarge: string;
@@ -454,6 +526,7 @@ export const DEFAULT_UI_STRINGS: UiStrings = {
   usingSkill: "Using skill {name}",
   enqueuedMessages: "Added during the run",
   mcpAppUnsupported: "An app view can't be shown here: {uri}",
+  mcpAppExitFullscreen: "Exit full screen",
   runInterrupted: "The previous response didn’t finish — the page changed before it arrived.",
   pageMoved:
     "The page changed since you last looked at it. Call read_page to see the current page, then retry.",
@@ -489,6 +562,8 @@ export const DEFAULT_UI_STRINGS: UiStrings = {
   resizePanel: "Resize the chat panel",
   decisionApproved: "approved by you",
   decisionDeclined: "declined by you",
+  answeredByReviewer: "Approved by a reviewer model",
+  answeredByRoutine: "Approved by a routine",
   argumentsLabel: "Arguments",
   resultLabel: "Result",
   errorLabel: "Error",
@@ -543,6 +618,42 @@ export const DEFAULT_UI_STRINGS: UiStrings = {
   delete: "Delete",
   deleteConversation: "Delete conversation",
   deletePrompt: "Delete?",
+
+  skills: "Skills",
+  manageSkills: "Manage skills",
+  backToConversation: "Back to the conversation",
+  newSkill: "New skill",
+  newSkillTitle: "New skill",
+  editSkillTitle: "Edit skill",
+  noSkills: "No skills yet",
+  noSkillsBody:
+    "A skill is a set of instructions you or the agent can call up by name, like {example}.",
+  draftSkill: "Draft one with the agent",
+  writeSkill: "Write it yourself",
+  skillName: "Name",
+  skillNameHint: "Lowercase words joined by hyphens. It is what you type after /.",
+  skillDescription: "Description",
+  skillDescriptionHint:
+    "The agent reads only this until it loads the skill, so say when to use it.",
+  skillBody: "Instructions",
+  skillBodyHint: "Markdown. A skill grants no tools: approvals still apply.",
+  skillReach: "Who can use it",
+  skillInMenu: "In the / menu",
+  skillInMenuHint: "You pick it from the palette.",
+  skillAgentMayLoad: "Agent may load it on its own",
+  skillAgentMayLoadHint: "When the description matches the request.",
+  skillUnreachable:
+    "With both off nobody can reach this skill. Turn it off instead if that is the intent.",
+  skillOff: "Off",
+  turnOn: "Turn on",
+  turnOff: "Turn off",
+  create: "Create",
+  save: "Save",
+  skillSaved: "Saved /{name}",
+  skillTurnedOn: "/{name} is on again",
+  skillTurnedOff: "/{name} is off",
+  skillsUnavailable: "Skills could not be loaded.",
+  skillSaveFailed: "The skill could not be saved.",
 
   tooLarge: "Too large (max {size})",
   fileTypeNotAllowed: "File type not allowed",

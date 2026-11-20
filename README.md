@@ -195,6 +195,8 @@ another origin, add `credentials="include"` too; see
 | `data-slash-commands` | — | Present (bare, or any value but `"false"`) to enable the `/`-command palette. |
 | `data-skills` | — | Inline JSON skill catalog. A value that will not parse is ignored and reported on the console, rather than reading as an empty catalog. |
 | `data-skills-url` | — | URL of a JSON skill catalog (fetched with the element's headers and cookie policy). |
+| `data-skill-editor-url` | — | URL of django-ag-ui's skill editor endpoint (`skills/editor/`). Opts into the [skill editor](#the-skill-editor): a "Manage skills" row at the foot of the `/` palette under `data-slash-commands`, a header button with `data-skill-editor-button`, or `openSkillEditor()`. |
+| `data-skill-editor-button` | absent | With `data-skill-editor-url`, also puts a Skills button in the header. Off by default: with every header control on, the row needs about 262px. |
 | `data-tools-url` | — | URL of a server tool-label catalog (`[{ name, summary, description? }]`), fetched with the element's headers and cookie policy; labels tool-call cards for server-side tools. |
 | `user-key` | `userKey` | Who the stored conversation belongs to — any string identifying the signed-in principal. Joins the storage namespace, and **changing it purges what the previous principal left behind**. Live (not connect-time): a logout is the host's to announce. See [Who the stored conversation belongs to](#who-the-stored-conversation-belongs-to-user-key). |
 | `user-name` | `userName` | The signed-in user's display name, for the [greeting](#the-greeting-on-an-empty-page) an empty conversation shows under `placement="page"`. Presentation only: unlike `user-key` it scopes nothing and is never sent. Absent or blank gives the nameless greeting. Live. |
@@ -290,8 +292,8 @@ the element enters the DOM, or remove and re-insert it. See
 [Framework hosts](#framework-hosts-configure-before-you-insert), where the boundary bites hardest.
 The list: `data-attachments-url`, `data-attachment-accept`, `data-attachment-max-bytes`,
 `data-transcribe-url`, `data-threads-url`, `data-threads-cache`, `data-tools-url`,
-`data-skills-url`, `data-skills`, `data-prompt-chips`, `data-slash-commands`, `data-theme-toggle`,
-`data-strings`, `data-icon-url`.
+`data-skills-url`, `data-skill-editor-url`, `data-skill-editor-button`, `data-skills`, `data-prompt-chips`,
+`data-slash-commands`, `data-theme-toggle`, `data-strings`, `data-icon-url`.
 
 What re-inserting costs: the chrome is built again from the attributes as they stand, a run in
 progress is cancelled, and the conversation is redrawn from its stored history — the same rebuild
@@ -336,7 +338,7 @@ keyboard focus and styleable via the `code-copy` part. Override its labels with
 the `copyCode` / `copied` / `copyFailed` strings.
 
 **Methods**: `registerTool`, `registerPageState`, `registerActivityRenderer`, `registerContext`,
-`setSkills`, `sendMessage`, `run`, `attachFile`, `appendMessage`, `retryLastTurn`, `quote`, `offerQuoteInPage`,
+`setSkills`, `openSkillEditor`, `closeSkillEditor`, `sendMessage`, `run`, `attachFile`, `appendMessage`, `retryLastTurn`, `quote`, `offerQuoteInPage`,
 `enableCharts`, `newChat`, `setCollapsed`, `toggleCollapsed`, `setMaximized`, `toggleMaximized`,
 `describeSurface`, `moveTo`, `resetSize`, `toggleTheme`, `openThreads`, `closeThreads`, `switchThread`, `deleteThread`,
 `openCheckpoints`, `closeCheckpoints`, `toggleCheckpoints`, `refreshPlace`, `request`, `tokenValues` and `reload`.
@@ -2271,13 +2273,13 @@ from the view's own frame:
 
 | The view sends | The host |
 | --- | --- |
-| `ui/initialize` | answers with `hostContext`: `theme`, `styles.variables`, `locale`, `displayMode: "inline"`, `availableDisplayModes: ["inline"]`, `containerDimensions` (the frame's width and a `maxHeight` of 640) and `platform: "web"` |
+| `ui/initialize` | answers with `hostContext`: `theme`, `styles.variables`, `locale`, `displayMode` (`inline` until it asks), `availableDisplayModes` (`["inline", "fullscreen"]` for a live view, `["inline"]` for a stored one), `containerDimensions` (inline, the frame's width and a `maxHeight` of 640; fullscreen, its `width` and `height`) and `platform: "web"` |
 | `ui/notifications/initialized` | sends `ui/notifications/tool-input` (the call's arguments), then `ui/notifications/tool-result` |
 | `ui/notifications/size-changed` | sets the frame's height, at most 640px; the view scrolls past it |
 | `tools/call` | sends it to the route with the view's `serverId` and answers its `result`, or its `error` with the route's code |
 | `ui/message` | sends its text as the user's next message (`chat.sendMessage`); `isError` when nothing was sent |
 | `ui/open-link` | opens an `http(s)` URL in a `noopener` tab; `isError` for any other |
-| `ui/request-display-mode` | answers `inline`, the only mode a view is shown in |
+| `ui/request-display-mode` | `fullscreen` fixes the view over the page in the same frame, which does not reload, with an exit control (string `mcpAppExitFullscreen`); Escape, that control or `inline` returns it to the transcript at its height. Answers the mode it is in after: the current one for `pip`, and for a stored or torn-down view |
 | `ui/notifications/request-teardown` | sends `ui/resource-teardown`, then closes the view to the notice |
 | anything else | answers `-32601` |
 
@@ -2285,7 +2287,18 @@ from the view's own frame:
 drawn from a stored conversation rather than a live run, and once it has asked
 to be torn down. Once initialised, the
 view is sent `ui/notifications/host-context-changed` with what changed when the
-`theme` attribute, the system scheme or the frame's width does.
+`theme` attribute, the system scheme, the frame's width or its display mode does
+(`displayMode` and `containerDimensions`, however it was switched). Fullscreen
+shows the view's box as a manual popover, in the top layer, so it covers the
+viewport above the host page's own layers whatever `--ag-ui-z-index` is and in
+every placement; a browser without popover (Firefox before 125) draws it as a
+fixed box inside the host's stacking context instead. One
+view per registration is fullscreen at a time; a second's request returns the
+first inline.
+
+A view that navigates its own frame is closed to the notice: a `srcdoc` frame
+seen by the host, a proxied one reported by the shipped proxy page with
+`ui/notifications/sandbox-view-navigated`.
 
 `styles.variables` are the element's own tokens, resolved in the scheme drawn
 now, under the MCP Apps names: `--color-background-primary` (`--ag-ui-bg`),
@@ -2451,6 +2464,16 @@ approval message — the answer rides `resume[]` as transient run input — so a
 tool call and its result but not the note that a human waved it through. If you need "who
 approved what" durably, that is an audit concern rather than a transcript one; record it
 server-side.
+
+A call no person was asked about can still have been approved: by a reviewer model, or by a
+routine's standing grant. No interrupt is raised for it, so the tool call card carries the mark.
+When a result's `metadata.answered_by` (django-ag-ui 0.81.0 or later stamps it, live and on the
+stored tool message) starts `reviewer:` or `routine:`, the card gets
+`data-answered-by="reviewer"` or `"routine"` and a note in its head (part
+`tool-card-answered-by`, strings `answeredByReviewer` / `answeredByRoutine`). Any other value,
+and a result without the key, render exactly as before. Unlike the decision, the mark survives a
+reload, because it is read off the stored message. It is display only: the server's audit record
+is the authority.
 
 If a tool's schema carries an `x-summary` string (use `X_SUMMARY_KEY`), the card shows it on the
 label instead of the raw tool name.
@@ -3033,6 +3056,44 @@ chat.skillContext = () => ({ title: document.title });
 **Picking a skill sends it.** A chip that needs a second click to do anything is a two-step
 shortcut. Set `sendImmediately: false` on a prompt-carrying skill to pre-fill the composer instead —
 useful when the user is expected to edit before sending. A server-resolved skill always sends.
+
+### The skill editor
+
+With django-ag-ui's stored skills (`AGUIServer(skill_editor=True)`, 0.83.0 or later), the element
+can offer an editor for the skills the caller may write. Point `data-skill-editor-url` at the
+mount's `skills/editor/` route:
+
+```html
+<ag-ui-chat
+  endpoint="/agent/"
+  data-skills-url="/agent/skills/"
+  data-skill-editor-url="/agent/skills/editor/"
+  data-skill-editor-button
+  data-slash-commands="true"
+></ag-ui-chat>
+```
+
+The editor opens in place of the conversation, below the header, from a "Manage skills" row at the foot of the
+`/` palette (under `data-slash-commands`; alone under a bare `/` when nothing matches) and, with `data-skill-editor-button`, from a Skills button in the header (`openSkillEditor()` and
+`closeSkillEditor()` drive it from your own chrome). It lists the skills the server says the caller
+may write, off ones included, with "Turn on" on an off row; it creates, edits and turns skills off;
+and "Draft one with the agent" closes it and sends `/create-skill`, whose draft comes back as an
+approval card. History, Checkpoints and New chat close it first. The server keeps every rule: a
+refused save shows the server's message (`{"error"}`) above the form, since django-ag-ui 0.83.0
+names no field; an answer that adds `"field"` shows under that field.
+
+**Writes are CSRF-checked by default** on the server, and each one sends `headers` and
+`getHeaders()` as read at that moment, so a `getHeaders` returning the current CSRF token is all a
+Django host needs:
+
+```js
+chat.getHeaders = () => ({ "X-CSRFToken": readCookie("csrftoken") });
+```
+
+The palette catches up without a reload: after each save from the editor, on every change of
+`user-key`, and whenever a run sends django-ag-ui's `ag_ui.skills_changed` CUSTOM event (still
+forwarded to the page as `ag-ui-custom`). A `user-key` handover also closes the editor and drops
+what it held, the previous principal's skill bodies included.
 
 ---
 
@@ -3766,6 +3827,8 @@ paths.
 | `createPageStateTools(binding)` | function | Build `read_<name>` / `set_<name>` tools. |
 | `PageState` | type | A page-state binding declaration. |
 | `Skill` | type | A launchable prompt (chip / `/`-command). |
+| `EditorSkill` | type | A stored skill as the skill editor endpoint serves it. |
+| `EditorSkillDraft` | type | What the skill editor sends to create or replace one. |
 | `RunFinishedDetail` / `ToolRun` | type | `ag-ui-run-finished` detail: the tools an interaction ran, which side ran them, and how it ended. |
 | `CustomAgentDetail` | type | `ag-ui-custom` detail: an AG-UI `CUSTOM` event's `name` and `value`, verbatim. |
 | `InvalidateDetail` | type | `ag-ui-invalidate` detail: the resource `keys` that moved, and the `reason`. |
@@ -4419,7 +4482,7 @@ component sets, so a new one cannot ship undocumented.
 | Feature | Parts |
 | --- | --- |
 | Shell | `panel`, `header`, `title`, `icon`, `header-controls`, `messages`, `empty`, `greeting`, `pending`, `stopped`, `usage-line`, `jump-latest`, and one per resize grip: `resize-handle` plus `resize-handle-top`, `resize-handle-bottom`, `resize-handle-left`, `resize-handle-right`, `resize-handle-top-left`, `resize-handle-top-right`, `resize-handle-bottom-left`, `resize-handle-bottom-right` |
-| Header buttons | `header-button` on each, plus `history-button`, `checkpoints-button`, `new-button`, `maximize-button`, `collapse-button`, `theme-toggle` |
+| Header buttons | `header-button` on each, plus `skills-button` (with `data-skill-editor-button`), `history-button`, `checkpoints-button`, `new-button`, `maximize-button`, `collapse-button`, `theme-toggle` |
 | Collapsed widget | `launcher`, `launcher-icon`, `launcher-badge`, `rail-label`, `bar` (the [bottom bar](#collapsing-to-a-bottom-bar)'s wrapper, around the launcher), `bar-place` (the place beside the bar's title; its text carries `place-label` and `place-detail`), `bar-history` |
 | Answers | `answer` (the per-turn group), `message` (plus `message-user`, `message-assistant`), `code-copy`, `enqueued-messages` and `enqueued-messages-note` (user messages a run took in mid-turn) |
 | Reasoning | `thoughts`, `thoughts-toggle`, `thoughts-body`, `thoughts-label` |
@@ -4427,7 +4490,7 @@ component sets, so a new one cannot ship undocumented.
 | Message actions | `run-error-offer` (the new-conversation offer under a failed run), `message-actions`, `message-action` (plus `message-action-retry`, `message-action-copy`, `message-action-up`, `message-action-down`), and the icon holder inside each: `message-action-icon` (plus `message-action-icon-retry`, `message-action-icon-copy`, `message-action-icon-up`, `message-action-icon-down`) |
 | Queued messages | `queued`, `queued-chip` |
 | Run notices | `run-notice` (plus `run-notice-interrupted`, `run-notice-attachment-pending`, `run-notice-compaction`, `run-notice-skill`, `run-notice-history-replaced`, `run-notice-chart-undrawable`, `run-notice-surface`, `run-notice-not-connected`, `run-notice-mcp-app`), `run-notice-icon`, `run-notice-text`, `run-notice-undo` |
-| Tool cards | `tool-card` (plus one status modifier: `tool-card-pending`, `tool-card-deferred`, `tool-card-done`, `tool-card-error`, `tool-card-declined`, `tool-card-interrupted`), `tool-card-head`, `tool-card-icon`, `tool-card-name`, `tool-card-status` (plus `tool-card-status-pending`, `tool-card-status-deferred`, `tool-card-status-done`, `tool-card-status-error`, `tool-card-status-declined`, `tool-card-status-interrupted`), `tool-card-decision`, `tool-card-toggle`, `tool-card-body`, `tool-card-section` (plus `tool-card-args-section`, `tool-card-result-section`), `tool-card-section-label` (plus `tool-card-args-label`, `tool-card-result-label`), `tool-card-args`, `tool-card-result`, `tool-card-approval`, `tool-card-subagent`, `tool-card-repeat` |
+| Tool cards | `tool-card` (plus one status modifier: `tool-card-pending`, `tool-card-deferred`, `tool-card-done`, `tool-card-error`, `tool-card-declined`, `tool-card-interrupted`), `tool-card-head`, `tool-card-icon`, `tool-card-name`, `tool-card-status` (plus `tool-card-status-pending`, `tool-card-status-deferred`, `tool-card-status-done`, `tool-card-status-error`, `tool-card-status-declined`, `tool-card-status-interrupted`), `tool-card-decision`, `tool-card-answered-by`, `tool-card-toggle`, `tool-card-body`, `tool-card-section` (plus `tool-card-args-section`, `tool-card-result-section`), `tool-card-section-label` (plus `tool-card-args-label`, `tool-card-result-label`), `tool-card-args`, `tool-card-result`, `tool-card-approval`, `tool-card-subagent`, `tool-card-repeat` |
 | Tool-step group | `tool-group` (plus one state modifier: `tool-group-waiting`, `tool-group-running`, `tool-group-done`, `tool-group-error`), `tool-group-head`, `tool-group-icon`, `tool-group-label`, `tool-group-meta`, `tool-group-list` |
 | Delegated sub-agents | `subagent`, `subagent-row`, `subagent-icon`, `subagent-status`, `subagent-steps`, `subagent-step`, `subagent-step-icon`, `subagent-step-name` |
 | Client-side confirmation | `confirm`, `confirm-body`, `confirm-args`, `confirm-actions`, `confirm-button` (plus `confirm-confirm`, `confirm-cancel`, `confirm-always`) |
@@ -4436,10 +4499,12 @@ component sets, so a new one cannot ship undocumented.
 | Composer | `composer`, `composer-surface`, `composer-tools`, `input`, `send`, `attach-button`, `voice-button` |
 | Place chip | `place` (carries `data-excluded` while the user withholds the place), `place-icon`, `place-label`, `place-detail`, `place-toggle` |
 | Attachments | `attachment-tray`, `attachment-chips` (the read-only chips on sent bubbles), and the shared chip parts `attachment-chip`, `attachment-chip-icon`, `attachment-chip-name`, `attachment-chip-size`, `attachment-chip-bar`, `attachment-chip-bar-fill`, `attachment-chip-retry`, `attachment-chip-remove` |
-| Skills | `skill-chips`, `skill-chip`, `skill-palette`, `skill-item`, `skill-item-title`, `skill-item-desc`, `skill-item-token`, `skill-hint` (the composer hint: a skill’s missing placeholders, and a run continuation picked with nothing typed or while a run is in flight) |
+| Skills | `skill-chips`, `skill-chip`, `skill-palette`, `skill-item`, `skill-item-title`, `skill-item-desc`, `skill-item-token`, `skill-hint` (the composer hint: a skill’s missing placeholders, and a run continuation picked with nothing typed or while a run is in flight), `skill-manage` (the "Manage skills" row, also a `skill-item`) |
+| Full-panel view | `panel-view`, `panel-view-bar`, `panel-view-title`, `panel-view-body`, `panel-view-footer`, and in its bar `back-button` |
+| Skill editor | `skill-rows`, `skill-row`, `skill-empty`, `skill-form`, and in the view's bar `new-skill-button` |
 | Thread drawer | `drawer`, `drawer-backdrop`, `drawer-panel`, `drawer-header`, `drawer-title`, `drawer-new`, `drawer-close`, `drawer-filter`, `drawer-list`, `drawer-empty`, `drawer-group-label`, `drawer-row`, `drawer-row-select`, `drawer-row-title`, `drawer-row-time`, `drawer-row-preview`, `drawer-row-actions`, `drawer-row-rename`, `drawer-row-delete`, `drawer-rename-input`, `drawer-confirm`, `drawer-confirm-label`, `drawer-confirm-yes`, `drawer-confirm-no` |
 | Charts | `chart-block`, `chart-title`, `chart-legend` |
-| Checkpoints panel | `checkpoints`, `checkpoints-header`, `checkpoints-title`, `checkpoints-list`, `checkpoints-empty`, `checkpoint-row`, `checkpoint-label`, `checkpoint-time`, `checkpoint-id`, `checkpoint-branch`, `checkpoint-action` (plus `checkpoint-resume`, `checkpoint-fork`) |
+| Checkpoints panel | `checkpoints`, `checkpoints-header`, `checkpoints-title`, `checkpoints-list`, `checkpoints-empty`, `checkpoint-row`, `checkpoint-label`, `checkpoint-time`, `checkpoint-id`, `checkpoint-branch`, `checkpoint-actions` (the pair's wrapper), `checkpoint-action` (plus `checkpoint-resume`, `checkpoint-fork`) |
 
 > **Hiding `::part(header)` hides the controls inside it.** The history, checkpoints, new-chat,
 > theme and collapse buttons are all children of the header, so a host that renders its own title

@@ -87,6 +87,93 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 // that all read as component bugs, from one line of harness.
 const id = (prefix) => `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 
+// The stored skills behind the skill editor scenario, shaped as django-ag-ui's
+// SkillEditorView answers them. A write without a CSRF header is refused as
+// Django's middleware refuses it, so the page has to send the live header.
+const EDITOR_SKILLS = [];
+let editorNextId = 1;
+
+function editorSkill(draft) {
+  const skill = { ...draft, id: String(editorNextId), enabled: true };
+  editorNextId += 1;
+  EDITOR_SKILLS.push(skill);
+  return skill;
+}
+
+function editorRefusal(draft) {
+  if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(draft.name ?? "")) {
+    return `Skill name '${draft.name ?? ""}' must be kebab-case: lowercase letters, digits and single hyphens.`;
+  }
+  if ((draft.description ?? "").trim() === "") {
+    return "A skill needs a description.";
+  }
+  if (EDITOR_SKILLS.some((skill) => skill.name === draft.name && skill.id !== draft.id)) {
+    return `A skill named '${draft.name}' already exists.`;
+  }
+  return null;
+}
+
+function editorRoute(req, res, path) {
+  const json = (status, body) => {
+    res.writeHead(status, { "Content-Type": "application/json" });
+    res.end(JSON.stringify(body));
+  };
+  if (req.method === "GET" && path === "/skills/") {
+    json(
+      200,
+      EDITOR_SKILLS.filter((skill) => skill.enabled && skill.userInvocable).map((skill) => ({
+        name: skill.name,
+        title: skill.name,
+        description: skill.description,
+      })),
+    );
+    return;
+  }
+  if (req.method === "GET") {
+    json(200, { skills: EDITOR_SKILLS });
+    return;
+  }
+  if (req.headers["x-csrftoken"] === undefined) {
+    json(403, { detail: "CSRF Failed: CSRF token missing." });
+    return;
+  }
+  let body = "";
+  req.on("data", (chunk) => {
+    body += chunk;
+  });
+  req.on("end", () => {
+    const draft = JSON.parse(body || "{}");
+    const id = path.slice("/skills/editor/".length).replace(/\/$/, "");
+    if (req.method === "POST") {
+      const refusal = editorRefusal(draft);
+      if (refusal !== null) {
+        json(400, { error: refusal });
+        return;
+      }
+      json(201, editorSkill(draft));
+      return;
+    }
+    const index = EDITOR_SKILLS.findIndex((skill) => skill.id === id);
+    if (index < 0) {
+      json(404, { error: "not found" });
+      return;
+    }
+    const current = EDITOR_SKILLS[index];
+    if (req.method === "PATCH") {
+      EDITOR_SKILLS[index] = { ...current, enabled: draft.enabled === true };
+      json(200, EDITOR_SKILLS[index]);
+      return;
+    }
+    const refusal = editorRefusal({ ...draft, id });
+    if (refusal !== null) {
+      json(400, { error: refusal });
+      return;
+    }
+    EDITOR_SKILLS[index] = { ...current, ...draft, id, enabled: current.enabled };
+    json(200, EDITOR_SKILLS[index]);
+  });
+}
+
 function emit(res, event) {
   res.write(`data: ${JSON.stringify(event)}\n\n`);
 }
@@ -220,6 +307,33 @@ async function handleAgent(res, body) {
     emitToolCall(res, id("call"), "lookup_docs", { query: "deadline" }, parent);
     await sleep(900);
     emit(res, { type: "RUN_FINISHED", threadId, runId, outcome: { type: "cancelled" } });
+    res.end();
+    return;
+  }
+
+  // Calls approved with no one asked, as django-ag-ui stamps them: who answered
+  // rides in the result's metadata under answered_by, and no interrupt is raised.
+  if (/\bapproved without asking\b/i.test(prompt)) {
+    const parent = id("msg");
+    await streamText(res, parent, ["Running these without asking you. "]);
+    for (const [name, answeredBy] of [
+      ["book_room", "reviewer:openai:gpt-5"],
+      ["send_digest", "routine:42"],
+      ["archive_thread", "oracle:x"],
+    ]) {
+      const call = id("call");
+      emitToolCall(res, call, name, { when: "tomorrow" }, parent);
+      await sleep(400);
+      emit(res, {
+        type: "TOOL_CALL_RESULT",
+        toolCallId: call,
+        messageId: id("m"),
+        content: "ok",
+        metadata: { answered_by: answeredBy },
+      });
+    }
+    await streamText(res, id("msg"), ["Done."]);
+    emit(res, { type: "RUN_FINISHED", threadId, runId });
     res.end();
     return;
   }
@@ -604,6 +718,23 @@ async function handleAgent(res, body) {
         ],
       },
     });
+  } else if (prompt === "/create-skill") {
+    // The agent drafting a skill: it saves one and says so with the CUSTOM event
+    // django-ag-ui sends, which makes the element refetch its catalog.
+    if (!EDITOR_SKILLS.some((skill) => skill.name === "standup-notes")) {
+      editorSkill({
+        name: "standup-notes",
+        description: "Turn yesterday's tickets into three standup lines.",
+        body: "List what closed yesterday, what is open today, and anything blocked.",
+        userInvocable: true,
+        modelInvocable: true,
+      });
+    }
+    await streamText(res, id("msg"), [
+      "Saved a skill, **/standup-notes**. ",
+      "Type / to find it, or open Manage skills to change it.",
+    ]);
+    emit(res, { type: "CUSTOM", name: "ag_ui.skills_changed", value: { name: "standup-notes" } });
   } else if (prompt.startsWith("/")) {
     // A server-resolved skill: the client sent only the token, so this is the
     // first point at which the prompt behind it exists at all. Answering here
@@ -799,6 +930,7 @@ const MCP_APP_VIEW = `<!doctype html>
   <div class="row">
     <button id="refresh">Refresh (tools/call)</button>
     <button id="ask">Ask the agent (ui/message)</button>
+    <button id="mode">Full screen (ui/request-display-mode)</button>
   </div>
   <pre id="log" class="muted"></pre>
 </div>
@@ -835,6 +967,7 @@ const MCP_APP_VIEW = `<!doctype html>
     if (data.method === "ui/notifications/tool-input") $("input").textContent = JSON.stringify(data.params.arguments);
     if (data.method === "ui/notifications/tool-result") $("result").textContent = text(data.params);
     if (data.method === "ui/notifications/host-context-changed") theme(data.params);
+    if (data.params && data.params.displayMode) shown(data.params.displayMode);
     if (data.method === "ui/resource-teardown") post({ id: data.id, result: {} });
     size();
   });
@@ -847,6 +980,16 @@ const MCP_APP_VIEW = `<!doctype html>
       $("log").textContent = "tools/call refused (" + error.code + "): " + error.message;
     }
     size();
+  });
+  let mode = "inline";
+  const shown = (next) => {
+    mode = next;
+    $("mode").textContent = mode === "fullscreen" ? "Back inline (ui/request-display-mode)" : "Full screen (ui/request-display-mode)";
+  };
+  $("mode").addEventListener("click", async () => {
+    const result = await call("ui/request-display-mode", { mode: mode === "fullscreen" ? "inline" : "fullscreen" });
+    $("log").textContent = "ui/request-display-mode answered " + result.mode;
+    shown(result.mode);
   });
   $("ask").addEventListener("click", async () => {
     try {
@@ -1063,6 +1206,10 @@ const server = createServer((req, res) => {
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ text: "Draft an article about sea otters." }));
     });
+    return;
+  }
+  if (path === "/skills/" || path.startsWith("/skills/editor/")) {
+    editorRoute(req, res, path);
     return;
   }
   if (req.method === "GET" && req.url === "/runs/") {

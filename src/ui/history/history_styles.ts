@@ -168,6 +168,15 @@ export const HISTORY_STYLES: string = `
   opacity: 0.8;
 }
 
+/* The pair is one flex item, so a narrow row wraps it whole and never parts
+   Resume from Fork. It rides the trailing edge on either line. */
+.checkpoint-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.5rem;
+  margin-inline-start: auto;
+}
+
 /* The two things in the row that actually do something, so they are the two
    things that look like it: a filled surface at rest rather than a transparent
    outline, which on top of the old row highlight was nearly invisible. */

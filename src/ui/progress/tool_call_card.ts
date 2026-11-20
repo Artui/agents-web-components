@@ -35,6 +35,19 @@ function resultLabels(strings: UiStrings): Record<SettledStatus, string> {
   };
 }
 
+/**
+ * The words for each `answered_by` prefix the card marks, keyed by the prefix.
+ * A prefix not named here draws no mark: the mark is display only, and a value
+ * the card cannot put a name to says nothing a person could act on.
+ */
+function answeredByLabels(strings: UiStrings): ReadonlyMap<string, string> {
+  // A Map, so a prefix such as "constructor" finds nothing an object inherits.
+  return new Map([
+    ["reviewer", strings.answeredByReviewer],
+    ["routine", strings.answeredByRoutine],
+  ]);
+}
+
 /** Pretty-print a JSON payload; fall back to the raw text if it isn't JSON. */
 function formatPayload(text: string): string {
   try {
@@ -310,6 +323,33 @@ export class ToolCallCard {
     this.#decision.hidden = false;
   }
 
+  /**
+   * Mark who approved this call when no person was asked: a reviewer model or
+   * a routine, read off the `answered_by` the server stamped on the result
+   * (`reviewer:<model>`, `routine:<id>`). No interrupt was raised for such a
+   * call, so this card is the only place it can show. Sets `data-answered-by`
+   * to the prefix and appends the `tool-card-answered-by` line; an absent,
+   * malformed or unknown value adds nothing, so the card is byte-for-byte the
+   * one it was before the mark existed.
+   */
+  #markAnsweredBy(answeredBy: unknown): void {
+    if (typeof answeredBy !== "string") {
+      return;
+    }
+    const colon = answeredBy.indexOf(":");
+    const prefix = answeredBy.slice(0, colon);
+    const words = colon < 0 ? undefined : answeredByLabels(this.#strings).get(prefix);
+    if (words === undefined) {
+      return;
+    }
+    this.element.setAttribute("data-answered-by", prefix);
+    const mark = document.createElement("span");
+    mark.className = "tool-call-answered-by";
+    mark.setAttribute("part", "tool-card-answered-by");
+    mark.textContent = words;
+    this.#decision.after(mark);
+  }
+
   /** Whether {@link settle} has already run (so a terminal sweep can skip it). */
   get settled(): boolean {
     return this.#settled;
@@ -323,8 +363,11 @@ export class ToolCallCard {
    * arguments: the call settled with nothing to show, so the card stays a
    * status row and its toggle is not offered. The formatter is not asked about
    * a result that is not there.
+   *
+   * `answeredBy` is the result's raw `answered_by` metadata, marked on the card
+   * when it names a reviewer model or a routine.
    */
-  settle(status: SettledStatus, text: string): void {
+  settle(status: SettledStatus, text: string, answeredBy?: unknown): void {
     // Idempotent: a duplicate `TOOL_CALL_RESULT`, or a replayed tool message
     // for an already-settled card, must not overwrite the first outcome.
     if (this.#settled) {
@@ -332,6 +375,7 @@ export class ToolCallCard {
     }
     this.#settled = true;
     this.#setStatus(status);
+    this.#markAnsweredBy(answeredBy);
     if (text.trim() === "") {
       return;
     }

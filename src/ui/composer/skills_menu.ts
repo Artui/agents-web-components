@@ -18,6 +18,7 @@ export class SkillsMenu {
   #slashEnabled = false;
   #filtered: Skill[] = [];
   #activeIndex = 0;
+  #manage: { readonly label: string; readonly onManage: () => void } | null = null;
 
   constructor(onPick: (skill: Skill) => void) {
     this.#onPick = onPick;
@@ -45,6 +46,15 @@ export class SkillsMenu {
 
   enableSlash(enabled: boolean): void {
     this.#slashEnabled = enabled;
+  }
+
+  /**
+   * Put a row at the palette's foot that leaves it for the skill editor, or
+   * take it away with `null`. With the row the palette opens on `/` even when
+   * no skill matches, so a caller with none yet still finds where to add one.
+   */
+  setManage(label: string | null, onManage: () => void): void {
+    this.#manage = label === null ? null : { label, onManage };
   }
 
   /** Whether the palette is currently open. */
@@ -85,6 +95,10 @@ export class SkillsMenu {
       return true;
     }
     if (event.key === "Enter") {
+      if (this.#activeIndex === this.#filtered.length) {
+        this.#openManage();
+        return true;
+      }
       // `slice(i, i+1)` yields a 0-or-1 element array; forEach gives a
       // definite Skill (no indexed-access `| undefined`).
       this.#filtered.slice(this.#activeIndex, this.#activeIndex + 1).forEach((skill) => {
@@ -107,7 +121,8 @@ export class SkillsMenu {
       (skill) =>
         skill.name.toLowerCase().includes(needle) || skill.title.toLowerCase().includes(needle),
     );
-    if (matches.length === 0) {
+    // Unmatched text is a message to send, so the row stands alone only under a bare `/`.
+    if (matches.length === 0 && (this.#manage === null || needle !== "")) {
       this.close();
       return;
     }
@@ -118,7 +133,7 @@ export class SkillsMenu {
   }
 
   #move(delta: number): void {
-    const count = this.#filtered.length;
+    const count = this.#filtered.length + (this.#manage === null ? 0 : 1);
     this.#activeIndex = (this.#activeIndex + delta + count) % count;
     this.#renderPalette();
   }
@@ -126,6 +141,12 @@ export class SkillsMenu {
   #pick(skill: Skill): void {
     this.close();
     this.#onPick(skill);
+  }
+
+  #openManage(): void {
+    const manage = this.#manage as { readonly onManage: () => void };
+    this.close();
+    manage.onManage();
   }
 
   #renderChips(): void {
@@ -184,5 +205,17 @@ export class SkillsMenu {
       item.addEventListener("click", () => this.#pick(skill));
       this.palette.appendChild(item);
     });
+    if (this.#manage !== null) {
+      const manage = document.createElement("button");
+      manage.type = "button";
+      manage.className = "skill-item skill-item--manage";
+      manage.setAttribute("part", "skill-item skill-manage");
+      manage.setAttribute("role", "option");
+      const active = this.#activeIndex === this.#filtered.length;
+      manage.setAttribute("aria-selected", active ? "true" : "false");
+      manage.textContent = this.#manage.label;
+      manage.addEventListener("click", () => this.#openManage());
+      this.palette.appendChild(manage);
+    }
   }
 }

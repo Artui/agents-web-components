@@ -28,6 +28,7 @@ import {
 } from "../constants.js";
 import type { Skill } from "../skills/skill.js";
 import { SkillCatalog } from "../skills/skill_catalog.js";
+import { SkillEditorClient } from "../skills/skill_editor_client.js";
 // biome-ignore lint/style/useImportType: the emitted declaration file copies this form
 import { type ChatCorner, type ChatSurfaceReport } from "../tools/chat_surface_tools.js";
 // biome-ignore lint/style/useImportType: the emitted declaration file copies this form
@@ -77,7 +78,9 @@ import { buildLauncher } from "../ui/shell/build_launcher.js";
 import { collapseGlyph } from "../ui/shell/collapse_glyph.js";
 import { iconElement } from "../ui/shell/icon_element.js";
 import { isUnreadBadgeEnabled } from "../ui/shell/is_unread_badge_enabled.js";
+import { PanelView } from "../ui/shell/panel_view.js";
 import { readLauncherIconUrl } from "../ui/shell/read_launcher_icon_url.js";
+import { SkillEditor } from "../ui/skill_editor/skill_editor.js";
 import { AnswerActions } from "../ui/transcript/answer_actions.js";
 import { AnswerStream } from "../ui/transcript/answer_stream.js";
 import { renderAttachmentChips } from "../ui/transcript/attachment_chips.js";
@@ -147,6 +150,8 @@ const CONNECT_TIME_ATTRIBUTES = [
   "data-threads-cache",
   "data-tools-url",
   "data-skills-url",
+  "data-skill-editor-url",
+  "data-skill-editor-button",
   "data-skills",
   "data-prompt-chips",
   "data-slash-commands",
@@ -993,6 +998,12 @@ export class AgUiChat extends HTMLElement {
    */
   readonly #skills: SkillCatalog;
 
+  /** The full-panel view under the header, in place of the transcript while open. */
+  readonly #panelView: PanelView;
+
+  /** The stored-skill editor, offered when `data-skill-editor-url` is set. */
+  readonly #skillEditor: SkillEditor;
+
   constructor() {
     super();
     this.#root = this.attachShadow({ mode: "open" });
@@ -1062,6 +1073,10 @@ export class AgUiChat extends HTMLElement {
       noteUnread: (threadId) => this.#noteUnread(threadId),
       newChat: () => this.newChat(),
       showUsage: () => readFlag(this, "show-usage"),
+      skillsChanged: () => {
+        void this.#skills.fetch();
+        this.#skillEditor.refresh();
+      },
     });
     this.#placement = new PanelPlacement({
       element: this,
@@ -1155,6 +1170,22 @@ export class AgUiChat extends HTMLElement {
         void this.#submit();
       },
       autoGrow: () => autoGrow(this.#input),
+    });
+    this.#panelView = new PanelView(
+      () => this.#strings.backToConversation,
+      () => this.#skillEditor.back(),
+    );
+    this.#skillEditor = new SkillEditor({
+      view: this.#panelView,
+      strings: () => this.#strings,
+      onDraft: () => {
+        this.closeSkillEditor();
+        void this.sendMessage("/create-skill");
+      },
+      onChanged: () => {
+        void this.#skills.fetch();
+      },
+      onClose: () => this.closeSkillEditor(),
     });
     this.#drawer = new ThreadDrawer({
       onSelect: (threadId) => {
@@ -1829,6 +1860,10 @@ export class AgUiChat extends HTMLElement {
       this.#emit<ToggleDetail>(TOGGLE_EVENT, { collapsed: this.collapsed });
     }
     this.#skills.init();
+    this.#skillsMenu.setManage(
+      this.#skillEditorUrl() === null ? null : this.#strings.manageSkills,
+      () => this.openSkillEditor(),
+    );
     // A `user-key` changed while detached gets the handover a live change gets,
     // here, the first moment it can: nothing goes out for a detached node, a key
     // that left and came back hands nothing over, and the namespace was just
@@ -2057,6 +2092,47 @@ export class AgUiChat extends HTMLElement {
    */
   setSkills(skills: readonly Skill[]): void {
     this.#skills.setClientSkills(skills);
+  }
+
+  /**
+   * Open the stored-skill editor in place of the conversation: the skills the
+   * caller may write, from `data-skill-editor-url` (django-ag-ui's
+   * `SkillEditorView`). Its header button and the "Manage skills" row at the
+   * foot of the `/` palette call this; without the attribute it does nothing.
+   *
+   * Every write sends {@link headers} and {@link getHeaders} as read at that
+   * moment, so the CSRF token the view checks by default goes with each one.
+   */
+  openSkillEditor(): void {
+    const url = this.#skillEditorUrl();
+    if (url === null) {
+      return;
+    }
+    this.#skillsMenu.close();
+    this.#chat.toggleAttribute("data-panel-view", true);
+    this.#skillEditor.open(new SkillEditorClient(url, (to, init) => this.request(to, init)));
+  }
+
+  /** Close the skill editor and return to the conversation, with focus in the composer. */
+  closeSkillEditor(): void {
+    if (!this.#skillEditor.isOpen) {
+      return;
+    }
+    this.#dropSkillEditor();
+    this.#input.focus();
+  }
+
+  /** Close the editor and forget what it held, without moving focus. */
+  #dropSkillEditor(): void {
+    this.#skillEditor.reset();
+    this.#panelView.close();
+    this.#chat.toggleAttribute("data-panel-view", false);
+  }
+
+  /** `data-skill-editor-url`, with an empty value meaning unset. */
+  #skillEditorUrl(): string | null {
+    const url = this.getAttribute("data-skill-editor-url");
+    return url === null || url === "" ? null : url;
   }
 
   /** Whether the widget is collapsed (reflected as the `collapsed` attribute). */
@@ -2564,6 +2640,8 @@ export class AgUiChat extends HTMLElement {
       SessionStorageStore.adopt(previous, next);
       if (live) {
         this.#rescopeStore(next);
+        // The catalog is per caller now: the anonymous one may hide stored skills.
+        void this.#skills.fetch();
       }
       return;
     }
@@ -2594,6 +2672,9 @@ export class AgUiChat extends HTMLElement {
     this.#setRunning(false);
     // The previous principal's marks go with their threads, unread: nobody saw them.
     this.#forgetUnread([...this.#unreadByThread.keys()], true);
+    // Their stored skills too: the catalog's and the editor's, bodies included.
+    this.#skills.forget();
+    this.#dropSkillEditor();
     if (!live) {
       return;
     }
@@ -2605,6 +2686,7 @@ export class AgUiChat extends HTMLElement {
     this.#history.adoptActiveThread();
     void this.#history.rehydrate("rescope");
     void this.#history.refreshDrawer();
+    void this.#skills.fetch();
   }
 
   /**
@@ -2673,6 +2755,7 @@ export class AgUiChat extends HTMLElement {
    * {@link toggleCollapsed} and {@link toggleTheme}.
    */
   openThreads(options: { readonly anchor?: Element } = {}): void {
+    this.#dropSkillEditor();
     // Collapsed into the bar, the list opens as a popover over the bar rather
     // than expanding the panel: the same drawer, moved beside the bar, since
     // nothing inside the hidden panel can be drawn. Under the host's own bar it
@@ -2759,6 +2842,7 @@ export class AgUiChat extends HTMLElement {
    * an empty panel.
    */
   openCheckpoints(): void {
+    this.#dropSkillEditor();
     this.#history.openCheckpoints();
   }
 
@@ -2842,6 +2926,7 @@ export class AgUiChat extends HTMLElement {
     // Stop any in-flight run first — discarding the client mid-run would
     // leave the old agent streaming into a cleared transcript.
     this.#cancelRun();
+    this.#dropSkillEditor();
     this.#history.reapUnsent();
     this.#resetState();
     this.#history.startThread();
@@ -3075,6 +3160,10 @@ export class AgUiChat extends HTMLElement {
       withCheckpoints: this.#history.runs() !== null,
       themeToggle: themed ? this.#themeToggle : null,
       signal,
+      onSkills:
+        this.#skillEditorUrl() === null || !this.hasAttribute("data-skill-editor-button")
+          ? null
+          : () => this.openSkillEditor(),
       onHistory: () => this.openThreads(),
       onCheckpoints: () => this.toggleCheckpoints(),
       onNewChat: () => this.newChat(),
@@ -3178,8 +3267,10 @@ export class AgUiChat extends HTMLElement {
     // `/`), the chips, the hint saying what the composer still needs, the
     // queued messages and the pending-attachments tray, then the host's own
     // content directly over the input.
+    this.#dropSkillEditor();
     this.#chat.replaceChildren(
       header,
+      this.#panelView.element,
       this.#messagesWrap,
       this.#skillsMenu.palette,
       this.#skillsMenu.chips,
