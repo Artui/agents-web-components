@@ -224,6 +224,33 @@ async function handleAgent(res, body) {
     return;
   }
 
+  // Calls approved with no one asked, as django-ag-ui stamps them: who answered
+  // rides in the result's metadata under answered_by, and no interrupt is raised.
+  if (/\bapproved without asking\b/i.test(prompt)) {
+    const parent = id("msg");
+    await streamText(res, parent, ["Running these without asking you. "]);
+    for (const [name, answeredBy] of [
+      ["book_room", "reviewer:openai:gpt-5"],
+      ["send_digest", "routine:42"],
+      ["archive_thread", "oracle:x"],
+    ]) {
+      const call = id("call");
+      emitToolCall(res, call, name, { when: "tomorrow" }, parent);
+      await sleep(400);
+      emit(res, {
+        type: "TOOL_CALL_RESULT",
+        toolCallId: call,
+        messageId: id("m"),
+        content: "ok",
+        metadata: { answered_by: answeredBy },
+      });
+    }
+    await streamText(res, id("msg"), ["Done."]);
+    emit(res, { type: "RUN_FINISHED", threadId, runId });
+    res.end();
+    return;
+  }
+
   // Two activities: one a host renderer answers with an empty fragment (nothing
   // to draw, by design), one nobody registered, which unhandledActivityTypes names.
   if (/\bnothing to draw\b/i.test(prompt)) {

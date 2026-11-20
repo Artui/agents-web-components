@@ -203,6 +203,10 @@ export interface UiStrings {
   decisionApproved: string;
   /** Note on a tool card whose call a human declined. */
   decisionDeclined: string;
+  /** Note on a tool card whose call a reviewer model approved, with no person asked. */
+  answeredByReviewer: string;
+  /** Note on a tool card whose call a routine's standing grant approved. */
+  answeredByRoutine: string;
   /** Heading over a tool card's arguments region. */
   argumentsLabel: string;
   /** Heading over a tool card's result region when the call succeeded. */
@@ -489,6 +493,8 @@ export const DEFAULT_UI_STRINGS: UiStrings = {
   resizePanel: "Resize the chat panel",
   decisionApproved: "approved by you",
   decisionDeclined: "declined by you",
+  answeredByReviewer: "Approved by a reviewer model",
+  answeredByRoutine: "Approved by a routine",
   argumentsLabel: "Arguments",
   resultLabel: "Result",
   errorLabel: "Error",

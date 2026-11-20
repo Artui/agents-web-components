@@ -2452,6 +2452,16 @@ tool call and its result but not the note that a human waved it through. If you 
 approved what" durably, that is an audit concern rather than a transcript one; record it
 server-side.
 
+A call no person was asked about can still have been approved: by a reviewer model, or by a
+routine's standing grant. No interrupt is raised for it, so the tool call card carries the mark.
+When a result's `metadata.answered_by` (django-ag-ui 0.81.0 or later stamps it, live and on the
+stored tool message) starts `reviewer:` or `routine:`, the card gets
+`data-answered-by="reviewer"` or `"routine"` and a note in its head (part
+`tool-card-answered-by`, strings `answeredByReviewer` / `answeredByRoutine`). Any other value,
+and a result without the key, render exactly as before. Unlike the decision, the mark survives a
+reload, because it is read off the stored message. It is display only: the server's audit record
+is the authority.
+
 If a tool's schema carries an `x-summary` string (use `X_SUMMARY_KEY`), the card shows it on the
 label instead of the raw tool name.
 
@@ -4427,7 +4437,7 @@ component sets, so a new one cannot ship undocumented.
 | Message actions | `run-error-offer` (the new-conversation offer under a failed run), `message-actions`, `message-action` (plus `message-action-retry`, `message-action-copy`, `message-action-up`, `message-action-down`), and the icon holder inside each: `message-action-icon` (plus `message-action-icon-retry`, `message-action-icon-copy`, `message-action-icon-up`, `message-action-icon-down`) |
 | Queued messages | `queued`, `queued-chip` |
 | Run notices | `run-notice` (plus `run-notice-interrupted`, `run-notice-attachment-pending`, `run-notice-compaction`, `run-notice-skill`, `run-notice-history-replaced`, `run-notice-chart-undrawable`, `run-notice-surface`, `run-notice-not-connected`, `run-notice-mcp-app`), `run-notice-icon`, `run-notice-text`, `run-notice-undo` |
-| Tool cards | `tool-card` (plus one status modifier: `tool-card-pending`, `tool-card-deferred`, `tool-card-done`, `tool-card-error`, `tool-card-declined`, `tool-card-interrupted`), `tool-card-head`, `tool-card-icon`, `tool-card-name`, `tool-card-status` (plus `tool-card-status-pending`, `tool-card-status-deferred`, `tool-card-status-done`, `tool-card-status-error`, `tool-card-status-declined`, `tool-card-status-interrupted`), `tool-card-decision`, `tool-card-toggle`, `tool-card-body`, `tool-card-section` (plus `tool-card-args-section`, `tool-card-result-section`), `tool-card-section-label` (plus `tool-card-args-label`, `tool-card-result-label`), `tool-card-args`, `tool-card-result`, `tool-card-approval`, `tool-card-subagent`, `tool-card-repeat` |
+| Tool cards | `tool-card` (plus one status modifier: `tool-card-pending`, `tool-card-deferred`, `tool-card-done`, `tool-card-error`, `tool-card-declined`, `tool-card-interrupted`), `tool-card-head`, `tool-card-icon`, `tool-card-name`, `tool-card-status` (plus `tool-card-status-pending`, `tool-card-status-deferred`, `tool-card-status-done`, `tool-card-status-error`, `tool-card-status-declined`, `tool-card-status-interrupted`), `tool-card-decision`, `tool-card-answered-by`, `tool-card-toggle`, `tool-card-body`, `tool-card-section` (plus `tool-card-args-section`, `tool-card-result-section`), `tool-card-section-label` (plus `tool-card-args-label`, `tool-card-result-label`), `tool-card-args`, `tool-card-result`, `tool-card-approval`, `tool-card-subagent`, `tool-card-repeat` |
 | Tool-step group | `tool-group` (plus one state modifier: `tool-group-waiting`, `tool-group-running`, `tool-group-done`, `tool-group-error`), `tool-group-head`, `tool-group-icon`, `tool-group-label`, `tool-group-meta`, `tool-group-list` |
 | Delegated sub-agents | `subagent`, `subagent-row`, `subagent-icon`, `subagent-status`, `subagent-steps`, `subagent-step`, `subagent-step-icon`, `subagent-step-name` |
 | Client-side confirmation | `confirm`, `confirm-body`, `confirm-args`, `confirm-actions`, `confirm-button` (plus `confirm-confirm`, `confirm-cancel`, `confirm-always`) |

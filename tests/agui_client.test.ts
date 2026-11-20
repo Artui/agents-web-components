@@ -7,6 +7,7 @@ import {
   ConnectionLostError,
 } from "../src/core/agui_client.js";
 import { createHttpAgent } from "../src/core/create_http_agent.js";
+import answeredBy from "./fixtures/answered_by.json";
 import { makeFakeAgent } from "./helpers/fake_agent.js";
 
 function recordingHandlers(): AgUiClientHandlers & { calls: string[] } {
@@ -1465,6 +1466,35 @@ describe("over the real HttpAgent", () => {
 
     expect(seen).toEqual([undefined]);
     expect(warnings()).toEqual([expect.stringContaining("'/outcome'")]);
+  });
+
+  it("delivers who answered a call's approval, from django-ag-ui's own frame", async () => {
+    const start = run(...serverToolCall({}))
+      .slice(0, 4)
+      .map((e) => `data: ${JSON.stringify(e)}\n\n`);
+    const end = `data: ${JSON.stringify({ type: "RUN_FINISHED", threadId: "t1", runId: "r1" })}\n\n`;
+    const body = [...start, answeredBy.frames.reviewer, end].join("");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(body, { status: 200, headers: { "Content-Type": "text/event-stream" } }),
+        ),
+      ),
+    );
+    const warnings = enforceWarnings();
+    const seen: unknown[] = [];
+    const handlers = recordingHandlers();
+    handlers.onToolResult = (_id, _content, outcome, by) => {
+      seen.push([outcome, by]);
+    };
+
+    await new AgUiClient({ agent: createHttpAgent({ endpoint: "/agent/" }), handlers }).send(
+      "book it",
+    );
+
+    expect(seen).toEqual([[undefined, "reviewer:openai:gpt-5"]]);
+    expect(warnings()).toEqual([]);
   });
 
   it("sends attachment refs in the user message's metadata", async () => {
