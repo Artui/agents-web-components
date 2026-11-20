@@ -1064,6 +1064,11 @@ export class ConversationHistory {
           // Flattened exactly as the live path flattens it, so a reload shows
           // the card the user watched settle.
           contentToText(message.content),
+          // Metadata only: django-ag-ui never states it at the top level, and
+          // a mark is not worth trusting from anywhere it did not write it.
+          (Object((message as { metadata?: unknown }).metadata) as Record<string, unknown>)[
+            "answered_by"
+          ],
         );
       }
     }

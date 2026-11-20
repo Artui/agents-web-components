@@ -159,10 +159,11 @@ export const SCENARIOS = [
     title: "Approvals and questions",
     since: "0.1.0",
     summary:
-      "Three server-side approvals in one run, each answered on its own and editable before approving, and the built-in ask_user question card.",
+      "Three server-side approvals in one run, each answered on its own and editable before approving, the built-in ask_user question card, and calls a reviewer model or a routine approved with no one asked (0.7.0).",
     prompts: [
       ["Three approvals", "import three rows"],
       ["A question", "ask me something"],
+      ["Approved without asking", "approved without asking"],
     ],
   },
   {

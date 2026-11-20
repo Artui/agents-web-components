@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A tool call card marks a call that a reviewer model or a routine approved.** No interrupt is
+  raised for such a call, so the mark goes on the card itself. It is read from
+  `metadata.answered_by` on a live `TOOL_CALL_RESULT` and on a stored tool message, so it returns
+  after a reload. A `reviewer:<model>` value sets `data-answered-by="reviewer"` and a
+  `routine:<id>` value sets `data-answered-by="routine"`. Each also adds a note in the card's head
+  with the new part `tool-card-answered-by`, worded by the new strings keys `answeredByReviewer`
+  ("Approved by a reviewer model") and `answeredByRoutine` ("Approved by a routine"). Any other
+  prefix, and a result without the key, render exactly as before. The mark is display only. No
+  opt-in: the mark appears wherever django-ag-ui 0.81.0 or later stamps `answered_by`.
+  `AgUiClientHandlers.onToolResult` takes the raw value as a fourth argument, `answeredBy`.
+
 ### Fixed
 
 - **A coded non-2xx answer from the mcp-apps route now reaches the view with its code and message.**

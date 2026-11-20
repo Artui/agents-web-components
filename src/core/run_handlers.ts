@@ -388,7 +388,7 @@ export class RunHandlers {
           "history-replaced",
         );
       },
-      onToolResult: (toolCallId, content, outcome) => {
+      onToolResult: (toolCallId, content, outcome, answeredBy) => {
         const card = this.#host.transcript.card(toolCallId);
         if (card === undefined) {
           return;
@@ -398,7 +398,7 @@ export class RunHandlers {
         // reads, at a glance, as a booking that was made. An absent or
         // unrecognised outcome still means DONE, so a server that never states
         // one renders every call as done.
-        card.settle(toolStatusFromOutcome(outcome), content);
+        card.settle(toolStatusFromOutcome(outcome), content, answeredBy);
         this.#host.transcript.markServerSettled(toolCallId);
         ledger.serverSettled.add(toolCallId);
         // The card stops being the live thing the moment it settles, and the
