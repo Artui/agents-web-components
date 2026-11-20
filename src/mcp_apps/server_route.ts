@@ -21,7 +21,9 @@ function refusal(error: Body): Error | null {
  * {@link McpAppsRouteRequest} to `url` over `host.request`, so it carries the
  * element's headers (the CSRF token among them) and cookie policy. The route
  * answers `{ result }`, which this resolves to, or `{ error: { code, message } }`,
- * which it rejects with as an error named {@link MCP_APPS_ROUTE_ERROR}.
+ * which it rejects with as an error named {@link MCP_APPS_ROUTE_ERROR}. A non-2xx
+ * answer (401, 403, 429) is read the same way; one that is not that envelope rejects
+ * with the status and no code.
  */
 export function serverRoute(host: Pick<McpAppsHost, "request">, url: string): McpAppsRoute {
   return async (request) => {
@@ -31,6 +33,11 @@ export function serverRoute(host: Pick<McpAppsHost, "request">, url: string): Mc
       body: JSON.stringify(request),
     });
     if (!response.ok) {
+      const body: unknown = await response.json().catch(() => null);
+      const refused = isRecord(body) && isRecord(body["error"]) ? refusal(body["error"]) : null;
+      if (refused !== null) {
+        throw refused;
+      }
       throw new Error(`the mcp-apps route answered ${request.method} with ${response.status}`);
     }
     const body: unknown = await response.json();
