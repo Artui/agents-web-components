@@ -7,6 +7,19 @@
     "timestamps, order kept",
     "etags"
   ],
+  "firstTurnReadWhileRunning": {
+    "status": 404
+  },
+  "firstTurnRowWhileRunning": null,
+  "firstTurnRowAfterRunAway": {
+    "thread_id": "t-first",
+    "title": "Hi",
+    "updated_at": "2026-01-01T00:00:03.000000+00:00",
+    "preview": "partial answer and the rest",
+    "agent_id": "helper",
+    "status": "idle",
+    "last_read_at": null
+  },
   "seenRun": "data: {\"type\":\"RUN_STARTED\",\"timestamp\":0,\"threadId\":\"t-read\",\"runId\":\"r1\",\"protocolVersion\":\"1.0\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_START\",\"timestamp\":0,\"messageId\":\"id-1\",\"role\":\"assistant\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"timestamp\":0,\"messageId\":\"id-1\",\"delta\":\"partial answer\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"timestamp\":0,\"messageId\":\"id-1\",\"delta\":\" and the rest\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_END\",\"timestamp\":0,\"messageId\":\"id-1\"}\n\ndata: {\"type\":\"RUN_FINISHED\",\"timestamp\":0,\"threadId\":\"t-read\",\"runId\":\"r1\",\"outcome\":{\"type\":\"success\"}}\n\n",
   "rowAfterSeenRun": {
     "thread_id": "t-read",
@@ -63,7 +76,7 @@
         {
           "thread_id": "t-failed",
           "title": "Please fail",
-          "updated_at": "2026-01-01T00:00:05.000000+00:00",
+          "updated_at": "2026-01-01T00:00:06.000000+00:00",
           "preview": "Please fail",
           "agent_id": "helper",
           "status": "failed",
@@ -73,7 +86,7 @@
         {
           "thread_id": "t-question",
           "title": "Please ask me",
-          "updated_at": "2026-01-01T00:00:04.000000+00:00",
+          "updated_at": "2026-01-01T00:00:05.000000+00:00",
           "preview": "Please ask me",
           "agent_id": "helper",
           "status": "waiting",
@@ -94,7 +107,7 @@
         {
           "thread_id": "t-approve",
           "title": "Please delete invoice 7",
-          "updated_at": "2026-01-01T00:00:03.000000+00:00",
+          "updated_at": "2026-01-01T00:00:04.000000+00:00",
           "preview": "Please delete invoice 7",
           "agent_id": "helper",
           "status": "waiting",
@@ -111,6 +124,15 @@
               }
             }
           ]
+        },
+        {
+          "thread_id": "t-first",
+          "title": "Hi",
+          "updated_at": "2026-01-01T00:00:03.000000+00:00",
+          "preview": "partial answer and the rest",
+          "agent_id": "helper",
+          "status": "idle",
+          "last_read_at": null
         },
         {
           "thread_id": "t-read",
@@ -176,7 +198,7 @@
         {
           "thread_id": "t-approve",
           "title": "Please delete invoice 7",
-          "updated_at": "2026-01-01T00:00:06.000000+00:00",
+          "updated_at": "2026-01-01T00:00:07.000000+00:00",
           "preview": "Deleted.",
           "agent_id": "helper",
           "status": "idle",
@@ -185,7 +207,7 @@
         {
           "thread_id": "t-failed",
           "title": "Please fail",
-          "updated_at": "2026-01-01T00:00:05.000000+00:00",
+          "updated_at": "2026-01-01T00:00:06.000000+00:00",
           "preview": "Please fail",
           "agent_id": "helper",
           "status": "failed",
@@ -195,7 +217,7 @@
         {
           "thread_id": "t-question",
           "title": "Please ask me",
-          "updated_at": "2026-01-01T00:00:04.000000+00:00",
+          "updated_at": "2026-01-01T00:00:05.000000+00:00",
           "preview": "Please ask me",
           "agent_id": "helper",
           "status": "waiting",
@@ -212,6 +234,15 @@
               }
             }
           ]
+        },
+        {
+          "thread_id": "t-first",
+          "title": "Hi",
+          "updated_at": "2026-01-01T00:00:03.000000+00:00",
+          "preview": "partial answer and the rest",
+          "agent_id": "helper",
+          "status": "idle",
+          "last_read_at": null
         },
         {
           "thread_id": "t-read",
@@ -231,7 +262,7 @@
     }
   },
   "streamContentType": "text/event-stream",
-  "streamFrame": "id: \"etag-2\"\ndata: {\"threads\":[{\"thread_id\":\"t-approve\",\"title\":\"Please delete invoice 7\",\"updated_at\":\"2026-01-01T00:00:06.000000+00:00\",\"preview\":\"Deleted.\",\"agent_id\":\"helper\",\"status\":\"idle\",\"last_read_at\":null},{\"thread_id\":\"t-failed\",\"title\":\"Please fail\",\"updated_at\":\"2026-01-01T00:00:05.000000+00:00\",\"preview\":\"Please fail\",\"agent_id\":\"helper\",\"status\":\"failed\",\"last_read_at\":null,\"reason\":\"error\"},{\"thread_id\":\"t-question\",\"title\":\"Please ask me\",\"updated_at\":\"2026-01-01T00:00:04.000000+00:00\",\"preview\":\"Please ask me\",\"agent_id\":\"helper\",\"status\":\"waiting\",\"last_read_at\":null,\"interrupts\":[{\"id\":\"int-call-2\",\"reason\":\"tool_call\",\"message\":\"ask\",\"toolCallId\":\"call-2\",\"metadata\":{\"destructive\":false,\"kind\":\"question\"}}]},{\"thread_id\":\"t-read\",\"title\":\"Hello\",\"updated_at\":\"2026-01-01T00:00:02.000000+00:00\",\"preview\":\"partial answer and the rest\",\"agent_id\":\"helper\",\"status\":\"idle\",\"last_read_at\":\"2026-01-01T00:00:01.000000+00:00\"}],\"agent\":{\"id\":\"helper\",\"name\":\"Helper\",\"description\":\"Answers questions.\"}}\n\n",
+  "streamFrame": "id: \"etag-2\"\ndata: {\"threads\":[{\"thread_id\":\"t-approve\",\"title\":\"Please delete invoice 7\",\"updated_at\":\"2026-01-01T00:00:07.000000+00:00\",\"preview\":\"Deleted.\",\"agent_id\":\"helper\",\"status\":\"idle\",\"last_read_at\":null},{\"thread_id\":\"t-failed\",\"title\":\"Please fail\",\"updated_at\":\"2026-01-01T00:00:06.000000+00:00\",\"preview\":\"Please fail\",\"agent_id\":\"helper\",\"status\":\"failed\",\"last_read_at\":null,\"reason\":\"error\"},{\"thread_id\":\"t-question\",\"title\":\"Please ask me\",\"updated_at\":\"2026-01-01T00:00:05.000000+00:00\",\"preview\":\"Please ask me\",\"agent_id\":\"helper\",\"status\":\"waiting\",\"last_read_at\":null,\"interrupts\":[{\"id\":\"int-call-2\",\"reason\":\"tool_call\",\"message\":\"ask\",\"toolCallId\":\"call-2\",\"metadata\":{\"destructive\":false,\"kind\":\"question\"}}]},{\"thread_id\":\"t-first\",\"title\":\"Hi\",\"updated_at\":\"2026-01-01T00:00:03.000000+00:00\",\"preview\":\"partial answer and the rest\",\"agent_id\":\"helper\",\"status\":\"idle\",\"last_read_at\":null},{\"thread_id\":\"t-read\",\"title\":\"Hello\",\"updated_at\":\"2026-01-01T00:00:02.000000+00:00\",\"preview\":\"partial answer and the rest\",\"agent_id\":\"helper\",\"status\":\"idle\",\"last_read_at\":\"2026-01-01T00:00:01.000000+00:00\"}],\"agent\":{\"id\":\"helper\",\"name\":\"Helper\",\"description\":\"Answers questions.\"}}\n\n",
   "streamSkipped": null,
   "wsgiStreamRequest": {
     "status": 200,
@@ -241,7 +272,7 @@
         {
           "thread_id": "t-approve",
           "title": "Please delete invoice 7",
-          "updated_at": "2026-01-01T00:00:06.000000+00:00",
+          "updated_at": "2026-01-01T00:00:07.000000+00:00",
           "preview": "Deleted.",
           "agent_id": "helper",
           "status": "idle",
@@ -250,7 +281,7 @@
         {
           "thread_id": "t-failed",
           "title": "Please fail",
-          "updated_at": "2026-01-01T00:00:05.000000+00:00",
+          "updated_at": "2026-01-01T00:00:06.000000+00:00",
           "preview": "Please fail",
           "agent_id": "helper",
           "status": "failed",
@@ -260,7 +291,7 @@
         {
           "thread_id": "t-question",
           "title": "Please ask me",
-          "updated_at": "2026-01-01T00:00:04.000000+00:00",
+          "updated_at": "2026-01-01T00:00:05.000000+00:00",
           "preview": "Please ask me",
           "agent_id": "helper",
           "status": "waiting",
@@ -277,6 +308,15 @@
               }
             }
           ]
+        },
+        {
+          "thread_id": "t-first",
+          "title": "Hi",
+          "updated_at": "2026-01-01T00:00:03.000000+00:00",
+          "preview": "partial answer and the rest",
+          "agent_id": "helper",
+          "status": "idle",
+          "last_read_at": null
         },
         {
           "thread_id": "t-read",

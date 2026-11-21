@@ -220,12 +220,13 @@ def _answer(response: Any) -> dict[str, Any]:
     return {"status": response.status_code, "etag": response.get("ETag"), "body": body}
 
 
-def _row(response: Any, thread_id: str) -> dict[str, Any]:
-    return next(r for r in json.loads(response.content)["threads"] if r["thread_id"] == thread_id)
+def _row(response: Any, thread_id: str) -> dict[str, Any] | None:
+    rows = json.loads(response.content)["threads"]
+    return next((r for r in rows if r["thread_id"] == thread_id), None)
 
 
 async def _reads(server: AGUIServer, gate: _Gate) -> dict[str, Any]:
-    """A turn seen to its end then read; a second turn left running; a thread no run claimed."""
+    """Seen then read; a second turn left running; no run claimed; a first turn read mid-run."""
     seen = await _drain(await _start(server, _body("t-read", "r1", [_user("r1", "Hello")])))
     await _settled("t-read")
     after_seen = _row(await _list(server), "t-read")
@@ -240,7 +241,17 @@ async def _reads(server: AGUIServer, gate: _Gate) -> dict[str, Any]:
     await _settled("t-read")
     after_away = _row(await _list(server), "t-read")
     unknown = await _read(server, "t-never")
+    gate.release.clear()
+    await _until(await _start(server, _body("t-first", "r0", [_user("r0", "Hi")])), "partial answer")
+    first_read = await _read(server, "t-first")
+    first_running = _row(await _list(server), "t-first")
+    gate.release.set()
+    await _settled("t-first")
+    first_away = _row(await _list(server), "t-first")
     return {
+        "firstTurnReadWhileRunning": {"status": first_read.status_code},
+        "firstTurnRowWhileRunning": first_running,
+        "firstTurnRowAfterRunAway": first_away,
         "seenRun": seen,
         "rowAfterSeenRun": after_seen,
         "markRead": {"status": read.status_code},
@@ -264,7 +275,7 @@ async def _parked(server: AGUIServer) -> dict[str, Any]:
     etag = listed["ETag"]
     unchanged = await _list(server, **{"If-None-Match": etag})
     stored = await DefaultConversationStore().load("t-approve", request=_Factory().get("/"))
-    [interrupt] = _row(listed, "t-approve")["interrupts"]
+    [interrupt] = (_row(listed, "t-approve") or {})["interrupts"]
     resume = [{"interruptId": interrupt["id"], "status": "resolved", "payload": {"approved": True}}]
     resumed = await _start(server, _body("t-approve", "r6", stored.messages, resume=resume))
     resumed_run = await _drain(resumed)
