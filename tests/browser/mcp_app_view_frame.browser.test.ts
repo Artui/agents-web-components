@@ -305,6 +305,25 @@ describe("viewFrame", () => {
     expect(disconnect).toHaveBeenCalledTimes(1);
   });
 
+  it("asks consent in the frame's stage, and declines a waiting card when the view leaves", async () => {
+    let channel: McpAppViewChannel | undefined;
+    const { node, frame } = await drawn(
+      services("<p>view</p>"),
+      vi.fn((given: McpAppViewChannel) => {
+        channel = given;
+        return vi.fn();
+      }),
+    );
+
+    const asked = channel?.consent.ask({ method: "ui/message", text: "hi" });
+    const card = node.querySelector(".mcp-app-consent");
+    expect(card?.parentElement).toBe(frame.parentElement);
+    node.remove();
+
+    expect(await asked).toBe(false);
+    expect(card?.isConnected).toBe(false);
+  });
+
   it("stops the bridge when a view scrolled out of sight leaves the document", async () => {
     const disconnect = vi.fn();
     const connect = vi.fn((_channel: McpAppViewChannel) => disconnect);

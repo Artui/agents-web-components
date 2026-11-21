@@ -56,4 +56,16 @@ export const MCP_APP_VIEW_STYLES: string = `
   outline: 2px solid var(--_ring);
   outline-offset: 2px;
 }
+
+/* The card that asks whether a view may send a message or run a tool: under
+   the frame inline, and pinned under it in the fullscreen sheet. Its look is
+   the confirmation card's own. */
+.mcp-app-view-stage > .mcp-app-consent {
+  margin-top: 8px;
+}
+
+.mcp-app-view-stage[data-display-mode="fullscreen"] > .mcp-app-consent {
+  flex: none;
+  margin: 8px;
+}
 `;

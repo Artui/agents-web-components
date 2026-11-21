@@ -2276,8 +2276,8 @@ from the view's own frame:
 | `ui/initialize` | answers with `hostContext`: `theme`, `styles.variables`, `locale`, `displayMode` (`inline` until it asks), `availableDisplayModes` (`["inline", "fullscreen"]` for a live view, `["inline"]` for a stored one), `containerDimensions` (inline, the frame's width and a `maxHeight` of 640; fullscreen, its `width` and `height`) and `platform: "web"` |
 | `ui/notifications/initialized` | sends `ui/notifications/tool-input` (the call's arguments), then `ui/notifications/tool-result` |
 | `ui/notifications/size-changed` | sets the frame's height, at most 640px; the view scrolls past it |
-| `tools/call` | sends it to the route with the view's `serverId` and answers its `result`, or its `error` with the route's code |
-| `ui/message` | sends its text as the user's next message (`chat.sendMessage`); `isError` when nothing was sent |
+| `tools/call` | once the user allows it (below), sends it to the route with the view's `serverId` and answers its `result`, or its `error` with the route's code; declined, `-32000` "Tool call denied" |
+| `ui/message` | once the user allows it (below), sends its text as the user's next message (`chat.sendMessage`); `isError` when nothing was sent; declined, `-32000` "Message sending denied" |
 | `ui/open-link` | opens an `http(s)` URL in a `noopener` tab; `isError` for any other |
 | `ui/request-display-mode` | `fullscreen` fixes the view over the page in the same frame, which does not reload, with an exit control (string `mcpAppExitFullscreen`); Escape, that control or `inline` returns it to the transcript at its height. Answers the mode it is in after: the current one for `pip`, and for a stored or torn-down view |
 | `ui/notifications/request-teardown` | sends `ui/resource-teardown`, then closes the view to the notice |
@@ -2295,6 +2295,23 @@ every placement; a browser without popover (Firefox before 125) draws it as a
 fixed box inside the host's stacking context instead. One
 view per registration is fullscreen at a time; a second's request returns the
 first inline.
+
+**A view never acts unseen.** A view's script runs as soon as it is framed and
+can post at any moment, and the host cannot tell a click inside a cross-origin
+sandboxed frame from a script: user activation there is not visible to the page.
+So every `tools/call` and `ui/message` of a live view waits for the user in a
+confirmation card under the view's frame (pinned under it while fullscreen),
+which names the tool and its arguments, or shows the exact text to be sent.
+Confirm runs it; Cancel answers the view `-32000`. The card takes the
+confirmation card's styles and the `confirm` part (plus `mcp-app-consent`), its
+prompts are the strings `mcpAppConfirmTool` and `mcpAppConfirmMessage`, and it
+takes no focus, so a key meant for the composer cannot answer it. A view's
+requests are asked one card at a time, in order; a card still waiting when the
+view asks to be torn down, or leaves, is declined, and a request allowed after
+the view went stored or asked to be torn down is refused. There is no setting
+to turn it off. The MCP Apps specification allows exactly this: a host "MAY
+request user consent" for `ui/message`, and may subject other requests "to
+further user approval".
 
 A view that navigates its own frame is closed to the notice: a `srcdoc` frame
 seen by the host, a proxied one reported by the shipped proxy page with
@@ -4494,6 +4511,7 @@ component sets, so a new one cannot ship undocumented.
 | Tool-step group | `tool-group` (plus one state modifier: `tool-group-waiting`, `tool-group-running`, `tool-group-done`, `tool-group-error`), `tool-group-head`, `tool-group-icon`, `tool-group-label`, `tool-group-meta`, `tool-group-list` |
 | Delegated sub-agents | `subagent`, `subagent-row`, `subagent-icon`, `subagent-status`, `subagent-steps`, `subagent-step`, `subagent-step-icon`, `subagent-step-name` |
 | Client-side confirmation | `confirm`, `confirm-body`, `confirm-args`, `confirm-actions`, `confirm-button` (plus `confirm-confirm`, `confirm-cancel`, `confirm-always`) |
+| An MCP Apps view's consent card | the same parts as the confirmation card, with `mcp-app-consent` beside `confirm` on the card |
 | Server-side approval | `approval`, `approval-body`, `approval-actions`, `approval-button` (plus `approval-approve`, `approval-deny`), `approval-edit`, `approval-args`, `approval-error` |
 | Typed question | `question`, `question-body`, `question-options`, `question-choice`, `question-choice-text`, `question-radio`, `question-input`, `question-actions`, `question-button` |
 | Composer | `composer`, `composer-surface`, `composer-tools`, `input`, `send`, `attach-button`, `voice-button` |

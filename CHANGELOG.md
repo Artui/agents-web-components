@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **A live MCP Apps view no longer sends a message or calls a tool unseen.** Each `ui/message`
+  and `tools/call` from a live view now waits for the user in a confirmation card under the
+  view's frame (pinned under it while fullscreen): the card names the tool and shows its
+  arguments, or shows the exact text the message would send. Confirm runs it as before; Cancel
+  answers the view with a JSON-RPC error, `-32000` "Message sending denied" or "Tool call
+  denied". A view that called a tool on load now shows a card first, and its result waits for
+  the answer. Requests are asked one card at a time, in order; a card still waiting when the
+  view asks to be torn down or leaves is declined, and one allowed after the view went stored
+  is refused. The card reuses the inline confirmation card's styles and its `confirm` part
+  (plus a new `mcp-app-consent` part), so a host's `::part(confirm)` rules now style it too; it
+  takes no focus. Two new strings keys word it, `mcpAppConfirmTool` ("This app wants to run
+  “{tool}”") and `mcpAppConfirmMessage` ("This app wants to send this message for you:"). `ui/open-link` is unchanged. **No opt-in, and no
+  opt-out:** a host that calls `registerMcpApps` gets the card on upgrade, and a view that
+  called tools without the user now needs a click per call. A `tools/call` whose `arguments`
+  is not an object is sent with `{}`.
+
 ## [0.7.0] — 2026-11-20
 
 ### Added
