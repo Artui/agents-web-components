@@ -384,6 +384,19 @@ describe("hostBridge", () => {
     expect(fixture.posted).toEqual([{ jsonrpc: "2.0", id: 3, result: { content: [] } }]);
   });
 
+  it.each([["x"], [[1]]])("sends {} for a tools/call whose arguments is %j", async (args) => {
+    const fixture = connected();
+
+    request(fixture, 3, "tools/call", { name: "forecast", arguments: args });
+    await answered(fixture);
+
+    expect(fixture.services.route).toHaveBeenCalledWith({
+      serverId: "weather",
+      method: "tools/call",
+      params: { name: "forecast", arguments: {} },
+    });
+  });
+
   it("refuses a tools/call with no tool name", async () => {
     const fixture = connected();
 

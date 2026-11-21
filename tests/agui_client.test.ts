@@ -1754,4 +1754,29 @@ describe("over the real HttpAgent", () => {
       expect(saved).toEqual([]);
     });
   });
+
+  it("hands on only a replay's first snapshot as authoritative", async () => {
+    const snapshot = (id: string): Record<string, unknown> => ({
+      type: "MESSAGES_SNAPSHOT",
+      messages: [{ id, role: "user", content: id }],
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(sse(run(snapshot("a"), snapshot("b"))))),
+    );
+    const flags: boolean[] = [];
+    const handlers = {
+      ...recordingHandlers(),
+      onMessagesSnapshot: (_messages: readonly Message[], authoritative: boolean) => {
+        flags.push(authoritative);
+      },
+    };
+
+    await new AgUiClient({
+      agent: createHttpAgent({ endpoint: "/agent/", eventsUrl: "/agent/threads/t1/events/" }),
+      handlers,
+    }).reattach();
+
+    expect(flags).toEqual([true, false]);
+  });
 });
