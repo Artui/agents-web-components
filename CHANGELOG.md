@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is refused. The card reuses the inline confirmation card's styles and its `confirm` part
   (plus a new `mcp-app-consent` part), so a host's `::part(confirm)` rules now style it too; it
   takes no focus. Two new strings keys word it, `mcpAppConfirmTool` ("This app wants to run
-  “{tool}”") and `mcpAppConfirmMessage`. `ui/open-link` is unchanged. **No opt-in, and no
+  “{tool}”") and `mcpAppConfirmMessage` ("This app wants to send this message for you:"). `ui/open-link` is unchanged. **No opt-in, and no
   opt-out:** a host that calls `registerMcpApps` gets the card on upgrade, and a view that
   called tools without the user now needs a click per call. A `tools/call` whose `arguments`
   is not an object is sent with `{}`.
