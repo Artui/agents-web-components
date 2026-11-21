@@ -9,6 +9,7 @@ import type {
   McpAppViewMount,
   McpAppViewState,
 } from "./types.js";
+import { type McpAppViewConsent, viewConsent } from "./view_consent.js";
 import { viewCsp, withCspMeta } from "./view_csp.js";
 
 /** What the host bridge drives one view's document through. */
@@ -31,6 +32,8 @@ export interface McpAppViewChannel {
   close(): void;
   /** How the view is shown, inline or fullscreen, and what switches it. */
   readonly display: McpAppViewDisplay;
+  /** Asks the user, beside the frame, whether the view may send a message or run a tool. */
+  readonly consent: McpAppViewConsent;
 }
 
 /**
@@ -153,6 +156,7 @@ async function openView(
   exit.hidden = true;
   stage.append(exit, iframe);
   const display = displayMode(node, stage, exit, services.overlay);
+  const consent = viewConsent(stage, () => services.host.uiStrings);
   const proxyUrl = services.sandboxProxyUrl;
   let post: (message: unknown) => void;
   let origin = "null";
@@ -165,6 +169,7 @@ async function openView(
     }
     closed = true;
     disconnect();
+    consent.dispose();
     dispose();
     display.dispose();
     stage.remove();
@@ -213,6 +218,7 @@ async function openView(
       },
       close: () => close(true),
       display,
+      consent,
     },
     view,
     services,

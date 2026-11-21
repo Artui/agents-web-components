@@ -90,3 +90,61 @@ describe.each(Object.entries(WIDTHS))(
     });
   },
 );
+
+/**
+ * The pair rides the row's trailing edge, whether it shares the line with the
+ * label or wraps under it, at the narrowest widths a host sets.
+ */
+describe.each([240, 280])("checkpoint actions in a panel %ipx wide (real browser)", (panel) => {
+  const original = globalThis.fetch;
+
+  beforeAll(async () => {
+    defineChat();
+    await page.viewport(DESKTOP.width, DESKTOP.height);
+  });
+
+  afterEach(() => {
+    for (const el of document.querySelectorAll(ELEMENT_TAG)) {
+      el.remove();
+    }
+    globalThis.fetch = original;
+  });
+
+  it("meets the row's content edge, on one line, without shrinking", async () => {
+    globalThis.fetch = (async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ runs: RUNS }),
+    })) as unknown as typeof fetch;
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("endpoint", "/agent/");
+    el.setAttribute("data-start-open", "");
+    el.setAttribute("data-runs-url", "/runs/");
+    el.style.setProperty("--ag-ui-width", `${panel}px`);
+    document.body.appendChild(el);
+    await settle();
+    el.openCheckpoints();
+    await new Promise((r) => setTimeout(r, 400));
+    const root = el.shadowRoot as ShadowRoot;
+    const rows = Array.from(root.querySelectorAll<HTMLElement>(".checkpoint-row"));
+    expect(rows).toHaveLength(RUNS.length);
+    for (const row of rows) {
+      const actions = row.querySelector(".checkpoint-actions") as HTMLElement;
+      const resume = row.querySelector(".checkpoint-resume") as HTMLElement;
+      const fork = row.querySelector(".checkpoint-fork") as HTMLElement;
+      const style = getComputedStyle(row);
+      const rowBox = row.getBoundingClientRect();
+      const edge =
+        rowBox.right -
+        Number.parseFloat(style.paddingRight) -
+        Number.parseFloat(style.borderRightWidth);
+
+      expect(Math.abs(actions.getBoundingClientRect().right - edge)).toBeLessThan(1);
+      expect(Math.abs(fork.getBoundingClientRect().right - edge)).toBeLessThan(1);
+      expect(resume.getBoundingClientRect().top).toBe(fork.getBoundingClientRect().top);
+      expect(getComputedStyle(actions).display).toBe("flex");
+      expect(getComputedStyle(actions).flexBasis).toBe("auto");
+      expect(getComputedStyle(actions).flexShrink).toBe("0");
+    }
+  });
+});

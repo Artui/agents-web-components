@@ -57,6 +57,24 @@ describe("displayMode", () => {
     expect(overlay.exit).toBeNull();
   });
 
+  it("ignores a second fullscreen request while fullscreen: overlay, focus and mode stay put", () => {
+    const overlay: McpAppsOverlay = { exit: null };
+    const { exit, display, switched } = view(overlay);
+    display.request("fullscreen");
+    const held = overlay.exit;
+    const other = document.createElement("input");
+    document.body.append(other);
+    other.focus();
+
+    expect(display.request("fullscreen")).toBe("fullscreen");
+
+    expect(switched).not.toHaveBeenCalled();
+    expect(overlay.exit).toBe(held);
+    expect(exit.hidden).toBe(false);
+    expect(document.activeElement).toBe(other);
+    display.dispose();
+  });
+
   it("leaves other keys alone, and takes Escape for itself only while fullscreen", () => {
     const { node, display, switched } = view({ exit: null });
     display.request("fullscreen");

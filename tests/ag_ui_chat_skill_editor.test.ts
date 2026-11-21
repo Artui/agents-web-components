@@ -495,6 +495,22 @@ describe("the skill editor in <ag-ui-chat>", () => {
     expect(paletteNames(el)).toEqual([]);
   });
 
+  it("drops a catalog answer a detached principal change overtook, though no refetch follows", async () => {
+    server.skills = [{ ...WEEKLY }];
+    server.holdNextCatalog = true;
+    const el = mount({ "user-key": "alice" });
+    await flush();
+
+    el.remove();
+    el.userKey = "bob";
+    el.removeAttribute("data-skills-url");
+    document.body.append(el);
+    server.releaseCatalog();
+    await flush();
+
+    expect(paletteNames(el)).toEqual([]);
+  });
+
   it("refetches the catalog and the open list on a skills-changed event, still forwarding it", async () => {
     const el = mount();
     await flush();

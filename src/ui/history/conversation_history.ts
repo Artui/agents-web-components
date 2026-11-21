@@ -115,8 +115,21 @@ export interface ConversationHistoryHost {
    * once that restore has ended, or has been stopped, and never rejects.
    */
   readonly holdRun: (restored: Promise<void> | null) => RunHold;
-  /** Stop the in-flight run. */
+  /**
+   * Let go of the in-flight run here: the request is aborted, and a run that
+   * asked to detach goes on on the server. What leaving a thread does.
+   */
   readonly cancelRun: () => void;
+  /** Stop the in-flight run, on the server too when it detached: what deleting it does. */
+  readonly stopRun: () => void;
+  /**
+   * Whether `threadId` has a run in flight on the server that this element can
+   * rejoin, never rejecting; `null`, asking nothing, without `data-detach-runs`
+   * and `data-threads-url`.
+   */
+  readonly runningOnServer: (threadId: string) => Promise<boolean> | null;
+  /** Join the run in flight on the thread on screen, through the conversation's own client. */
+  readonly reattach: () => void;
   /** Drop the in-memory run and transcript, leaving the thread untouched. */
   readonly resetState: () => void;
   /** Swap the composer between Send and Stop, which the composer owns. */
@@ -399,7 +412,7 @@ export class ConversationHistory {
   deleteThread(threadId: string): void {
     const wasActive = threadId === this.#threadId;
     if (wasActive) {
-      this.#host.cancelRun();
+      this.#host.stopRun();
     }
     this.#host.conversationStore().clear(threadId);
     this.#host.threadDeleted(threadId);
@@ -715,6 +728,13 @@ export class ConversationHistory {
     // `#claimedByCurrent`.
     this.#claim = { generation, store, threadId };
     const checkpoint = store.loadCheckpoint(threadId);
+    // Asked beside the load rather than after it, and not at all when the
+    // restore resumes a navigating call, which is the run then, nor of a
+    // thread nothing was sent in, which cannot have one.
+    const live =
+      checkpoint === null && store.isUnsent?.(threadId) !== true
+        ? this.#host.runningOnServer(threadId)
+        : null;
     // What a host's send waits on, for a restore with no run to resume, and
     // the hold either kind takes. Taken before the load for the same reason
     // the checkpoint is read before it: the load is the window.
@@ -784,7 +804,15 @@ export class ConversationHistory {
           }
         }
       }
-      if (checkpoint === null) {
+      // Not awaited when nothing was asked, so a restore takes no longer than it did.
+      const running = live !== null && (await live);
+      if (!this.#restoring(generation)) {
+        this.#forgetStopped(store, threadId, checkpoint);
+        return;
+      }
+      // A thread whose run is still going ends on its turn because the answer
+      // is still coming, which the reattach below is about to show.
+      if (checkpoint === null && !running) {
         this.#noticeIfRunUnfinished(messages);
       }
       // Said once the transcript is the restored one, and only by a restore
@@ -803,6 +831,12 @@ export class ConversationHistory {
           return;
         }
         await this.#resumeFrom(checkpoint, generation);
+      } else if (running && this.#restoring(generation)) {
+        // Not awaited, unlike a resume: the restore is over once the thread is
+        // drawn, and a host waiting on it hears so now rather than when the
+        // joined run ends. The reattach marks the composer running before it
+        // returns, so the release below sends nothing it parked.
+        this.#host.reattach();
       }
     } finally {
       // The resumed run starting has let go of the hold already, as a send's

@@ -16,5 +16,14 @@
       }
     },
     "status": 403
+  },
+  "429": {
+    "body": {
+      "error": {
+        "code": -32005,
+        "message": "rate limited"
+      }
+    },
+    "status": 429
   }
 }

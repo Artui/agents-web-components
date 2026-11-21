@@ -84,6 +84,48 @@ async function until<T>(read: () => T | undefined, what: string): Promise<T> {
   throw new Error(`timed out waiting for ${what}`);
 }
 
+/** Answers the consent card the view's request raised beside its frame. */
+async function answer(el: HTMLElement, allow = true): Promise<void> {
+  const button = await until(
+    () =>
+      (el.shadowRoot as ShadowRoot).querySelector<HTMLButtonElement>(
+        `.mcp-app-view-stage .mcp-app-consent .confirm-btn--${allow ? "confirm" : "cancel"}`,
+      ) ?? undefined,
+    "the consent card",
+  );
+  button.click();
+}
+
+/**
+ * Waits for the consent card, then asserts it is laid out where the user can
+ * answer it: inside its stage and the viewport, each button inside the card,
+ * and the confirm button the element hit at its own centre.
+ */
+async function consentCard(el: AgUiChat): Promise<HTMLElement> {
+  const root = el.shadowRoot as ShadowRoot;
+  const card = await until(
+    () => root.querySelector<HTMLElement>(".mcp-app-view-stage > .mcp-app-consent") ?? undefined,
+    "the consent card",
+  );
+  const box = card.getBoundingClientRect();
+  const stage = (card.parentElement as HTMLElement).getBoundingClientRect();
+  expect(box.width).toBeGreaterThan(0);
+  expect(box.left).toBeGreaterThanOrEqual(stage.left);
+  expect(box.right).toBeLessThanOrEqual(stage.right);
+  expect(box.bottom).toBeLessThanOrEqual(Math.min(stage.bottom, window.innerHeight) + 0.5);
+  for (const button of card.querySelectorAll<HTMLButtonElement>(".confirm-btn")) {
+    const rect = button.getBoundingClientRect();
+    expect(rect.left).toBeGreaterThanOrEqual(box.left);
+    expect(rect.right).toBeLessThanOrEqual(box.right);
+    expect(rect.bottom).toBeLessThanOrEqual(box.bottom);
+  }
+  const confirm = card.querySelector(".confirm-btn--confirm") as HTMLButtonElement;
+  const at = confirm.getBoundingClientRect();
+  expect(root.elementFromPoint(at.left + at.width / 2, at.top + at.height / 2)).toBe(confirm);
+  expect(getComputedStyle(card).borderTopStyle).toBe("solid");
+  return card;
+}
+
 function reports(kind: string): Received[] {
   return received.filter((entry) => entry.data?.["kind"] === kind);
 }
@@ -198,9 +240,10 @@ describe("the host bridge, against django-spec-mcp's view bridge", () => {
   });
 
   it("calls a tool through the route, with the element's request", async () => {
-    const { act, request } = await drawn();
+    const { el, act, request } = await drawn();
 
     act("callTool", "forecast", { day: "monday" });
+    await answer(el);
     const done = (await report("done")) as Record<string, unknown>;
 
     expect(done["result"]).toEqual(CALL_RESULT);
@@ -215,9 +258,10 @@ describe("the host bridge, against django-spec-mcp's view bridge", () => {
 
   it("gives the view the route's own JSON-RPC code when django-ag-ui refuses a tool call", async () => {
     const refusal = { code: -32602, message: "Tool forecast is not available to apps" };
-    const { act } = await drawn({}, { error: refusal });
+    const { el, act } = await drawn({}, { error: refusal });
 
     act("callTool", "forecast", {});
+    await answer(el);
     const done = (await report("done")) as Record<string, unknown>;
 
     expect(done["error"]).toEqual(refusal);
@@ -228,10 +272,36 @@ describe("the host bridge, against django-spec-mcp's view bridge", () => {
     const send = vi.spyOn(el, "sendMessage").mockResolvedValue(true);
 
     act("sendMessage", "and tomorrow?");
+    await answer(el);
     const done = (await report("done")) as Record<string, unknown>;
 
     expect(send).toHaveBeenCalledWith("and tomorrow?");
     expect(done["result"]).toEqual({});
+  });
+
+  it("answers the view's own bridge with the denial when the user declines a ui/message", async () => {
+    const { el, act } = await drawn();
+    const send = vi.spyOn(el, "sendMessage").mockResolvedValue(true);
+
+    act("sendMessage", "and tomorrow?");
+    await answer(el, false);
+    const done = (await report("done")) as Record<string, unknown>;
+
+    expect(send).not.toHaveBeenCalled();
+    expect(done["error"]).toMatchObject({ code: -32000, message: "Message sending denied" });
+  });
+
+  it("lays the consent card out under the frame in a narrow inline chat", async () => {
+    const { el, act, frame } = await drawn();
+    (el.parentElement as HTMLElement).style.width = "240px";
+
+    act("callTool", "forecast", { day: "monday", hours: [6, 12, 18] });
+    const card = await consentCard(el);
+
+    expect(card.getBoundingClientRect().top - frame.getBoundingClientRect().bottom).toBe(8);
+    expect(document.activeElement).not.toBe(el);
+    await answer(el);
+    expect(((await report("done")) as Record<string, unknown>)["result"]).toEqual(CALL_RESULT);
   });
 
   it("opens an http(s) link in a noopener tab and refuses any other", async () => {
@@ -329,6 +399,22 @@ describe("fullscreen, against django-spec-mcp's view bridge", () => {
   function stageOf(frame: HTMLIFrameElement): HTMLElement {
     return frame.parentElement as HTMLElement;
   }
+
+  it("pins the consent card under the frame in the fullscreen sheet, where it can be answered", async () => {
+    const drawnView = await drawn();
+    await fullscreen(drawnView);
+
+    drawnView.act("sendMessage", "and tomorrow?");
+    const card = await consentCard(drawnView.el);
+
+    expect(drawnView.frame.getBoundingClientRect().height).toBeGreaterThan(100);
+    const box = card.getBoundingClientRect();
+    expect(box.top - drawnView.frame.getBoundingClientRect().bottom).toBe(8);
+    expect([box.left, window.innerWidth - box.right, window.innerHeight - box.bottom]).toEqual([
+      8, 8, 8,
+    ]);
+    expect(card.querySelector(".confirm-args")?.textContent).toBe("and tomorrow?");
+  });
 
   it("shows the view over the page in the same frame, and tells it its mode and box", async () => {
     const drawnView = await drawn();

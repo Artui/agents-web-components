@@ -18,6 +18,7 @@ import { createServer } from "node:http";
 import { networkInterfaces } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { detachedRoute } from "./detached-runs.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -353,9 +354,11 @@ async function handleAgent(res, body) {
   // ./mcp-apps entry frames it from /mcp-apps/; without one it is the notice.
   if (/\bmcp app\b/i.test(prompt)) {
     const named = !/\bwithout\b/i.test(prompt);
+    // "on load": the view calls its tool as soon as it has its input, before anyone clicks.
+    const onLoad = /\bon load\b/i.test(prompt);
     const content = {
       resourceUri: "ui://sales/week.html",
-      toolInput: { week: "current" },
+      toolInput: { week: "current", ...(onLoad ? { refresh: "on load" } : {}) },
       result: { content: [{ type: "text", text: "12 orders this week" }] },
       ...(named ? { serverId: "sales", serverHash: "sales" } : {}),
     };
@@ -964,7 +967,10 @@ const MCP_APP_VIEW = `<!doctype html>
       if (data.error) entry?.reject(data.error); else entry?.resolve(data.result);
       return;
     }
-    if (data.method === "ui/notifications/tool-input") $("input").textContent = JSON.stringify(data.params.arguments);
+    if (data.method === "ui/notifications/tool-input") {
+      $("input").textContent = JSON.stringify(data.params.arguments);
+      if (data.params.arguments.refresh === "on load") $("refresh").click();
+    }
     if (data.method === "ui/notifications/tool-result") $("result").textContent = text(data.params);
     if (data.method === "ui/notifications/host-context-changed") theme(data.params);
     if (data.params && data.params.displayMode) shown(data.params.displayMode);
@@ -1132,6 +1138,9 @@ const server = createServer((req, res) => {
   // The pages are matched on their path alone, so `/page/?readout` is the same
   // page as `/page/`. The API routes below still match the whole URL.
   const path = req.url.split("?")[0];
+  if (detachedRoute(req, res, path)) {
+    return;
+  }
   if (req.method === "POST" && req.url === "/viewport-readout/") {
     // What viewport-readout.js measured on a device, one line per settled
     // reading, so the numbers can be read off this process's output instead of

@@ -821,6 +821,15 @@
               from the chat's tokens. The frame takes the view's height.
             </li>
             <li>
+              <strong>Consent.</strong> Neither runs unseen: each <code>tools/call</code> and
+              <code>ui/message</code> raises a confirmation card under the frame, naming the tool
+              and its arguments or showing the message's text. Cancel, and the view's log reads
+              "refused (-32000): Tool call denied" or "Message sending denied"; Confirm, and it
+              runs. "A view that calls on load" calls its tool before anyone clicks: the card is
+              there as the view appears, and the result waits for it. In full screen the card is
+              pinned under the frame. Two clicks of "Refresh" ask one card at a time.
+            </li>
+            <li>
               <strong>Full screen.</strong> "Full screen" sends <code>ui/request-display-mode</code>:
               the view covers the page in the same frame (its log and result stay, so it did not
               reload), with an "Exit full screen" control. Escape, that control, or "Back inline"
@@ -921,6 +930,55 @@
               <strong>Run context.</strong> <em>Show the context</em> lists what the run carried: the
               place, the page map, and the entry registered here. Untick the box and press it again: the
               function <code>registerContext</code> returned has removed it.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section data-scenario="detached-runs" hidden>
+        <div class="panel">
+          <h2>Two threads</h2>
+          <div class="controls">
+            <div class="ctl wide">
+              <span>Switch</span>
+              <span class="inline">
+                <button type="button" id="det-a">chat.switchThread("detached-a")</button>
+                <button type="button" id="det-b">chat.switchThread("detached-b")</button>
+              </span>
+            </div>
+            <label class="ctl"
+              ><span>Placement</span>
+              <select id="det-placement">
+                <option value="floating">floating</option>
+                <option value="embedded">embedded</option>
+              </select></label
+            >
+            <div class="ctl wide"><span>On screen</span><output id="det-state">-</output></div>
+          </div>
+        </div>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>Switch away mid-answer and back.</strong> Open thread A, send anything (the
+              answer takes about ten seconds), switch to B while it streams, then back to A. The
+              answer is complete, or still streaming and finishes; no cancel is posted. The mock
+              server prints each request it answers under <code>/detached/</code>.
+            </li>
+            <li>
+              <strong>Stop posts a cancel.</strong> Press Stop mid-answer: the server log shows
+              <code>POST /detached/threads/&lt;id&gt;/cancel/</code>, and the composer is back at
+              once.
+            </li>
+            <li>
+              <strong>Stop, then Send at once.</strong> The cancel lands about three seconds after
+              it is asked for, so a turn sent in that window is refused with a 409: the element joins
+              the run again, the turn waits as a chip above the composer, and it is sent when the
+              run ends.
+            </li>
+            <li>
+              <strong>Both placements at both widths.</strong> Floating and embedded, at about 360px
+              and at desktop width: the chip row, the Stop button and the replayed answer.
             </li>
           </ul>
         </div>

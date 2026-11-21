@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-11-21
+
+### Added
+
+- **A run can outlive its connection, behind a host opt-in: `data-detach-runs` (property
+  `detachRuns`).** It needs `data-threads-url` and a django-ag-ui 0.82.0+ mount with a run store
+  and `RUN_TIMEOUT_SECONDS`, served over ASGI to an authenticated user; without
+  `data-threads-url` it does nothing, and without the opt-in nothing changes. With it, every
+  request's `forwardedProps` carries `detach: true` (every round of a turn, frontend-tool rounds
+  included), so a thread switch, New chat, `reload()`, a `user-key` change or the element leaving
+  the page only aborts the request and the run finishes on the server with no cancel recorded.
+  Restoring a thread (a pick, the first load, re-insertion) asks the server once whether its run is
+  still going, with a JSON `GET <threads-url><id>/events/?after=0&limit=1`, and on `"running"`
+  joins it by replaying `events/?after=0` through the element's own agent, which is now a
+  `DetachedHttpAgent` (an `HttpAgent` overriding `connect`, through the same fetch wrapper,
+  headers and credentials). The replay's opening `MESSAGES_SNAPSHOT` redraws the transcript, and
+  `running` / `data-running` stay set until the joined run ends; a host's `sendMessage()` made
+  while that restore was in flight waits for the joined run, then goes out ahead of any turn the
+  composer parked. **Stop changes under the opt-in:** Stop, Escape and deleting the thread on
+  screen first post `<threads-url><id>/cancel/` (a `404` is quiet), then abort as before. A send
+  the server refuses with `409` because another run holds the thread joins that run and queues the
+  turn, attachments included, sent once that run ends. `HttpAgentOptions` gains `eventsUrl`;
+  `AgUiClientConfig` gains `detach`; `AgUiClient` gains `reattach()` and `canReattach`;
+  `AgUiClientHandlers.onMessagesSnapshot` takes a second argument, `authoritative`, and the
+  optional `onTurnRefused(content, attachments)`. A factory agent that does not override
+  `connect` is restored from the store alone. Not covered yet: a `firing_queue=` mount's JSON
+  answer to a detached start.
+
+### Changed
+
+- **A live MCP Apps view no longer sends a message or calls a tool unseen.** Each `ui/message`
+  and `tools/call` from a live view now waits for the user in a confirmation card under the
+  view's frame (pinned under it while fullscreen): the card names the tool and shows its
+  arguments, or shows the exact text the message would send. Confirm runs it as before; Cancel
+  answers the view with a JSON-RPC error, `-32000` "Message sending denied" or "Tool call
+  denied". A view that called a tool on load now shows a card first, and its result waits for
+  the answer. Requests are asked one card at a time, in order; a card still waiting when the
+  view asks to be torn down, leaves or reloads in a new window (a host moving the element does
+  it) is declined without answering the new window, and one allowed after the view went stored
+  is refused. The card reuses the inline confirmation card's styles and its `confirm` part
+  (plus a new `mcp-app-consent` part), so a host's `::part(confirm)` rules now style it too; it
+  takes no focus. Two new strings keys word it, `mcpAppConfirmTool` ("This app wants to run
+  “{tool}”") and `mcpAppConfirmMessage` ("This app wants to send this message for you:"). `ui/open-link` is unchanged. **No opt-in, and no
+  opt-out:** a host that calls `registerMcpApps` gets the card on upgrade, and a view that
+  called tools without the user now needs a click per call. A `tools/call` whose `arguments`
+  is not an object is sent with `{}`.
+
 ## [0.7.0] — 2026-11-20
 
 ### Added
@@ -438,7 +485,8 @@ move page walks a host over. Each entry below says whether a host opts in.
   kept offering the moon under `theme="dark"`. Only the toggle's own click redrew it before. A host
   opts in to nothing.
 
-[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/Artui/agents-web-components/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Artui/agents-web-components/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/Artui/agents-web-components/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/Artui/agents-web-components/compare/v0.4.0...v0.5.0

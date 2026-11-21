@@ -10,6 +10,7 @@ import type {
   McpAppsServices,
   McpAppView,
 } from "../src/mcp_apps/types.js";
+import { viewConsent } from "../src/mcp_apps/view_consent.js";
 import type { McpAppViewChannel } from "../src/mcp_apps/view_frame.js";
 import { DEFAULT_UI_STRINGS } from "../src/ui/ui_strings.js";
 
@@ -32,6 +33,7 @@ interface Fixture {
   readonly services: McpAppsServices;
   readonly view: McpAppView;
   readonly close: ReturnType<typeof vi.fn>;
+  readonly stage: HTMLElement;
   readonly disconnect: () => void;
   readonly display: {
     mode: McpAppDisplayMode;
@@ -65,6 +67,8 @@ function connected(
   document.body.append(iframe);
   const source = new EventTarget() as unknown as Window;
   const close = vi.fn();
+  const stage = document.createElement("div");
+  document.body.append(stage);
   const display = {
     mode: "inline" as McpAppDisplayMode,
     request: vi.fn((requested: unknown) => {
@@ -82,6 +86,7 @@ function connected(
     live: true,
     close,
     display,
+    consent: viewConsent(stage, () => DEFAULT_UI_STRINGS),
   };
   const events = new EventTarget();
   const host = {
@@ -123,6 +128,7 @@ function connected(
     services,
     view,
     close,
+    stage,
     disconnect,
     display,
   };
@@ -156,6 +162,19 @@ function initialised(fixture: Fixture): void {
 
 function settled(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+/** Answers each card the view's requests raise, in order, until none is left. */
+async function answered(fixture: Fixture, allow = true): Promise<void> {
+  await settled();
+  let button = fixture.stage.querySelector<HTMLButtonElement>(
+    allow ? ".confirm-btn--confirm" : ".confirm-btn--cancel",
+  );
+  while (button !== null) {
+    button.click();
+    await settled();
+    button = fixture.stage.querySelector(allow ? ".confirm-btn--confirm" : ".confirm-btn--cancel");
+  }
 }
 
 describe("hostBridge", () => {
@@ -289,6 +308,36 @@ describe("hostBridge", () => {
     expect(fixture.posted).toEqual([{ jsonrpc: "2.0", id: 4, result: { mode: "inline" } }]);
   });
 
+  it("tells a view the mode its own display request switched it to", () => {
+    const fixture = connected();
+    initialised(fixture);
+
+    request(fixture, 4, "ui/request-display-mode", { mode: "fullscreen" });
+
+    expect(fixture.posted).toEqual([
+      { jsonrpc: "2.0", id: 4, result: { mode: "fullscreen" } },
+      {
+        jsonrpc: "2.0",
+        method: "ui/notifications/host-context-changed",
+        params: { displayMode: "fullscreen", containerDimensions: { width: 0, height: 0 } },
+      },
+    ]);
+  });
+
+  it.each([
+    [true, ["inline", "fullscreen"]],
+    [false, ["inline"]],
+  ])("offers a view live=%s the display modes %j in ui/initialize", (live, modes) => {
+    const fixture = connected();
+    fixture.channel.live = live;
+
+    request(fixture, 1, "ui/initialize", {});
+
+    expect(fixture.posted[0]?.["result"]).toMatchObject({
+      hostContext: { availableDisplayModes: modes },
+    });
+  });
+
   it("answers any other request -32601", () => {
     const fixture = connected();
 
@@ -313,7 +362,7 @@ describe("hostBridge", () => {
     fixture.channel.live = false;
 
     request(fixture, 2, method, params);
-    await settled();
+    await answered(fixture);
 
     expect(fixture.posted[0]).toMatchObject({ id: 2, error: { code: -32000 } });
     expect(fixture.services.route).not.toHaveBeenCalled();
@@ -325,7 +374,7 @@ describe("hostBridge", () => {
     const fixture = connected();
 
     request(fixture, 3, "tools/call", { name: "forecast" });
-    await settled();
+    await answered(fixture);
 
     expect(fixture.services.route).toHaveBeenCalledWith({
       serverId: "weather",
@@ -335,11 +384,24 @@ describe("hostBridge", () => {
     expect(fixture.posted).toEqual([{ jsonrpc: "2.0", id: 3, result: { content: [] } }]);
   });
 
+  it.each([["x"], [[1]]])("sends {} for a tools/call whose arguments is %j", async (args) => {
+    const fixture = connected();
+
+    request(fixture, 3, "tools/call", { name: "forecast", arguments: args });
+    await answered(fixture);
+
+    expect(fixture.services.route).toHaveBeenCalledWith({
+      serverId: "weather",
+      method: "tools/call",
+      params: { name: "forecast", arguments: {} },
+    });
+  });
+
   it("refuses a tools/call with no tool name", async () => {
     const fixture = connected();
 
     request(fixture, 3, "tools/call", { arguments: {} });
-    await settled();
+    await answered(fixture);
 
     expect(fixture.posted[0]).toMatchObject({ id: 3, error: { code: -32602 } });
   });
@@ -349,7 +411,7 @@ describe("hostBridge", () => {
     vi.mocked(fixture.services.route).mockRejectedValueOnce(new Error("the route answered 403"));
 
     request(fixture, 3, "tools/call", { name: "forecast" });
-    await settled();
+    await answered(fixture);
 
     expect(fixture.posted[0]).toEqual({
       jsonrpc: "2.0",
@@ -366,7 +428,7 @@ describe("hostBridge", () => {
     vi.mocked(fixture.services.route).mockImplementationOnce(serverRoute({ request: post }, "/r/"));
 
     request(fixture, 3, "tools/call", { name: "forecast" });
-    await settled();
+    await answered(fixture);
 
     expect(fixture.posted[0]).toEqual({ jsonrpc: "2.0", id: 3, error: refusal.error });
   });
@@ -379,7 +441,7 @@ describe("hostBridge", () => {
     vi.mocked(fixture.services.route).mockRejectedValueOnce(aborted);
 
     request(fixture, 3, "tools/call", { name: "forecast" });
-    await settled();
+    await answered(fixture);
 
     expect(fixture.posted[0]).toMatchObject({ id: 3, error: { code: -32000 } });
   });
@@ -389,7 +451,7 @@ describe("hostBridge", () => {
     fixture.host.sendMessage.mockRejectedValueOnce("offline");
 
     request(fixture, 5, "ui/message", { content: { type: "text", text: "hi" } });
-    await settled();
+    await answered(fixture);
 
     expect(fixture.posted[0]).toMatchObject({ error: { message: "offline" } });
   });
@@ -407,7 +469,7 @@ describe("hostBridge", () => {
       ],
     });
     request(fixture, 6, "ui/message", { role: "user", content: { type: "text", text: "three" } });
-    await settled();
+    await answered(fixture);
 
     expect(fixture.host.sendMessage.mock.calls).toEqual([["one\n\ntwo"], ["three"]]);
     expect(fixture.posted.map((message) => message["result"])).toEqual([{}, {}]);
@@ -419,13 +481,119 @@ describe("hostBridge", () => {
 
     request(fixture, 5, "ui/message", { content: [{ type: "image" }] });
     request(fixture, 6, "ui/message", { content: [{ type: "text", text: "busy" }] });
-    await settled();
+    await answered(fixture);
 
     expect(fixture.host.sendMessage.mock.calls).toEqual([["busy"]]);
     expect(fixture.posted.map((message) => message["result"])).toEqual([
       { isError: true },
       { isError: true },
     ]);
+  });
+
+  it("holds a tool call a view makes on init until the user allows it in a card", async () => {
+    const fixture = connected();
+    initialised(fixture);
+
+    request(fixture, 3, "tools/call", { name: "forecast", arguments: { days: 2 } });
+    await settled();
+
+    expect(fixture.services.route).not.toHaveBeenCalled();
+    expect(fixture.posted).toEqual([]);
+    const card = fixture.stage.querySelector<HTMLElement>(".mcp-app-consent");
+    expect(card?.dataset["mcpAppRequest"]).toBe("tools/call");
+    expect(card?.querySelector(".confirm-body")?.textContent).toBe(
+      "This app wants to run “forecast”",
+    );
+    expect(JSON.parse(card?.querySelector(".confirm-args")?.textContent ?? "")).toEqual({
+      days: 2,
+    });
+
+    await answered(fixture);
+
+    expect(fixture.services.route).toHaveBeenCalledWith({
+      serverId: "weather",
+      method: "tools/call",
+      params: { name: "forecast", arguments: { days: 2 } },
+    });
+    expect(fixture.posted).toEqual([{ jsonrpc: "2.0", id: 3, result: { content: [] } }]);
+    expect(fixture.stage.querySelector(".mcp-app-consent")).toBeNull();
+  });
+
+  it.each([
+    ["tools/call", { name: "forecast" }, "Tool call denied"],
+    ["ui/message", { content: { type: "text", text: "hi" } }, "Message sending denied"],
+  ])("answers a declined %s -32000 and does not act", async (method, params, message) => {
+    const fixture = connected();
+
+    request(fixture, 4, method, params);
+    await answered(fixture, false);
+
+    expect(fixture.posted).toEqual([{ jsonrpc: "2.0", id: 4, error: { code: -32000, message } }]);
+    expect(fixture.services.route).not.toHaveBeenCalled();
+    expect(fixture.host.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it("shows a ui/message's text in its card before sending it", async () => {
+    const fixture = connected();
+
+    request(fixture, 5, "ui/message", { content: { type: "text", text: "and tomorrow?" } });
+    await settled();
+
+    const card = fixture.stage.querySelector<HTMLElement>(".mcp-app-consent");
+    expect(card?.dataset["mcpAppRequest"]).toBe("ui/message");
+    expect(card?.querySelector(".confirm-args")?.textContent).toBe("and tomorrow?");
+    expect(fixture.host.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it("asks one card at a time, in the order the view asked", async () => {
+    const fixture = connected();
+
+    request(fixture, 1, "tools/call", { name: "first" });
+    request(fixture, 2, "tools/call", { name: "second" });
+    await settled();
+
+    const bodies = (): string[] =>
+      [...fixture.stage.querySelectorAll(".confirm-body")].map((body) => body.textContent ?? "");
+    expect(bodies()).toEqual(["This app wants to run “first”"]);
+    fixture.stage.querySelector<HTMLButtonElement>(".confirm-btn--cancel")?.click();
+    await settled();
+    expect(bodies()).toEqual(["This app wants to run “second”"]);
+    await answered(fixture);
+
+    expect(fixture.posted.map((message) => message["id"])).toEqual([1, 2]);
+    expect(fixture.posted[0]).toMatchObject({ error: { message: "Tool call denied" } });
+    expect(fixture.posted[1]).toMatchObject({ result: { content: [] } });
+  });
+
+  it("refuses an allowed request when the view went stored while the card waited", async () => {
+    const fixture = connected();
+
+    request(fixture, 3, "tools/call", { name: "forecast" });
+    await settled();
+    fixture.channel.live = false;
+    await answered(fixture);
+
+    expect(fixture.services.route).not.toHaveBeenCalled();
+    expect(fixture.posted[0]).toMatchObject({
+      id: 3,
+      error: { code: -32000, message: expect.stringContaining("stored conversation") },
+    });
+  });
+
+  it("declines a waiting card when the view asks to be torn down, and removes it", async () => {
+    const fixture = connected();
+    initialised(fixture);
+
+    request(fixture, 5, "ui/message", { content: { type: "text", text: "hi" } });
+    await settled();
+    notify(fixture, "ui/notifications/request-teardown");
+    await settled();
+
+    expect(fixture.stage.querySelector(".mcp-app-consent")).toBeNull();
+    expect(fixture.host.sendMessage).not.toHaveBeenCalled();
+    expect(fixture.posted.find((message) => message["id"] === 5)).toMatchObject({
+      error: { code: -32000, message: expect.stringContaining("torn down") },
+    });
   });
 
   it("opens a safe link in a noopener tab, and answers isError for an unsafe one", async () => {
