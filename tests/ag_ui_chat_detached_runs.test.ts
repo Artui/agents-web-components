@@ -975,15 +975,28 @@ describe("a start a queued mount answers with its ids", () => {
 });
 
 describe("a data-threads-url set after the element connected", () => {
+  it("is not warned about before the element connects", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("data-threads-url", "/late/threads/");
+
+    expect(warn).not.toHaveBeenCalled();
+  });
+
   it("is where the next reattach and cancel go", async () => {
     quietAgentErrors();
-    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { el, server } = mount();
     await el.switchThread("t1");
     server.starts.push(() => sse(finishedRun("r8", "a first answer")));
     await el.sendMessage("hello");
     await settle();
     el.setAttribute("data-threads-url", "/late/threads/");
+    el.setAttribute("data-threads-url", "/late/threads/");
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0]?.[0])).toContain(
+      "The next run replay and cancel go to the new URL, but the thread list",
+    );
 
     server.starts.push(
       () => json(409, recorded.busyStart.body),

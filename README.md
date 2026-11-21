@@ -888,7 +888,8 @@ mount with `run_store=` and `RUN_TIMEOUT_SECONDS` set, served over **ASGI**, to 
 Reattaching needs an agent that can connect: the default `agentFactory` builds one. A factory
 returning an agent that does not override `connect` gets the store-only restore. A factory that
 wraps `createHttpAgent` passes `getEventsUrl` on with the rest of the options, which is how the
-late attribute reaches the default agent.
+late attribute reaches the default agent; `getEventsUrl` wins over `eventsUrl`, so a factory that
+points the run log elsewhere overrides `getEventsUrl`.
 
 ### A run the server stops
 

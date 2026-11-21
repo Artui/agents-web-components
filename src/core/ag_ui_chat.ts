@@ -1455,6 +1455,18 @@ export class AgUiChat extends HTMLElement {
       }
       return;
     }
+    // Half live: the run routes read it per request, the thread store only while connecting.
+    if (name === "data-threads-url") {
+      if (this.#connected && previous !== value) {
+        console.warn(
+          '<ag-ui-chat>: "data-threads-url" was changed after the element connected. ' +
+            "The next run replay and cancel go to the new URL, but the thread list and " +
+            "its store keep the one read while connecting. To move them too, remove and " +
+            "re-insert the element.",
+        );
+      }
+      return;
+    }
     // Everything else is read once, while connecting, to build chrome. A later
     // change does nothing, which reads as a broken component, so say so.
     if (previous === value || !this.#connected) {
