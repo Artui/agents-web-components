@@ -49,8 +49,8 @@ export interface HttpAgentOptions {
   /**
    * The thread's run log, django-ag-ui's `threads/<id>/events/`, which the
    * agent's `connectAgent()` replays a run in flight from. Set by the element
-   * only with `data-detach-runs` and `data-threads-url`; without it the agent
-   * cannot reattach, and the element restores the thread from its store alone.
+   * whenever `data-threads-url` is, and reached only under `data-detach-runs`;
+   * without it the agent cannot reattach, and the thread is restored from its store alone.
    */
   eventsUrl?: string;
 }

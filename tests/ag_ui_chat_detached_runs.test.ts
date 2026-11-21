@@ -948,6 +948,24 @@ describe("without data-detach-runs", () => {
     expect(server.to("events/")).toEqual([]);
   });
 
+  it("joins the run on a 409 when detachRuns is set after the first turn", async () => {
+    const { el, server } = mount({});
+    await el.switchThread("t1");
+    server.starts.push(() => sse(finishedRun("r1", "first answer")));
+    await el.sendMessage("first");
+    await settle();
+    el.detachRuns = true;
+    server.starts.push(() => json(409, recorded.busyStart.body));
+    server.replays.push(() => sse(recorded.replayFromStart));
+    server.starts.push(() => sse(finishedRun("r9", "a fresh answer")));
+    composerSend(el, "And another thing");
+    await settle();
+
+    expect(replays(server).length).toBe(1);
+    expect(failedText(el)).toBe("");
+    expect(transcriptText(el)).toContain("a fresh answer");
+  });
+
   it("shows a 409 as an error, and joins nothing", async () => {
     quietAgentErrors();
     const { el, server } = mount({});

@@ -3699,8 +3699,16 @@ export class AgUiChat extends HTMLElement {
    * are probed, rejoined or cancelled on the server.
    */
   #detachedRuns(): DetachedRuns | null {
+    return this.detachRuns ? this.#runRoutes() : null;
+  }
+
+  /**
+   * The run routes beside `data-threads-url`, whatever the opt-in: the agent is
+   * built once, and only reaches its run log under detach, so a late opt-in still joins.
+   */
+  #runRoutes(): DetachedRuns | null {
     const url = this.getAttribute("data-threads-url");
-    if (url === null || !this.detachRuns) {
+    if (url === null) {
       return null;
     }
     return new DetachedRuns(
@@ -4251,7 +4259,7 @@ export class AgUiChat extends HTMLElement {
     // The thread id alone cannot do it, because the store is still read live --
     // it has to be, since an adoption rescopes it under a run that keeps going.
     const tenure = this.#tenure;
-    const detached = this.#detachedRuns();
+    const runRoutes = this.#runRoutes();
     const agent = this.agentFactory({
       endpoint: seed.endpoint,
       headers: this.#requestHeaders(),
@@ -4264,7 +4272,7 @@ export class AgUiChat extends HTMLElement {
       threadId,
       initialMessages: seed.initialMessages,
       initialState: this.#sharedState,
-      ...(detached === null ? {} : { eventsUrl: detached.eventsUrl(threadId) }),
+      ...(runRoutes === null ? {} : { eventsUrl: runRoutes.eventsUrl(threadId) }),
     });
     return new AgUiClient({
       agent,
