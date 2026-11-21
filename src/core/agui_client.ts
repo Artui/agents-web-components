@@ -481,13 +481,11 @@ export class AgUiClient {
    * Whether the agent can join a run already in flight ({@link reattach}):
    * whether it overrides `connect`, which the base agent leaves throwing. A
    * host's {@link AbstractAgent} that does not is never asked to, and the
-   * conversation is restored from its store alone.
+   * conversation is restored from its store alone. Every agent is one, so
+   * `connect` is always a function and only which one is asked.
    */
   get canReattach(): boolean {
-    const connect: unknown = Reflect.get(this.#agent, "connect");
-    return (
-      typeof connect === "function" && connect !== Reflect.get(AbstractAgent.prototype, "connect")
-    );
+    return Reflect.get(this.#agent, "connect") !== Reflect.get(AbstractAgent.prototype, "connect");
   }
 
   /** The current conversation history (for persistence / rehydration). */

@@ -943,12 +943,13 @@ export class AgUiChat extends HTMLElement {
    */
   #restoreHold: { readonly hold: object; readonly restored: Promise<void> } | null = null;
   /**
-   * A host's {@link sendMessage} that was waiting on a restore when the restore
-   * joined the run still going on its thread ({@link detachRuns}), and that
-   * run: the send goes out once the run has ended, as after a restore with no
-   * run to join, and ahead of what the composer parked. A Stop forgets it.
+   * The run a restore joined on its thread ({@link detachRuns}) while a host's
+   * {@link sendMessage} waited on that restore, which is the only send that can
+   * be waiting then: the send goes out once the run has ended, as after a
+   * restore with no run to join, and ahead of what the composer parked. A Stop
+   * forgets it, and so drops the send.
    */
-  #joined: { readonly waiting: object; readonly run: Promise<void> } | null = null;
+  #joined: Promise<void> | null = null;
   /**
    * The thread the latest {@link THREAD_EVENT} reported, which the next one
    * names as the thread it replaced; `null` before the first.
@@ -1305,10 +1306,10 @@ export class AgUiChat extends HTMLElement {
           // Before the request, so the restore that asked for it sends nothing
           // it parked, and a host sees the run from the moment it is joined.
           // A host's send waiting on the restore has taken its hold over.
-          const waiting = this.#sending === this.#restoreHold?.hold ? null : this.#sending;
+          const waited = this.#sending !== this.#restoreHold?.hold;
           this.#setRunning(true);
           const run = client.reattach();
-          this.#joined = waiting === null ? null : { waiting, run };
+          this.#joined = waited ? run : null;
         }
       },
       resetState: () => this.#resetState(),
@@ -4103,8 +4104,8 @@ export class AgUiChat extends HTMLElement {
       // The restore joined the run still going on its thread, which is this
       // conversation's too, so the turn follows it, unless a Stop forgot it.
       const joined = this.#joined;
-      if (joined?.waiting === waiting) {
-        await Promise.allSettled([joined.run]);
+      if (joined !== null) {
+        await Promise.allSettled([joined]);
         if (this.#joined !== joined) {
           return false;
         }

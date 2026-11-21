@@ -14,6 +14,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { ELEMENT_TAG, THREAD_EVENT } from "../src/constants.js";
 import type { AgUiChat } from "../src/core/ag_ui_chat.js";
 import { defineChat } from "../src/core/define_chat.js";
+import { DetachedHttpAgent } from "../src/core/detached_http_agent.js";
 import recorded from "./fixtures/detached_runs.json";
 
 const THREADS = "/agent/threads/";
@@ -227,6 +228,24 @@ function quietAgentErrors(): void {
   vi.spyOn(console, "error").mockImplementation(() => {});
 }
 
+/** The replays asked for, the probe aside. */
+function replays(server: Server): Call[] {
+  return server.to("events/").filter((call) => !call.url.includes("limit"));
+}
+
+function failedText(el: AgUiChat): string {
+  return shadow(el).querySelector(".message--failed")?.textContent ?? "";
+}
+
+function composerSend(el: AgUiChat, text: string): void {
+  const input = shadow(el).querySelector<HTMLTextAreaElement>("textarea");
+  if (input === null) {
+    throw new Error("no composer");
+  }
+  input.value = text;
+  shadow(el).querySelector<HTMLButtonElement>(".send")?.click();
+}
+
 describe("a detached run", () => {
   it("is finished on screen when its thread is switched away from and back, with no cancel", async () => {
     const { el, server } = mount();
@@ -365,7 +384,11 @@ describe("a detached run", () => {
   it("is restored from the store alone when the factory's agent cannot connect", async () => {
     const { el, server } = mount();
     el.agentFactory = (options) =>
-      new HttpAgent({ url: options.endpoint, fetch: (url, init) => fetch(url, init) });
+      new HttpAgent({
+        url: options.endpoint,
+        threadId: "t1",
+        fetch: (url, init) => fetch(url, init),
+      });
     server.stored.set("t1", [{ id: "u0", role: "user", content: "stored question" }]);
     server.running.add("t1");
     const seen: boolean[] = [];
@@ -413,6 +436,122 @@ describe("a detached run", () => {
 
     expect(server.to("events/").length).toBe(1);
     expect(el.running).toBe(false);
+  });
+});
+
+describe("a joined run", () => {
+  it("runs a frontend tool its replay ends on, and posts the next round rather than replaying again", async () => {
+    const { el, server } = mount();
+    el.registerTool({
+      name: "pick_colour",
+      description: "Let the person pick a colour.",
+      parameters: { type: "object", properties: {} },
+      handler: () => "blue",
+    });
+    await el.switchThread("t2");
+    server.running.add("t3");
+    server.replays.push(() => sse(recorded.toolRound));
+    server.starts.push(() => sse(recorded.answerRound.body as string));
+    await el.switchThread("t3");
+    await settle();
+
+    expect(replays(server).length).toBe(1);
+    expect(server.starts_().length).toBe(1);
+    expect(transcriptText(el)).toContain("You picked it.");
+  });
+
+  it("does not warn about a message id it streamed itself before the Stop", async () => {
+    quietAgentErrors();
+    const warn = vi.spyOn(console, "warn");
+    const { el, server } = mount();
+    await el.switchThread("t1");
+    const stream = await startLiveRun(el, server);
+    stream.push(`data: ${JSON.stringify({ type: "TEXT_MESSAGE_END", messageId: "id-1" })}\n\n`);
+    await settle();
+    shadow(el).querySelector<HTMLButtonElement>(".send")?.click();
+    await settle();
+    server.starts.push(() => json(409, recorded.busyStart.body));
+    server.replays.push(() => sse(recorded.replayFromStart));
+    server.starts.push(() => sse(finishedRun("r9", "a fresh answer")));
+    composerSend(el, "And another thing");
+    await settle();
+
+    expect(transcriptText(el)).toContain("a fresh answer");
+    expect(warn.mock.calls.flat().join(" ")).not.toContain("reused message id");
+  });
+
+  it("is not joined twice when its replay is itself refused", async () => {
+    quietAgentErrors();
+    const { el, server } = mount();
+    await el.switchThread("t2");
+    server.running.add("t1");
+    server.replays.push(() => json(409, { ...recorded.busyStart.body, run_id: "r2" }));
+    await el.switchThread("t1");
+    await settle();
+
+    expect(replays(server).length).toBe(1);
+    expect(failedText(el)).toContain("HTTP 409");
+  });
+
+  it("shows no unfinished-run notice for a stored question while its answer is still coming", async () => {
+    const { el, server } = mount();
+    server.stored.set("t1", [{ id: "u0", role: "user", content: "stored question" }]);
+    server.running.add("t1");
+    const [head] = replayHalves();
+    const opening = head.slice(0, head.indexOf("\n\n") + 2);
+    server.replays.push((init) => live(init, opening).response);
+    await el.switchThread("t1");
+    await settle();
+
+    expect(el.running).toBe(true);
+    expect(transcriptText(el)).toContain("stored question");
+    expect(shadow(el).querySelector(".run-notice--interrupted")).toBeNull();
+  });
+
+  it("is not asked about when the restore resumes a navigating call", async () => {
+    quietAgentErrors();
+    const { el, server } = mount();
+    server.running.add("t1");
+    el.conversationStore.saveCheckpoint("t1", { toolCallId: "nav-1" });
+    server.starts.push(() => sse(finishedRun("r9", "resumed")));
+    await el.switchThread("t1");
+    await settle();
+
+    expect(server.to("events/")).toEqual([]);
+  });
+
+  it("reports no thread change for a thread left while the server was asked", async () => {
+    const { el, server } = mount();
+    server.running.add("t1");
+    let answer!: () => void;
+    server.probeHold = new Promise((resolve) => {
+      answer = resolve;
+    });
+    const reported: string[] = [];
+    el.addEventListener(THREAD_EVENT, (event) => {
+      reported.push((event as CustomEvent<{ threadId: string }>).detail.threadId);
+    });
+    void el.switchThread("t1");
+    await settle();
+    el.newChat();
+    const left = reported.length;
+    answer();
+    await settle();
+
+    expect(reported.slice(left)).not.toContain("t1");
+  });
+
+  it("sends a turn the composer parked during the restore once it has ended", async () => {
+    const { el, server } = mount();
+    const { answer, finish } = await openWhileRunning(server, el);
+    composerSend(el, "typed turn");
+    answer();
+    await settle();
+    expect(server.starts_()).toEqual([]);
+    server.starts.push(() => sse(finishedRun("r9", "the typed answer")));
+    await finish();
+
+    expect(server.starts_().map(lastUserTurn)).toEqual(["typed turn"]);
   });
 });
 
@@ -599,14 +738,19 @@ describe("a start refused because a run holds the thread", () => {
     quietAgentErrors();
     const { el, server } = mount();
     el.agentFactory = (options) =>
-      new HttpAgent({ url: options.endpoint, fetch: (url, init) => fetch(url, init) });
+      new HttpAgent({
+        url: options.endpoint,
+        threadId: "t1",
+        fetch: (url, init) => fetch(url, init),
+      });
     await el.switchThread("t1");
     server.starts.push(() => json(409, recorded.busyStart.body));
     await el.sendMessage("first");
     await settle();
 
-    expect(shadow(el).querySelector(".message--failed")).not.toBeNull();
-    expect(server.to("events/").filter((call) => !call.url.includes("limit"))).toEqual([]);
+    expect(failedText(el)).toContain("the thread has a run in progress");
+    expect(replays(server)).toEqual([]);
+    expect(shadow(el).querySelector(".queued-chip")).toBeNull();
   });
 
   it("is an error when the refusal names another thread", async () => {
@@ -617,7 +761,60 @@ describe("a start refused because a run holds the thread", () => {
     await el.sendMessage("first");
     await settle();
 
-    expect(shadow(el).querySelector(".message--failed")).not.toBeNull();
+    expect(failedText(el)).toContain("the thread has a run in progress");
+    expect(replays(server)).toEqual([]);
+    expect(shadow(el).querySelector(".queued-chip")).toBeNull();
+  });
+
+  it.each([
+    ["a 500 that names the thread and a run", () => json(500, recorded.busyStart.body), "HTTP 500"],
+    ["a 409 that names no run", () => json(409, { thread_id: "t1" }), "HTTP 409"],
+    ["a 409 whose body is text", () => new Response("busy", { status: 409 }), "HTTP 409: busy"],
+    ["a 409 whose body is null", () => json(409, null), "HTTP 409: null"],
+  ])("is an error, not a reattach, for %s", async (_name, answer, shown) => {
+    quietAgentErrors();
+    const { el, server } = mount();
+    await el.switchThread("t1");
+    server.starts.push(answer);
+    await el.sendMessage("first");
+    await settle();
+
+    expect(failedText(el)).toContain(shown);
+    expect(replays(server)).toEqual([]);
+    expect(shadow(el).querySelector(".queued-chip")).toBeNull();
+  });
+
+  it("is the failure itself when the request fails with something that is not an Error", async () => {
+    quietAgentErrors();
+    const { el } = mount();
+    el.agentFactory = (options) =>
+      new DetachedHttpAgent({
+        url: options.endpoint,
+        fetch: () => Promise.reject("offline"),
+        eventsUrl: "/agent/threads/t1/events/",
+      });
+    await el.switchThread("t1");
+    await el.sendMessage("first");
+    await settle();
+
+    expect(failedText(el)).toContain("offline");
+  });
+
+  it("is an error when a later request after the joined run fails, not a second reattach", async () => {
+    quietAgentErrors();
+    const { el, server } = mount();
+    await el.switchThread("t1");
+    server.starts.push(
+      () => json(409, recorded.busyStart.body),
+      () => json(500, { error: "boom" }),
+    );
+    server.replays.push(() => sse(recorded.replayFromStart));
+    void el.sendMessage("first");
+    await settle();
+
+    expect(server.starts_().length).toBe(2);
+    expect(replays(server).length).toBe(1);
+    expect(failedText(el)).toContain("HTTP 500");
   });
 });
 
@@ -749,6 +946,19 @@ describe("without data-detach-runs", () => {
 
     expect(server.starts_()[0]?.["forwardedProps"]).toEqual({});
     expect(server.to("events/")).toEqual([]);
+  });
+
+  it("shows a 409 as an error, and joins nothing", async () => {
+    quietAgentErrors();
+    const { el, server } = mount({});
+    await el.switchThread("t1");
+    server.starts.push(() => json(409, recorded.busyStart.body));
+    await el.sendMessage("first");
+    await settle();
+
+    expect(failedText(el)).toContain("the thread has a run in progress");
+    expect(server.to("events/")).toEqual([]);
+    expect(shadow(el).querySelector(".queued-chip")).toBeNull();
   });
 
   it("reflects the detachRuns property as the attribute", () => {

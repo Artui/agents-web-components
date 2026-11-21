@@ -28,6 +28,15 @@ describe("DetachedRuns", () => {
     expect(runs().eventsUrl("a b")).toBe("/agent/threads/a%20b/events/");
   });
 
+  it("reads nothing from an error page, whatever its body says", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => json(500, recorded.probeRunning.body)),
+    );
+
+    expect(await runs().running("t1")).toBe(false);
+  });
+
   it("reads a running run from one JSON page of its log", async () => {
     const fetch = vi.fn(async () => json(200, recorded.probeRunning.body));
     vi.stubGlobal("fetch", fetch);
