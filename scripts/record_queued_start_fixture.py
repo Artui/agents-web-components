@@ -1,19 +1,4 @@
 #!/usr/bin/env python
-"""Record a detached start on a queued django-ag-ui mount into ``tests/fixtures/queued_start.json``.
-
-An ``AGUIServer(firing_queue=)`` answers a browser start that asks to detach with
-``200 {"thread_id", "run_id"}`` and leaves the run to a worker; the browser then reads
-the run through ``threads/<id>/events/?after=0``. Every body here is what the real
-server answers: the start, and the replay as it reads once the worker has run it.
-Nothing is typed by hand. Run it with the released server::
-
-    uv run --no-project --with 'django-ag-ui==0.84.0' --with django-service-specs \\
-        --with 'django-spec-agents[harness]' python scripts/record_queued_start_fixture.py
-
-Ids the server mints and timestamps are replaced by stable placeholders, so a
-regeneration diffs clean.
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -30,6 +15,8 @@ from typing import Any
 
 import django
 from django.conf import settings
+
+RUN = "uv run --no-project --with 'django-ag-ui==0.84.0' --with django-service-specs --with 'django-spec-agents[harness]' python scripts/record_queued_start_fixture.py"  # noqa: E501
 
 DB = Path(tempfile.mkdtemp()) / "queued.sqlite3"
 settings.configure(
@@ -64,7 +51,9 @@ from django_ag_ui.agent.agui_server import AGUIServer  # noqa: E402
 from django_ag_ui.agent.headless_runner import AGUIHeadlessRunner  # noqa: E402
 from django_ag_ui.config.build_ag_ui_config import build_ag_ui_config  # noqa: E402
 
-OUT = Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "queued_start.json"
+OUT = (
+    Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "queued_start.json"
+)
 SSE = {"Accept": "text/event-stream"}
 OWNER = SimpleNamespace(is_authenticated=True, pk=1, username="owner")
 
@@ -133,7 +122,9 @@ def _body(thread_id: str, run_id: str) -> bytes:
             "threadId": thread_id,
             "runId": run_id,
             "state": {},
-            "messages": [{"id": f"u-{run_id}", "role": "user", "content": "Queue this one"}],
+            "messages": [
+                {"id": f"u-{run_id}", "role": "user", "content": "Queue this one"}
+            ],
             "tools": [],
             "context": [],
             "forwardedProps": {"detach": True},
@@ -152,7 +143,9 @@ async def _read_all(stream: Any) -> str:
 async def record() -> dict[str, Any]:
     worker = _Worker()
     server = _server(worker)
-    request = _Factory().post("/agent/", data=_body("t1", "r1"), content_type="application/json")
+    request = _Factory().post(
+        "/agent/", data=_body("t1", "r1"), content_type="application/json"
+    )
     start = await _route(server, "endpoint")(request)
     replay_request = _Factory().get("/agent/threads/t1/events/?after=0", headers=SSE)
     replay = await _route(server, "thread_events")(replay_request, thread_id="t1")
@@ -180,9 +173,15 @@ def _normalise(text: str) -> str:
     def stable(match: re.Match[str]) -> str:
         return seen.setdefault(match.group(0), f"id-{len(seen) + 1}")
 
-    text = re.sub(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", stable, text)
+    text = re.sub(
+        r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", stable, text
+    )
     text = re.sub(r'(\\?"timestamp\\?": ?)\d+', r"\g<1>0", text)
-    return re.sub(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?(\+00:00|Z)", "2026-01-01T00:00:00Z", text)
+    return re.sub(
+        r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?(\+00:00|Z)",
+        "2026-01-01T00:00:00Z",
+        text,
+    )
 
 
 if __name__ == "__main__":

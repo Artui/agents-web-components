@@ -56,6 +56,26 @@ describe("RemoteConversationStore thread status", () => {
     vi.unstubAllGlobals();
   });
 
+  it("leaves out the reason of a failed run the server gives none", async () => {
+    fetchMock.mockResolvedValueOnce(
+      list([
+        {
+          thread_id: "t-failed",
+          title: "Failed",
+          updated_at: "2026-01-01T00:00:02+00:00",
+          preview: "",
+          status: "failed",
+          reason: null,
+          last_read_at: null,
+        },
+      ]),
+    );
+    const rows = byId(await new RemoteConversationStore(URL_).listThreads());
+
+    expect(rows["t-failed"]?.status).toBe("failed");
+    expect(rows["t-failed"]).not.toHaveProperty("reason");
+  });
+
   it("reads status, reason and the interrupt list off the recorded rows", async () => {
     fetchMock.mockResolvedValueOnce(recordedList(recorded.listed));
     const rows = byId(await new RemoteConversationStore(URL_).listThreads());
@@ -302,6 +322,14 @@ describe("RemoteConversationStore thread status", () => {
 
   it.each([
     ["a refused stream", () => new Response(null, { status: 500 })],
+    [
+      "a refusal with django-ag-ui's error body",
+      () =>
+        new Response(JSON.stringify({ error: "forbidden" }), {
+          status: 403,
+          headers: { "content-type": "application/json" },
+        }),
+    ],
     ["an empty stream", () => new Response(null, { status: 200 })],
     ["a dropped connection", () => Promise.reject(new TypeError("network"))],
   ])("asks again after %s", async (_name, answer) => {

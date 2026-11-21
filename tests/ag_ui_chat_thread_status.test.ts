@@ -9,6 +9,7 @@ import type {
 import { SessionStorageStore } from "../src/core/conversation_store.js";
 import { defineChat } from "../src/core/define_chat.js";
 import type { ThreadsChangeDetail } from "../src/core/events/threads_change_detail.js";
+import { makeFakeAgent } from "./helpers/fake_agent.js";
 
 defineChat();
 
@@ -157,5 +158,54 @@ describe("<ag-ui-chat> data-thread-status", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("reads an answer watched in view once its run has settled, after the save", async () => {
+    const order: string[] = [];
+    const watched = watchedStore();
+    watched.store.markRead = () => order.push("read");
+    const el = mount(watched.store, null);
+    el.setAttribute("data-start-open", "");
+    el.setCollapsed(false);
+    el.agentFactory = () =>
+      makeFakeAgent({
+        script: (emit) => {
+          emit.runStart();
+          emit.textEnd("an answer");
+          order.push("run end");
+          emit.runEnd();
+        },
+      }).agent;
+
+    await el.sendMessage("hi");
+    for (let i = 0; i < 10; i += 1) {
+      await Promise.resolve();
+    }
+
+    expect(order).toEqual(["run end", "read"]);
+  });
+
+  it("reads an answer seen landing though the panel closed before its run settled", async () => {
+    const order: string[] = [];
+    const watched = watchedStore();
+    watched.store.markRead = () => order.push("read");
+    const el = mount(watched.store, null);
+    el.setCollapsed(false);
+    el.agentFactory = () =>
+      makeFakeAgent({
+        script: (emit) => {
+          emit.runStart();
+          emit.textEnd("an answer");
+          el.setCollapsed(true);
+          emit.runEnd();
+        },
+      }).agent;
+
+    await el.sendMessage("hi");
+    for (let i = 0; i < 10; i += 1) {
+      await Promise.resolve();
+    }
+
+    expect(order).toEqual(["read"]);
   });
 });

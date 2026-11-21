@@ -64,6 +64,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   when the attribute had been missing. A replay now reads the attribute when it is made, as a
   cancel already did. The thread list and its store still read it only while connecting, and
   the late-change warning now says which half moved. No opt-in.
+- **An answer read as it lands is now recorded when its run settles.** `markRead` was called at the
+  answer's end, which a django-ag-ui server reaches before it saves the conversation, so the read
+  could land first and the thread list as unread on the next listing. It is now called once the
+  run has settled, still once per answer, and for an answer seen landing even if the panel closed
+  before the run ended. A store of your own sees the same single call, a little later. No opt-in.
 
 ## [0.8.0] — 2026-11-21
 

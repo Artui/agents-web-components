@@ -730,6 +730,8 @@ export class AgUiChat extends HTMLElement {
   #anchorWarned = false;
   // Unseen answers per thread: finished while collapsed or off screen.
   #unreadByThread = new Map<string, number>();
+  // Threads an answer landed on in view, read once its run has settled.
+  #readOnSettle = new Set<string>();
   /** Empty-state region at the top of the message list; hidden once anything renders. */
   readonly #emptyWrap: HTMLDivElement;
   /**
@@ -1088,6 +1090,11 @@ export class AgUiChat extends HTMLElement {
       setRunning: (running) => this.#setRunning(running),
       appendMessage: (role, content) => this.appendMessage(role, content),
       noteUnread: (threadId) => this.#noteUnread(threadId),
+      runSettled: (threadId) => {
+        if (this.#readOnSettle.delete(threadId)) {
+          this.conversationStore.markRead?.(threadId);
+        }
+      },
       newChat: () => this.newChat(),
       showUsage: () => readFlag(this, "show-usage"),
       skillsChanged: () => {
@@ -3542,12 +3549,14 @@ export class AgUiChat extends HTMLElement {
   }
 
   /**
-   * Note an answer that finished on `threadId`: read as it lands when that
-   * thread is on screen in an expanded panel, otherwise one more unseen.
+   * Note an answer that finished on `threadId`: read when its run settles if
+   * that thread is on screen in an expanded panel, otherwise one more unseen.
+   * Not as it lands: a server saves the conversation after the answer's end
+   * and before the run's, and a read sent first leaves the thread listed unread.
    */
   #noteUnread(threadId: string): void {
     if (this.#inView(threadId)) {
-      this.conversationStore.markRead?.(threadId);
+      this.#readOnSettle.add(threadId);
       return;
     }
     this.#unreadByThread.set(threadId, (this.#unreadByThread.get(threadId) ?? 0) + 1);

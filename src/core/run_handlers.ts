@@ -53,6 +53,8 @@ export interface RunHandlersHost {
   readonly appendMessage: (role: MessageRole, content: string) => HTMLDivElement;
   /** Note an assistant answer finished on `threadId`, which may be unseen. */
   readonly noteUnread: (threadId: string) => void;
+  /** An interaction on `threadId` settled, however it ended. */
+  readonly runSettled: (threadId: string) => void;
   /** Start a new conversation, as the element's public `newChat` does. */
   readonly newChat: () => void;
   /** Whether `show-usage` is set, read when a turn settles. */
@@ -238,6 +240,7 @@ export class RunHandlers {
         // stopped changing -- and outside the check, because what a run did is
         // true whichever conversation is on screen when it ends.
         ledger.usage = { input: null, output: null };
+        this.#host.runSettled(threadId);
         this.#dispatchRunFinished(ledger, threadId);
       },
     };

@@ -1826,6 +1826,50 @@ describe("a turn refused again by the run it just joined", () => {
     expect(handlers.calls).toContain("cancelled");
     expect(handlers.calls.some((call) => call.startsWith("err:"))).toBe(false);
   });
+
+  it("asks the person once for a parked run its resume retries", async () => {
+    const posts: unknown[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init: RequestInit) => {
+        if (init.method === "POST") {
+          posts.push(JSON.parse(String(init.body)).resume ?? null);
+          return new Response(JSON.stringify(busy), {
+            status: 409,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        return new Response(replay, { headers: { "Content-Type": "text/event-stream" } });
+      }),
+    );
+    const asked = vi.fn((interrupts: readonly Interrupt[]) =>
+      Promise.resolve(
+        Object.fromEntries(
+          interrupts.map((interrupt) => [interrupt.id, { status: "resolved", payload: {} }]),
+        ),
+      ),
+    );
+    const client = new AgUiClient({
+      agent: createHttpAgent({
+        endpoint: "/agent/",
+        threadId: "t1",
+        eventsUrl: "/agent/threads/t1/events/",
+      }),
+      handlers: recordingHandlers(),
+      detach: () => true,
+      resolveInterrupts: asked as never,
+    });
+    await client.send("first");
+    posts.length = 0;
+
+    await client.answerParked([
+      { id: "int-1", reason: "tool_call", toolCallId: "call-1", metadata: { kind: "approval" } },
+    ]);
+
+    expect(asked).toHaveBeenCalledTimes(1);
+    expect(posts).toHaveLength(2);
+    expect(posts[1]).toEqual(posts[0]);
+  });
 });
 
 describe("a queued start's stream", () => {

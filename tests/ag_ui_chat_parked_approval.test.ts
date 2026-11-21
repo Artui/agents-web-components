@@ -233,4 +233,56 @@ describe("<ag-ui-chat> restoring a thread parked on an approval", () => {
     expect(el.running).toBe(false);
     expect(runs(sent)).toEqual([]);
   });
+
+  it.each([
+    [
+      "an interrupt of another kind beside it",
+      (interrupts: Record<string, unknown>[]) =>
+        interrupts.push({
+          ...interrupts[0],
+          id: "int-call-9",
+          toolCallId: "call-9",
+          metadata: { kind: "question" },
+        }),
+    ],
+    [
+      "an interrupt without its call",
+      (interrupts: Record<string, unknown>[]) => {
+        delete interrupts[0]?.["toolCallId"];
+      },
+    ],
+  ])("offers nothing for a run parked with %s", async (_name, change) => {
+    const listed = listedAs("approval");
+    const row = listed.threads.find((thread) => thread.thread_id === "t-approve");
+    change((row?.interrupts ?? []) as unknown as Record<string, unknown>[]);
+    const sent = serve(listed);
+    const el = await mount();
+
+    expect(shadow(el).querySelector(".approval-btn--approve")).toBeNull();
+    expect(el.running).toBe(false);
+    expect(runs(sent)).toEqual([]);
+  });
+
+  it("sends a turn the composer queued while the person decides after the answered run", async () => {
+    const sent = serve(listedAs("approval"));
+    const el = await mount();
+    const input = shadow(el).querySelector<HTMLTextAreaElement>(".input");
+    if (input === null) {
+      throw new Error("expected an input");
+    }
+    input.value = "queued while deciding";
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    await settle();
+
+    expect(runs(sent)).toEqual([]);
+    shadow(el)
+      .querySelector<HTMLButtonElement>('[data-tool-name="delete_invoice"] .approval-btn--approve')
+      ?.click();
+    await settle();
+    await settle();
+
+    const bodies = runs(sent).map((request) => request.body);
+    expect(bodies.map((body) => body?.["resume"] ?? null)).toEqual([recorded.resumeSent, null]);
+    expect(JSON.stringify(bodies[1]?.["messages"])).toContain("queued while deciding");
+  });
 });

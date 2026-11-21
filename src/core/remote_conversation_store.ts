@@ -216,15 +216,37 @@ export class RemoteConversationStore implements ClientConversationStore {
     listener: (threads: readonly ThreadMeta[]) => void,
     transport: ThreadsTransport,
   ): () => void {
+    // The list this watch last handed on, by ETag: every listing of this store
+    // writes the one it saw, so a change another listing saw first is still
+    // handed on, and a stream reconnects from what this watch has shown.
+    let handed: string | null | undefined;
     const watch = new ThreadsWatch({
       url: this.#url,
       transport,
       headers: this.#headers,
       credentials: this.#credentials,
-      poll: () => this.#poll(),
-      seen: (etag, rows) => this.#seen(etag, rows),
+      poll: async () => {
+        const rows = await this.#fetchThreads();
+        const listed = this.#listed;
+        if (rows === null) {
+          return null;
+        }
+        if (listed === null) {
+          handed = null;
+          return rows;
+        }
+        if (listed.etag === handed) {
+          return undefined;
+        }
+        handed = listed.etag;
+        return listed.rows;
+      },
+      seen: (etag, rows) => {
+        this.#seen(etag, rows);
+        handed = etag;
+      },
       changed: (rows) => listener(this.#metasFrom(rows)),
-      etag: () => this.#listed?.etag ?? null,
+      etag: () => handed ?? null,
     });
     return watch.start();
   }
@@ -241,16 +263,6 @@ export class RemoteConversationStore implements ClientConversationStore {
     // django-ag-ui lists interrupts only on a waiting row.
     const row = (await this.#fetchThreads())?.find((listed) => listed.thread_id === threadId);
     return row?.interrupts ?? [];
-  }
-
-  /** One poll: the rows when they changed, `undefined` when a `304` says not, `null` on failure. */
-  async #poll(): Promise<readonly ServerThreadRow[] | null | undefined> {
-    const before = this.#listed;
-    const rows = await this.#fetchThreads();
-    if (rows !== null && before !== null && this.#listed === before) {
-      return undefined;
-    }
-    return rows;
   }
 
   #seen(etag: string | null, rows: readonly ServerThreadRow[]): void {

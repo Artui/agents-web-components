@@ -1628,7 +1628,8 @@ no badge for answers that finished elsewhere.
 - **`ThreadMeta.unread`** (boolean): a thread `listThreads()` reports as unread, and the page has
   not counted, counts once, when the list is fetched.
 - **`markRead(threadId)`**: called when the element reads a thread with unseen answers, and when
-  an answer finishes on the thread in view. A server store maps it to its read endpoint, and
+  the run of an answer that finished on the thread in view settles (after the answer, so a server
+  has saved it first). A server store maps it to its read endpoint, and
   should list the thread with `unread: false` afterwards.
 
 A store without either still has its threads counted and cleared in the page. Neither is
@@ -2178,9 +2179,10 @@ on screen as current, and drives the chat through the [thread API](#driving-the-
   changes that one string.
 - **Styling.** Parts `list`, `row` (plus `row-active` on the thread on screen), `row-button`,
   `mark` (plus `mark-running`, `mark-waiting`, `mark-failed` or `mark-unread`), `delete`,
-  `confirm`, `empty`. The chat's colour tokens apply, and the list takes the light or
-  dark half of each from the page's own `color-scheme`, since it sits in your chrome rather than
-  in the chat's. The host carries `data-empty` when the chat has no conversations.
+  `confirm`, `empty`. The chat's colour tokens apply, plus `--ag-ui-danger` (the delete
+  confirmation and the failed mark) and `--ag-ui-waiting` (the waiting mark). The list takes the
+  light or dark half of each from the page's own `color-scheme`, since it sits in your chrome
+  rather than in the chat's. The host carries `data-empty` when the chat has no conversations.
 
 The main `/bundle` does not carry the element. Without a build step, load
 `/threads/bundle` beside it:
@@ -2227,7 +2229,9 @@ server, or a mount without a run store, lists none of them and nothing below hap
   so it needs no `data-thread-status`. Stop, or leaving the thread, while the person decides
   sends and writes nothing: the run stays parked and is offered again next time. A `question` or
   `external` interrupt, or a mix, is marked waiting and not offered: the server maps every resume
-  entry to an approval, so answering one that way would approve it.
+  entry to an approval, so answering one that way would approve it. A host driving its own `AgUiClient`
+  answers a parked run the same way with `client.answerParked(interrupts)`, which asks its
+  `resolveInterrupts` once and sends the resume.
 
 ## A2UI surfaces
 

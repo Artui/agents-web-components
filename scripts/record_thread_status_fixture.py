@@ -1,23 +1,4 @@
 #!/usr/bin/env python
-"""Record django-ag-ui's thread-status routes into ``tests/fixtures/thread_status.json``.
-
-Every body here is what a real ``AGUIServer`` mount with a run store answers:
-``threads/`` with each row's ``status``, ``last_read_at`` and ``interrupts``,
-its ``ETag`` and the ``304`` a matching ``If-None-Match`` gets, one SSE frame of
-the same body, the JSON a non-ASGI request gets for ``Accept: text/event-stream``,
-``threads/<id>/read/``, and the run a resumed approval starts. Nothing is typed
-by hand; the script only chooses the thread ids, the prompts and the tools.
-
-Driven through ``AsyncRequestFactory`` on one event loop, as
-``record_detached_fixture.py`` is. Run it with the released server::
-
-    uv run --no-project --with 'django-ag-ui==0.84.0' python scripts/record_thread_status_fixture.py
-
-Ids the server mints are replaced by stable placeholders. Timestamps are
-replaced by stable ones that keep their order, since the client compares
-``last_read_at`` with ``updated_at``.
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -32,6 +13,8 @@ from typing import Any
 
 import django
 from django.conf import settings
+
+RUN = "uv run --no-project --with 'django-ag-ui==0.84.0' --with 'django-spec-agents==0.23.0' python scripts/record_thread_status_fixture.py"  # noqa: E501
 
 DB = Path(tempfile.mkdtemp()) / "status.sqlite3"
 settings.configure(
@@ -70,7 +53,9 @@ from django_ag_ui.agent.agui_server import AGUIServer  # noqa: E402
 from django_ag_ui.config.build_ag_ui_config import build_ag_ui_config  # noqa: E402
 from django_ag_ui.persistence import threads_view as threads_view_module  # noqa: E402
 
-OUT = Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "thread_status.json"
+OUT = (
+    Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "thread_status.json"
+)
 SSE = {"Accept": "text/event-stream"}
 USER = SimpleNamespace(is_authenticated=True, pk=1, username="owner")
 
@@ -107,15 +92,29 @@ class _Gate:
                 yield "Deleted."
                 return
             prompt = next(
-                (p.content for p in reversed(parts) if getattr(p, "part_kind", "") == "user-prompt"),
+                (
+                    p.content
+                    for p in reversed(parts)
+                    if getattr(p, "part_kind", "") == "user-prompt"
+                ),
                 "",
             )
             if "delete" in prompt:
                 args = '{"target": "invoice-7"}'
-                yield {0: DeltaToolCall(name="delete_invoice", json_args=args, tool_call_id="call-1")}
+                yield {
+                    0: DeltaToolCall(
+                        name="delete_invoice", json_args=args, tool_call_id="call-1"
+                    )
+                }
                 return
             if "ask" in prompt:
-                yield {0: DeltaToolCall(name="ask", json_args='{"topic": "colour"}', tool_call_id="call-2")}
+                yield {
+                    0: DeltaToolCall(
+                        name="ask",
+                        json_args='{"topic": "colour"}',
+                        tool_call_id="call-2",
+                    )
+                }
                 return
             if "fail" in prompt:
                 raise RuntimeError("the model broke")
@@ -146,7 +145,9 @@ def _server(gate: _Gate, **kwargs: Any) -> AGUIServer:
         conversation_store=DefaultConversationStore(),
         run_store=DefaultRunStore(),
         config=build_ag_ui_config(
-            heartbeat_seconds=0, run_timeout_seconds=300, tool_guard=ToolGuardConfig(enabled=True)
+            heartbeat_seconds=0,
+            run_timeout_seconds=300,
+            tool_guard=ToolGuardConfig(enabled=True),
         ),
         **kwargs,
     )
@@ -157,7 +158,9 @@ def _route(server: AGUIServer, name: str) -> Any:
     return next(p for p in patterns if p.name == name).callback
 
 
-def _body(thread_id: str, run_id: str, messages: list[dict[str, Any]], **extra: Any) -> bytes:
+def _body(
+    thread_id: str, run_id: str, messages: list[dict[str, Any]], **extra: Any
+) -> bytes:
     payload = {
         "threadId": thread_id,
         "runId": run_id,
@@ -181,7 +184,12 @@ async def _start(server: AGUIServer, body: bytes) -> Any:
 
 async def _drain(response: Any) -> str:
     async def read() -> str:
-        return "".join([c if isinstance(c, str) else c.decode() async for c in response.streaming_content])
+        return "".join(
+            [
+                c if isinstance(c, str) else c.decode()
+                async for c in response.streaming_content
+            ]
+        )
 
     return await asyncio.wait_for(read(), 20)
 
@@ -203,11 +211,13 @@ async def _settled(thread_id: str) -> None:
         if state is not None and state.status is not ThreadRunStatus.RUNNING:
             return
         await asyncio.sleep(0.01)
-    raise AssertionError("the run never settled")
+    raise AssertionError(f"the run never settled; record with: {RUN}")
 
 
 async def _list(server: AGUIServer, **headers: str) -> Any:
-    return await _route(server, "threads")(_Factory().get("/agent/threads/", headers=headers))
+    return await _route(server, "threads")(
+        _Factory().get("/agent/threads/", headers=headers)
+    )
 
 
 async def _read(server: AGUIServer, thread_id: str) -> Any:
@@ -227,12 +237,16 @@ def _row(response: Any, thread_id: str) -> dict[str, Any] | None:
 
 async def _reads(server: AGUIServer, gate: _Gate) -> dict[str, Any]:
     """Seen then read; a second turn left running; no run claimed; a first turn read mid-run."""
-    seen = await _drain(await _start(server, _body("t-read", "r1", [_user("r1", "Hello")])))
+    seen = await _drain(
+        await _start(server, _body("t-read", "r1", [_user("r1", "Hello")]))
+    )
     await _settled("t-read")
     after_seen = _row(await _list(server), "t-read")
     read = await _read(server, "t-read")
     after_read = _row(await _list(server), "t-read")
-    stored = await DefaultConversationStore().load("t-read", request=_Factory().get("/"))
+    stored = await DefaultConversationStore().load(
+        "t-read", request=_Factory().get("/")
+    )
     gate.release.clear()
     second = [*stored.messages, _user("r2", "And then?")]
     await _until(await _start(server, _body("t-read", "r2", second)), "partial answer")
@@ -242,7 +256,10 @@ async def _reads(server: AGUIServer, gate: _Gate) -> dict[str, Any]:
     after_away = _row(await _list(server), "t-read")
     unknown = await _read(server, "t-never")
     gate.release.clear()
-    await _until(await _start(server, _body("t-first", "r0", [_user("r0", "Hi")])), "partial answer")
+    await _until(
+        await _start(server, _body("t-first", "r0", [_user("r0", "Hi")])),
+        "partial answer",
+    )
     first_read = await _read(server, "t-first")
     first_running = _row(await _list(server), "t-first")
     gate.release.set()
@@ -267,17 +284,31 @@ async def _parked(server: AGUIServer) -> dict[str, Any]:
     asked = [_user("r3", "Please delete invoice 7")]
     parked_run = await _drain(await _start(server, _body("t-approve", "r3", asked)))
     await _settled("t-approve")
-    await _drain(await _start(server, _body("t-question", "r4", [_user("r4", "Please ask me")])))
+    await _drain(
+        await _start(server, _body("t-question", "r4", [_user("r4", "Please ask me")]))
+    )
     await _settled("t-question")
-    await _drain(await _start(server, _body("t-failed", "r5", [_user("r5", "Please fail")])))
+    await _drain(
+        await _start(server, _body("t-failed", "r5", [_user("r5", "Please fail")]))
+    )
     await _settled("t-failed")
     listed = await _list(server)
     etag = listed["ETag"]
     unchanged = await _list(server, **{"If-None-Match": etag})
-    stored = await DefaultConversationStore().load("t-approve", request=_Factory().get("/"))
+    stored = await DefaultConversationStore().load(
+        "t-approve", request=_Factory().get("/")
+    )
     [interrupt] = (_row(listed, "t-approve") or {})["interrupts"]
-    resume = [{"interruptId": interrupt["id"], "status": "resolved", "payload": {"approved": True}}]
-    resumed = await _start(server, _body("t-approve", "r6", stored.messages, resume=resume))
+    resume = [
+        {
+            "interruptId": interrupt["id"],
+            "status": "resolved",
+            "payload": {"approved": True},
+        }
+    ]
+    resumed = await _start(
+        server, _body("t-approve", "r6", stored.messages, resume=resume)
+    )
     resumed_run = await _drain(resumed)
     await _settled("t-approve")
     changed = await _list(server, **{"If-None-Match": etag})
@@ -300,10 +331,14 @@ async def _streams(server: AGUIServer) -> dict[str, Any]:
     etag = frame.split("\n", 1)[0].removeprefix("id: ")
     skipped = await _list(server, **SSE, **{"Last-Event-ID": etag})
     try:
-        first_after_skip: str | None = await asyncio.wait_for(_first_chunk(skipped), 0.5)
+        first_after_skip: str | None = await asyncio.wait_for(
+            _first_chunk(skipped), 0.5
+        )
     except TimeoutError:
         first_after_skip = None
-    wsgi = await _route(server, "threads")(_SyncFactory().get("/agent/threads/", headers=SSE))
+    wsgi = await _route(server, "threads")(
+        _SyncFactory().get("/agent/threads/", headers=SSE)
+    )
     return {
         "streamContentType": stream["Content-Type"],
         "streamFrame": frame,
@@ -325,15 +360,23 @@ def _normalise(text: str) -> str:
     def stable(match: re.Match[str]) -> str:
         return seen.setdefault(match.group(0), f"id-{len(seen) + 1}")
 
-    text = re.sub(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", stable, text)
+    text = re.sub(
+        r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", stable, text
+    )
     text = re.sub(r'(\\?"timestamp\\?": ?)\d+', r"\g<1>0", text)
     stamp = r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:\+00:00|Z)"
     ordered = sorted(set(re.findall(stamp, text)))
-    times = {t: f"2026-01-01T00:{i // 60:02d}:{i % 60:02d}.000000+00:00" for i, t in enumerate(ordered)}
+    times = {
+        t: f"2026-01-01T00:{i // 60:02d}:{i % 60:02d}.000000+00:00"
+        for i, t in enumerate(ordered)
+    }
     text = re.sub(stamp, lambda m: times[m.group(0)], text)
-    # The ETag hashes the body, so it is renamed after the body's own values are.
     etags: dict[str, str] = {}
-    return re.sub(r'W?/?\\?"[0-9a-f]{32,64}\\?"', lambda m: etags.setdefault(m.group(0), f'\\"etag-{len(etags) + 1}\\"'), text)
+    return re.sub(
+        r'W?/?\\?"[0-9a-f]{32,64}\\?"',
+        lambda m: etags.setdefault(m.group(0), f'\\"etag-{len(etags) + 1}\\"'),
+        text,
+    )
 
 
 async def record() -> dict[str, Any]:
