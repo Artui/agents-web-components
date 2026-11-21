@@ -64,6 +64,7 @@ describe("serverRoute", () => {
   it.each([
     ["401", -32001, "authentication required"],
     ["403", -32006, "forbidden"],
+    ["429", -32005, "rate limited"],
   ] as const)(
     "carries django-ag-ui's coded %s answer, recorded from its view, into the error",
     async (key, code, message) => {

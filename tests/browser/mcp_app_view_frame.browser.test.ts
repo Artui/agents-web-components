@@ -400,6 +400,51 @@ describe("viewFrame", () => {
     );
   });
 
+  it("tears down only the view that navigated, when two share the shipped proxy page", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const proxyUrl = `${await otherOrigin()}/${inject("sandboxProxyPage")}`;
+    const disconnectMover = vi.fn();
+    const disconnectStayer = vi.fn();
+    const connectMover = vi.fn((_channel: McpAppViewChannel) => disconnectMover);
+    const connectStayer = vi.fn((_channel: McpAppViewChannel) => disconnectStayer);
+    const mover = await drawn(
+      services(
+        `<script>
+          addEventListener("message", () => { location.href = "about:blank"; });
+          parent.postMessage({ kind: "booted-mover" }, "*");
+        </script>`,
+        undefined,
+        proxyUrl,
+      ),
+      connectMover,
+    );
+    const stayer = await drawn(
+      services(
+        `<script>
+          addEventListener("message", (event) => parent.postMessage({ kind: "echo-stayer", data: event.data }, "*"));
+          parent.postMessage({ kind: "booted-stayer" }, "*");
+        </script>`,
+        undefined,
+        proxyUrl,
+      ),
+      connectStayer,
+    );
+    await message("booted-mover");
+    await message("booted-stayer");
+
+    connectMover.mock.calls[0]?.[0].post({ jsonrpc: "2.0", method: "go" });
+    await until(() => (mover.frame.isConnected ? undefined : true), "the mover's teardown");
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    connectStayer.mock.calls[0]?.[0].post({ jsonrpc: "2.0", method: "ping" });
+    const echo = await message("echo-stayer");
+
+    expect(disconnectMover).toHaveBeenCalledTimes(1);
+    expect(disconnectStayer).not.toHaveBeenCalled();
+    expect(stayer.frame.isConnected).toBe(true);
+    expect(stayer.node.textContent).not.toContain("can't be shown here");
+    expect(echo.data["data"]).toEqual({ jsonrpc: "2.0", method: "ping" });
+  });
+
   it("answers a proxy-ready from the proxy's window only on the proxy's origin", async () => {
     const stand = document.createElement("iframe");
     document.body.append(stand);
