@@ -9,4 +9,8 @@ export const DEFAULT_THREADS_STRINGS: ThreadsStrings = {
   deleteConfirm: "Delete this conversation?",
   deleteYes: "Delete",
   deleteNo: "Cancel",
+  running: "Running",
+  waiting: "Waiting",
+  failed: "Failed",
+  unread: "Unread",
 };

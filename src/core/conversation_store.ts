@@ -1,5 +1,5 @@
 import { randomUUID } from "@ag-ui/client";
-import type { Message } from "@ag-ui/core";
+import type { Interrupt, Message } from "@ag-ui/core";
 import { STORAGE_ROOT } from "../constants.js";
 import { prettifyToolName } from "../ui/progress/prettify_tool_name.js";
 
@@ -32,7 +32,30 @@ export interface ThreadMeta {
    * leaves it out, and the element counts only what finishes in this page.
    */
   readonly unread?: boolean;
+  /**
+   * The thread's run, as a server store knows it: `running` while a run works,
+   * `waiting` while one is parked on a person, `failed` when the last one broke,
+   * `idle` otherwise. Absent when the store cannot tell.
+   */
+  readonly status?: ThreadStatus;
+  /** Why a `failed` run ended (`error`, `interrupted`), when the server says. */
+  readonly reason?: string;
+  /**
+   * What a `waiting` run waits on, as AG-UI interrupts. `metadata.kind` says
+   * which (`approval`, `question`, `external`) and `metadata.destructive`
+   * whether an approval is for a destructive call.
+   */
+  readonly interrupts?: readonly Interrupt[];
 }
+
+/** A thread's run status, as {@link ThreadMeta.status} reports it. */
+export type ThreadStatus = "idle" | "running" | "waiting" | "failed";
+
+/**
+ * How a store keeps its thread list fresh while something watches it: `poll`
+ * asks again on an interval (with an ETag), `stream` follows a server stream.
+ */
+export type ThreadsTransport = "poll" | "stream";
 
 /**
  * Client-side persistence seam for the conversation and a pending-navigation
@@ -109,6 +132,19 @@ export interface ClientConversationStore {
    * the page; nothing is recorded beyond it.
    */
   markRead?(threadId: string): void;
+  /**
+   * Hand `listener` the thread list each time it changes, over `transport`,
+   * until the returned function is called.
+   *
+   * Optional: a store whose list changes only through this page leaves it out,
+   * and the element re-lists after its own changes as before. Called with the
+   * list as it stands when the watch starts and on every change after; a
+   * failed request is retried on the next tick rather than reported.
+   */
+  watchThreads?(
+    listener: (threads: readonly ThreadMeta[]) => void,
+    transport: ThreadsTransport,
+  ): () => void;
 }
 
 const THREAD_SUFFIX = "thread";

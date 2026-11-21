@@ -1,12 +1,17 @@
 /**
  * `<ag-ui-threads>` over a real `<ag-ui-chat>`: the list it draws from the
  * chat's store, the thread it marks, the chat it drives, and the run marks it
- * does not draw yet.
+ * draws from what the store reports.
  */
 
 import type { Message } from "@ag-ui/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ELEMENT_TAG, THREADS_SELECT_EVENT, THREADS_TAG } from "../src/constants.js";
+import {
+  ELEMENT_TAG,
+  THREADS_CHANGE_EVENT,
+  THREADS_SELECT_EVENT,
+  THREADS_TAG,
+} from "../src/constants.js";
 import type { AgUiChat } from "../src/core/ag_ui_chat.js";
 import type { ClientConversationStore } from "../src/core/conversation_store.js";
 import { SessionStorageStore } from "../src/core/conversation_store.js";
@@ -108,7 +113,7 @@ async function send(chat: AgUiChat): Promise<void> {
 }
 
 /** A store whose rows the test writes, extra keys and all, over a real one. */
-function rowStore(listed: (ThreadRow & Record<string, unknown>)[]): ClientConversationStore {
+function rowStore(listed: readonly ThreadRow[]): ClientConversationStore {
   const inner = new SessionStorageStore("rows");
   return {
     threadId: () => inner.threadId(),
@@ -449,7 +454,7 @@ describe("driving the chat", () => {
   });
 });
 
-describe("no run marks", () => {
+describe("run marks", () => {
   function marked(list: AgUiThreads): boolean {
     const root = list.shadowRoot as ShadowRoot;
     return (
@@ -480,17 +485,53 @@ describe("no run marks", () => {
     expect(marked(failing.list)).toBe(false);
   });
 
-  it("draws no mark from what a store's rows carry", async () => {
-    const listed = [
+  it("marks each row with the status its store reports, waiting over unread", async () => {
+    const listed: ThreadRow[] = [
       { threadId: "a", title: "A", updatedAt: 1, preview: "", status: "running" },
       { threadId: "w", title: "W", updatedAt: 1, preview: "", status: "waiting", unread: true },
-      { threadId: "u", title: "", updatedAt: 1, preview: "", unread: true },
+      { threadId: "f", title: "F", updatedAt: 1, preview: "", status: "failed", reason: "error" },
+      { threadId: "u", title: "", updatedAt: 1, preview: "", status: "idle", unread: true },
+      { threadId: "i", title: "I", updatedAt: 1, preview: "", status: "idle", unread: false },
     ];
     const { list } = mount({ store: rowStore(listed) });
     await flush();
 
-    expect(titles(list)).toEqual(["A", "W", "New conversation"]);
-    expect(marked(list)).toBe(false);
+    expect(titles(list)).toEqual(["A", "W", "F", "New conversation", "I"]);
+    const marks = rows(list).map((item) => item.dataset["status"] ?? null);
+    expect(marks).toEqual(["running", "waiting", "failed", "unread", null]);
+    const mark = row(list, "w")?.querySelector(".row-main .mark");
+    expect(mark?.getAttribute("part")).toBe("mark mark-waiting");
+    expect(row(list, "w")?.querySelector(".row-main")?.textContent).toBe("WWaiting");
+    expect(row(list, "i")?.querySelector(".mark")).toBeNull();
+  });
+
+  it("names its marks in the strings it is given", async () => {
+    const listed: ThreadRow[] = [
+      { threadId: "a", title: "A", updatedAt: 1, preview: "", status: "running" },
+    ];
+    const { list } = mount({ store: rowStore(listed) });
+    list.strings = { running: "Läuft" };
+    await flush();
+
+    expect(row(list, "a")?.querySelector(".mark")?.textContent).toBe("Läuft");
+  });
+
+  it("draws the rows a chat's watch hands on without listing again", async () => {
+    const listed: ThreadRow[] = [{ threadId: "a", title: "A", updatedAt: 1, preview: "" }];
+    const store = rowStore(listed);
+    const { chat, list } = mount({ store });
+    await flush();
+    const listThreads = vi.spyOn(store, "listThreads");
+
+    chat.dispatchEvent(
+      new CustomEvent(THREADS_CHANGE_EVENT, {
+        detail: { threads: [{ ...listed[0], status: "failed" }] },
+      }),
+    );
+    await flush();
+
+    expect(row(list, "a")?.dataset["status"]).toBe("failed");
+    expect(listThreads).not.toHaveBeenCalled();
   });
 
   it("re-lists when a run finishes, so a thread the run touched moves", async () => {

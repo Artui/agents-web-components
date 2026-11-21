@@ -12,6 +12,7 @@ export const THREADS_STYLES: string = `
   --_hover: var(--ag-ui-hover, color-mix(in oklch, var(--_fg) 6%, var(--_bg)));
   --_ring: var(--ag-ui-ring, color-mix(in oklch, var(--_accent) 40%, var(--_fg)));
   --_danger: var(--ag-ui-danger, light-dark(#b42318, #f97066));
+  --_waiting: var(--ag-ui-waiting, light-dark(#b54708, #fdb022));
   --_radius: var(--ag-ui-radius, 8px);
   --_font: var(--ag-ui-font, inherit);
   display: block;
@@ -84,6 +85,39 @@ export const THREADS_STYLES: string = `
 }
 .row[data-active] .title {
   font-weight: 600;
+}
+.mark {
+  position: relative;
+  flex: none;
+  width: 8px;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 50%;
+  color: transparent;
+  font-size: 0;
+}
+.mark::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 2px currentColor;
+}
+.mark[part~="mark-running"] {
+  color: var(--_accent);
+}
+.mark[part~="mark-waiting"] {
+  color: var(--_waiting);
+}
+.mark[part~="mark-failed"],
+.mark[part~="mark-unread"] {
+  background: currentColor;
+}
+.mark[part~="mark-failed"] {
+  color: var(--_danger);
+}
+.mark[part~="mark-unread"] {
+  color: var(--_accent);
 }
 .delete {
   flex: none;

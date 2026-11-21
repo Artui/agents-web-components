@@ -1,20 +1,33 @@
-import type { Message } from "@ag-ui/core";
+import type { Interrupt, Message } from "@ag-ui/core";
 import {
   type ClientConversationStore,
   type NavigationCheckpoint,
   SessionStorageStore,
   type ThreadMeta,
+  type ThreadStatus,
+  type ThreadsTransport,
   threadTitleFrom,
 } from "./conversation_store.js";
+import { ThreadsWatch } from "./threads_watch.js";
 import { mintThread, withCredentials } from "./utils.js";
 
-/** One row of the server thread index (django-ag-ui's `ThreadsView` wire shape). */
-interface ServerThreadRow {
+/**
+ * One row of the server thread index (django-ag-ui's `ThreadsView` wire shape).
+ * The status keys come from 0.84.0 on, and only from a mount with a run store.
+ */
+export interface ServerThreadRow {
   readonly thread_id: string;
   readonly title: string;
   readonly updated_at: string | null;
   readonly preview: string;
+  readonly status?: ThreadStatus;
+  readonly last_read_at?: string | null;
+  readonly reason?: string | null;
+  readonly interrupts?: readonly Interrupt[];
 }
+
+/** What a listing answered: the rows, or `null` when the list could not be read. */
+type Listing = readonly ServerThreadRow[] | null;
 
 const PROVISIONAL_TITLE = "New conversation";
 
@@ -63,6 +76,12 @@ export class RemoteConversationStore implements ClientConversationStore {
   readonly #provisional = new Map<string, ThreadMeta>();
   /** The active id as last read or set through this store; listing must not mint one. */
   #active: string | null = null;
+  /** The last list the server sent and its ETag, which a `304` confirms. */
+  #listed: { readonly etag: string; readonly rows: readonly ServerThreadRow[] } | null = null;
+  /** Whether the last list carried status, so the server mounts the read route. */
+  #statusServed = false;
+  /** Each thread read here, with the `updatedAt` it was read at: read until it moves on. */
+  readonly #readAt = new Map<string, number>();
 
   /**
    * @param cacheMessages Whether to mirror message bodies into the local store.
@@ -167,6 +186,65 @@ export class RemoteConversationStore implements ClientConversationStore {
     if (rows === null) {
       return this.#local.listThreads();
     }
+    return this.#metasFrom(rows);
+  }
+
+  /**
+   * Record a read on the server, through django-ag-ui's
+   * `POST <url><id>/read/`, and read the thread as read here until it changes.
+   *
+   * Sent only once a listing carried `status`: the route is mounted only
+   * beside a run store, and posting to a server without one would answer
+   * `404` for every answer the user watched arrive.
+   */
+  markRead(threadId: string): void {
+    const listed = this.#listed?.rows.find((row) => row.thread_id === threadId);
+    if (listed !== undefined) {
+      this.#readAt.set(threadId, updatedAtOf(listed));
+    }
+    if (this.#statusServed) {
+      void this.#mutate(threadId, "POST", undefined, "read/");
+    }
+  }
+
+  /**
+   * Keep the list fresh: `poll` asks every five seconds with the ETag, and
+   * `stream` follows the same URL as Server-Sent Events, which django-ag-ui
+   * answers (0.84.0, under ASGI) with a frame each time the list changes.
+   */
+  watchThreads(
+    listener: (threads: readonly ThreadMeta[]) => void,
+    transport: ThreadsTransport,
+  ): () => void {
+    const watch = new ThreadsWatch({
+      url: this.#url,
+      transport,
+      headers: this.#headers,
+      credentials: this.#credentials,
+      poll: () => this.#poll(),
+      seen: (etag, rows) => this.#seen(etag, rows),
+      changed: (rows) => listener(this.#metasFrom(rows)),
+      etag: () => this.#listed?.etag ?? null,
+    });
+    return watch.start();
+  }
+
+  /** One poll: the rows when they changed, `undefined` when a `304` says not, `null` on failure. */
+  async #poll(): Promise<readonly ServerThreadRow[] | null | undefined> {
+    const before = this.#listed;
+    const rows = await this.#fetchThreads();
+    if (rows !== null && before !== null && this.#listed === before) {
+      return undefined;
+    }
+    return rows;
+  }
+
+  #seen(etag: string | null, rows: readonly ServerThreadRow[]): void {
+    this.#statusServed = rows.some((row) => row.status !== undefined);
+    this.#listed = etag === null ? null : { etag, rows };
+  }
+
+  #metasFrom(rows: readonly ServerThreadRow[]): readonly ThreadMeta[] {
     const metas = rows
       .filter((row) => !this.#dropped.has(row.thread_id))
       .map((row) => this.#toMeta(row));
@@ -210,8 +288,15 @@ export class RemoteConversationStore implements ClientConversationStore {
     return body.messages ?? null;
   }
 
-  async #fetchThreads(): Promise<readonly ServerThreadRow[] | null> {
-    const response = await this.#get(this.#url);
+  async #fetchThreads(): Promise<Listing> {
+    const listed = this.#listed;
+    const response = await this.#get(
+      this.#url,
+      listed === null ? {} : { "If-None-Match": listed.etag },
+    );
+    if (response !== null && response.status === 304 && listed !== null) {
+      return listed.rows;
+    }
     if (response === null || !response.ok) {
       return null;
     }
@@ -219,7 +304,9 @@ export class RemoteConversationStore implements ClientConversationStore {
     if (body === null) {
       return null;
     }
-    return body.threads ?? [];
+    const rows = body.threads ?? [];
+    this.#seen(response.headers.get("ETag"), rows);
+    return rows;
   }
 
   /** Parse a `Response` body as JSON, or `null` when it isn't valid JSON. */
@@ -232,21 +319,52 @@ export class RemoteConversationStore implements ClientConversationStore {
   }
 
   #toMeta(row: ServerThreadRow): ThreadMeta {
-    return {
+    const updatedAt = updatedAtOf(row);
+    const meta: ThreadMeta = {
       threadId: row.thread_id,
       title: this.#renamed.get(row.thread_id) ?? row.title,
-      // `null` and an unparseable date both become NaN, Date.parse's own
-      // signal, which `relativeTime` renders as a neutral label rather than an
-      // epoch-0 or NaN duration.
-      updatedAt: row.updated_at === null ? Number.NaN : Date.parse(row.updated_at),
+      updatedAt,
       preview: row.preview,
+    };
+    if (row.status === undefined) {
+      return meta;
+    }
+    return {
+      ...meta,
+      status: row.status,
+      unread: this.#unread(row, updatedAt),
+      ...(row.status === "failed" && typeof row.reason === "string" ? { reason: row.reason } : {}),
+      ...(row.status === "waiting" && row.interrupts !== undefined
+        ? { interrupts: row.interrupts }
+        : {}),
     };
   }
 
+  /**
+   * Changed since it was last read, by the server's clock on both sides, and
+   * not still being written. A thread never read reads as not unread: the
+   * server sets no mark until a thread is read once, so every thread from
+   * before the mark existed would otherwise read as new.
+   */
+  #unread(row: ServerThreadRow, updatedAt: number): boolean {
+    const lastRead = row.last_read_at;
+    if (row.status === "running" || lastRead === null || lastRead === undefined) {
+      return false;
+    }
+    const readHere = this.#readAt.get(row.thread_id);
+    if (readHere !== undefined && updatedAt <= readHere) {
+      return false;
+    }
+    return updatedAt > Date.parse(lastRead);
+  }
+
   /** GET that resolves to the `Response`, or `null` on a network error. */
-  async #get(url: string): Promise<Response | null> {
+  async #get(url: string, extra: Record<string, string> = {}): Promise<Response | null> {
     try {
-      return await fetch(url, withCredentials({ headers: this.#headers() }, this.#credentials()));
+      return await fetch(
+        url,
+        withCredentials({ headers: { ...this.#headers(), ...extra } }, this.#credentials()),
+      );
     } catch {
       return null;
     }
@@ -255,13 +373,14 @@ export class RemoteConversationStore implements ClientConversationStore {
   /** Fire a best-effort write to the thread endpoint; failures are tolerated. */
   async #mutate(
     threadId: string,
-    method: "PATCH" | "DELETE",
+    method: "PATCH" | "DELETE" | "POST",
     body?: { title: string },
+    route = "",
   ): Promise<void> {
     const headers = this.#headers();
     try {
       await fetch(
-        `${this.#url}${encodeURIComponent(threadId)}/`,
+        `${this.#url}${encodeURIComponent(threadId)}/${route}`,
         withCredentials(
           {
             method,
@@ -276,4 +395,13 @@ export class RemoteConversationStore implements ClientConversationStore {
       // Best-effort; the optimistic overlay keeps the drawer consistent.
     }
   }
+}
+
+/**
+ * A row's `updated_at` as epoch ms. `null` and an unparseable date both become
+ * NaN, Date.parse's own signal, which `relativeTime` renders as a neutral label
+ * rather than an epoch-0 or NaN duration.
+ */
+function updatedAtOf(row: ServerThreadRow): number {
+  return row.updated_at === null ? Number.NaN : Date.parse(row.updated_at);
 }

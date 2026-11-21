@@ -313,6 +313,8 @@ describe("a title a server listed", () => {
   function remote(title: string, first: string): Mounted {
     const fetchMock = vi.fn(async (url: string) => ({
       ok: true,
+      status: 200,
+      headers: new Headers(),
       json: async () =>
         url.endsWith("/s1/")
           ? { messages: [{ id: "u1", role: "user", content: first }] }
