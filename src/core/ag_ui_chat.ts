@@ -3651,9 +3651,10 @@ export class AgUiChat extends HTMLElement {
   #cancelRun(): void {
     // Local only: a run that asked to detach goes on on the server, which is
     // what leaving its thread wants. A Stop also asks the server: #stopRun.
-    // Stopping discards what was waiting, and loses nothing: a queued turn
-    // entered the recall history as it left the composer. Also reached from
-    // disconnectedCallback, where a DOM move is not a farewell either.
+    // Stopping discards what was waiting. A turn typed into the composer
+    // entered the recall history as it left it; a turn a refused start parked
+    // (a host's text, or files) is dropped with the run it waited on. Also
+    // reached from disconnectedCallback, where a DOM move is not a farewell either.
     this.#queued.length = 0;
     this.#renderQueued();
     this.#decision.abort();
