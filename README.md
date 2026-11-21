@@ -861,7 +861,10 @@ mount with `run_store=` and `RUN_TIMEOUT_SECONDS` set, served over **ASGI**, to 
   list yet. Joining replays the run from its start (`events/?after=0` as an AG-UI stream), so the
   transcript is redrawn from the replay's opening `MESSAGES_SNAPSHOT` and the answer streams in
   as a live one does. `running` (and `data-running`) is true from the moment the run is joined
-  until it ends, so a host that defers a switch until a run is over can key on its removal.
+  until it ends, so a host that defers a switch until a run is over can key on its removal. A
+  host's `sendMessage()` made while that restore is in flight waits for the joined run to end and
+  then goes out, ahead of any turn the composer parked; a Stop during the joined run drops it
+  (`false`).
 - **Stop asks the server.** Stop, Escape and deleting the thread on screen post
   `<url><id>/cancel/` with the element's headers and credentials, then abort as before. The run
   acts on it at its next lease renewal, about ten seconds on; a `404` means it had already ended

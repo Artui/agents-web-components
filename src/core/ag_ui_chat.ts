@@ -939,6 +939,13 @@ export class AgUiChat extends HTMLElement {
    */
   #restoreHold: { readonly hold: object; readonly restored: Promise<void> } | null = null;
   /**
+   * A host's {@link sendMessage} that was waiting on a restore when the restore
+   * joined the run still going on its thread ({@link detachRuns}), and that
+   * run: the send goes out once the run has ended, as after a restore with no
+   * run to join, and ahead of what the composer parked. A Stop forgets it.
+   */
+  #joined: { readonly waiting: object; readonly run: Promise<void> } | null = null;
+  /**
    * The thread the latest {@link THREAD_EVENT} reported, which the next one
    * names as the thread it replaced; `null` before the first.
    */
@@ -1293,8 +1300,11 @@ export class AgUiChat extends HTMLElement {
         if (client.canReattach) {
           // Before the request, so the restore that asked for it sends nothing
           // it parked, and a host sees the run from the moment it is joined.
+          // A host's send waiting on the restore has taken its hold over.
+          const waiting = this.#sending === this.#restoreHold?.hold ? null : this.#sending;
           this.#setRunning(true);
-          void client.reattach();
+          const run = client.reattach();
+          this.#joined = waiting === null ? null : { waiting, run };
         }
       },
       resetState: () => this.#resetState(),
@@ -3655,6 +3665,7 @@ export class AgUiChat extends HTMLElement {
     // This is how a submit listener that starts a new chat, switches thread or
     // moves the element stops the send it is hearing about.
     this.#sending = null;
+    this.#joined = null;
     // A checkpoint continuation is as much the run in flight -- the composer
     // offers Stop for it -- but it runs on a client the element does not hold.
     this.#history.stopContinuation();
@@ -3849,7 +3860,8 @@ export class AgUiChat extends HTMLElement {
     // A continuation settles its run before the element lets go of it, so the
     // settle below arrives while `continuation` is still set, and the release
     // that follows is what drains.
-    if (this.#running || this.#history.continuation !== null) {
+    // Nor while a host's send waits out a joined run, which goes first.
+    if (this.#running || this.#joined !== null || this.#history.continuation !== null) {
       return;
     }
     const next = this.#queued.shift();
@@ -3989,7 +4001,11 @@ export class AgUiChat extends HTMLElement {
    * that is when the restore learns it was stopped. A first `user-key` on an
    * anonymous conversation adopts it rather than replacing it, and stops
    * nothing. A second call while one waits is
-   * refused, as a second call in the same task is.
+   * refused, as a second call in the same task is. Under {@link detachRuns}, a
+   * restore that finds its thread's run still going joins it, and the send
+   * waits for that run to end as well, then goes out ahead of anything the
+   * composer parked meanwhile; a Stop, or anything that reaches one, during
+   * the joined run drops it.
    *
    * Unlike the built-in Send it does not queue: it returns, and the caller
    * keeps what it tried to send. Nor does it consult the tray -- what you pass
@@ -4078,6 +4094,17 @@ export class AgUiChat extends HTMLElement {
       const waiting = {};
       this.#sending = waiting;
       await restore.restored;
+      // The restore joined the run still going on its thread, which is this
+      // conversation's too, so the turn follows it, unless a Stop forgot it.
+      const joined = this.#joined;
+      if (joined?.waiting === waiting) {
+        await Promise.allSettled([joined.run]);
+        if (this.#joined !== joined) {
+          return false;
+        }
+        this.#joined = null;
+        return this.#startRun(turn, start);
+      }
       // Anything that stopped the restore let go of this too, by the Stop
       // that New chat, a thread switch, a principal handover, a reload and the
       // element leaving all reach. Otherwise let go of here and the guards

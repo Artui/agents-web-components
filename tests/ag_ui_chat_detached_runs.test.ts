@@ -577,6 +577,102 @@ describe("a start refused because a run holds the thread", () => {
   });
 });
 
+/** Open `t1` while its run goes on, holding the server's answer to the probe until `answer()`. */
+async function openWhileRunning(
+  server: Server,
+  el: AgUiChat,
+): Promise<{
+  answer: () => void;
+  finish: () => Promise<void>;
+}> {
+  await el.switchThread("t2");
+  server.running.add("t1");
+  let answer!: () => void;
+  server.probeHold = new Promise((resolve) => {
+    answer = resolve;
+  });
+  const [head, rest] = replayHalves();
+  let replay: Live | undefined;
+  server.replays.push((init) => {
+    replay = live(init, head);
+    return replay.response;
+  });
+  void el.switchThread("t1");
+  await settle();
+  return {
+    answer,
+    finish: async () => {
+      server.running.delete("t1");
+      replay?.push(rest);
+      replay?.end();
+      await settle();
+    },
+  };
+}
+
+function lastUserTurn(body: Record<string, unknown> | undefined): unknown {
+  const messages = (body?.["messages"] ?? []) as { role: string; content: unknown }[];
+  return messages.filter((message) => message.role === "user").at(-1)?.content;
+}
+
+describe("a host send made while the restore joins a run", () => {
+  it("waits for the joined run and is sent after it, ahead of a turn the composer parked", async () => {
+    const { el, server } = mount();
+    const { answer, finish } = await openWhileRunning(server, el);
+    let sent: boolean | undefined;
+    void el.sendMessage("host turn").then((result) => {
+      sent = result;
+    });
+    const input = shadow(el).querySelector<HTMLTextAreaElement>("textarea");
+    if (input === null) {
+      throw new Error("no composer");
+    }
+    input.value = "typed turn";
+    shadow(el).querySelector<HTMLButtonElement>(".send")?.click();
+    answer();
+    await settle();
+
+    expect(el.running).toBe(true);
+    expect(sent).toBeUndefined();
+    expect(server.starts_()).toEqual([]);
+    server.starts.push(
+      () => sse(finishedRun("r8", "the host's answer")),
+      () => sse(finishedRun("r9", "the typed answer")),
+    );
+    await finish();
+
+    expect(sent).toBe(true);
+    expect(server.starts_().map(lastUserTurn)).toEqual(["host turn", "typed turn"]);
+    expect(transcriptText(el)).toContain("the typed answer");
+  });
+
+  it("is not sent when the joined run is stopped", async () => {
+    const { el, server } = mount();
+    const { answer } = await openWhileRunning(server, el);
+    const sent = el.sendMessage("host turn");
+    answer();
+    await settle();
+    shadow(el).querySelector<HTMLButtonElement>(".send")?.click();
+
+    expect(await sent).toBe(false);
+    await settle();
+    expect(server.starts_()).toEqual([]);
+  });
+
+  it("is not sent when New chat is pressed during the joined run", async () => {
+    const { el, server } = mount();
+    const { answer } = await openWhileRunning(server, el);
+    const sent = el.sendMessage("host turn");
+    answer();
+    await settle();
+    el.newChat();
+
+    expect(await sent).toBe(false);
+    await settle();
+    expect(server.starts_()).toEqual([]);
+  });
+});
+
 describe("without data-detach-runs", () => {
   it("asks nothing, sends no detach, and a switch or a Stop cancels by aborting as before", async () => {
     const { el, server } = mount({});

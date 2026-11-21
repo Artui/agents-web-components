@@ -21,7 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   joins it by replaying `events/?after=0` through the element's own agent, which is now a
   `DetachedHttpAgent` (an `HttpAgent` overriding `connect`, through the same fetch wrapper,
   headers and credentials). The replay's opening `MESSAGES_SNAPSHOT` redraws the transcript, and
-  `running` / `data-running` stay set until the joined run ends. **Stop changes under the
+  `running` / `data-running` stay set until the joined run ends; a host's `sendMessage()` made
+  while that restore was in flight waits for the joined run, then goes out ahead of any turn the
+  composer parked. **Stop changes under the
   opt-in:** Stop, Escape and deleting the thread on screen first post `<threads-url><id>/cancel/`
   (a `404` is quiet), then abort as before. A send the server refuses with `409` because another
   run holds the thread joins that run and queues the turn's text, sent once that run ends.
