@@ -1,4 +1,4 @@
-import type { TokenUsage } from "@ag-ui/core";
+import type { Message, TokenUsage } from "@ag-ui/core";
 import {
   CUSTOM_AGENT_EVENT,
   INVALIDATE_CUSTOM_NAME,
@@ -58,6 +58,10 @@ export interface RunHandlersHost {
   readonly showUsage: () => boolean;
   /** A run saved a stored skill: the skill catalog (and an open editor) refetch. */
   readonly skillsChanged: () => void;
+  /** Draw `messages` in place of the transcript, keeping the run in flight: a reattach's opening. */
+  readonly redraw: (messages: readonly Message[]) => void;
+  /** Hold a refused turn's text in the composer's queue, to go out when the run settles. */
+  readonly park: (content: string) => void;
 }
 
 /** The `RUN_ERROR` code whose message names the field and limit, and is shown as sent. */
@@ -374,7 +378,15 @@ export class RunHandlers {
       onSubAgentError: (subagentRunId, message) => {
         this.#host.subagents.fail(subagentRunId, message);
       },
-      onMessagesSnapshot: () => {
+      onMessagesSnapshot: (messages, authoritative) => {
+        // A reattach opens on the conversation as it stands, and nothing of the
+        // run it joins is on screen yet, so that one is drawn: there is no
+        // in-flight UI for it to destroy, and the replay then streams the run
+        // into it as a run streams.
+        if (authoritative) {
+          this.#host.redraw(messages);
+          return;
+        }
         // Honoured for persistence and announced, not re-rendered.
         //
         // The store follows the server, because the server is authoritative
@@ -423,6 +435,13 @@ export class RunHandlers {
         // and is why they were removed from here too. The terminal guarantee
         // that shipped in the same release is what makes showing them safe now.
         this.#host.transcript.showPending();
+      },
+      onTurnRefused: (content) => {
+        // Text only, as the composer queues: an attachment is the tray's, and
+        // the tray has let go of it with the send.
+        if (content !== "") {
+          this.#host.park(content);
+        }
       },
       onActivityChanged: (messageId, activityType, content) => {
         this.#host.activities.draw(messageId, activityType, content, true);

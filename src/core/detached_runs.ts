@@ -1,0 +1,84 @@
+import { withCredentials } from "./utils.js";
+
+/** Headers for a request to `url`, read per request so rotated tokens and CSRF go with it. */
+type HeadersFor = (url: string) => Record<string, string>;
+
+/** Live cookie policy, read per request; see `RemoteConversationStore`'s note. */
+type CredentialsProvider = () => RequestCredentials | undefined;
+
+/**
+ * The two routes django-ag-ui (0.82.0+) serves beside each thread for a run
+ * that outlives its connection, derived from the `data-threads-url` the
+ * element already has, as {@link RunIndex} derives resume and fork from
+ * `data-runs-url`:
+ *
+ * - `GET <url><id>/events/` is the run log, which a reattach replays and
+ *   {@link running} probes as a JSON page;
+ * - `POST <url><id>/cancel/` records a cancel the run acts on at its next
+ *   lease renewal.
+ *
+ * String surgery rather than `new URL`, because the configured value is
+ * usually root-relative and `new URL` needs an absolute base.
+ */
+export class DetachedRuns {
+  readonly #url: string;
+  readonly #headers: HeadersFor;
+  readonly #credentials: CredentialsProvider;
+
+  constructor(threadsUrl: string, headers: HeadersFor, credentials: CredentialsProvider) {
+    this.#url = threadsUrl.endsWith("/") ? threadsUrl : `${threadsUrl}/`;
+    this.#headers = headers;
+    this.#credentials = credentials;
+  }
+
+  /** The thread's run log. */
+  eventsUrl(threadId: string): string {
+    return `${this.#url}${encodeURIComponent(threadId)}/events/`;
+  }
+
+  /**
+   * Whether the thread has a run in flight now: one JSON page of its log, read
+   * for its `status`.
+   *
+   * Asked of the server rather than remembered, so it holds across an element
+   * a tab host unmounted while the run went on. A `404` (the thread never ran),
+   * any other status (`idle`, a parked `waiting`, `failed`) and any fault mean
+   * no: the thread is then restored from its store, as it always was.
+   */
+  async running(threadId: string): Promise<boolean> {
+    const url = `${this.eventsUrl(threadId)}?after=0&limit=1`;
+    try {
+      const response = await fetch(
+        url,
+        withCredentials(
+          { method: "GET", headers: { ...this.#headers(url), Accept: "application/json" } },
+          this.#credentials(),
+        ),
+      );
+      if (!response.ok) {
+        return false;
+      }
+      const page = (await response.json()) as { status?: unknown };
+      return page.status === "running";
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Ask the server to stop the thread's run. Best-effort: a `404` means the run
+   * had already ended, which is what was asked for, and a fault leaves the
+   * run to its own timeout, so neither is reported.
+   */
+  async cancel(threadId: string): Promise<void> {
+    const url = `${this.#url}${encodeURIComponent(threadId)}/cancel/`;
+    try {
+      await fetch(
+        url,
+        withCredentials({ method: "POST", headers: this.#headers(url) }, this.#credentials()),
+      );
+    } catch {
+      // Best-effort; see above.
+    }
+  }
+}

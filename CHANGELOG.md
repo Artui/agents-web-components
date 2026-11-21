@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A run can outlive its connection, behind a host opt-in: `data-detach-runs` (property
+  `detachRuns`).** It needs `data-threads-url` and a django-ag-ui 0.82.0+ mount with a run store
+  and `RUN_TIMEOUT_SECONDS`, served over ASGI to an authenticated user; without
+  `data-threads-url` it does nothing, and without the opt-in nothing changes. With it, every
+  request's `forwardedProps` carries `detach: true` (every round of a turn, frontend-tool rounds
+  included), so a thread switch, New chat, `reload()`, a `user-key` change or the element leaving
+  the page only aborts the request and the run finishes on the server with no cancel recorded.
+  Restoring a thread (a pick, the first load, re-insertion) asks the server once whether its run is
+  still going, with a JSON `GET <threads-url><id>/events/?after=0&limit=1`, and on `"running"`
+  joins it by replaying `events/?after=0` through the element's own agent, which is now a
+  `DetachedHttpAgent` (an `HttpAgent` overriding `connect`, through the same fetch wrapper,
+  headers and credentials). The replay's opening `MESSAGES_SNAPSHOT` redraws the transcript, and
+  `running` / `data-running` stay set until the joined run ends. **Stop changes under the
+  opt-in:** Stop, Escape and deleting the thread on screen first post `<threads-url><id>/cancel/`
+  (a `404` is quiet), then abort as before. A send the server refuses with `409` because another
+  run holds the thread joins that run and queues the turn's text, sent once that run ends.
+  `HttpAgentOptions` gains `eventsUrl`; `AgUiClientConfig` gains `detach`; `AgUiClient` gains
+  `reattach()` and `canReattach`; `AgUiClientHandlers.onMessagesSnapshot` takes a second argument,
+  `authoritative`, and the optional `onTurnRefused`. A factory agent that does not override
+  `connect` is restored from the store alone. Not covered yet: a `firing_queue=` mount's JSON
+  answer to a detached start.
+
 ## [0.7.0] — 2026-11-20
 
 ### Added

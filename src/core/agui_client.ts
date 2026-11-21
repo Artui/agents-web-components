@@ -1,5 +1,5 @@
 import {
-  type AbstractAgent,
+  AbstractAgent,
   type AgentSubscriber,
   buildResumeArray,
   type RunAgentParameters,
@@ -182,8 +182,20 @@ export interface AgUiClientHandlers {
    * loop persists `agent.messages`. The replacement therefore reaches the
    * conversation store whatever the host does; this hook exists so the host can
    * stop that being invisible.
+   *
+   * `authoritative` is true for the first snapshot of a reattach
+   * ({@link AgUiClient.reattach}): the server's replay opens with the
+   * conversation as it stands, which the host draws in place of its own, since
+   * nothing of the run it joins is on screen yet.
    */
-  onMessagesSnapshot(messages: readonly Message[]): void;
+  onMessagesSnapshot(messages: readonly Message[], authoritative: boolean): void;
+  /**
+   * The server refused a {@link AgUiClient.send} because another run holds the
+   * thread (a `409`), and the client is reattaching to that run instead.
+   * `content` is the refused turn's text, the turn already taken back out of
+   * the history, for the host to send again once that run has ended.
+   */
+  onTurnRefused?(content: string): void;
   /**
    * The agent sent a `CUSTOM` event.
    *
@@ -260,7 +272,11 @@ export interface RunErrorInfo {
  * {@link AgUiClient.run} and `AgUiChat.run` take.
  */
 export interface AgUiRunRequest {
-  /** Sent as the first request's `RunAgentInput.forwardedProps`, and on no later round. */
+  /**
+   * Sent as the first request's `RunAgentInput.forwardedProps`, and on no later
+   * round. A client built with {@link AgUiClientConfig.detach} adds its
+   * `detach: true` here, and sends that alone on the later rounds.
+   */
   readonly forwardedProps: Readonly<Record<string, unknown>>;
   /** Sent as the first request's `RunAgentInput.runId`; later rounds mint their own. */
   readonly runId?: string;
@@ -348,6 +364,15 @@ export interface AgUiClientConfig extends AgUiRunInputs {
    * last is not a thing a host has any way to reason about.
    */
   maxToolRounds?: number;
+  /**
+   * Whether this conversation's runs ask to outlive their connection: read per
+   * request, and `true` adds `detach: true` to every request's
+   * `RunAgentInput.forwardedProps`, every round of a turn included, since a
+   * switch away during a frontend tool's round has to leave that round running
+   * too. Also what lets a `409` from a thread held by another run reattach to
+   * it rather than fail. Omitted, nothing is added and a `409` is an error.
+   */
+  detach?: () => boolean;
 }
 
 /**
@@ -388,6 +413,14 @@ export class AgUiClient {
   readonly #unfinishedMessage: string;
   readonly #declinedMessage: string;
   readonly #maxToolRounds: number;
+  readonly #detach: () => boolean;
+  /**
+   * The run a `409` last sent this client to, so a second `409` naming the
+   * same run fails instead: the replay of a run that has ended can reach its
+   * end before the server lets go of the thread, and reattaching again would
+   * replay it in a loop.
+   */
+  #rejoined: string | null = null;
   // Set by cancel() or a server-cancelled `RUN_FINISHED`; reset as send() or
   // resume() begins, before either runs any host code. Checked by the loop so
   // a cancel between frontend-tool rounds doesn't start another round, and
@@ -408,6 +441,7 @@ export class AgUiClient {
       config.unfinishedMessage ??
       "Not finished: the run ended or moved on before this tool call returned a result.";
     this.#declinedMessage = config.declinedMessage ?? "User declined the action.";
+    this.#detach = config.detach ?? (() => false);
     // Validated here rather than at each caller, so the element's attribute and
     // a direct consumer get the same answer. A bound below one -- or a NaN from
     // an unparseable attribute -- is not a smaller budget but a send that runs
@@ -441,6 +475,19 @@ export class AgUiClient {
   /** Whether a run is currently in flight. */
   get running(): boolean {
     return this.#agent.isRunning;
+  }
+
+  /**
+   * Whether the agent can join a run already in flight ({@link reattach}):
+   * whether it overrides `connect`, which the base agent leaves throwing. A
+   * host's {@link AbstractAgent} that does not is never asked to, and the
+   * conversation is restored from its store alone.
+   */
+  get canReattach(): boolean {
+    const connect: unknown = Reflect.get(this.#agent, "connect");
+    return (
+      typeof connect === "function" && connect !== Reflect.get(AbstractAgent.prototype, "connect")
+    );
   }
 
   /** The current conversation history (for persistence / rehydration). */
@@ -479,7 +526,23 @@ export class AgUiClient {
     };
     this.#agent.addMessage(message);
     this.#persist();
-    await this.#run();
+    await this.#run(undefined, { id: message.id, content });
+  }
+
+  /**
+   * Join the run in flight on this client's thread and follow it to its end,
+   * through the same handlers as a run of its own, and then go on as a run
+   * does: a frontend tool it called runs, and the next round is an ordinary
+   * request.
+   *
+   * The agent's `connectAgent()` replays the run from its first event, so the
+   * replay's opening `MESSAGES_SNAPSHOT` is handed on as authoritative. Call it
+   * only when {@link canReattach}; {@link cancel} stops it, locally.
+   */
+  async reattach(): Promise<void> {
+    // A new interaction, as in send(); no host code runs between here and the loop.
+    this.#cancelled = false;
+    await this.#run(undefined, null, true);
   }
 
   /**
@@ -505,7 +568,7 @@ export class AgUiClient {
   async run(request: AgUiRunRequest, onStarted?: () => void): Promise<void> {
     // A new interaction, as in send(); no host code runs between here and the loop.
     this.#cancelled = false;
-    await this.#run({ request, onStarted });
+    await this.#run({ request, onStarted }, null);
   }
 
   /**
@@ -564,7 +627,7 @@ export class AgUiClient {
   async resume(): Promise<void> {
     // A new interaction, as in send(); no host code runs between here and the loop.
     this.#cancelled = false;
-    await this.#run();
+    await this.#run(undefined, null);
   }
 
   /** Append a frontend tool result to history (used by the resume path). */
@@ -592,9 +655,18 @@ export class AgUiClient {
     this.#agent.abortRun();
   }
 
-  async #run(action?: Action): Promise<void> {
+  async #run(action: Action | undefined, turn: Turn | null, connect = false): Promise<void> {
     try {
-      await this.#runLoop(action);
+      // Nested rather than a method of its own, so an ordinary run takes no
+      // more turns of the microtask queue to settle than it always has.
+      try {
+        await this.#runLoop(action, connect);
+      } catch (error) {
+        if (connect || !this.#rejoin(error, turn)) {
+          throw error;
+        }
+        await this.#runLoop(undefined, true);
+      }
       // `@ag-ui/client` filters abort errors inside `runAgent` (it resolves
       // rather than rejects on a cancelled fetch), so a cancelled run usually
       // ends here, not in the catch.
@@ -616,6 +688,51 @@ export class AgUiClient {
     } finally {
       this.#handlers.onSettled();
     }
+  }
+
+  /**
+   * Whether to join the run that a refused start names instead of failing,
+   * having taken the refused turn back if so.
+   *
+   * Only for a client that asks to detach, since only then is the run that
+   * holds the thread one this conversation can come back to, and only for the
+   * thread this client was built for. The refused `turn` is taken back out of
+   * the history and handed to the host, which sends it again once the run it
+   * joins has ended; a host action refused this way is not kept, since it is
+   * not a turn there is anywhere to put back.
+   */
+  #rejoin(error: unknown, turn: Turn | null): boolean {
+    const holder = this.#holder(error);
+    if (holder === null || holder === this.#rejoined || !this.#detach()) {
+      return false;
+    }
+    this.#rejoined = holder;
+    if (turn !== null) {
+      this.#agent.setMessages(this.#agent.messages.filter((message) => message.id !== turn.id));
+      this.#persist();
+      this.#handlers.onTurnRefused?.(turn.content);
+    }
+    return true;
+  }
+
+  /**
+   * The run named by a `409` refusing this thread's start, or `null`.
+   *
+   * `@ag-ui/client` rejects a non-2xx answer with an `Error` carrying `status`
+   * and the parsed body as `payload`; django-ag-ui's refusal names the thread
+   * and the run that holds it.
+   */
+  #holder(error: unknown): string | null {
+    if (!(error instanceof Error) || Reflect.get(error, "status") !== 409) {
+      return null;
+    }
+    const payload: unknown = Reflect.get(error, "payload");
+    if (typeof payload !== "object" || payload === null || !this.canReattach) {
+      return null;
+    }
+    const runId: unknown = Reflect.get(payload, "run_id");
+    const threadId: unknown = Reflect.get(payload, "thread_id");
+    return typeof runId === "string" && threadId === this.#agent.threadId ? runId : null;
   }
 
   #onCancelled(): void {
@@ -737,7 +854,7 @@ export class AgUiClient {
     this.#onPersist(this.#agent.messages);
   }
 
-  async #runLoop(action?: Action): Promise<void> {
+  async #runLoop(action: Action | undefined, connect = false): Promise<void> {
     // Carries resolved approval answers into the next run when a round finished
     // on a server-side-tool interrupt. Distinct from the public resume(), which
     // continues an unfinished frontend-tool round after a page load; this stays
@@ -769,11 +886,13 @@ export class AgUiClient {
       }
       // Only the first round answers the action; the rest are this client's.
       const first = round === 0 ? action?.request : undefined;
-      if (first !== undefined) {
-        params.forwardedProps = first.forwardedProps;
-        if (first.runId !== undefined) {
-          params.runId = first.runId;
-        }
+      // Every round, so a switch during a frontend tool's round leaves it running too.
+      const detach = this.#detach() ? { detach: true } : null;
+      if (first !== undefined || detach !== null) {
+        params.forwardedProps = { ...first?.forwardedProps, ...detach };
+      }
+      if (first?.runId !== undefined) {
+        params.runId = first.runId;
       }
       this.#answerUnansweredCalls(resuming);
       // Everything above since the check at the top is host code -- the tool
@@ -789,7 +908,11 @@ export class AgUiClient {
       const turn: Message | undefined =
         kept === undefined ? undefined : { id: kept.id, role: "user", content: kept.content };
       const started = round === 0 ? action?.onStarted : undefined;
-      await this.#agent.runAgent(params, this.#buildSubscriber(pending, runState, turn, started));
+      const replay = connect && round === 0;
+      const subscriber = this.#buildSubscriber(pending, runState, turn, started, replay);
+      await (replay
+        ? this.#agent.connectAgent(params, subscriber)
+        : this.#agent.runAgent(params, subscriber));
       resume = undefined;
       resuming = new Set();
       this.#persist();
@@ -884,6 +1007,7 @@ export class AgUiClient {
     runState: RunState,
     turn: Message | undefined,
     started: (() => void) | undefined,
+    replay: boolean,
   ): AgentSubscriber {
     const h = this.#handlers;
     const closed = this.#closedMessageIds;
@@ -901,6 +1025,8 @@ export class AgUiClient {
     // the id it streams back; the event is the server's own statement of
     // which run this is, so it is the id a host can find again.
     let runId: string | undefined;
+    // The replay's opening snapshot is the conversation it joins; any later one is a run's own.
+    let opened = !replay;
     return {
       onRunInitialized() {
         h.onRunStart();
@@ -917,7 +1043,9 @@ export class AgUiClient {
         // entry. The protocol has no rule to enforce and refusing the event
         // would be worse than the merge, so warn and continue — but do not stay
         // silent, since the corruption outlives the session.
-        if (closed.has(event.messageId)) {
+        // A replay re-sends the run's messages, which this client may have
+        // streamed itself before a Stop: the id is the same message, not a reuse.
+        if (!replay && closed.has(event.messageId)) {
           console.warn(
             `<ag-ui-chat>: the server reused message id "${event.messageId}", which was ` +
               "already closed. Its content will be appended to that earlier message rather " +
@@ -1010,7 +1138,8 @@ export class AgUiClient {
         h.onSubAgentError(event.subagentRunId, event.message);
       },
       onMessagesSnapshotEvent({ event }) {
-        h.onMessagesSnapshot(event.messages as readonly Message[]);
+        h.onMessagesSnapshot(event.messages as readonly Message[], !opened);
+        opened = true;
       },
       // Emitted after the client has written the patched messages, which is the
       // first moment the result exists. Only the ids marked above are looked at,
@@ -1085,6 +1214,12 @@ export class AgUiClient {
       },
     };
   }
+}
+
+/** A typed turn {@link AgUiClient.send} added, which a refused start takes back out. */
+interface Turn {
+  readonly id: string;
+  readonly content: string;
 }
 
 /** Per-run mutable flags the subscriber writes and {@link AgUiClient} reads. */

@@ -1,5 +1,6 @@
-import { type AbstractAgent, HttpAgent } from "@ag-ui/client";
+import type { AbstractAgent } from "@ag-ui/client";
 import type { Message } from "@ag-ui/core";
+import { DetachedHttpAgent } from "./detached_http_agent.js";
 import { warnOnCrossOriginCredentials, withCredentials } from "./utils.js";
 
 /** Config for {@link createHttpAgent}. */
@@ -45,10 +46,18 @@ export interface HttpAgentOptions {
    * scheme and port included), which is what `URL.origin` produces.
    */
   trustedOrigins?: readonly string[];
+  /**
+   * The thread's run log, django-ag-ui's `threads/<id>/events/`, which the
+   * agent's `connectAgent()` replays a run in flight from. Set by the element
+   * only with `data-detach-runs` and `data-threads-url`; without it the agent
+   * cannot reattach, and the element restores the thread from its store alone.
+   */
+  eventsUrl?: string;
 }
 
 /**
- * Build an AG-UI {@link HttpAgent} pointed at `endpoint`.
+ * Build an AG-UI `HttpAgent` pointed at `endpoint`: a {@link DetachedHttpAgent},
+ * which can also reattach to a run on its thread when given `eventsUrl`.
  *
  * The default agent factory for `<ag-ui-chat>`; tests and advanced hosts
  * override the element's `agentFactory` to inject a different
@@ -57,7 +66,7 @@ export interface HttpAgentOptions {
 export function createHttpAgent(options: HttpAgentOptions): AbstractAgent {
   const staticHeaders = options.headers ?? {};
   const warned = new Set<string>();
-  return new HttpAgent({
+  return new DetachedHttpAgent({
     url: options.endpoint,
     headers: staticHeaders,
     initialState: { ...(options.initialState ?? {}) },
@@ -87,6 +96,7 @@ export function createHttpAgent(options: HttpAgentOptions): AbstractAgent {
     // Spread conditionally: under `exactOptionalPropertyTypes` an explicit
     // `undefined` is not assignable to an optional field.
     ...(options.threadId !== undefined ? { threadId: options.threadId } : {}),
+    ...(options.eventsUrl !== undefined ? { eventsUrl: options.eventsUrl } : {}),
     ...(options.initialMessages !== undefined
       ? { initialMessages: [...options.initialMessages] }
       : {}),

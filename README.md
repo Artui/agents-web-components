@@ -46,6 +46,7 @@ This package is the successor of `@artooi/ag-ui-web-component`. Coming from it? 
   - [The run loop and the AG-UI client](#the-run-loop-and-the-ag-ui-client)
   - [Stopping a run](#stopping-a-run)
   - [A run the server stops](#a-run-the-server-stops)
+  - [Runs that outlive their connection](#runs-that-outlive-their-connection)
   - [When a run fails, and what it cost](#when-a-run-fails-and-what-it-cost)
   - [Registering tools](#registering-tools)
   - [Inline confirmation (`x-destructive` / `x-confirm` / `confirmPredicate`)](#inline-confirmation-x-destructive--x-confirm--confirmpredicate)
@@ -201,6 +202,7 @@ another origin, add `credentials="include"` too; see
 | `user-key` | `userKey` | Who the stored conversation belongs to — any string identifying the signed-in principal. Joins the storage namespace, and **changing it purges what the previous principal left behind**. Live (not connect-time): a logout is the host's to announce. See [Who the stored conversation belongs to](#who-the-stored-conversation-belongs-to-user-key). |
 | `user-name` | `userName` | The signed-in user's display name, for the [greeting](#the-greeting-on-an-empty-page) an empty conversation shows under `placement="page"`. Presentation only: unlike `user-key` it scopes nothing and is never sent. Absent or blank gives the nameless greeting. Live. |
 | `data-threads-url` | — | URL of a server thread index (django-ag-ui's `ThreadsView`); enables durable, cross-device chat history. |
+| `data-detach-runs` | — | Opt-in, read at each request. With `data-threads-url`, a run outlives its connection: a thread switch, New chat or the element leaving the page lets go of it instead of stopping it, opening a thread whose run is still going joins it, and Stop posts the thread's `cancel/`. Needs a django-ag-ui 0.82.0+ mount; see [Runs that outlive their connection](#runs-that-outlive-their-connection). Without `data-threads-url` it does nothing. |
 | `data-threads-cache` | — | **On by default.** `="false"` stops mirroring message bodies into `sessionStorage` when `data-threads-url` is set, for a deployment that put history on the server so transcripts stay off the client. Only meaningful alongside `data-threads-url`. |
 | `data-runs-url` | — | URL of a server run index (django-ag-ui's `RunsView`); reveals the header's *Continue a run* panel. See [Resuming a run](#resuming-a-run). |
 | `data-attachments-url` | — | URL of the file-upload endpoint (django-ag-ui's `AttachmentsView`); reveals the composer's paperclip picker, drag-and-drop, and paste. |
@@ -307,7 +309,7 @@ element after the fact.
 `skillContext`, `toolSummaries`, `formatToolPayload`, `formatRelativeTime`, `strings`,
 `resolvePageTarget`, `sharedState`, `anchor` (an element, which wins over the attribute's selector), `extraStyles` ([unstable](#d-extrastyles-the-last-mile)), plus the read-only `unread`, `unhandledActivityTypes`, `threadId`, `threadTitle`, `running`, `barHeight`, `dockWidth`, `uiStrings`, `colorScheme` and `locale`, and
 the attribute mirrors `endpoint` / `userKey` / `userName` / `toolDisplay` / `toolGroupDisplay` / `collapsed` /
-`maximized` / `credentials`.
+`maximized` / `credentials` / `detachRuns`.
 
 `headers` and `getHeaders` authenticate **every** request the element makes, not only the agent
 run; `getHeaders` is the one to use for a credential that rotates. See
@@ -447,7 +449,8 @@ await chat.run({
 - **Only the first request carries `forwardedProps` and `runId`.** `runId` reaches the wire
   unchanged, so you can derive ids from it. The rounds a frontend tool or an approval starts
   afterwards send `{}` and a run id of their own, because a server that acts on the props would
-  otherwise act again for every round.
+  otherwise act again for every round. Under [`data-detach-runs`](#runs-that-outlive-their-connection)
+  every round's `forwardedProps` also carries `detach: true`, and the later rounds send that alone.
 - **`message` is the turn the server stores, under your `id`.** It is drawn as the user's bubble
   and announced by `ag-ui-submit`, as a `sendMessage` turn is, but it is not in the first
   request's `messages`, which would put it in the conversation twice. When that request's
@@ -824,6 +827,55 @@ A cancelled run ends a moment later, once its request has closed or a running to
 returned. What it does then stays with the conversation it belonged to: its truncated exchange is
 saved to that thread, `ag-ui-run-finished` still reports the tools it ran, and nothing reaches the
 transcript or the Stop button of the conversation that replaced it.
+
+With [`data-detach-runs`](#runs-that-outlive-their-connection), Stop, Escape and deleting the
+thread on screen also post the thread's `cancel/`; switching, New chat, `reload()`, a `user-key`
+change and removing the element still only abort the request, and the run carries on.
+
+### Runs that outlive their connection
+
+By default a run lives inside its request: switching thread, New chat or removing the element
+aborts it, and the server cancels it. With a django-ag-ui **0.82.0+** mount that has a run store,
+a run can ask to carry on instead. Opt in on the element:
+
+```html
+<ag-ui-chat endpoint="/agent/" data-threads-url="/agent/threads/" data-detach-runs></ag-ui-chat>
+```
+
+or `chat.detachRuns = true`. Both are read at each request, and both need `data-threads-url`:
+the element reaches the run's log and cancel route beside it, at `<url><id>/events/` and
+`<url><id>/cancel/`, and does nothing extra without it. The server honours the request only on a
+mount with `run_store=` and `RUN_TIMEOUT_SECONDS` set, served over **ASGI**, to an
+**authenticated** user; anywhere else the run is cancelled on disconnect as before. Then:
+
+- **Every request asks to detach.** `RunAgentInput.forwardedProps.detach` is `true` on every round
+  of a turn, a frontend tool's rounds included, so leaving during one leaves it running too.
+- **Leaving lets go.** A thread switch, New chat, `reload()`, a `user-key` change and the element
+  leaving the page abort the request locally; the server sees a disconnect, the run finishes,
+  and no cancel is recorded.
+- **Coming back joins the run.** Restoring a thread (picking it, the first load, a reload, the
+  element being inserted again) asks the server once whether it has a run going: a JSON
+  `GET <url><id>/events/?after=0&limit=1`, reattaching when its `status` is `"running"`. A `404`
+  or any other status restores the thread from its store as before. It is asked rather than
+  remembered so it holds across an element a tab host unmounted; there is no status on the thread
+  list yet. Joining replays the run from its start (`events/?after=0` as an AG-UI stream), so the
+  transcript is redrawn from the replay's opening `MESSAGES_SNAPSHOT` and the answer streams in
+  as a live one does. `running` (and `data-running`) is true from the moment the run is joined
+  until it ends, so a host that defers a switch until a run is over can key on its removal.
+- **Stop asks the server.** Stop, Escape and deleting the thread on screen post
+  `<url><id>/cancel/` with the element's headers and credentials, then abort as before. The run
+  acts on it at its next lease renewal, about ten seconds on; a `404` means it had already ended
+  and is not reported.
+- **A start on a busy thread joins the busy run.** A send the server refuses with `409` because
+  another run holds the thread (a Stop's cancel has not landed yet, or a second tab) joins that run
+  instead, and the turn waits in the composer's queue, sent once that run has ended. The queue is
+  text only, so a refused turn's attachments do not come back; a refused `run()` action is not
+  sent again.
+
+Reattaching needs an agent that can connect: the default `agentFactory` builds one. A factory
+returning an agent that does not override `connect` gets the store-only restore. A mount with a
+`firing_queue=` answers a detached start with JSON rather than a stream, which this element does
+not read yet.
 
 ### A run the server stops
 
