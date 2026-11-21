@@ -42,7 +42,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   answers the view with a JSON-RPC error, `-32000` "Message sending denied" or "Tool call
   denied". A view that called a tool on load now shows a card first, and its result waits for
   the answer. Requests are asked one card at a time, in order; a card still waiting when the
-  view asks to be torn down or leaves is declined, and one allowed after the view went stored
+  view asks to be torn down, leaves or reloads in a new window (a host moving the element does
+  it) is declined without answering the new window, and one allowed after the view went stored
   is refused. The card reuses the inline confirmation card's styles and its `confirm` part
   (plus a new `mcp-app-consent` part), so a host's `::part(confirm)` rules now style it too; it
   takes no focus. Two new strings keys word it, `mcpAppConfirmTool` ("This app wants to run

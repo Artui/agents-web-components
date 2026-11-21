@@ -47,17 +47,41 @@ describe("viewConsent", () => {
     expect(stage.children).toHaveLength(0);
   });
 
-  it("ignores a second click on a card already answered", async () => {
+  it("ignores a second click on a card already answered, and the cards after it still answer", async () => {
     const { stage, consent } = staged();
     const first = consent.ask({ method: "ui/message", text: "one" });
-    void consent.ask({ method: "ui/message", text: "two" });
+    const second = consent.ask({ method: "ui/message", text: "two" });
+    const third = consent.ask({ method: "ui/message", text: "three" });
     const spent = stage.querySelector<HTMLButtonElement>(".confirm-btn--confirm");
 
     spent?.click();
     spent?.click();
 
     expect(await first).toBe(true);
+    expect(stage.children).toHaveLength(1);
     expect(stage.querySelector(".confirm-args")?.textContent).toBe("two");
+    click(stage, "confirm");
+    expect(await second).toBe(true);
+    expect(stage.querySelector(".confirm-args")?.textContent).toBe("three");
+    click(stage, "cancel");
+    expect(await third).toBe(false);
+    expect(stage.children).toHaveLength(0);
+  });
+
+  it("declines every waiting request on reset, removes the card and still asks after", async () => {
+    const { stage, consent } = staged();
+    const shown = consent.ask({ method: "ui/message", text: "one" });
+    const queued = consent.ask({ method: "ui/message", text: "two" });
+    const spent = stage.querySelector<HTMLButtonElement>(".confirm-btn--confirm");
+
+    consent.reset();
+    spent?.click();
+
+    expect([await shown, await queued]).toEqual([false, false]);
+    expect(stage.children).toHaveLength(0);
+    const later = consent.ask({ method: "ui/message", text: "three" });
+    click(stage, "confirm");
+    expect(await later).toBe(true);
   });
 
   it("declines every waiting request on dispose, removes the card and asks nothing after", async () => {

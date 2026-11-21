@@ -14,7 +14,9 @@ export type McpAppConsentRequest =
 export interface McpAppViewConsent {
   /** Resolves `true` once the user allows `request`, `false` once they decline or the view goes. */
   ask(request: McpAppConsentRequest): Promise<boolean>;
-  /** Declines every request still waiting and removes its card: the view is going. */
+  /** Declines every request still waiting and removes its card, and still takes new ones. */
+  reset(): void;
+  /** Like {@link reset}, and declines every request after: the view is going. */
   dispose(): void;
 }
 
@@ -99,6 +101,14 @@ export function viewConsent(stage: HTMLElement, strings: () => UiStrings): McpAp
     stage.append(node);
   };
 
+  const reset = (): void => {
+    shown?.remove();
+    shown = null;
+    for (const pending of queue.splice(0)) {
+      pending.resolve(false);
+    }
+  };
+
   return {
     ask(request) {
       return new Promise((resolve) => {
@@ -112,13 +122,10 @@ export function viewConsent(stage: HTMLElement, strings: () => UiStrings): McpAp
         }
       });
     },
+    reset,
     dispose() {
       disposed = true;
-      shown?.remove();
-      shown = null;
-      for (const pending of queue.splice(0)) {
-        pending.resolve(false);
-      }
+      reset();
     },
   };
 }

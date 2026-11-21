@@ -152,10 +152,14 @@ export function hostBridge(): McpAppViewConnect {
       return tornDown ? `${method} is refused: this view asked to be torn down` : null;
     };
 
-    // Waits for the user's answer, then re-checks the view, which may have gone stored or asked
-    // to be torn down meanwhile. Answers the view and resolves false on any refusal.
+    // Waits for the user's answer, then re-checks the view, which may have gone stored, asked to
+    // be torn down or moved to a new window meanwhile; refuses all but the last of those aloud.
     const allowed = async (id: RequestId, request: McpAppConsentRequest): Promise<boolean> => {
+      const source = channel.source;
       const yes = await channel.consent.ask(request);
+      if (channel.source !== source) {
+        return false;
+      }
       const after = refusal(request.method);
       if (after !== null) {
         fail(id, REFUSED, after);
@@ -210,6 +214,7 @@ export function hostBridge(): McpAppViewConnect {
     const onRequest = (id: RequestId, method: string, params: Params): void => {
       if (method === "ui/initialize") {
         initialized = false;
+        channel.consent.reset();
         told = context();
         answer(id, {
           protocolVersion: PROTOCOL_VERSION,
