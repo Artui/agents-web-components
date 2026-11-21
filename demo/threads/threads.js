@@ -4,10 +4,18 @@
 import { defineChat } from "/bundle.js";
 import { defineThreads } from "/threads.bundle.js";
 
+const chat = document.getElementById("chat");
+// /threads/?status (or ?status=stream) lists threads from a server that reports
+// run status, and watches it, so each row carries its mark. Set before the
+// element is defined, since data-threads-url is read while it connects.
+const status = new URLSearchParams(location.search).get("status");
+if (status !== null) {
+  chat.setAttribute("data-threads-url", "/status/threads/");
+  chat.setAttribute("data-thread-status", status === "stream" ? "stream" : "poll");
+}
+
 defineChat();
 defineThreads();
-
-const chat = document.getElementById("chat");
 document.getElementById("pills").chat = chat;
 
 document.getElementById("new-chat").addEventListener("click", () => chat.newChat());

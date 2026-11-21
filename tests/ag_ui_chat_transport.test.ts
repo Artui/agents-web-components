@@ -52,7 +52,12 @@ function installFetch(): Call[] {
     "fetch",
     vi.fn(async (url: string, init?: RequestInit) => {
       calls.push({ url, init });
-      return { ok: true, json: async () => bodyFor(url) } as unknown as Response;
+      return {
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        json: async () => bodyFor(url),
+      } as unknown as Response;
     }),
   );
   return calls;

@@ -109,6 +109,25 @@ describe("pills in a narrow bar", () => {
   });
 });
 
+describe("a run mark", () => {
+  it.each(["pills", "list"] as const)(
+    "keeps its dot whole beside a cut title in narrow %s",
+    async (variant) => {
+      const list = await mount(variant, 320, [{ ...(rows(1)[0] as ThreadRow), status: "waiting" }]);
+      const row = (all(list, ".row")[0] as HTMLElement).getBoundingClientRect();
+      const title = (all(list, ".title")[0] as HTMLElement).getBoundingClientRect();
+      const mark = (all(list, ".mark")[0] as HTMLElement).getBoundingClientRect();
+
+      expect(mark.width).toBeCloseTo(8, 0);
+      expect(mark.height).toBeCloseTo(8, 0);
+      expect(mark.left).toBeGreaterThanOrEqual(title.right);
+      expect(mark.right).toBeLessThanOrEqual(row.right);
+      expect(mark.top).toBeGreaterThanOrEqual(row.top);
+      expect(mark.bottom).toBeLessThanOrEqual(row.bottom);
+    },
+  );
+});
+
 describe("rows in a narrow rail", () => {
   it("keep the delete button inside the row", async () => {
     const list = await mount("list", 220, rows(2));

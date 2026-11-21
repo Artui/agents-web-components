@@ -272,12 +272,63 @@ describe("RemoteConversationStore thread status", () => {
     let signal: AbortSignal | undefined;
     fetchMock.mockImplementationOnce((_url: string, init: RequestInit) => {
       signal = init.signal ?? undefined;
-      return new Promise(() => undefined);
+      return new Promise((_resolve, reject) => {
+        signal?.addEventListener("abort", () => reject(new DOMException("stopped", "AbortError")));
+      });
     });
     const stop = new RemoteConversationStore(URL_).watchThreads(vi.fn(), "stream");
     await vi.advanceTimersByTimeAsync(0);
     stop();
+    await vi.advanceTimersByTimeAsync(20000);
 
     expect(signal?.aborted).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("hands on nothing from a poll answered after it was stopped", async () => {
+    vi.useFakeTimers();
+    let answer: (response: Response) => void = () => undefined;
+    fetchMock.mockReturnValueOnce(new Promise<Response>((resolve) => (answer = resolve)));
+    const listener = vi.fn();
+    const stop = new RemoteConversationStore(URL_).watchThreads(listener, "poll");
+    await vi.advanceTimersByTimeAsync(0);
+    stop();
+    answer(recordedList(recorded.listed));
+    await vi.advanceTimersByTimeAsync(20000);
+
+    expect(listener).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["a refused stream", () => new Response(null, { status: 500 })],
+    ["an empty stream", () => new Response(null, { status: 200 })],
+    ["a dropped connection", () => Promise.reject(new TypeError("network"))],
+  ])("asks again after %s", async (_name, answer) => {
+    vi.useFakeTimers();
+    fetchMock.mockImplementationOnce(answer).mockReturnValue(new Promise(() => undefined));
+    const listener = vi.fn();
+    const stop = new RemoteConversationStore(URL_).watchThreads(listener, "stream");
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(listener).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    stop();
+  });
+
+  it("reads a list with no threads, from a frame or an untyped answer, as empty", async () => {
+    vi.useFakeTimers();
+    const untyped = new Response(new Blob(["{}"]).stream(), { status: 200 });
+    fetchMock
+      .mockResolvedValueOnce(stream(['id: "e-9"\ndata: {}\n\n']))
+      .mockResolvedValueOnce(untyped)
+      .mockReturnValue(new Promise(() => undefined));
+    const listener = vi.fn();
+    const stop = new RemoteConversationStore(URL_).watchThreads(listener, "stream");
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(untyped.headers.get("content-type")).toBeNull();
+    expect(listener.mock.calls).toEqual([[[]], [[]]]);
+    stop();
   });
 });

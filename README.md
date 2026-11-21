@@ -233,6 +233,7 @@ another origin, add `credentials="include"` too; see
 | `data-empty` | — | **Written by the element, not by you.** Present while the conversation has nothing in it, which is when the greeting shows. Public as a styling hook, so the chrome around a full-page chat can react to the same state, e.g. `ag-ui-chat[data-empty] ~ .page-footer { display: none }`. |
 | `data-running` | — | **Written by the element, not by you.** Present while an interaction is in flight, the same state that shows the Stop button (see the `running` property). Public as a styling hook, as `data-empty` is, so the chrome around the chat can react to it, e.g. `ag-ui-chat[data-running] ~ .toolbar button { pointer-events: none }`. |
 | `data-threads-search` | — | When the conversation list shows its search box: `auto` (absent, or any other value) from eight conversations, `always` over any list, `never` not at all. Live. See [The conversation list](#the-conversation-list). |
+| `data-thread-status` | — | Watch the conversation list for run status and unread: `poll` asks again every five seconds with the last ETag, `stream` follows the server's event stream (and polls when the server answers with JSON). Each list is handed on in `ag-ui-threads-change`. Needs a store with `watchThreads`, as `data-threads-url` gives. Live. See [Thread status](#thread-status). |
 | `data-small-viewport` | — | `off` keeps the desktop layout at every width, opting out of the [small-viewport override](#small-viewports). Styling, and read by script for the width `dockWidth` reports on a phone. Live. Everything that override sets is a token you can re-state; its trigger is a media query, which is the one thing you cannot. |
 | `data-paste-attach` | — | When to turn a long text paste into an attachment instead of composer text: absent for the 5000-character default, `off` to never, or a positive number of characters. Only acts where `data-attachments-url` (or a custom `uploadHandler`) gives it somewhere to go. |
 | `data-starters` | — | JSON array of prompts offered on an empty transcript, e.g. `'["Summarise this page"]'`. Fallback content for `slot="empty"`, so slotting your own replaces them. Shares the four-prompt and 120-character limits with the suggestion chips a run pushes. Read once at connect. |
@@ -283,7 +284,7 @@ neither camp is `data-launcher-icon-url`: it is read while the element connects,
 below, but is not observed, so a late write is inert and says nothing.
 
 **Live attributes.** Written at any time, before or after the element connects, and acted on
-either way: `title-text`, `placement`, `collapse-to`, `anchor`, `anchor-side`, `maximized`, `data-side`, `data-small-viewport`, `data-threads-search`, `credentials`, `user-key`,
+either way: `title-text`, `placement`, `collapse-to`, `anchor`, `anchor-side`, `maximized`, `data-side`, `data-small-viewport`, `data-threads-search`, `data-thread-status`, `credentials`, `user-key`,
 `user-name`, `data-tool-group-display`, `data-collapse-icon`, `theme`.
 
 **Connect-time attributes.** Read once, while the element connects, to decide what chrome exists at
@@ -3877,6 +3878,7 @@ paths.
 | `DockWidthDetail` | type | `detail` shape of the `ag-ui-dock-width` event (`{ width, side }`). |
 | `ThreadTitleDetail` | type | `detail` shape of the `ag-ui-thread-title` event (`{ threadId, title }`). |
 | `UnreadDetail` | type | `detail` shape of the `ag-ui-unread` event (`{ unread, threadIds }`). |
+| `ThreadsChangeDetail` | type | `detail` shape of the `ag-ui-threads-change` event (`{ threads }`). |
 | `AttachmentsDetail` | type | `detail` shape of the `ag-ui-attachments` event (`{ attachments, pending }`). |
 | `StateDetail` | type | `detail` shape of the `ag-ui-state` event (`{ state }`). |
 
@@ -3958,6 +3960,8 @@ paths.
 | `RemoteConversationStore` | class | Server-backed store over a `data-threads-url` endpoint. |
 | `ClientConversationStore` | type | The persistence seam. |
 | `ThreadMeta` | type | A thread-drawer row (`{ threadId, title, updatedAt, preview, unread?, status?, reason?, interrupts? }`); see [Thread status](#thread-status). |
+| `ThreadStatus` | type | A thread's run status as the server lists it: `idle`, `running`, `waiting` or `failed`. |
+| `ThreadsTransport` | type | How `watchThreads` follows the list: `poll` or `stream`. |
 | `NavigationCheckpoint` | type | The pre-reload checkpoint marker. |
 | `RunIndex` | class | Reads a `data-runs-url` run index and derives its resume / fork endpoints. |
 | `RunRow` | type | One run index row (`{ run_id, thread_id, parent_run_id, started_at, continuable, preview? }`). |
@@ -4032,6 +4036,7 @@ paths.
 | `SUBMIT_EVENT` | The submit CustomEvent name. |
 | `THREAD_EVENT` | The conversation-changed CustomEvent name (`ag-ui-thread`). |
 | `THREAD_TITLE_EVENT` | The thread-title CustomEvent name (`ag-ui-thread-title`). |
+| `THREADS_CHANGE_EVENT` | The thread-list CustomEvent name (`ag-ui-threads-change`), fired by a chat watching its list under `data-thread-status`. |
 | `TOGGLE_EVENT` | The collapse-toggle CustomEvent name (`ag-ui-toggle`). |
 | `MAXIMIZE_EVENT` | The maximized-state CustomEvent name (`ag-ui-maximize`). |
 | `BAR_HEIGHT_EVENT` | The bottom bar's height CustomEvent name (`ag-ui-bar-height`). |

@@ -6,6 +6,7 @@ export { defineThreads } from "./threads/define_threads.js";
 export type {
   ThreadRow,
   ThreadsChat,
+  ThreadsMark,
   ThreadsSelectDetail,
   ThreadsStrings,
   ThreadsStringsInput,

@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Thread status and unread from the server, behind a host opt-in for live updates:
+  `data-thread-status="poll"` or `"stream"`.** Without the attribute nothing is watched, and a
+  server without a run store changes nothing. With `data-threads-url` on a django-ag-ui 0.84.0+
+  mount that has a run store, every listing now reads each row's `status` (`idle`, `running`,
+  `waiting` or `failed`), the failure `reason` and the `interrupts` a waiting run parked onto
+  `ThreadMeta` (`status`, `reason`, `interrupts`), and derives `unread` from `last_read_at`: a
+  thread is unread when it changed after it was last read and is not running, and a thread never
+  read is not. Reading a thread posts `<threads-url><id>/read/`, only to a server whose listing
+  carried `status`. Listings send `If-None-Match` and reuse the rows a `304` confirms. With the
+  attribute, the chat watches the list while connected: `poll` asks again every five seconds,
+  `stream` follows the server's event stream through `fetch` (the live headers and credentials),
+  reconnects naming the last frame, and polls from then on if the server answers with JSON (a WSGI
+  deployment). Each list is handed on in the new `ag-ui-threads-change` event (detail
+  `ThreadsChangeDetail`, `{ threads }`) and counted into `unread`. `ClientConversationStore` gains
+  the optional `watchThreads(listener, transport)`. `<ag-ui-threads>` marks each row the store
+  marks, waiting before failed before running before unread, as `data-status` on the row and a
+  `mark` part (`mark-running`, `mark-waiting`, `mark-failed`, `mark-unread`) named by the new
+  `ThreadsStrings` `running`, `waiting`, `failed` and `unread`, and draws each
+  `ag-ui-threads-change` list without listing again. The history drawer draws no marks yet.
+
 ## [0.8.0] — 2026-11-21
 
 ### Added

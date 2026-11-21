@@ -20,6 +20,7 @@ import {
   THEME_EVENT,
   THREAD_EVENT,
   THREAD_TITLE_EVENT,
+  THREADS_CHANGE_EVENT,
   TOGGLE_EVENT,
   TOOL_DISPLAY,
   TOOL_GROUP_DISPLAY,
@@ -115,6 +116,7 @@ import type { StateDetail } from "./events/state_detail.js";
 import type { SubmitDetail } from "./events/submit_detail.js";
 import type { ThreadDetail } from "./events/thread_detail.js";
 import type { ThreadTitleDetail } from "./events/thread_title_detail.js";
+import type { ThreadsChangeDetail } from "./events/threads_change_detail.js";
 import type { ToggleDetail } from "./events/toggle_detail.js";
 import type { UnreadDetail } from "./events/unread_detail.js";
 import type { MessageRole } from "./message_role.js";
@@ -849,6 +851,8 @@ export class AgUiChat extends HTMLElement {
   readonly #voice: ComposerVoice;
   /** Whether the element is currently in the DOM; gates the connect-time warning. */
   #connected = false;
+  /** Stops the thread list watch `data-thread-status` started, while one runs. */
+  #unwatch: (() => void) | null = null;
   /** A {@link newChat} asked for before the element connected, to start at connect. */
   #newChatOnConnect = false;
   /**
@@ -1335,6 +1339,7 @@ export class AgUiChat extends HTMLElement {
       "data-side",
       "data-small-viewport",
       "data-threads-search",
+      "data-thread-status",
       "credentials",
       "user-key",
       "user-name",
@@ -1362,6 +1367,10 @@ export class AgUiChat extends HTMLElement {
     }
     if (name === "data-tool-group-display") {
       this.#transcript.refreshStepGroups();
+      return;
+    }
+    if (name === "data-thread-status") {
+      this.#watchThreads();
       return;
     }
     if (name === "data-threads-search") {
@@ -2027,6 +2036,7 @@ export class AgUiChat extends HTMLElement {
     window.visualViewport?.removeEventListener("scroll", this.#onViewportResize);
     this.#storage.release();
     this.#chatRegistration.leave();
+    this.#stopWatch();
     this.#cancelRun();
     this.#excerpts.detachPageOffer();
     this.#attachments.tray?.dispose();
@@ -2113,6 +2123,31 @@ export class AgUiChat extends HTMLElement {
       this.#threadStore = { remote, inner };
       this.conversationStore = remote;
     }
+    this.#watchThreads();
+  }
+
+  /**
+   * Watch the store's thread list while connected, as `data-thread-status`
+   * asks (`poll` or `stream`), handing each list on in
+   * {@link THREADS_CHANGE_EVENT} and counting what it lists unread.
+   */
+  #watchThreads(): void {
+    this.#stopWatch();
+    const transport = this.getAttribute("data-thread-status");
+    const store = this.conversationStore;
+    if (!this.isConnected || (transport !== "poll" && transport !== "stream")) {
+      return;
+    }
+    this.#unwatch =
+      store.watchThreads?.((threads) => {
+        this.#takeListedUnread(threads);
+        this.#emit<ThreadsChangeDetail>(THREADS_CHANGE_EVENT, { threads });
+      }, transport) ?? null;
+  }
+
+  #stopWatch(): void {
+    this.#unwatch?.();
+    this.#unwatch = null;
   }
 
   /**
