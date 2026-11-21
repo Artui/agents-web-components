@@ -1780,3 +1780,87 @@ describe("over the real HttpAgent", () => {
     expect(flags).toEqual([true, false]);
   });
 });
+
+describe("a turn refused again by the run it just joined", () => {
+  const busy = { error: "the thread has a run in progress", thread_id: "t1", run_id: "r1" };
+  const replay = [
+    { type: "RUN_STARTED", threadId: "t1", runId: "r1" },
+    { type: "RUN_FINISHED", threadId: "t1", runId: "r1" },
+  ]
+    .map((event) => `data: ${JSON.stringify(event)}\n\n`)
+    .join("");
+
+  it("is not asked again once a Stop lands while it waits for the run to be let go", async () => {
+    const posts: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init: RequestInit) => {
+        if (init.method === "POST") {
+          posts.push(url);
+          return new Response(JSON.stringify(busy), {
+            status: 409,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        return new Response(replay, { headers: { "Content-Type": "text/event-stream" } });
+      }),
+    );
+    const handlers = recordingHandlers();
+    const client = new AgUiClient({
+      agent: createHttpAgent({
+        endpoint: "/agent/",
+        threadId: "t1",
+        eventsUrl: "/agent/threads/t1/events/",
+      }),
+      handlers,
+      detach: () => true,
+    });
+    await client.send("first");
+    handlers.calls.length = 0;
+    const sending = client.send("first");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    client.cancel();
+    await sending;
+
+    expect(posts.length).toBe(2);
+    expect(handlers.calls).toContain("cancelled");
+    expect(handlers.calls.some((call) => call.startsWith("err:"))).toBe(false);
+  });
+});
+
+describe("a queued start's stream", () => {
+  it("skips only the replay's opening snapshot, and applies a later one", async () => {
+    const later = { id: "s1", role: "user", content: "compacted" };
+    const events = [
+      { type: "RUN_STARTED", threadId: "t1", runId: "r1" },
+      { type: "MESSAGES_SNAPSHOT", messages: [] },
+      { type: "MESSAGES_SNAPSHOT", messages: [later] },
+      { type: "RUN_FINISHED", threadId: "t1", runId: "r1" },
+    ]
+      .map((event) => `data: ${JSON.stringify(event)}\n\n`)
+      .join("");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init: RequestInit) =>
+        init.method === "POST"
+          ? new Response(JSON.stringify({ thread_id: "t1", run_id: "r1" }), {
+              headers: { "Content-Type": "application/json" },
+            })
+          : new Response(events, { headers: { "Content-Type": "text/event-stream" } }),
+      ),
+    );
+    const handlers = recordingHandlers();
+    const client = new AgUiClient({
+      agent: createHttpAgent({
+        endpoint: "/agent/",
+        threadId: "t1",
+        eventsUrl: "/agent/threads/t1/events/",
+      }),
+      handlers,
+    });
+    await client.send("hello");
+
+    expect(handlers.calls.filter((call) => call.startsWith("snapshot:"))).toEqual(["snapshot:1"]);
+    expect(client.messages).toEqual([later]);
+  });
+});

@@ -1,0 +1,18 @@
+{
+  "generator": "scripts/record_queued_start_fixture.py",
+  "djangoAgUi": "0.84.0",
+  "agUiProtocol": "1.0.0",
+  "canonicalized": [
+    "uuid ids",
+    "timestamps"
+  ],
+  "queuedStart": {
+    "status": 200,
+    "contentType": "application/json",
+    "body": {
+      "thread_id": "t1",
+      "run_id": "r1"
+    }
+  },
+  "queuedReplay": "data: {\"type\":\"RUN_STARTED\",\"timestamp\":0,\"threadId\":\"t1\",\"runId\":\"r1\",\"protocolVersion\":\"1.0\"}\n\ndata: {\"type\":\"MESSAGES_SNAPSHOT\",\"messages\":[]}\n\nid: 3\ndata: {\"type\":\"TEXT_MESSAGE_START\",\"timestamp\":0,\"messageId\":\"id-1\",\"role\":\"assistant\"}\n\nid: 4\ndata: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"timestamp\":0,\"messageId\":\"id-1\",\"delta\":\"queued answer\"}\n\nid: 5\ndata: {\"type\":\"TEXT_MESSAGE_END\",\"timestamp\":0,\"messageId\":\"id-1\"}\n\nid: 6\ndata: {\"type\":\"RUN_FINISHED\",\"timestamp\":0,\"threadId\":\"t1\",\"runId\":\"r1\",\"outcome\":{\"type\":\"success\"}}\n\n"
+}

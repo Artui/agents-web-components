@@ -16,8 +16,16 @@ import {
 } from "@ag-ui/core";
 import { MAX_TOOL_ROUNDS, TOOL_OUTCOME } from "../constants.js";
 import type { AttachmentRef } from "./attachment.js";
+import { DetachedHttpAgent } from "./detached_http_agent.js";
 import type { ToolOutcome } from "./tool_outcome.js";
 import { answerUnansweredCalls } from "./utils.js";
+
+/**
+ * How long a turn refused by the run it just joined waits before it is sent
+ * once more: the server releases the claim right after it logs the run's end,
+ * so this covers that gap and the replay's poll, not a run still going.
+ */
+const RELEASE_RETRY_MS = 250;
 
 /** A tool call surfaced to the host by {@link AgUiClient}. */
 export interface AgUiToolCall {
@@ -660,10 +668,19 @@ export class AgUiClient {
       try {
         await this.#runLoop(action, connect);
       } catch (error) {
-        if (connect || !this.#rejoin(error, turn)) {
+        if (!connect && this.#stillHeld(error)) {
+          // The run this client just replayed to its end, which the server
+          // logs before it lets go of the thread: asked once more, a moment
+          // later, and a second refusal is the error it always was.
+          await new Promise((resolve) => setTimeout(resolve, RELEASE_RETRY_MS));
+          if (!this.#cancelled) {
+            await this.#runLoop(action, false);
+          }
+        } else if (connect || !this.#rejoin(error, turn)) {
           throw error;
+        } else {
+          await this.#runLoop(undefined, true);
         }
-        await this.#runLoop(undefined, true);
       }
       // `@ag-ui/client` filters abort errors inside `runAgent` (it resolves
       // rather than rejects on a cancelled fetch), so a cancelled run usually
@@ -711,6 +728,16 @@ export class AgUiClient {
       this.#handlers.onTurnRefused?.(turn.content, turn.attachments);
     }
     return true;
+  }
+
+  /**
+   * Whether a refused start names the run this client last joined, whose
+   * replay it followed to the end: django-ag-ui logs a run's `RUN_FINISHED`
+   * before it releases the thread's claim, so a turn sent the moment the
+   * replay ends can still find it held.
+   */
+  #stillHeld(error: unknown): boolean {
+    return this.#rejoined !== null && this.#holder(error) === this.#rejoined;
   }
 
   /**
@@ -1025,6 +1052,8 @@ export class AgUiClient {
     let runId: string | undefined;
     // The replay's opening snapshot is the conversation it joins; any later one is a run's own.
     let opened = !replay;
+    let queuedOpened = replay;
+    const agent = this.#agent;
     return {
       onRunInitialized() {
         h.onRunStart();
@@ -1136,8 +1165,17 @@ export class AgUiClient {
         h.onSubAgentError(event.subagentRunId, event.message);
       },
       onMessagesSnapshotEvent({ event }) {
+        // A queued start's stream is its run log's replay, which opens on the
+        // stored conversation, without the turn this round just posted: the
+        // client's own history is the newer one, so that snapshot is not applied.
+        const queuedOpening = !queuedOpened && agent instanceof DetachedHttpAgent && agent.followed;
+        queuedOpened = true;
+        if (queuedOpening) {
+          return { stopPropagation: true };
+        }
         h.onMessagesSnapshot(event.messages as readonly Message[], !opened);
         opened = true;
+        return undefined;
       },
       // Emitted after the client has written the patched messages, which is the
       // first moment the result exists. Only the ids marked above are looked at,

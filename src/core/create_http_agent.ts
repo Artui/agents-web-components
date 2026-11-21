@@ -53,6 +53,13 @@ export interface HttpAgentOptions {
    * without it the agent cannot reattach, and the thread is restored from its store alone.
    */
   eventsUrl?: string;
+  /**
+   * Live source of {@link eventsUrl}, re-read on every reattach and every
+   * queued start, and preferred to it when both are given: the element passes
+   * it so a `data-threads-url` set after the agent was built is where the next
+   * replay goes.
+   */
+  getEventsUrl?: () => string | undefined;
 }
 
 /**
@@ -96,7 +103,11 @@ export function createHttpAgent(options: HttpAgentOptions): AbstractAgent {
     // Spread conditionally: under `exactOptionalPropertyTypes` an explicit
     // `undefined` is not assignable to an optional field.
     ...(options.threadId !== undefined ? { threadId: options.threadId } : {}),
-    ...(options.eventsUrl !== undefined ? { eventsUrl: options.eventsUrl } : {}),
+    ...(options.getEventsUrl !== undefined
+      ? { eventsUrl: options.getEventsUrl }
+      : options.eventsUrl !== undefined
+        ? { eventsUrl: options.eventsUrl }
+        : {}),
     ...(options.initialMessages !== undefined
       ? { initialMessages: [...options.initialMessages] }
       : {}),

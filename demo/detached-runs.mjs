@@ -5,6 +5,9 @@
 //
 // - POST /detached/agent/                    starts a run, or answers 409 while
 //                                            one holds the thread
+// - POST /detached/queued/agent/             the same, as a firing_queue= mount:
+//                                            200 {thread_id, run_id}, the run's
+//                                            stream left to the run log
 // - GET  /detached/threads/                  lists the threads
 // - GET  /detached/threads/<id>/             one thread's messages
 // - GET  /detached/threads/<id>/events/      the run log: JSON with limit=1 (the
@@ -21,6 +24,7 @@
 import { randomUUID } from "node:crypto";
 
 const AGENT = "/detached/agent/";
+const QUEUED_AGENT = "/detached/queued/agent/";
 const THREADS = /^\/detached\/threads\/(?:([^/]+)\/(events\/|cancel\/)?)?$/;
 // Slow on purpose: long enough to switch away mid-answer and come back.
 const CHUNK_MS = 600;
@@ -114,7 +118,7 @@ function tail(run, res, from) {
   });
 }
 
-function startRun(res, body) {
+function startRun(res, body, queued = false) {
   const threadId = body.threadId;
   const row = thread(threadId);
   if (row.run !== null && !row.run.done) {
@@ -140,7 +144,7 @@ function startRun(res, body) {
     done: false,
     detach: body.forwardedProps?.detach === true,
     cancelAt: null,
-    origin: res,
+    origin: queued ? null : res,
     timer: null,
   };
   row.run = run;
@@ -166,6 +170,11 @@ function startRun(res, body) {
     });
     end(run, row);
   }, CHUNK_MS);
+  if (queued) {
+    // A worker has the run now; the element follows it through events/?after=0.
+    json(res, 200, { thread_id: threadId, run_id: run.runId });
+    return;
+  }
   openStream(res);
   tail(run, res, 0);
 }
@@ -226,8 +235,8 @@ export function detachedRoute(req, res, path) {
     // So the requests the element makes can be read off this process's output.
     process.stdout.write(`detached-runs ${req.method} ${req.url}\n`);
   }
-  if (req.method === "POST" && path === AGENT) {
-    readBody(req).then((body) => startRun(res, JSON.parse(body)));
+  if (req.method === "POST" && (path === AGENT || path === QUEUED_AGENT)) {
+    readBody(req).then((body) => startRun(res, JSON.parse(body), path === QUEUED_AGENT));
     return true;
   }
   const match = THREADS.exec(path);

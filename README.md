@@ -874,12 +874,23 @@ mount with `run_store=` and `RUN_TIMEOUT_SECONDS` set, served over **ASGI**, to 
   another run holds the thread (a Stop's cancel has not landed yet, or a second tab) joins that run
   instead, and the turn waits in the composer's queue, attachments included, sent once that run
   has ended (a turn that is only files is shown by their names); a refused `run()` action is not
-  sent again.
+  sent again. The server logs a run's end a moment before it lets go of the thread, so a turn
+  refused by the very run it just waited out is asked once more, a quarter second later, and a
+  second refusal is shown as the error.
+- **A queued mount's start is followed.** A mount with a `firing_queue=` (django-ag-ui 0.82.0+)
+  answers a detached start with `200 {"thread_id", "run_id"}` and leaves the run to a worker; the
+  element then reads that run through `events/?after=0` and streams it as it would have streamed
+  the start, each frontend-tool round alike. The replay's opening snapshot is the stored
+  conversation, without the turn just sent, so it is not applied.
+- **The run routes follow `data-threads-url`.** A replay and a cancel read the attribute when they
+  are made, so a host that sets or changes it after the element connected sends the next of each
+  to the new URL; the thread list and its store still read it while connecting.
 
 Reattaching needs an agent that can connect: the default `agentFactory` builds one. A factory
-returning an agent that does not override `connect` gets the store-only restore. A mount with a
-`firing_queue=` answers a detached start with JSON rather than a stream, which this element does
-not read yet.
+returning an agent that does not override `connect` gets the store-only restore. A factory that
+wraps `createHttpAgent` passes `getEventsUrl` on with the rest of the options, which is how the
+late attribute reaches the default agent; `getEventsUrl` wins over `eventsUrl`, so a factory that
+points the run log elsewhere overrides `getEventsUrl`.
 
 ### A run the server stops
 
