@@ -289,6 +289,36 @@ describe("hostBridge", () => {
     expect(fixture.posted).toEqual([{ jsonrpc: "2.0", id: 4, result: { mode: "inline" } }]);
   });
 
+  it("tells a view the mode its own display request switched it to", () => {
+    const fixture = connected();
+    initialised(fixture);
+
+    request(fixture, 4, "ui/request-display-mode", { mode: "fullscreen" });
+
+    expect(fixture.posted).toEqual([
+      { jsonrpc: "2.0", id: 4, result: { mode: "fullscreen" } },
+      {
+        jsonrpc: "2.0",
+        method: "ui/notifications/host-context-changed",
+        params: { displayMode: "fullscreen", containerDimensions: { width: 0, height: 0 } },
+      },
+    ]);
+  });
+
+  it.each([
+    [true, ["inline", "fullscreen"]],
+    [false, ["inline"]],
+  ])("offers a view live=%s the display modes %j in ui/initialize", (live, modes) => {
+    const fixture = connected();
+    fixture.channel.live = live;
+
+    request(fixture, 1, "ui/initialize", {});
+
+    expect(fixture.posted[0]?.["result"]).toMatchObject({
+      hostContext: { availableDisplayModes: modes },
+    });
+  });
+
   it("answers any other request -32601", () => {
     const fixture = connected();
 
