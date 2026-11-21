@@ -23,13 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   headers and credentials). The replay's opening `MESSAGES_SNAPSHOT` redraws the transcript, and
   `running` / `data-running` stay set until the joined run ends; a host's `sendMessage()` made
   while that restore was in flight waits for the joined run, then goes out ahead of any turn the
-  composer parked. **Stop changes under the
-  opt-in:** Stop, Escape and deleting the thread on screen first post `<threads-url><id>/cancel/`
-  (a `404` is quiet), then abort as before. A send the server refuses with `409` because another
-  run holds the thread joins that run and queues the turn's text, sent once that run ends.
-  `HttpAgentOptions` gains `eventsUrl`; `AgUiClientConfig` gains `detach`; `AgUiClient` gains
-  `reattach()` and `canReattach`; `AgUiClientHandlers.onMessagesSnapshot` takes a second argument,
-  `authoritative`, and the optional `onTurnRefused`. A factory agent that does not override
+  composer parked. **Stop changes under the opt-in:** Stop, Escape and deleting the thread on
+  screen first post `<threads-url><id>/cancel/` (a `404` is quiet), then abort as before. A send
+  the server refuses with `409` because another run holds the thread joins that run and queues the
+  turn, attachments included, sent once that run ends. `HttpAgentOptions` gains `eventsUrl`;
+  `AgUiClientConfig` gains `detach`; `AgUiClient` gains `reattach()` and `canReattach`;
+  `AgUiClientHandlers.onMessagesSnapshot` takes a second argument, `authoritative`, and the
+  optional `onTurnRefused(content, attachments)`. A factory agent that does not override
   `connect` is restored from the store alone. Not covered yet: a `firing_queue=` mount's JSON
   answer to a detached start.
 

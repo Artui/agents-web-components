@@ -871,8 +871,8 @@ mount with `run_store=` and `RUN_TIMEOUT_SECONDS` set, served over **ASGI**, to 
   and is not reported.
 - **A start on a busy thread joins the busy run.** A send the server refuses with `409` because
   another run holds the thread (a Stop's cancel has not landed yet, or a second tab) joins that run
-  instead, and the turn waits in the composer's queue, sent once that run has ended. The queue is
-  text only, so a refused turn's attachments do not come back; a refused `run()` action is not
+  instead, and the turn waits in the composer's queue, attachments included, sent once that run
+  has ended (a turn that is only files is shown by their names); a refused `run()` action is not
   sent again.
 
 Reattaching needs an agent that can connect: the default `agentFactory` builds one. A factory

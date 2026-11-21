@@ -777,8 +777,12 @@ export class AgUiChat extends HTMLElement {
   #collapseControl: HTMLButtonElement | null = null;
   /** What the user has sent this session, newest first, for arrow-key recall. */
   readonly #sentDrafts: string[] = [];
-  /** Typed while a run was in flight, oldest first; sent when it settles. */
-  readonly #queued: string[] = [];
+  /**
+   * Typed while a run was in flight, oldest first; sent when it settles. Only a
+   * turn a refused start gave back carries attachments: Send leaves them in the tray.
+   */
+  readonly #queued: { readonly content: string; readonly attachments: readonly AttachmentRef[] }[] =
+    [];
   /** The row those show up in, above the composer. */
   readonly #queuedRow: HTMLDivElement = document.createElement("div");
   /** How far back the composer has been walked; null while the user is typing. */
@@ -1096,8 +1100,8 @@ export class AgUiChat extends HTMLElement {
         this.#transcript.ensureGroup();
         this.#transcript.showPending();
       },
-      park: (content) => {
-        this.#queued.push(content);
+      park: (content, attachments) => {
+        this.#queued.push({ content, attachments });
         this.#renderQueued();
       },
     });
@@ -3867,7 +3871,7 @@ export class AgUiChat extends HTMLElement {
     const next = this.#queued.shift();
     this.#renderQueued();
     if (next !== undefined) {
-      void this.sendMessage(next);
+      void this.sendMessage(next.content, next.attachments);
     }
   }
 
@@ -3881,7 +3885,9 @@ export class AgUiChat extends HTMLElement {
   #renderQueued(): void {
     this.#queuedRow.replaceChildren();
     this.#queuedRow.hidden = this.#queued.length === 0;
-    for (const [index, text] of this.#queued.entries()) {
+    for (const [index, turn] of this.#queued.entries()) {
+      // A turn that is only files is shown by their names.
+      const text = turn.content || turn.attachments.map((ref) => ref.name).join(", ");
       const chip = document.createElement("button");
       chip.type = "button";
       chip.className = "queued-chip";
@@ -3936,7 +3942,7 @@ export class AgUiChat extends HTMLElement {
     this.#recordTurn(content);
     if (this.#busy()) {
       if (content !== "") {
-        this.#queued.push(content);
+        this.#queued.push({ content, attachments: [] });
         this.#renderQueued();
         this.#input.value = "";
         autoGrow(this.#input);

@@ -19,6 +19,7 @@ import { type UsageTotals, usageLineText } from "../ui/transcript/usage_line_tex
 import type { UiStrings } from "../ui/ui_strings.js";
 import type { ActivityRegistry } from "./activity_registry.js";
 import type { AgUiClientHandlers, RunErrorInfo } from "./agui_client.js";
+import type { AttachmentRef } from "./attachment.js";
 import type { CustomAgentDetail } from "./events/custom_agent_detail.js";
 import type { InvalidateDetail } from "./events/invalidate_detail.js";
 import type { RunFinishedDetail } from "./events/run_finished_detail.js";
@@ -60,8 +61,8 @@ export interface RunHandlersHost {
   readonly skillsChanged: () => void;
   /** Draw `messages` in place of the transcript, keeping the run in flight: a reattach's opening. */
   readonly redraw: (messages: readonly Message[]) => void;
-  /** Hold a refused turn's text in the composer's queue, to go out when the run settles. */
-  readonly park: (content: string) => void;
+  /** Hold a refused turn in the composer's queue, to go out when the run settles. */
+  readonly park: (content: string, attachments: readonly AttachmentRef[]) => void;
 }
 
 /** The `RUN_ERROR` code whose message names the field and limit, and is shown as sent. */
@@ -436,12 +437,10 @@ export class RunHandlers {
         // that shipped in the same release is what makes showing them safe now.
         this.#host.transcript.showPending();
       },
-      onTurnRefused: (content) => {
-        // Text only, as the composer queues: an attachment is the tray's, and
-        // the tray has let go of it with the send.
-        if (content !== "") {
-          this.#host.park(content);
-        }
+      onTurnRefused: (content, attachments) => {
+        // With its attachments: the tray let go of them with the send, so the
+        // refused turn is the only copy left.
+        this.#host.park(content, attachments);
       },
       onActivityChanged: (messageId, activityType, content) => {
         this.#host.activities.draw(messageId, activityType, content, true);

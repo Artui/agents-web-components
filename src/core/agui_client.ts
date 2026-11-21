@@ -192,10 +192,10 @@ export interface AgUiClientHandlers {
   /**
    * The server refused a {@link AgUiClient.send} because another run holds the
    * thread (a `409`), and the client is reattaching to that run instead.
-   * `content` is the refused turn's text, the turn already taken back out of
-   * the history, for the host to send again once that run has ended.
+   * `content` and `attachments` are the refused turn's, the turn already taken
+   * back out of the history, for the host to send again once that run has ended.
    */
-  onTurnRefused?(content: string): void;
+  onTurnRefused?(content: string, attachments: readonly AttachmentRef[]): void;
   /**
    * The agent sent a `CUSTOM` event.
    *
@@ -526,7 +526,7 @@ export class AgUiClient {
     };
     this.#agent.addMessage(message);
     this.#persist();
-    await this.#run(undefined, { id: message.id, content });
+    await this.#run(undefined, { id: message.id, content, attachments });
   }
 
   /**
@@ -710,7 +710,7 @@ export class AgUiClient {
     if (turn !== null) {
       this.#agent.setMessages(this.#agent.messages.filter((message) => message.id !== turn.id));
       this.#persist();
-      this.#handlers.onTurnRefused?.(turn.content);
+      this.#handlers.onTurnRefused?.(turn.content, turn.attachments);
     }
     return true;
   }
@@ -1220,6 +1220,7 @@ export class AgUiClient {
 interface Turn {
   readonly id: string;
   readonly content: string;
+  readonly attachments: readonly AttachmentRef[];
 }
 
 /** Per-run mutable flags the subscriber writes and {@link AgUiClient} reads. */

@@ -538,17 +538,61 @@ describe("a start refused because a run holds the thread", () => {
     expect(shadow(el).querySelector(".queued-chip")).toBeNull();
   });
 
-  it("queues nothing for a refused turn that had only attachments", async () => {
+  it("keeps a refused turn's attachments, and sends them with it once that run has ended", async () => {
+    quietAgentErrors();
+    const { el, server } = mount();
+    await el.switchThread("t1");
+    const file = { id: "f1", name: "a.png", mime: "image/png", size: 1 };
+    server.starts.push(() => json(409, recorded.busyStart.body));
+    const [head, rest] = replayHalves();
+    let replay: Live | undefined;
+    server.replays.push((init) => {
+      replay = live(init, head);
+      return replay.response;
+    });
+    server.starts.push(() => sse(finishedRun("r9", "a fresh answer")));
+    void el.sendMessage("Describe this", [file]);
+    await settle();
+    expect(shadow(el).querySelector(".queued-chip")?.textContent).toBe("Describe this");
+    replay?.push(rest);
+    replay?.end();
+    await settle();
+
+    const messages = server.starts_()[1]?.["messages"] as { metadata?: unknown }[];
+    expect(messages.at(-1)).toMatchObject({
+      content: "Describe this",
+      metadata: { attachments: [file] },
+    });
+  });
+
+  it("queues a refused turn that had only attachments under its files' names", async () => {
     quietAgentErrors();
     const { el, server } = mount();
     await el.switchThread("t1");
     server.starts.push(() => json(409, recorded.busyStart.body));
-    server.replays.push(() => sse(recorded.replayFromStart));
-    await el.sendMessage("", [{ id: "f1", name: "a.png", mime: "image/png", size: 1 }]);
+    const [head, rest] = replayHalves();
+    let replay: Live | undefined;
+    server.replays.push((init) => {
+      replay = live(init, head);
+      return replay.response;
+    });
+    server.starts.push(() => sse(finishedRun("r9", "a fresh answer")));
+    void el.sendMessage("", [
+      { id: "f1", name: "a.png", mime: "image/png", size: 1 },
+      { id: "f2", name: "b.pdf", mime: "application/pdf", size: 1 },
+    ]);
+    await settle();
+    expect(shadow(el).querySelector(".queued-chip")?.textContent).toBe("a.png, b.pdf");
+    replay?.push(rest);
+    replay?.end();
     await settle();
 
-    expect(transcriptText(el)).toContain("partial answer and the rest");
-    expect(shadow(el).querySelector(".queued-chip")).toBeNull();
+    expect(transcriptText(el)).toContain("a fresh answer");
+    const messages = server.starts_()[1]?.["messages"] as { metadata?: unknown }[];
+    expect(messages.at(-1)).toMatchObject({
+      content: "",
+      metadata: { attachments: [{ id: "f1" }, { id: "f2" }] },
+    });
   });
 
   it("is an error for an agent that cannot connect", async () => {
