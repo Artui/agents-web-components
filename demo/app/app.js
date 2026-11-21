@@ -950,3 +950,20 @@ if (restart !== null) {
     send(restart.prompt);
   }
 }
+
+// ── Runs that outlive their connection ───────────────────────────────────────
+
+$("det-a").addEventListener("click", () => void chat.switchThread("detached-a"));
+$("det-b").addEventListener("click", () => void chat.switchThread("detached-b"));
+$("det-placement").addEventListener("change", (event) => {
+  chat.setAttribute("placement", event.target.value);
+});
+const detachedState = () => {
+  $("det-state").textContent =
+    `thread ${chat.threadId ?? "-"}, ${chat.running ? "running" : "idle"}`;
+};
+chat.addEventListener("ag-ui-thread", detachedState);
+new MutationObserver(detachedState).observe(chat, {
+  attributes: true,
+  attributeFilter: ["data-running"],
+});

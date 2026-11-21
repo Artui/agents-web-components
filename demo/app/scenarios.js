@@ -257,6 +257,20 @@ export const SCENARIOS = [
       "chat.request sends the element's headers on a host's own fetch (0.5.0); chat.registerContext adds entries to every run (0.3.0).",
     prompts: [["Show the context", "show context"]],
   },
+  {
+    slug: "detached-runs",
+    group: "Conversation",
+    title: "Runs that outlive their connection",
+    since: "0.8.0",
+    summary:
+      "With data-detach-runs and data-threads-url, a thread switch lets go of a run instead of stopping it, opening the thread again joins it, Stop posts the thread's cancel, and a Send the server refuses while the run holds the thread waits for it.",
+    prompts: [["Ask for a slow answer", "Tell me something slowly"]],
+    attrs: {
+      endpoint: "/detached/agent/",
+      "data-threads-url": "/detached/threads/",
+      "data-detach-runs": "",
+    },
+  },
 ];
 
 /** The scenario a path names, or null for the start page. */

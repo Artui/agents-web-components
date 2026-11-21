@@ -935,6 +935,55 @@
         </div>
       </section>
 
+      <section data-scenario="detached-runs" hidden>
+        <div class="panel">
+          <h2>Two threads</h2>
+          <div class="controls">
+            <div class="ctl wide">
+              <span>Switch</span>
+              <span class="inline">
+                <button type="button" id="det-a">chat.switchThread("detached-a")</button>
+                <button type="button" id="det-b">chat.switchThread("detached-b")</button>
+              </span>
+            </div>
+            <label class="ctl"
+              ><span>Placement</span>
+              <select id="det-placement">
+                <option value="floating">floating</option>
+                <option value="embedded">embedded</option>
+              </select></label
+            >
+            <div class="ctl wide"><span>On screen</span><output id="det-state">-</output></div>
+          </div>
+        </div>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>Switch away mid-answer and back.</strong> Open thread A, send anything (the
+              answer takes about ten seconds), switch to B while it streams, then back to A. The
+              answer is complete, or still streaming and finishes; no cancel is posted. The mock
+              server prints each request it answers under <code>/detached/</code>.
+            </li>
+            <li>
+              <strong>Stop posts a cancel.</strong> Press Stop mid-answer: the server log shows
+              <code>POST /detached/threads/&lt;id&gt;/cancel/</code>, and the composer is back at
+              once.
+            </li>
+            <li>
+              <strong>Stop, then Send at once.</strong> The cancel lands about three seconds after
+              it is asked for, so a turn sent in that window is refused with a 409: the element joins
+              the run again, the turn waits as a chip above the composer, and it is sent when the
+              run ends.
+            </li>
+            <li>
+              <strong>Both placements at both widths.</strong> Floating and embedded, at about 360px
+              and at desktop width: the chip row, the Stop button and the replayed answer.
+            </li>
+          </ul>
+        </div>
+      </section>
+
       <!-- Where the widget renders under placement="embedded". -->
       <div class="embed-slot">
         <ag-ui-chat

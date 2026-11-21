@@ -107,6 +107,7 @@ import {
   threadTitleFrom,
 } from "./conversation_store.js";
 import { type AgentFactory, createHttpAgent } from "./create_http_agent.js";
+import { DetachedRuns } from "./detached_runs.js";
 import type { BarHeightDetail } from "./events/bar_height_detail.js";
 import type { DockWidthDetail } from "./events/dock_width_detail.js";
 import type { MaximizeDetail } from "./events/maximize_detail.js";
@@ -776,8 +777,12 @@ export class AgUiChat extends HTMLElement {
   #collapseControl: HTMLButtonElement | null = null;
   /** What the user has sent this session, newest first, for arrow-key recall. */
   readonly #sentDrafts: string[] = [];
-  /** Typed while a run was in flight, oldest first; sent when it settles. */
-  readonly #queued: string[] = [];
+  /**
+   * Typed while a run was in flight, oldest first; sent when it settles. Only a
+   * turn a refused start gave back carries attachments: Send leaves them in the tray.
+   */
+  readonly #queued: { readonly content: string; readonly attachments: readonly AttachmentRef[] }[] =
+    [];
   /** The row those show up in, above the composer. */
   readonly #queuedRow: HTMLDivElement = document.createElement("div");
   /** How far back the composer has been walked; null while the user is typing. */
@@ -938,6 +943,14 @@ export class AgUiChat extends HTMLElement {
    */
   #restoreHold: { readonly hold: object; readonly restored: Promise<void> } | null = null;
   /**
+   * The run a restore joined on its thread ({@link detachRuns}) while a host's
+   * {@link sendMessage} waited on that restore, which is the only send that can
+   * be waiting then: the send goes out once the run has ended, as after a
+   * restore with no run to join, and ahead of what the composer parked. A Stop
+   * forgets it, and so drops the send.
+   */
+  #joined: Promise<void> | null = null;
+  /**
    * The thread the latest {@link THREAD_EVENT} reported, which the next one
    * names as the thread it replaced; `null` before the first.
    */
@@ -1076,6 +1089,21 @@ export class AgUiChat extends HTMLElement {
       skillsChanged: () => {
         void this.#skills.fetch();
         this.#skillEditor.refresh();
+      },
+      redraw: (messages) => {
+        // The transcript only: the client, the handlers and the run stay, since
+        // the run being drawn is the one in flight.
+        this.#clearTranscript();
+        for (const message of messages) {
+          this.#history.replay(message);
+        }
+        // The run's start opened its group and dots, which the clear let go of.
+        this.#transcript.ensureGroup();
+        this.#transcript.showPending();
+      },
+      park: (content, attachments) => {
+        this.#queued.push({ content, attachments });
+        this.#renderQueued();
       },
     });
     this.#placement = new PanelPlacement({
@@ -1270,6 +1298,20 @@ export class AgUiChat extends HTMLElement {
         };
       },
       cancelRun: () => this.#cancelRun(),
+      stopRun: () => this.#stopRun(),
+      runningOnServer: (threadId) => this.#detachedRuns()?.running(threadId) ?? null,
+      reattach: () => {
+        const client = this.#ensureClient();
+        if (client.canReattach) {
+          // Before the request, so the restore that asked for it sends nothing
+          // it parked, and a host sees the run from the moment it is joined.
+          // A host's send waiting on the restore has taken its hold over.
+          const waited = this.#sending !== this.#restoreHold?.hold;
+          this.#setRunning(true);
+          const run = client.reattach();
+          this.#joined = waited ? run : null;
+        }
+      },
       resetState: () => this.#resetState(),
       setRunning: (running) => this.#setRunning(running),
       threadChanged: (threadId, reason) => this.#dispatchThread(threadId, reason),
@@ -2275,6 +2317,29 @@ export class AgUiChat extends HTMLElement {
   }
 
   /**
+   * Whether this element's runs outlive their connection, reflected as the
+   * `data-detach-runs` attribute and read at each request.
+   *
+   * On, with `data-threads-url` set, every request asks the server to keep the
+   * run going when the client leaves (`forwardedProps.detach`), so switching
+   * thread, New chat or the element leaving the page lets go of the run rather
+   * than stopping it, and opening a thread whose run is still going joins it
+   * (`running` is true until it ends). Stop and deleting the thread post the
+   * thread's `cancel/`. A start the server refuses because another run holds
+   * the thread joins that run, and the turn goes out after it. Needs a
+   * django-ag-ui 0.82.0+ mount with a run store and `RUN_TIMEOUT_SECONDS`,
+   * served over ASGI to an authenticated user; without `data-threads-url` it
+   * does nothing.
+   */
+  get detachRuns(): boolean {
+    return readFlag(this, "data-detach-runs");
+  }
+
+  set detachRuns(value: boolean) {
+    this.toggleAttribute("data-detach-runs", value);
+  }
+
+  /**
    * The height of the bottom bar in CSS px, and 0 when none is drawn: under
    * any collapse-to but "bar", and on a phone while the panel is open, where
    * the panel is the screen. The bar is fixed over the page, so a host pads
@@ -3235,7 +3300,7 @@ export class AgUiChat extends HTMLElement {
         // One button, two states: Send while idle, Stop while a run is in
         // flight (no layout change).
         if (this.#running) {
-          this.#cancelRun();
+          this.#stopRun();
           return;
         }
         void this.#submit();
@@ -3515,7 +3580,7 @@ export class AgUiChat extends HTMLElement {
     // consumed the key above otherwise), so the two Escapes don't clash.
     if (event.key === "Escape" && this.#running) {
       event.preventDefault();
-      this.#cancelRun();
+      this.#stopRun();
       return;
     }
     if (event.key === "Enter" && !event.shiftKey) {
@@ -3584,9 +3649,12 @@ export class AgUiChat extends HTMLElement {
    * observes the disconnect).
    */
   #cancelRun(): void {
-    // Stopping discards what was waiting, and loses nothing: a queued turn
-    // entered the recall history as it left the composer. Also reached from
-    // disconnectedCallback, where a DOM move is not a farewell either.
+    // Local only: a run that asked to detach goes on on the server, which is
+    // what leaving its thread wants. A Stop also asks the server: #stopRun.
+    // Stopping discards what was waiting. A turn typed into the composer
+    // entered the recall history as it left it; a turn a refused start parked
+    // (a host's text, or files) is dropped with the run it waited on. Also
+    // reached from disconnectedCallback, where a DOM move is not a farewell either.
     this.#queued.length = 0;
     this.#renderQueued();
     this.#decision.abort();
@@ -3603,9 +3671,43 @@ export class AgUiChat extends HTMLElement {
     // This is how a submit listener that starts a new chat, switches thread or
     // moves the element stops the send it is hearing about.
     this.#sending = null;
+    this.#joined = null;
     // A checkpoint continuation is as much the run in flight -- the composer
     // offers Stop for it -- but it runs on a client the element does not hold.
     this.#history.stopContinuation();
+  }
+
+  /**
+   * Stop the run the user is looking at, for Stop, Escape and deleting the
+   * thread: a run that detached is asked to stop on the server, since aborting
+   * the request only lets go of it, and then let go of here as before.
+   *
+   * The cancel goes first and is not awaited: the run acts on it at its next
+   * lease renewal, about ten seconds on, and the composer comes back now.
+   */
+  #stopRun(): void {
+    const runs = this.#detachedRuns();
+    if (runs !== null && this.#running) {
+      void runs.cancel(this.#history.threadId);
+    }
+    this.#cancelRun();
+  }
+
+  /**
+   * The detached-run routes beside `data-threads-url`, while `data-detach-runs`
+   * asks for them; `null` otherwise, and then runs neither ask to detach nor
+   * are probed, rejoined or cancelled on the server.
+   */
+  #detachedRuns(): DetachedRuns | null {
+    const url = this.getAttribute("data-threads-url");
+    if (url === null || !this.detachRuns) {
+      return null;
+    }
+    return new DetachedRuns(
+      url,
+      (target) => this.#headersFor(target),
+      () => this.#requestCredentials(),
+    );
   }
 
   /**
@@ -3764,13 +3866,14 @@ export class AgUiChat extends HTMLElement {
     // A continuation settles its run before the element lets go of it, so the
     // settle below arrives while `continuation` is still set, and the release
     // that follows is what drains.
-    if (this.#running || this.#history.continuation !== null) {
+    // Nor while a host's send waits out a joined run, which goes first.
+    if (this.#running || this.#joined !== null || this.#history.continuation !== null) {
       return;
     }
     const next = this.#queued.shift();
     this.#renderQueued();
     if (next !== undefined) {
-      void this.sendMessage(next);
+      void this.sendMessage(next.content, next.attachments);
     }
   }
 
@@ -3784,7 +3887,9 @@ export class AgUiChat extends HTMLElement {
   #renderQueued(): void {
     this.#queuedRow.replaceChildren();
     this.#queuedRow.hidden = this.#queued.length === 0;
-    for (const [index, text] of this.#queued.entries()) {
+    for (const [index, turn] of this.#queued.entries()) {
+      // A turn that is only files is shown by their names.
+      const text = turn.content || turn.attachments.map((ref) => ref.name).join(", ");
       const chip = document.createElement("button");
       chip.type = "button";
       chip.className = "queued-chip";
@@ -3839,7 +3944,7 @@ export class AgUiChat extends HTMLElement {
     this.#recordTurn(content);
     if (this.#busy()) {
       if (content !== "") {
-        this.#queued.push(content);
+        this.#queued.push({ content, attachments: [] });
         this.#renderQueued();
         this.#input.value = "";
         autoGrow(this.#input);
@@ -3904,7 +4009,11 @@ export class AgUiChat extends HTMLElement {
    * that is when the restore learns it was stopped. A first `user-key` on an
    * anonymous conversation adopts it rather than replacing it, and stops
    * nothing. A second call while one waits is
-   * refused, as a second call in the same task is.
+   * refused, as a second call in the same task is. Under {@link detachRuns}, a
+   * restore that finds its thread's run still going joins it, and the send
+   * waits for that run to end as well, then goes out ahead of anything the
+   * composer parked meanwhile; a Stop, or anything that reaches one, during
+   * the joined run drops it.
    *
    * Unlike the built-in Send it does not queue: it returns, and the caller
    * keeps what it tried to send. Nor does it consult the tray -- what you pass
@@ -3993,6 +4102,17 @@ export class AgUiChat extends HTMLElement {
       const waiting = {};
       this.#sending = waiting;
       await restore.restored;
+      // The restore joined the run still going on its thread, which is this
+      // conversation's too, so the turn follows it, unless a Stop forgot it.
+      const joined = this.#joined;
+      if (joined !== null) {
+        await Promise.allSettled([joined]);
+        if (this.#joined !== joined) {
+          return false;
+        }
+        this.#joined = null;
+        return this.#startRun(turn, start);
+      }
       // Anything that stopped the restore let go of this too, by the Stop
       // that New chat, a thread switch, a principal handover, a reload and the
       // element leaving all reach. Otherwise let go of here and the guards
@@ -4131,6 +4251,7 @@ export class AgUiChat extends HTMLElement {
     // The thread id alone cannot do it, because the store is still read live --
     // it has to be, since an adoption rescopes it under a run that keeps going.
     const tenure = this.#tenure;
+    const detached = this.#detachedRuns();
     const agent = this.agentFactory({
       endpoint: seed.endpoint,
       headers: this.#requestHeaders(),
@@ -4143,6 +4264,7 @@ export class AgUiChat extends HTMLElement {
       threadId,
       initialMessages: seed.initialMessages,
       initialState: this.#sharedState,
+      ...(detached === null ? {} : { eventsUrl: detached.eventsUrl(threadId) }),
     });
     return new AgUiClient({
       agent,
@@ -4184,6 +4306,9 @@ export class AgUiChat extends HTMLElement {
       unfinishedMessage: this.#strings.callNotFinished,
       declinedMessage: this.#strings.declinedAction,
       maxToolRounds: readMaxToolRounds(this),
+      // Live, so the attribute decides each request; never without the routes
+      // that can rejoin or stop a run that outlived its connection.
+      detach: () => this.#detachedRuns() !== null,
     });
   }
 
