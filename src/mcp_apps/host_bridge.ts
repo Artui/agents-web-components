@@ -3,6 +3,7 @@ import { MCP_APP_MAX_HEIGHT, MCP_APPS_ROUTE_ERROR, THEME_EVENT } from "../consta
 import { VERSION } from "../version.js";
 import { hostContext } from "./host_context.js";
 import type { McpAppDisplayMode, McpAppHostContext } from "./types.js";
+import type { McpAppConsentRequest } from "./view_consent.js";
 import type { McpAppViewConnect } from "./view_frame.js";
 
 /** The MCP Apps revision this host speaks (ext-apps `LATEST_PROTOCOL_VERSION`). */
@@ -13,6 +14,10 @@ const METHOD_NOT_FOUND = -32601;
 const INVALID_PARAMS = -32602;
 /** A server error: the request was understood and refused or failed. */
 const REFUSED = -32000;
+/** The answer to a `ui/message` the user declined, as the MCP Apps specification's own example. */
+const MESSAGE_DENIED = "Message sending denied";
+/** The answer to a `tools/call` the user declined. */
+const TOOL_CALL_DENIED = "Tool call denied";
 /** How long a view's `ui/notifications/request-teardown` waits for its teardown answer. */
 const TEARDOWN_WAIT_MS = 3000;
 
@@ -77,9 +82,10 @@ function changed(previous: McpAppHostContext, next: McpAppHostContext): Params {
  * result, then `host-context-changed` when the scheme, the tokens or the
  * frame's width change. `size-changed` sets the frame's height, up to
  * {@link MCP_APP_MAX_HEIGHT}. `tools/call` goes to the route, `ui/message` to
- * `chat.sendMessage`, `ui/open-link` (an `http(s)` URL only) to a `noopener`
- * tab; all three are refused while the view is not live, and once it has
- * asked to be torn down. `ui/request-display-mode` switches a live view
+ * `chat.sendMessage`, each only once the user allows it in a card beside the
+ * view (declined, `-32000`), and `ui/open-link` (an `http(s)` URL only) to a
+ * `noopener` tab; all three are refused while the view is not live, and once
+ * it has asked to be torn down. `ui/request-display-mode` switches a live view
  * between `inline` and `fullscreen` through the frame's display, answers the
  * mode it is in after (the current one for `pip` or a refused request, as the
  * schema's result allows), and tells the view `displayMode` and
@@ -126,6 +132,7 @@ export function hostBridge(): McpAppViewConnect {
     const tearDown = (): Promise<void> => {
       teardowns += 1;
       tornDown = true;
+      channel.consent.dispose();
       const id = `teardown-${teardowns}`;
       return new Promise((resolve) => {
         const timer = setTimeout(resolve, TEARDOWN_WAIT_MS);
@@ -137,16 +144,44 @@ export function hostBridge(): McpAppViewConnect {
       });
     };
 
+    // Why the view may not act now, or null when it may.
+    const refusal = (method: string): string | null => {
+      if (!channel.live) {
+        return `${method} is refused: this view is drawn from a stored conversation`;
+      }
+      return tornDown ? `${method} is refused: this view asked to be torn down` : null;
+    };
+
+    // Waits for the user's answer, then re-checks the view, which may have gone stored or asked
+    // to be torn down meanwhile. Answers the view and resolves false on any refusal.
+    const allowed = async (id: RequestId, request: McpAppConsentRequest): Promise<boolean> => {
+      const yes = await channel.consent.ask(request);
+      const after = refusal(request.method);
+      if (after !== null) {
+        fail(id, REFUSED, after);
+        return false;
+      }
+      if (!yes) {
+        fail(id, REFUSED, request.method === "ui/message" ? MESSAGE_DENIED : TOOL_CALL_DENIED);
+      }
+      return yes;
+    };
+
     const act = async (id: RequestId, method: string, params: Params): Promise<void> => {
       if (method === "tools/call") {
-        if (typeof params["name"] !== "string") {
+        const name = params["name"];
+        if (typeof name !== "string") {
           fail(id, INVALID_PARAMS, "tools/call needs a tool name");
+          return;
+        }
+        const args = isRecord(params["arguments"]) ? params["arguments"] : {};
+        if (!(await allowed(id, { method, name, arguments: args }))) {
           return;
         }
         const result = await services.route({
           serverId: view.activity.serverId,
           method: "tools/call",
-          params: { name: params["name"], arguments: params["arguments"] ?? {} },
+          params: { name, arguments: args },
         });
         answer(id, result);
         return;
@@ -162,8 +197,14 @@ export function hostBridge(): McpAppViewConnect {
         return;
       }
       const text = messageText(params["content"]);
-      const sent = text !== "" && (await host.sendMessage(text));
-      answer(id, sent ? {} : { isError: true });
+      if (text === "") {
+        answer(id, { isError: true });
+        return;
+      }
+      if (!(await allowed(id, { method: "ui/message", text }))) {
+        return;
+      }
+      answer(id, (await host.sendMessage(text)) ? {} : { isError: true });
     };
 
     const onRequest = (id: RequestId, method: string, params: Params): void => {
@@ -185,12 +226,9 @@ export function hostBridge(): McpAppViewConnect {
         return;
       }
       if (method === "tools/call" || method === "ui/open-link" || method === "ui/message") {
-        if (!channel.live) {
-          fail(id, REFUSED, `${method} is refused: this view is drawn from a stored conversation`);
-          return;
-        }
-        if (tornDown) {
-          fail(id, REFUSED, `${method} is refused: this view asked to be torn down`);
+        const refused = refusal(method);
+        if (refused !== null) {
+          fail(id, REFUSED, refused);
           return;
         }
         act(id, method, params).catch((error: unknown) =>

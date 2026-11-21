@@ -231,9 +231,10 @@ export const SCENARIOS = [
     title: "MCP Apps",
     since: "0.5.0",
     summary:
-      "The ./mcp-apps entry frames a view in a sandbox and answers its bridge: the view initialises, shows its tool input and result, calls a tool and sends a message.",
+      "The ./mcp-apps entry frames a view in a sandbox and answers its bridge: the view initialises, shows its tool input and result, calls a tool and sends a message, each once you allow it in a card under the view.",
     prompts: [
       ["A view with a server", "mcp app"],
+      ["A view that calls on load", "mcp app that calls on load"],
       ["A view without one", "mcp app without a server"],
     ],
   },

@@ -134,6 +134,10 @@ export interface UiStrings {
   mcpAppUnsupported: string;
   /** Label of the control that returns a fullscreen MCP App view inline. */
   mcpAppExitFullscreen: string;
+  /** Prompt of the card that asks whether an MCP App view may send the message shown under it. */
+  mcpAppConfirmMessage: string;
+  /** Prompt of the card that asks whether an MCP App view may run a tool. Token: `{tool}`. */
+  mcpAppConfirmTool: string;
   /** Notice shown on mount when the previous run never produced a response. */
   runInterrupted: string;
   /** Tool-result content (and card text) when the page moved mid-run. */
@@ -527,6 +531,8 @@ export const DEFAULT_UI_STRINGS: UiStrings = {
   enqueuedMessages: "Added during the run",
   mcpAppUnsupported: "An app view can't be shown here: {uri}",
   mcpAppExitFullscreen: "Exit full screen",
+  mcpAppConfirmMessage: "This app wants to send this message for you:",
+  mcpAppConfirmTool: "This app wants to run “{tool}”",
   runInterrupted: "The previous response didn’t finish — the page changed before it arrived.",
   pageMoved:
     "The page changed since you last looked at it. Call read_page to see the current page, then retry.",
