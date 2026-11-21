@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A detached start on a queued mount is followed.** A django-ag-ui 0.82.0+ mount with a
+  `firing_queue=` answers a start that asks to detach with `200 {"thread_id", "run_id"}` and runs
+  it on a worker; the element's agent now exchanges that answer for the thread's run log
+  (`events/?after=0`) and streams the run as it would have streamed the start, where it used to
+  read the JSON as an empty stream and show "Connection lost". The replay's opening
+  `MESSAGES_SNAPSHOT` (the stored conversation, without the turn just sent) is not applied, so
+  the turn stays in the history and in the next request. Under the existing opt-in
+  (`data-detach-runs` with `data-threads-url`); nothing new to opt into. `createHttpAgent` takes
+  `getEventsUrl`, a live source of `eventsUrl` read per replay; a host factory wrapping it passes
+  it on with the rest of the options.
+
+### Fixed
+
+- **A turn parked behind a joined run no longer fails on the server's release lag.** django-ag-ui
+  logs a run's `RUN_FINISHED` before it lets go of the thread, so the parked turn sent the moment
+  the joined replay ended could meet a second `409` naming that same run and be shown as an
+  error. It is now asked once more after a quarter second; a second refusal is still the error.
+  No opt-in.
+- **`data-threads-url` set after the element connected now reaches the run routes.** The agent
+  took its run log's URL when it was built, so the next reattach went to the old URL, or nowhere
+  when the attribute had been missing. A replay now reads the attribute when it is made, as a
+  cancel already did. The thread list and its store still read it only while connecting, which
+  the late-change warning is still about. No opt-in.
+
 ## [0.8.0] — 2026-11-21
 
 ### Added

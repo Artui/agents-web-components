@@ -4273,6 +4273,8 @@ export class AgUiChat extends HTMLElement {
       initialMessages: seed.initialMessages,
       initialState: this.#sharedState,
       ...(runRoutes === null ? {} : { eventsUrl: runRoutes.eventsUrl(threadId) }),
+      // Read per reattach, so a data-threads-url set after this build is followed.
+      getEventsUrl: () => this.#runRoutes()?.eventsUrl(threadId),
     });
     return new AgUiClient({
       agent,

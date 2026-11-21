@@ -271,6 +271,20 @@ export const SCENARIOS = [
       "data-detach-runs": "",
     },
   },
+  {
+    slug: "detached-queued-start",
+    group: "Conversation",
+    title: "A start a queued mount takes off its request",
+    since: "0.9.0",
+    summary:
+      "A mount with a firing_queue= answers a detached start with 200 {thread_id, run_id} and runs it on a worker; the element follows the run through its log and streams it as it would have streamed the start, with the turn kept in the history.",
+    prompts: [["Ask for a slow answer", "Tell me something slowly"]],
+    attrs: {
+      endpoint: "/detached/queued/agent/",
+      "data-threads-url": "/detached/threads/",
+      "data-detach-runs": "",
+    },
+  },
 ];
 
 /** The scenario a path names, or null for the start page. */
