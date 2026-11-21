@@ -188,4 +188,4 @@ if __name__ == "__main__":
     call_command("migrate", verbosity=0)
     recorded = asyncio.run(record())
     OUT.write_text(_normalise(json.dumps(recorded, indent=2)) + "\n")
-    sys.stdout.write(f"wrote {OUT.name}\n")
+    sys.stdout.write(f"wrote {OUT.name}; regenerate with: {RUN}\n")
