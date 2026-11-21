@@ -70,12 +70,12 @@ describe("DetachedRuns", () => {
       .mockRejectedValueOnce(new TypeError("offline"));
     vi.stubGlobal("fetch", fetch);
 
-    await runs().cancel("t1");
+    await runs("include").cancel("t1");
     await runs().cancel("t1");
     await runs().cancel("t1");
     const [url, init] = fetch.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("/agent/threads/t1/cancel/");
-    expect(init).toEqual({ method: "POST", headers: { "X-For": url } });
+    expect(init).toEqual({ method: "POST", headers: { "X-For": url }, credentials: "include" });
     expect(fetch).toHaveBeenCalledTimes(3);
   });
 });
