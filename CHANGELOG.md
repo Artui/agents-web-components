@@ -29,6 +29,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `ThreadsStrings` `running`, `waiting`, `failed` and `unread`, and draws each
   `ag-ui-threads-change` list without listing again. The history drawer draws no marks yet.
 
+- **A thread restored while its run waits on an approval offers the approval.** With
+  `data-threads-url` on a django-ag-ui 0.84.0+ mount with a run store, restoring a thread the list
+  names as waiting on approvals (`metadata.kind == "approval"`) leaves the parked call open,
+  shows the approval card on it as a live run does, and resumes the run with the person's
+  answer, where the call used to be closed as not finished. No opt-in: a server without a run
+  store lists no interrupts. A `question` or `external` interrupt is not offered. Stop, or leaving
+  the thread, while the person decides keeps the run parked. `ClientConversationStore` gains the
+  optional `waitingInterrupts(threadId)`, and `AgUiClient` gains `answerParked(interrupts)`.
+
 - **A detached start on a queued mount is followed.** A django-ag-ui 0.82.0+ mount with a
   `firing_queue=` answers a start that asks to detach with `200 {"thread_id", "run_id"}` and runs
   it on a worker; the element's agent now exchanges that answer for the thread's run log

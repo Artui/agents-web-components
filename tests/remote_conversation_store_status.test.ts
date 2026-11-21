@@ -331,4 +331,44 @@ describe("RemoteConversationStore thread status", () => {
     expect(listener.mock.calls).toEqual([[[]], [[]]]);
     stop();
   });
+
+  it("names the interrupts a thread waits on, asking again with the ETag", async () => {
+    fetchMock
+      .mockResolvedValueOnce(recordedList(recorded.listed))
+      .mockResolvedValueOnce(recordedList(recorded.notModified))
+      .mockResolvedValueOnce(recordedList(recorded.listedAfterResume));
+    const store = new RemoteConversationStore(URL_);
+    const first = await store.waitingInterrupts("t-approve");
+    const again = await store.waitingInterrupts("t-approve");
+    const answered = await store.waitingInterrupts("t-approve");
+
+    expect(first.map((interrupt) => interrupt.id)).toEqual(["int-call-1"]);
+    expect(again).toEqual(first);
+    expect(fetchMock.mock.calls[1]?.[1]).toEqual({
+      headers: { "If-None-Match": recorded.listed.etag },
+    });
+    expect(answered).toEqual([]);
+  });
+
+  it("names none for a thread not waiting, not listed, or not listable", async () => {
+    fetchMock
+      .mockResolvedValueOnce(recordedList(recorded.listed))
+      .mockResolvedValueOnce(recordedList(recorded.listed))
+      .mockResolvedValueOnce(new Response(null, { status: 500 }));
+
+    expect(await new RemoteConversationStore(URL_).waitingInterrupts("t-read")).toEqual([]);
+    expect(await new RemoteConversationStore(URL_).waitingInterrupts("t-gone")).toEqual([]);
+    expect(await new RemoteConversationStore(URL_).waitingInterrupts("t-read")).toEqual([]);
+  });
+
+  it("does not ask a server whose listing carried no status", async () => {
+    fetchMock.mockResolvedValueOnce(
+      list([{ thread_id: "t1", title: "A", updated_at: null, preview: "" }]),
+    );
+    const store = new RemoteConversationStore(URL_);
+    await store.listThreads();
+
+    expect(await store.waitingInterrupts("t1")).toEqual([]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });

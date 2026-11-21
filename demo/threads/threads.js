@@ -10,6 +10,7 @@ const chat = document.getElementById("chat");
 // element is defined, since data-threads-url is read while it connects.
 const status = new URLSearchParams(location.search).get("status");
 if (status !== null) {
+  chat.setAttribute("endpoint", "/status/agent/");
   chat.setAttribute("data-threads-url", "/status/threads/");
   chat.setAttribute("data-thread-status", status === "stream" ? "stream" : "poll");
 }

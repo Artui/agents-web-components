@@ -1316,6 +1316,14 @@ export class AgUiChat extends HTMLElement {
           this.#joined = waited ? run : null;
         }
       },
+      answerParked: (approvals) => {
+        // As a reattach: running from now, and a host's send waiting on the
+        // restore goes after the resumed run.
+        const waited = this.#sending !== this.#restoreHold?.hold;
+        this.#setRunning(true);
+        const run = this.#ensureClient().answerParked(approvals);
+        this.#joined = waited ? run : null;
+      },
       resetState: () => this.#resetState(),
       setRunning: (running) => this.#setRunning(running),
       threadChanged: (threadId, reason) => this.#dispatchThread(threadId, reason),

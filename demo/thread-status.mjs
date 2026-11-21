@@ -7,13 +7,17 @@
 //                                    that sends the list each time it changes
 // - GET  /status/threads/<id>/       one thread's messages
 // - POST /status/threads/<id>/read/  records the read, 204 or 404
+// - POST /status/agent/              a run; one carrying `resume` runs the
+//                                    approved delete and leaves the thread idle
 //
 // One thread runs for twenty seconds after the server starts and then finishes
 // away from the page, which is what turns it unread: watch its mark go from
-// running to unread, and open it to read it.
+// running to unread, and open it to read it. The waiting one is parked on an
+// approval of a delete: open it and the card asks again.
 import { createHash } from "node:crypto";
 
 const THREADS = /^\/status\/threads\/(?:([^/]+)\/(read\/)?)?$/;
+const AGENT = "/status/agent/";
 const RUN_MS = 20000;
 const started = Date.now();
 const at = (offset) => new Date(started + offset).toISOString();
@@ -82,8 +86,55 @@ function follow(req, res) {
   req.on("close", () => clearInterval(timer));
 }
 
+function run(req, res) {
+  let raw = "";
+  req.on("data", (chunk) => {
+    raw += chunk;
+  });
+  req.on("end", () => {
+    const input = JSON.parse(raw);
+    const row = threads.get(input.threadId);
+    const approved = input.resume?.[0]?.payload?.approved === true;
+    const text = input.resume === undefined ? "Nothing to do here." : approved ? "Deleted." : "Kept.";
+    const events = [
+      { type: "RUN_STARTED", threadId: input.threadId, runId: input.runId },
+      ...(input.resume === undefined
+        ? []
+        : [
+            {
+              type: "TOOL_CALL_RESULT",
+              messageId: "status-result",
+              toolCallId: "call-1",
+              content: approved ? "deleted invoice-7" : "declined",
+              role: "tool",
+            },
+          ]),
+      { type: "TEXT_MESSAGE_START", messageId: "status-answer", role: "assistant" },
+      { type: "TEXT_MESSAGE_CONTENT", messageId: "status-answer", delta: text },
+      { type: "TEXT_MESSAGE_END", messageId: "status-answer" },
+      { type: "RUN_FINISHED", threadId: input.threadId, runId: input.runId },
+    ];
+    if (row !== undefined && input.resume !== undefined) {
+      row.status = "idle";
+      row.updated = Date.now() - started;
+      row.read = row.updated;
+      row.answer = [
+        { id: "status-result", role: "tool", toolCallId: "call-1", content: events[1].content },
+        { id: "status-answer", role: "assistant", content: text },
+      ];
+    }
+    res.writeHead(200, { "content-type": "text/event-stream" });
+    res.end(events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join(""));
+  });
+}
+
 /** Answer a /status/ request; false for any other path. */
 export function statusRoute(req, res, path) {
+  if (req.method === "POST" && path === AGENT) {
+    process.stdout.write(`thread-status ${req.method} ${req.url}\n`);
+    run(req, res);
+    return true;
+  }
   const match = THREADS.exec(path);
   if (match === null) {
     return false;
@@ -110,7 +161,20 @@ export function statusRoute(req, res, path) {
   } else {
     const messages = [
       { id: `u-${id}`, role: "user", content: row.title },
-      { id: `a-${id}`, role: "assistant", content: `Its last run is ${row.status}.` },
+      row.status === "waiting"
+        ? {
+            id: `a-${id}`,
+            role: "assistant",
+            toolCalls: [
+              {
+                id: "call-1",
+                type: "function",
+                function: { name: "delete_invoice", arguments: '{"target":"invoice-7"}' },
+              },
+            ],
+          }
+        : { id: `a-${id}`, role: "assistant", content: `Its last run is ${row.status}.` },
+      ...(row.answer === undefined ? [] : row.answer),
     ];
     res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ messages }));
   }

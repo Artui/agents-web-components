@@ -145,6 +145,14 @@ export interface ClientConversationStore {
     listener: (threads: readonly ThreadMeta[]) => void,
     transport: ThreadsTransport,
   ): () => void;
+  /**
+   * The interrupts a thread's run is parked on, as the server lists them now;
+   * empty when it is not waiting, or the store cannot tell.
+   *
+   * Optional: asked when a thread is restored, so a run parked on an approval
+   * before this page loaded can be offered for the person to answer.
+   */
+  waitingInterrupts?(threadId: string): Promise<readonly Interrupt[]>;
 }
 
 const THREAD_SUFFIX = "thread";

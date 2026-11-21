@@ -297,8 +297,18 @@ export interface AgUiRunRequest {
 
 /** A {@link AgUiClient.run} request, and who hears that its first round started. */
 interface Action {
-  readonly request: AgUiRunRequest;
+  readonly request?: AgUiRunRequest;
   readonly onStarted: (() => void) | undefined;
+  /**
+   * A run the server parked on these interrupts before this page loaded. Asked
+   * once, however many times the loop is entered, so a retried request carries
+   * the same answers rather than asking the person again.
+   */
+  readonly parked?: {
+    readonly interrupts: readonly Interrupt[];
+    /** The person's answers, or `null` with no resolver to ask. */
+    readonly answers: () => Promise<Readonly<Record<string, InterruptResponse>> | null>;
+  };
 }
 
 /**
@@ -636,6 +646,33 @@ export class AgUiClient {
     await this.#run(undefined, null);
   }
 
+  /**
+   * Answer the interrupts a run parked on before this page loaded (a thread
+   * restored while waiting on an approval), then carry on as the run would
+   * have: the host's resolver is asked, and its answers resume the run.
+   *
+   * A Stop while the person decides sends nothing and writes nothing, so the
+   * run stays parked on the server for the next visit to offer again.
+   */
+  async answerParked(interrupts: readonly Interrupt[]): Promise<void> {
+    this.#cancelled = false;
+    const resolve = this.#resolveInterrupts;
+    let answers: Promise<Readonly<Record<string, InterruptResponse>> | null> | undefined;
+    await this.#run(
+      {
+        onStarted: undefined,
+        parked: {
+          interrupts,
+          answers: () => {
+            answers ??= resolve === null ? Promise.resolve(null) : resolve(interrupts);
+            return answers;
+          },
+        },
+      },
+      null,
+    );
+  }
+
   /** Append a frontend tool result to history (used by the resume path). */
   addToolResult(toolCallId: string, content: string): void {
     this.#agent.addMessage({ id: randomUUID(), role: "tool", content, toolCallId });
@@ -886,6 +923,15 @@ export class AgUiClient {
     // inside one #run().
     let resume: ResumeEntry[] | undefined;
     let resuming: ReadonlySet<string> = new Set();
+    const parked = action?.parked;
+    if (parked !== undefined) {
+      const responses = await parked.answers();
+      if (responses === null || this.#cancelled) {
+        return;
+      }
+      resume = buildResumeArray([...parked.interrupts], responses);
+      resuming = new Set(parked.interrupts.flatMap(({ toolCallId }) => toolCallId ?? []));
+    }
     for (let round = 0; round < this.#maxToolRounds; round += 1) {
       // A cancel during the previous round's tool execution lands here: the
       // running handler completed, but no further round starts. The check

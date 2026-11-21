@@ -229,6 +229,20 @@ export class RemoteConversationStore implements ClientConversationStore {
     return watch.start();
   }
 
+  /**
+   * The interrupts the server lists `threadId` as waiting on, asked again with
+   * the ETag so a run answered elsewhere is not offered here. A server whose
+   * listing carried no `status` has no run store, so it is not asked.
+   */
+  async waitingInterrupts(threadId: string): Promise<readonly Interrupt[]> {
+    if (this.#listed !== null && !this.#statusServed) {
+      return [];
+    }
+    // django-ag-ui lists interrupts only on a waiting row.
+    const row = (await this.#fetchThreads())?.find((listed) => listed.thread_id === threadId);
+    return row?.interrupts ?? [];
+  }
+
   /** One poll: the rows when they changed, `undefined` when a `304` says not, `null` on failure. */
   async #poll(): Promise<readonly ServerThreadRow[] | null | undefined> {
     const before = this.#listed;

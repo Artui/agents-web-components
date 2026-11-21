@@ -225,7 +225,12 @@ describe("an element removed and inserted again", () => {
   });
 
   it("does not stack a second remote thread store on the first", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ threads: [] }) });
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      json: async () => ({ threads: [] }),
+    });
     vi.stubGlobal("fetch", fetchMock);
     const { el } = mount({ "data-threads-url": "/agent/threads/" });
     reinsert(el);
@@ -242,7 +247,12 @@ describe("an element removed and inserted again", () => {
   it("wraps a store the host assigned while it was away, not the one it had", () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ threads: [] }) }),
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        json: async () => ({ threads: [] }),
+      }),
     );
     const { el } = mount({ "data-threads-url": "/agent/threads/" });
     el.remove();
@@ -272,7 +282,12 @@ describe("an element removed and inserted again", () => {
   it("drops the remote thread store when data-threads-url went while it was away", () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ threads: [] }) }),
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        json: async () => ({ threads: [] }),
+      }),
     );
     const { el } = mount({ "data-threads-url": "/agent/threads/" });
     expect(el.conversationStore).toBeInstanceOf(RemoteConversationStore);

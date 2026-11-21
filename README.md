@@ -2222,9 +2222,12 @@ server, or a mount without a run store, lists none of them and nothing below hap
 - **A waiting approval is answered where it waits.** Opening a thread whose run is parked on an
   approval (`metadata.kind == "approval"`) shows the approval card on its tool call, as a live
   run's interrupt does, and the answer starts the run again with `resume` built by
-  `@ag-ui/client`'s `buildResumeArray`. A `question` or `external` interrupt is marked waiting
-  and not offered: the server maps every resume entry to an approval, so answering one that way
-  would approve it.
+  `@ag-ui/client`'s `buildResumeArray`. Asked of the store when the thread is restored
+  (`waitingInterrupts(threadId)`, which `data-threads-url` answers from the list with its ETag),
+  so it needs no `data-thread-status`. Stop, or leaving the thread, while the person decides
+  sends and writes nothing: the run stays parked and is offered again next time. A `question` or
+  `external` interrupt, or a mix, is marked waiting and not offered: the server maps every resume
+  entry to an approval, so answering one that way would approve it.
 
 ## A2UI surfaces
 
