@@ -108,6 +108,13 @@
           <code>chat</code> property. Pick a row or a pill to switch; hover one for its delete,
           which asks first. "Seed conversations" adds a few to pick from.
         </p>
+        <p class="try">
+          <a href="/threads/?status">Run marks</a> lists threads from a server that reports run
+          status and polls it (<a href="/threads/?status=stream">or follows its stream</a>): each
+          row is marked waiting, failed, running or unread. The running one finishes twenty
+          seconds after the demo server starts and turns unread; open it to read it. The waiting
+          one is parked on an approval: open it and approve or deny the delete.
+        </p>
       </aside>
       <ag-ui-chat id="chat" endpoint="/agent/" placement="embedded" data-start-open></ag-ui-chat>
     </main>

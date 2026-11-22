@@ -20,6 +20,7 @@ import {
   THEME_EVENT,
   THREAD_EVENT,
   THREAD_TITLE_EVENT,
+  THREADS_CHANGE_EVENT,
   TOGGLE_EVENT,
   TOOL_DISPLAY,
   TOOL_GROUP_DISPLAY,
@@ -115,6 +116,7 @@ import type { StateDetail } from "./events/state_detail.js";
 import type { SubmitDetail } from "./events/submit_detail.js";
 import type { ThreadDetail } from "./events/thread_detail.js";
 import type { ThreadTitleDetail } from "./events/thread_title_detail.js";
+import type { ThreadsChangeDetail } from "./events/threads_change_detail.js";
 import type { ToggleDetail } from "./events/toggle_detail.js";
 import type { UnreadDetail } from "./events/unread_detail.js";
 import type { MessageRole } from "./message_role.js";
@@ -728,6 +730,8 @@ export class AgUiChat extends HTMLElement {
   #anchorWarned = false;
   // Unseen answers per thread: finished while collapsed or off screen.
   #unreadByThread = new Map<string, number>();
+  // Threads an answer landed on in view, read once its run has settled.
+  #readOnSettle = new Set<string>();
   /** Empty-state region at the top of the message list; hidden once anything renders. */
   readonly #emptyWrap: HTMLDivElement;
   /**
@@ -849,6 +853,8 @@ export class AgUiChat extends HTMLElement {
   readonly #voice: ComposerVoice;
   /** Whether the element is currently in the DOM; gates the connect-time warning. */
   #connected = false;
+  /** Stops the thread list watch `data-thread-status` started, while one runs. */
+  #unwatch: (() => void) | null = null;
   /** A {@link newChat} asked for before the element connected, to start at connect. */
   #newChatOnConnect = false;
   /**
@@ -1084,6 +1090,11 @@ export class AgUiChat extends HTMLElement {
       setRunning: (running) => this.#setRunning(running),
       appendMessage: (role, content) => this.appendMessage(role, content),
       noteUnread: (threadId) => this.#noteUnread(threadId),
+      runSettled: (threadId) => {
+        if (this.#readOnSettle.delete(threadId)) {
+          this.conversationStore.markRead?.(threadId);
+        }
+      },
       newChat: () => this.newChat(),
       showUsage: () => readFlag(this, "show-usage"),
       skillsChanged: () => {
@@ -1312,6 +1323,14 @@ export class AgUiChat extends HTMLElement {
           this.#joined = waited ? run : null;
         }
       },
+      answerParked: (approvals) => {
+        // As a reattach: running from now, and a host's send waiting on the
+        // restore goes after the resumed run.
+        const waited = this.#sending !== this.#restoreHold?.hold;
+        this.#setRunning(true);
+        const run = this.#ensureClient().answerParked(approvals);
+        this.#joined = waited ? run : null;
+      },
       resetState: () => this.#resetState(),
       setRunning: (running) => this.#setRunning(running),
       threadChanged: (threadId, reason) => this.#dispatchThread(threadId, reason),
@@ -1335,6 +1354,7 @@ export class AgUiChat extends HTMLElement {
       "data-side",
       "data-small-viewport",
       "data-threads-search",
+      "data-thread-status",
       "credentials",
       "user-key",
       "user-name",
@@ -1362,6 +1382,10 @@ export class AgUiChat extends HTMLElement {
     }
     if (name === "data-tool-group-display") {
       this.#transcript.refreshStepGroups();
+      return;
+    }
+    if (name === "data-thread-status") {
+      this.#watchThreads();
       return;
     }
     if (name === "data-threads-search") {
@@ -1452,6 +1476,18 @@ export class AgUiChat extends HTMLElement {
       // while detached (see #principalKey). Absent and empty name one principal.
       if (this.#connected && (previous ?? "") !== (value ?? "")) {
         this.#changePrincipal(previous ?? "", value ?? "");
+      }
+      return;
+    }
+    // Half live: the run routes read it per request, the thread store only while connecting.
+    if (name === "data-threads-url") {
+      if (this.#connected && previous !== value) {
+        console.warn(
+          '<ag-ui-chat>: "data-threads-url" was changed after the element connected. ' +
+            "The next run replay and cancel go to the new URL, but the thread list and " +
+            "its store keep the one read while connecting. To move them too, remove and " +
+            "re-insert the element.",
+        );
       }
       return;
     }
@@ -2027,6 +2063,7 @@ export class AgUiChat extends HTMLElement {
     window.visualViewport?.removeEventListener("scroll", this.#onViewportResize);
     this.#storage.release();
     this.#chatRegistration.leave();
+    this.#stopWatch();
     this.#cancelRun();
     this.#excerpts.detachPageOffer();
     this.#attachments.tray?.dispose();
@@ -2113,6 +2150,31 @@ export class AgUiChat extends HTMLElement {
       this.#threadStore = { remote, inner };
       this.conversationStore = remote;
     }
+    this.#watchThreads();
+  }
+
+  /**
+   * Watch the store's thread list while connected, as `data-thread-status`
+   * asks (`poll` or `stream`), handing each list on in
+   * {@link THREADS_CHANGE_EVENT} and counting what it lists unread.
+   */
+  #watchThreads(): void {
+    this.#stopWatch();
+    const transport = this.getAttribute("data-thread-status");
+    const store = this.conversationStore;
+    if (!this.isConnected || (transport !== "poll" && transport !== "stream")) {
+      return;
+    }
+    this.#unwatch =
+      store.watchThreads?.((threads) => {
+        this.#takeListedUnread(threads);
+        this.#emit<ThreadsChangeDetail>(THREADS_CHANGE_EVENT, { threads });
+      }, transport) ?? null;
+  }
+
+  #stopWatch(): void {
+    this.#unwatch?.();
+    this.#unwatch = null;
   }
 
   /**
@@ -3487,12 +3549,14 @@ export class AgUiChat extends HTMLElement {
   }
 
   /**
-   * Note an answer that finished on `threadId`: read as it lands when that
-   * thread is on screen in an expanded panel, otherwise one more unseen.
+   * Note an answer that finished on `threadId`: read when its run settles if
+   * that thread is on screen in an expanded panel, otherwise one more unseen.
+   * Not as it lands: a server saves the conversation after the answer's end
+   * and before the run's, and a read sent first leaves the thread listed unread.
    */
   #noteUnread(threadId: string): void {
     if (this.#inView(threadId)) {
-      this.conversationStore.markRead?.(threadId);
+      this.#readOnSettle.add(threadId);
       return;
     }
     this.#unreadByThread.set(threadId, (this.#unreadByThread.get(threadId) ?? 0) + 1);
@@ -4273,6 +4337,8 @@ export class AgUiChat extends HTMLElement {
       initialMessages: seed.initialMessages,
       initialState: this.#sharedState,
       ...(runRoutes === null ? {} : { eventsUrl: runRoutes.eventsUrl(threadId) }),
+      // Read per reattach, so a data-threads-url set after this build is followed.
+      getEventsUrl: () => this.#runRoutes()?.eventsUrl(threadId),
     });
     return new AgUiClient({
       agent,

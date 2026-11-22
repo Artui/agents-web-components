@@ -1,0 +1,339 @@
+{
+  "generator": "scripts/record_thread_status_fixture.py",
+  "djangoAgUi": "0.84.0",
+  "agUiProtocol": "1.0.0",
+  "canonicalized": [
+    "uuid ids",
+    "timestamps, order kept",
+    "etags"
+  ],
+  "firstTurnReadWhileRunning": {
+    "status": 404
+  },
+  "firstTurnRowWhileRunning": null,
+  "firstTurnRowAfterRunAway": {
+    "thread_id": "t-first",
+    "title": "Hi",
+    "updated_at": "2026-01-01T00:00:03.000000+00:00",
+    "preview": "partial answer and the rest",
+    "agent_id": "helper",
+    "status": "idle",
+    "last_read_at": null
+  },
+  "seenRun": "data: {\"type\":\"RUN_STARTED\",\"timestamp\":0,\"threadId\":\"t-read\",\"runId\":\"r1\",\"protocolVersion\":\"1.0\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_START\",\"timestamp\":0,\"messageId\":\"id-1\",\"role\":\"assistant\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"timestamp\":0,\"messageId\":\"id-1\",\"delta\":\"partial answer\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"timestamp\":0,\"messageId\":\"id-1\",\"delta\":\" and the rest\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_END\",\"timestamp\":0,\"messageId\":\"id-1\"}\n\ndata: {\"type\":\"RUN_FINISHED\",\"timestamp\":0,\"threadId\":\"t-read\",\"runId\":\"r1\",\"outcome\":{\"type\":\"success\"}}\n\n",
+  "rowAfterSeenRun": {
+    "thread_id": "t-read",
+    "title": "Hello",
+    "updated_at": "2026-01-01T00:00:00.000000+00:00",
+    "preview": "partial answer and the rest",
+    "agent_id": "helper",
+    "status": "idle",
+    "last_read_at": null
+  },
+  "markRead": {
+    "status": 204
+  },
+  "rowAfterRead": {
+    "thread_id": "t-read",
+    "title": "Hello",
+    "updated_at": "2026-01-01T00:00:00.000000+00:00",
+    "preview": "partial answer and the rest",
+    "agent_id": "helper",
+    "status": "idle",
+    "last_read_at": "2026-01-01T00:00:01.000000+00:00"
+  },
+  "rowWhileRunning": {
+    "thread_id": "t-read",
+    "title": "Hello",
+    "updated_at": "2026-01-01T00:00:00.000000+00:00",
+    "preview": "partial answer and the rest",
+    "agent_id": "helper",
+    "status": "running",
+    "last_read_at": "2026-01-01T00:00:01.000000+00:00"
+  },
+  "rowAfterRunAway": {
+    "thread_id": "t-read",
+    "title": "Hello",
+    "updated_at": "2026-01-01T00:00:02.000000+00:00",
+    "preview": "partial answer and the rest",
+    "agent_id": "helper",
+    "status": "idle",
+    "last_read_at": "2026-01-01T00:00:01.000000+00:00"
+  },
+  "markReadUnknown": {
+    "status": 404,
+    "etag": null,
+    "body": {
+      "error": "not found"
+    }
+  },
+  "parkedApprovalRun": "data: {\"type\":\"RUN_STARTED\",\"timestamp\":0,\"threadId\":\"t-approve\",\"runId\":\"r3\",\"protocolVersion\":\"1.0\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_START\",\"timestamp\":0,\"messageId\":\"id-2\",\"role\":\"assistant\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_END\",\"timestamp\":0,\"messageId\":\"id-2\"}\n\ndata: {\"type\":\"TOOL_CALL_START\",\"timestamp\":0,\"toolCallId\":\"call-1\",\"toolCallName\":\"delete_invoice\",\"parentMessageId\":\"id-2\"}\n\ndata: {\"type\":\"TOOL_CALL_ARGS\",\"timestamp\":0,\"toolCallId\":\"call-1\",\"delta\":\"{\\\"target\\\": \\\"invoice-7\\\"}\"}\n\ndata: {\"type\":\"TOOL_CALL_END\",\"timestamp\":0,\"toolCallId\":\"call-1\"}\n\ndata: {\"type\":\"RUN_FINISHED\",\"timestamp\":0,\"threadId\":\"t-approve\",\"runId\":\"r3\",\"outcome\":{\"type\":\"interrupt\",\"interrupts\":[{\"id\":\"int-call-1\",\"reason\":\"tool_call\",\"message\":\"Approve delete_invoice({\\\"target\\\":\\\"invoice-7\\\"})?\",\"toolCallId\":\"call-1\",\"responseSchema\":{\"properties\":{\"approved\":{\"type\":\"boolean\"},\"editedArgs\":{\"type\":\"object\"},\"reason\":{\"type\":\"string\"}},\"required\":[\"approved\"],\"type\":\"object\"}}]}}\n\n",
+  "listed": {
+    "status": 200,
+    "etag": "\"etag-1\"",
+    "body": {
+      "threads": [
+        {
+          "thread_id": "t-failed",
+          "title": "Please fail",
+          "updated_at": "2026-01-01T00:00:06.000000+00:00",
+          "preview": "Please fail",
+          "agent_id": "helper",
+          "status": "failed",
+          "last_read_at": null,
+          "reason": "error"
+        },
+        {
+          "thread_id": "t-question",
+          "title": "Please ask me",
+          "updated_at": "2026-01-01T00:00:05.000000+00:00",
+          "preview": "Please ask me",
+          "agent_id": "helper",
+          "status": "waiting",
+          "last_read_at": null,
+          "interrupts": [
+            {
+              "id": "int-call-2",
+              "reason": "tool_call",
+              "message": "ask",
+              "toolCallId": "call-2",
+              "metadata": {
+                "destructive": false,
+                "kind": "question"
+              }
+            }
+          ]
+        },
+        {
+          "thread_id": "t-approve",
+          "title": "Please delete invoice 7",
+          "updated_at": "2026-01-01T00:00:04.000000+00:00",
+          "preview": "Please delete invoice 7",
+          "agent_id": "helper",
+          "status": "waiting",
+          "last_read_at": null,
+          "interrupts": [
+            {
+              "id": "int-call-1",
+              "reason": "tool_call",
+              "message": "delete_invoice",
+              "toolCallId": "call-1",
+              "metadata": {
+                "destructive": true,
+                "kind": "approval"
+              }
+            }
+          ]
+        },
+        {
+          "thread_id": "t-first",
+          "title": "Hi",
+          "updated_at": "2026-01-01T00:00:03.000000+00:00",
+          "preview": "partial answer and the rest",
+          "agent_id": "helper",
+          "status": "idle",
+          "last_read_at": null
+        },
+        {
+          "thread_id": "t-read",
+          "title": "Hello",
+          "updated_at": "2026-01-01T00:00:02.000000+00:00",
+          "preview": "partial answer and the rest",
+          "agent_id": "helper",
+          "status": "idle",
+          "last_read_at": "2026-01-01T00:00:01.000000+00:00"
+        }
+      ],
+      "agent": {
+        "id": "helper",
+        "name": "Helper",
+        "description": "Answers questions."
+      }
+    }
+  },
+  "notModified": {
+    "status": 304,
+    "etag": "\"etag-1\"",
+    "body": null
+  },
+  "approvalHistory": [
+    {
+      "id": "u-r3",
+      "role": "user",
+      "content": "Please delete invoice 7"
+    },
+    {
+      "id": "id-2",
+      "role": "assistant",
+      "toolCalls": [
+        {
+          "id": "call-1",
+          "type": "function",
+          "function": {
+            "name": "delete_invoice",
+            "arguments": "{\"target\":\"invoice-7\"}"
+          }
+        }
+      ]
+    }
+  ],
+  "resumeSent": [
+    {
+      "interruptId": "int-call-1",
+      "status": "resolved",
+      "payload": {
+        "approved": true
+      }
+    }
+  ],
+  "resumedRun": {
+    "status": 200,
+    "body": "data: {\"type\":\"RUN_STARTED\",\"timestamp\":0,\"threadId\":\"t-approve\",\"runId\":\"r6\",\"protocolVersion\":\"1.0\"}\n\ndata: {\"type\":\"TOOL_CALL_RESULT\",\"timestamp\":0,\"messageId\":\"id-3\",\"toolCallId\":\"call-1\",\"content\":\"deleted invoice-7\",\"role\":\"tool\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_START\",\"timestamp\":0,\"messageId\":\"id-4\",\"role\":\"assistant\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"timestamp\":0,\"messageId\":\"id-4\",\"delta\":\"Deleted.\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_END\",\"timestamp\":0,\"messageId\":\"id-4\"}\n\ndata: {\"type\":\"RUN_FINISHED\",\"timestamp\":0,\"threadId\":\"t-approve\",\"runId\":\"r6\",\"outcome\":{\"type\":\"success\"}}\n\n"
+  },
+  "listedAfterResume": {
+    "status": 200,
+    "etag": "\"etag-2\"",
+    "body": {
+      "threads": [
+        {
+          "thread_id": "t-approve",
+          "title": "Please delete invoice 7",
+          "updated_at": "2026-01-01T00:00:07.000000+00:00",
+          "preview": "Deleted.",
+          "agent_id": "helper",
+          "status": "idle",
+          "last_read_at": null
+        },
+        {
+          "thread_id": "t-failed",
+          "title": "Please fail",
+          "updated_at": "2026-01-01T00:00:06.000000+00:00",
+          "preview": "Please fail",
+          "agent_id": "helper",
+          "status": "failed",
+          "last_read_at": null,
+          "reason": "error"
+        },
+        {
+          "thread_id": "t-question",
+          "title": "Please ask me",
+          "updated_at": "2026-01-01T00:00:05.000000+00:00",
+          "preview": "Please ask me",
+          "agent_id": "helper",
+          "status": "waiting",
+          "last_read_at": null,
+          "interrupts": [
+            {
+              "id": "int-call-2",
+              "reason": "tool_call",
+              "message": "ask",
+              "toolCallId": "call-2",
+              "metadata": {
+                "destructive": false,
+                "kind": "question"
+              }
+            }
+          ]
+        },
+        {
+          "thread_id": "t-first",
+          "title": "Hi",
+          "updated_at": "2026-01-01T00:00:03.000000+00:00",
+          "preview": "partial answer and the rest",
+          "agent_id": "helper",
+          "status": "idle",
+          "last_read_at": null
+        },
+        {
+          "thread_id": "t-read",
+          "title": "Hello",
+          "updated_at": "2026-01-01T00:00:02.000000+00:00",
+          "preview": "partial answer and the rest",
+          "agent_id": "helper",
+          "status": "idle",
+          "last_read_at": "2026-01-01T00:00:01.000000+00:00"
+        }
+      ],
+      "agent": {
+        "id": "helper",
+        "name": "Helper",
+        "description": "Answers questions."
+      }
+    }
+  },
+  "streamContentType": "text/event-stream",
+  "streamFrame": "id: \"etag-2\"\ndata: {\"threads\":[{\"thread_id\":\"t-approve\",\"title\":\"Please delete invoice 7\",\"updated_at\":\"2026-01-01T00:00:07.000000+00:00\",\"preview\":\"Deleted.\",\"agent_id\":\"helper\",\"status\":\"idle\",\"last_read_at\":null},{\"thread_id\":\"t-failed\",\"title\":\"Please fail\",\"updated_at\":\"2026-01-01T00:00:06.000000+00:00\",\"preview\":\"Please fail\",\"agent_id\":\"helper\",\"status\":\"failed\",\"last_read_at\":null,\"reason\":\"error\"},{\"thread_id\":\"t-question\",\"title\":\"Please ask me\",\"updated_at\":\"2026-01-01T00:00:05.000000+00:00\",\"preview\":\"Please ask me\",\"agent_id\":\"helper\",\"status\":\"waiting\",\"last_read_at\":null,\"interrupts\":[{\"id\":\"int-call-2\",\"reason\":\"tool_call\",\"message\":\"ask\",\"toolCallId\":\"call-2\",\"metadata\":{\"destructive\":false,\"kind\":\"question\"}}]},{\"thread_id\":\"t-first\",\"title\":\"Hi\",\"updated_at\":\"2026-01-01T00:00:03.000000+00:00\",\"preview\":\"partial answer and the rest\",\"agent_id\":\"helper\",\"status\":\"idle\",\"last_read_at\":null},{\"thread_id\":\"t-read\",\"title\":\"Hello\",\"updated_at\":\"2026-01-01T00:00:02.000000+00:00\",\"preview\":\"partial answer and the rest\",\"agent_id\":\"helper\",\"status\":\"idle\",\"last_read_at\":\"2026-01-01T00:00:01.000000+00:00\"}],\"agent\":{\"id\":\"helper\",\"name\":\"Helper\",\"description\":\"Answers questions.\"}}\n\n",
+  "streamSkipped": null,
+  "wsgiStreamRequest": {
+    "status": 200,
+    "etag": "\"etag-2\"",
+    "body": {
+      "threads": [
+        {
+          "thread_id": "t-approve",
+          "title": "Please delete invoice 7",
+          "updated_at": "2026-01-01T00:00:07.000000+00:00",
+          "preview": "Deleted.",
+          "agent_id": "helper",
+          "status": "idle",
+          "last_read_at": null
+        },
+        {
+          "thread_id": "t-failed",
+          "title": "Please fail",
+          "updated_at": "2026-01-01T00:00:06.000000+00:00",
+          "preview": "Please fail",
+          "agent_id": "helper",
+          "status": "failed",
+          "last_read_at": null,
+          "reason": "error"
+        },
+        {
+          "thread_id": "t-question",
+          "title": "Please ask me",
+          "updated_at": "2026-01-01T00:00:05.000000+00:00",
+          "preview": "Please ask me",
+          "agent_id": "helper",
+          "status": "waiting",
+          "last_read_at": null,
+          "interrupts": [
+            {
+              "id": "int-call-2",
+              "reason": "tool_call",
+              "message": "ask",
+              "toolCallId": "call-2",
+              "metadata": {
+                "destructive": false,
+                "kind": "question"
+              }
+            }
+          ]
+        },
+        {
+          "thread_id": "t-first",
+          "title": "Hi",
+          "updated_at": "2026-01-01T00:00:03.000000+00:00",
+          "preview": "partial answer and the rest",
+          "agent_id": "helper",
+          "status": "idle",
+          "last_read_at": null
+        },
+        {
+          "thread_id": "t-read",
+          "title": "Hello",
+          "updated_at": "2026-01-01T00:00:02.000000+00:00",
+          "preview": "partial answer and the rest",
+          "agent_id": "helper",
+          "status": "idle",
+          "last_read_at": "2026-01-01T00:00:01.000000+00:00"
+        }
+      ],
+      "agent": {
+        "id": "helper",
+        "name": "Helper",
+        "description": "Answers questions."
+      }
+    },
+    "contentType": "application/json"
+  }
+}

@@ -16,6 +16,7 @@ import type { AgUiChat } from "../src/core/ag_ui_chat.js";
 import { defineChat } from "../src/core/define_chat.js";
 import { DetachedHttpAgent } from "../src/core/detached_http_agent.js";
 import recorded from "./fixtures/detached_runs.json";
+import queued from "./fixtures/queued_start.json";
 
 const THREADS = "/agent/threads/";
 
@@ -124,7 +125,7 @@ class Server {
     if (url === THREADS) {
       return json(200, { threads: [] });
     }
-    const match = /^\/agent\/threads\/([^/]+)\/(events\/|cancel\/)?(\?.*)?$/.exec(url);
+    const match = /^\/(?:agent|late)\/threads\/([^/]+)\/(events\/|cancel\/)?(\?.*)?$/.exec(url);
     if (match === null) {
       return json(404, {});
     }
@@ -191,6 +192,12 @@ function shadow(el: AgUiChat): ShadowRoot {
 
 function transcriptText(el: AgUiChat): string {
   return shadow(el).querySelector(".messages")?.textContent ?? "";
+}
+
+/** Longer than the client waits for a joined run's claim to be let go before it asks again. */
+async function releaseWait(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 400));
+  await settle();
 }
 
 /** Long enough for the stubbed requests, the streams and the answer's frame-paced render. */
@@ -652,15 +659,41 @@ describe("a start refused because a run holds the thread", () => {
     server.starts.push(
       () => json(409, recorded.busyStart.body),
       () => json(409, recorded.busyStart.body),
+      () => json(409, recorded.busyStart.body),
     );
     server.replays.push(() => sse(recorded.replayFromStart));
     await el.sendMessage("first");
     await settle();
+    await releaseWait();
 
+    expect(server.starts_().length).toBe(3);
     expect(server.to("events/").filter((call) => !call.url.includes("limit")).length).toBe(1);
     expect(shadow(el).querySelector(".message--failed")?.textContent).toContain(
       "the thread has a run in progress",
     );
+  });
+
+  it("sends the parked turn once when the server lets go of the joined run a moment late", async () => {
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { el, server } = mount();
+    await el.switchThread("t1");
+    server.starts.push(
+      () => json(409, recorded.busyStart.body),
+      () => json(409, recorded.busyStart.body),
+      () => sse(finishedRun("r9", "the parked answer")),
+    );
+    server.replays.push(() => sse(recorded.replayFromStart));
+    await el.sendMessage("first");
+    await settle();
+    await releaseWait();
+
+    expect(failedText(el)).toBe("");
+    expect(transcriptText(el)).toContain("the parked answer");
+    expect(server.starts_().map(lastUserTurn)).toEqual(["first", "first", "first"]);
+    const messages = server.starts_()[2]?.["messages"] as { content: unknown }[];
+    expect(messages.filter((message) => message.content === "first").length).toBe(1);
+    expect(replays(server).length).toBe(1);
+    expect(errors).not.toHaveBeenCalledWith(expect.stringContaining("run in progress"));
   });
 
   it("joins the run for a host action, with no turn to send again", async () => {
@@ -911,6 +944,73 @@ describe("a host send made while the restore joins a run", () => {
     expect(await sent).toBe(false);
     await settle();
     expect(server.starts_()).toEqual([]);
+  });
+});
+
+describe("a start a queued mount answers with its ids", () => {
+  it("follows the run log, renders the run, and keeps the turn for the next request", async () => {
+    const { el, server } = mount();
+    await el.switchThread("t1");
+    server.starts.push(() => json(queued.queuedStart.status, queued.queuedStart.body));
+    server.replays.push(() => sse(queued.queuedReplay));
+    await el.sendMessage("Queue this one");
+    await settle();
+
+    expect(failedText(el)).toBe("");
+    expect(transcriptText(el)).toContain("Queue this one");
+    expect(transcriptText(el)).toContain("queued answer");
+    expect(replays(server).map((call) => call.url)).toEqual(["/agent/threads/t1/events/?after=0"]);
+    expect(el.running).toBe(false);
+    server.starts.push(() => sse(finishedRun("r9", "the next answer")));
+    await el.sendMessage("And then");
+    await settle();
+
+    const messages = server.starts_()[1]?.["messages"] as { role: string; content: unknown }[];
+    expect(messages.map((message) => [message.role, message.content])).toEqual([
+      ["user", "Queue this one"],
+      ["assistant", "queued answer"],
+      ["user", "And then"],
+    ]);
+  });
+});
+
+describe("a data-threads-url set after the element connected", () => {
+  it("is not warned about before the element connects", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("data-threads-url", "/late/threads/");
+
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("is where the next reattach and cancel go", async () => {
+    quietAgentErrors();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { el, server } = mount();
+    await el.switchThread("t1");
+    server.starts.push(() => sse(finishedRun("r8", "a first answer")));
+    await el.sendMessage("hello");
+    await settle();
+    el.setAttribute("data-threads-url", "/late/threads/");
+    el.setAttribute("data-threads-url", "/late/threads/");
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0]?.[0])).toContain(
+      "The next run replay and cancel go to the new URL, but the thread list",
+    );
+
+    server.starts.push(
+      () => json(409, recorded.busyStart.body),
+      () => sse(finishedRun("r9", "a later answer")),
+    );
+    server.replays.push(() => sse(recorded.replayFromStart));
+    await el.sendMessage("again");
+    await settle();
+    expect(replays(server).map((call) => call.url)).toEqual(["/late/threads/t1/events/?after=0"]);
+
+    await startLiveRun(el, server);
+    shadow(el).querySelector<HTMLButtonElement>(".send")?.click();
+    await settle();
+    expect(server.to("cancel/").map((call) => call.url)).toEqual(["/late/threads/t1/cancel/"]);
   });
 });
 

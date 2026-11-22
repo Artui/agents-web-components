@@ -1,5 +1,5 @@
 import { randomUUID } from "@ag-ui/client";
-import { contentToText, type Message } from "@ag-ui/core";
+import { contentToText, type Interrupt, type Message } from "@ag-ui/core";
 import { MESSAGE_ROLE, TOOL_CALL_STATUS, TOOL_OUTCOME } from "../../constants.js";
 import type { ActivityRegistry } from "../../core/activity_registry.js";
 import type { AgUiClient } from "../../core/agui_client.js";
@@ -130,6 +130,8 @@ export interface ConversationHistoryHost {
   readonly runningOnServer: (threadId: string) => Promise<boolean> | null;
   /** Join the run in flight on the thread on screen, through the conversation's own client. */
   readonly reattach: () => void;
+  /** Offer the approvals the thread on screen's run is parked on, and resume it with the answers. */
+  readonly answerParked: (approvals: readonly Interrupt[]) => void;
   /** Drop the in-memory run and transcript, leaving the thread untouched. */
   readonly resetState: () => void;
   /** Swap the composer between Send and Stop, which the composer owns. */
@@ -731,10 +733,13 @@ export class ConversationHistory {
     // Asked beside the load rather than after it, and not at all when the
     // restore resumes a navigating call, which is the run then, nor of a
     // thread nothing was sent in, which cannot have one.
-    const live =
-      checkpoint === null && store.isUnsent?.(threadId) !== true
-        ? this.#host.runningOnServer(threadId)
-        : null;
+    const asks = checkpoint === null && store.isUnsent?.(threadId) !== true;
+    const live = asks ? this.#host.runningOnServer(threadId) : null;
+    // Beside the load too: the approvals a run parked on before this page
+    // loaded, which the replay must leave open for the person to answer.
+    const parked = asks
+      ? (store.waitingInterrupts?.(threadId).then(approvalsOnly, () => NO_APPROVALS) ?? null)
+      : null;
     // What a host's send waits on, for a restore with no run to resume, and
     // the hold either kind takes. Taken before the load for the same reason
     // the checkpoint is read before it: the load is the window.
@@ -768,6 +773,10 @@ export class ConversationHistory {
           this.#host.element.removeAttribute("data-restoring");
         }
       }
+      let approvals = NO_APPROVALS;
+      if (parked !== null) {
+        approvals = await parked;
+      }
       // Stopped while the store answered. Going on drew the conversation being
       // left into the chat that replaced it, and resumed its run there, on a
       // client seeded from what the restore had just drawn.
@@ -788,7 +797,11 @@ export class ConversationHistory {
             toolCallId,
             metadata: { outcome: TOOL_OUTCOME.INTERRUPTED },
           }),
-          new Set(checkpoint === null ? [] : [checkpoint.toolCallId]),
+          new Set(
+            checkpoint === null
+              ? approvals.map(({ toolCallId }) => toolCallId as string)
+              : [checkpoint.toolCallId],
+          ),
         );
         this.#restored = restored;
         for (const message of restored) {
@@ -837,6 +850,9 @@ export class ConversationHistory {
         // joined run ends. The reattach marks the composer running before it
         // returns, so the release below sends nothing it parked.
         this.#host.reattach();
+      } else if (approvals.length > 0 && this.#restoring(generation)) {
+        // Not awaited either: the person may take minutes to decide.
+        this.#host.answerParked(approvals);
       }
     } finally {
       // The resumed run starting has let go of the hold already, as a send's
@@ -1205,4 +1221,21 @@ function isRestoredToolCall(value: unknown): value is RestoredToolCall {
   }
   const call = value as { id?: unknown; function?: { name?: unknown } };
   return typeof call.id === "string" && typeof call.function?.name === "string";
+}
+
+const NO_APPROVALS: readonly Interrupt[] = [];
+
+/**
+ * The interrupts this element can answer for a run parked before the page
+ * loaded: all of them when each is an approval of a call, otherwise none,
+ * since a resume has to answer every interrupt and only approvals can be asked
+ * here.
+ */
+function approvalsOnly(interrupts: readonly Interrupt[]): readonly Interrupt[] {
+  const asked = interrupts.every(
+    (interrupt) =>
+      interrupt.toolCallId !== undefined &&
+      (interrupt.metadata as { kind?: unknown } | undefined)?.kind === "approval",
+  );
+  return asked ? interrupts : NO_APPROVALS;
 }

@@ -2,13 +2,16 @@ import {
   RUN_FINISHED_EVENT,
   THREAD_EVENT,
   THREAD_TITLE_EVENT,
+  THREADS_CHANGE_EVENT,
   THREADS_SELECT_EVENT,
 } from "../constants.js";
+import type { ThreadsChangeDetail } from "../core/events/threads_change_detail.js";
 import { DEFAULT_THREADS_STRINGS } from "./threads_strings.js";
 import { THREADS_STYLES } from "./threads_styles.js";
 import type {
   ThreadRow,
   ThreadsChat,
+  ThreadsMark,
   ThreadsSelectDetail,
   ThreadsStrings,
   ThreadsStringsInput,
@@ -172,6 +175,7 @@ export class AgUiThreads extends HTMLElement {
     for (const type of LISTEN_TO) {
       chat.addEventListener(type, this.#onChatEvent);
     }
+    chat.addEventListener(THREADS_CHANGE_EVENT, this.#onThreadsChange);
     void this.refresh();
   }
 
@@ -183,6 +187,7 @@ export class AgUiThreads extends HTMLElement {
     for (const type of LISTEN_TO) {
       chat.removeEventListener(type, this.#onChatEvent);
     }
+    chat.removeEventListener(THREADS_CHANGE_EVENT, this.#onThreadsChange);
     this.#chat = null;
     this.#listing += 1;
     this.#rows = [];
@@ -210,6 +215,13 @@ export class AgUiThreads extends HTMLElement {
 
   readonly #onChatEvent = (): void => {
     void this.refresh();
+  };
+
+  /** A list the chat's watch received: drawn as it is, and newer than any listing in flight. */
+  readonly #onThreadsChange = (event: Event): void => {
+    this.#listing += 1;
+    this.#rows = (event as CustomEvent<ThreadsChangeDetail>).detail.threads;
+    this.#render();
   };
 
   #label(): void {
@@ -265,6 +277,15 @@ export class AgUiThreads extends HTMLElement {
     text.className = "title";
     text.textContent = title;
     main.append(text);
+    const mark = markOf(row);
+    if (mark !== null) {
+      item.dataset["status"] = mark;
+      const dot = document.createElement("span");
+      dot.className = "mark";
+      dot.setAttribute("part", `mark mark-${mark}`);
+      dot.textContent = this.#strings[mark];
+      main.append(dot);
+    }
     main.addEventListener("click", () => this.#select(row.threadId));
     item.append(main);
     this.#addDelete(item, main, row.threadId, title);
@@ -337,4 +358,12 @@ export class AgUiThreads extends HTMLElement {
     this.#render();
     void this.refresh();
   }
+}
+
+/** The one mark a row carries, or `null` for an idle, read row. */
+function markOf(row: ThreadRow): ThreadsMark | null {
+  if (row.status === "waiting" || row.status === "failed" || row.status === "running") {
+    return row.status;
+  }
+  return row.unread === true ? "unread" : null;
 }

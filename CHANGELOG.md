@@ -7,6 +7,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-11-21
+
+### Added
+
+- **Thread status and unread from the server, behind a host opt-in for live updates:
+  `data-thread-status="poll"` or `"stream"`.** Without the attribute nothing is watched, and a
+  server without a run store changes nothing. With `data-threads-url` on a django-ag-ui 0.84.0+
+  mount that has a run store, every listing now reads each row's `status` (`idle`, `running`,
+  `waiting` or `failed`), the failure `reason` and the `interrupts` a waiting run parked onto
+  `ThreadMeta` (`status`, `reason`, `interrupts`), and derives `unread` from `last_read_at`: a
+  thread is unread when it changed after it was last read and is not running, and a thread never
+  read is not. Reading a thread posts `<threads-url><id>/read/`, only to a server whose listing
+  carried `status`. Listings send `If-None-Match` and reuse the rows a `304` confirms. With the
+  attribute, the chat watches the list while connected: `poll` asks again every five seconds,
+  `stream` follows the server's event stream through `fetch` (the live headers and credentials),
+  reconnects naming the last frame, and polls from then on if the server answers with JSON (a WSGI
+  deployment). Each list is handed on in the new `ag-ui-threads-change` event (detail
+  `ThreadsChangeDetail`, `{ threads }`) and counted into `unread`. `ClientConversationStore` gains
+  the optional `watchThreads(listener, transport)`. `<ag-ui-threads>` marks each row the store
+  marks, waiting before failed before running before unread, as `data-status` on the row and a
+  `mark` part (`mark-running`, `mark-waiting`, `mark-failed`, `mark-unread`) named by the new
+  `ThreadsStrings` `running`, `waiting`, `failed` and `unread`, and draws each
+  `ag-ui-threads-change` list without listing again. The history drawer draws no marks yet.
+
+- **A thread restored while its run waits on an approval offers the approval.** With
+  `data-threads-url` on a django-ag-ui 0.84.0+ mount with a run store, restoring a thread the list
+  names as waiting on approvals (`metadata.kind == "approval"`) leaves the parked call open,
+  shows the approval card on it as a live run does, and resumes the run with the person's
+  answer, where the call used to be closed as not finished. No opt-in: a server without a run
+  store lists no interrupts. A `question` or `external` interrupt is not offered. Stop, or leaving
+  the thread, while the person decides keeps the run parked. `ClientConversationStore` gains the
+  optional `waitingInterrupts(threadId)`, and `AgUiClient` gains `answerParked(interrupts)`.
+
+- **A detached start on a queued mount is followed.** A django-ag-ui 0.82.0+ mount with a
+  `firing_queue=` answers a start that asks to detach with `200 {"thread_id", "run_id"}` and runs
+  it on a worker; the element's agent now exchanges that answer for the thread's run log
+  (`events/?after=0`) and streams the run as it would have streamed the start, where it used to
+  read the JSON as an empty stream and show "Connection lost". The replay's opening
+  `MESSAGES_SNAPSHOT` (the stored conversation, without the turn just sent) is not applied, so
+  the turn stays in the history and in the next request. Under the existing opt-in
+  (`data-detach-runs` with `data-threads-url`); nothing new to opt into. `createHttpAgent` takes
+  `getEventsUrl`, a live source of `eventsUrl` read per replay, which wins over `eventsUrl`; the
+  element now passes both. **A host factory that overrides `eventsUrl`** (as
+  `createHttpAgent({ ...options, eventsUrl })`) has that override ignored: override
+  `getEventsUrl` instead, or drop it from the options. A factory that passes the options on
+  unchanged needs nothing.
+
+### Fixed
+
+- **A turn parked behind a joined run no longer fails on the server's release lag.** django-ag-ui
+  logs a run's `RUN_FINISHED` before it lets go of the thread, so the parked turn sent the moment
+  the joined replay ended could meet a second `409` naming that same run and be shown as an
+  error. It is now asked once more after a quarter second; a second refusal is still the error.
+  No opt-in.
+- **`data-threads-url` set after the element connected now reaches the run routes.** The agent
+  took its run log's URL when it was built, so the next reattach went to the old URL, or nowhere
+  when the attribute had been missing. A replay now reads the attribute when it is made, as a
+  cancel already did. The thread list and its store still read it only while connecting, and
+  the late-change warning now says which half moved. No opt-in.
+- **An answer read as it lands is now recorded when its run settles.** `markRead` was called at the
+  answer's end, which a django-ag-ui server reaches before it saves the conversation, so the read
+  could land first and the thread list as unread on the next listing. It is now called once the
+  run has settled, still once per answer, and for an answer seen landing even if the panel closed
+  before the run ended. A store of your own sees the same single call, a little later. No opt-in.
+
 ## [0.8.0] — 2026-11-21
 
 ### Added
@@ -485,7 +550,8 @@ move page walks a host over. Each entry below says whether a host opts in.
   kept offering the moon under `theme="dark"`. Only the toggle's own click redrew it before. A host
   opts in to nothing.
 
-[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/Artui/agents-web-components/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/Artui/agents-web-components/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Artui/agents-web-components/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/Artui/agents-web-components/compare/v0.5.0...v0.6.0

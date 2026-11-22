@@ -4,18 +4,31 @@ import { RemoteConversationStore } from "../src/core/remote_conversation_store.j
 
 const fetchMock = vi.fn();
 
+// Reusable across calls, unlike a Response's body; `headers` as a real one has them.
 function ok(body: unknown): Response {
-  return { ok: true, json: async () => body } as unknown as Response;
+  return {
+    ok: true,
+    status: 200,
+    headers: new Headers(),
+    json: async () => body,
+  } as unknown as Response;
 }
 
 function notOk(): Response {
-  return { ok: false, json: async () => ({}) } as unknown as Response;
+  return {
+    ok: false,
+    status: 500,
+    headers: new Headers(),
+    json: async () => ({}),
+  } as unknown as Response;
 }
 
 /** A 200 whose body isn't JSON (e.g. a proxy's HTML error page). */
 function badJson(): Response {
   return {
     ok: true,
+    status: 200,
+    headers: new Headers(),
     json: async () => {
       throw new SyntaxError("Unexpected token < in JSON");
     },

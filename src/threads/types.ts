@@ -36,7 +36,18 @@ export interface ThreadsStrings {
   readonly deleteYes: string;
   /** The inline confirm's no. */
   readonly deleteNo: string;
+  /** The mark on a row whose run works now. */
+  readonly running: string;
+  /** The mark on a row whose run waits on a person. */
+  readonly waiting: string;
+  /** The mark on a row whose last run failed. */
+  readonly failed: string;
+  /** The mark on a row that changed since it was read. */
+  readonly unread: string;
 }
+
+/** The mark a row carries, by precedence: what needs the user before what is merely new. */
+export type ThreadsMark = "waiting" | "failed" | "running" | "unread";
 
 /** What the `strings` setter takes: any of {@link ThreadsStrings}. */
 export type ThreadsStringsInput = Partial<ThreadsStrings>;

@@ -233,6 +233,7 @@ another origin, add `credentials="include"` too; see
 | `data-empty` | — | **Written by the element, not by you.** Present while the conversation has nothing in it, which is when the greeting shows. Public as a styling hook, so the chrome around a full-page chat can react to the same state, e.g. `ag-ui-chat[data-empty] ~ .page-footer { display: none }`. |
 | `data-running` | — | **Written by the element, not by you.** Present while an interaction is in flight, the same state that shows the Stop button (see the `running` property). Public as a styling hook, as `data-empty` is, so the chrome around the chat can react to it, e.g. `ag-ui-chat[data-running] ~ .toolbar button { pointer-events: none }`. |
 | `data-threads-search` | — | When the conversation list shows its search box: `auto` (absent, or any other value) from eight conversations, `always` over any list, `never` not at all. Live. See [The conversation list](#the-conversation-list). |
+| `data-thread-status` | — | Watch the conversation list for run status and unread: `poll` asks again every five seconds with the last ETag, `stream` follows the server's event stream (and polls when the server answers with JSON). Each list is handed on in `ag-ui-threads-change`. Needs a store with `watchThreads`, as `data-threads-url` gives. Live. See [Thread status](#thread-status). |
 | `data-small-viewport` | — | `off` keeps the desktop layout at every width, opting out of the [small-viewport override](#small-viewports). Styling, and read by script for the width `dockWidth` reports on a phone. Live. Everything that override sets is a token you can re-state; its trigger is a media query, which is the one thing you cannot. |
 | `data-paste-attach` | — | When to turn a long text paste into an attachment instead of composer text: absent for the 5000-character default, `off` to never, or a positive number of characters. Only acts where `data-attachments-url` (or a custom `uploadHandler`) gives it somewhere to go. |
 | `data-starters` | — | JSON array of prompts offered on an empty transcript, e.g. `'["Summarise this page"]'`. Fallback content for `slot="empty"`, so slotting your own replaces them. Shares the four-prompt and 120-character limits with the suggestion chips a run pushes. Read once at connect. |
@@ -283,7 +284,7 @@ neither camp is `data-launcher-icon-url`: it is read while the element connects,
 below, but is not observed, so a late write is inert and says nothing.
 
 **Live attributes.** Written at any time, before or after the element connects, and acted on
-either way: `title-text`, `placement`, `collapse-to`, `anchor`, `anchor-side`, `maximized`, `data-side`, `data-small-viewport`, `data-threads-search`, `credentials`, `user-key`,
+either way: `title-text`, `placement`, `collapse-to`, `anchor`, `anchor-side`, `maximized`, `data-side`, `data-small-viewport`, `data-threads-search`, `data-thread-status`, `credentials`, `user-key`,
 `user-name`, `data-tool-group-display`, `data-collapse-icon`, `theme`.
 
 **Connect-time attributes.** Read once, while the element connects, to decide what chrome exists at
@@ -873,12 +874,23 @@ mount with `run_store=` and `RUN_TIMEOUT_SECONDS` set, served over **ASGI**, to 
   another run holds the thread (a Stop's cancel has not landed yet, or a second tab) joins that run
   instead, and the turn waits in the composer's queue, attachments included, sent once that run
   has ended (a turn that is only files is shown by their names); a refused `run()` action is not
-  sent again.
+  sent again. The server logs a run's end a moment before it lets go of the thread, so a turn
+  refused by the very run it just waited out is asked once more, a quarter second later, and a
+  second refusal is shown as the error.
+- **A queued mount's start is followed.** A mount with a `firing_queue=` (django-ag-ui 0.82.0+)
+  answers a detached start with `200 {"thread_id", "run_id"}` and leaves the run to a worker; the
+  element then reads that run through `events/?after=0` and streams it as it would have streamed
+  the start, each frontend-tool round alike. The replay's opening snapshot is the stored
+  conversation, without the turn just sent, so it is not applied.
+- **The run routes follow `data-threads-url`.** A replay and a cancel read the attribute when they
+  are made, so a host that sets or changes it after the element connected sends the next of each
+  to the new URL; the thread list and its store still read it while connecting.
 
 Reattaching needs an agent that can connect: the default `agentFactory` builds one. A factory
-returning an agent that does not override `connect` gets the store-only restore. A mount with a
-`firing_queue=` answers a detached start with JSON rather than a stream, which this element does
-not read yet.
+returning an agent that does not override `connect` gets the store-only restore. A factory that
+wraps `createHttpAgent` passes `getEventsUrl` on with the rest of the options, which is how the
+late attribute reaches the default agent; `getEventsUrl` wins over `eventsUrl`, so a factory that
+points the run log elsewhere overrides `getEventsUrl`.
 
 ### A run the server stops
 
@@ -1616,7 +1628,8 @@ no badge for answers that finished elsewhere.
 - **`ThreadMeta.unread`** (boolean): a thread `listThreads()` reports as unread, and the page has
   not counted, counts once, when the list is fetched.
 - **`markRead(threadId)`**: called when the element reads a thread with unseen answers, and when
-  an answer finishes on the thread in view. A server store maps it to its read endpoint, and
+  the run of an answer that finished on the thread in view settles (after the answer, so a server
+  has saved it first). A server store maps it to its read endpoint, and
   should list the thread with `unread: false` afterwards.
 
 A store without either still has its threads counted and cleared in the page. Neither is
@@ -2153,20 +2166,23 @@ on screen as current, and drives the chat through the [thread API](#driving-the-
   `{ threadId }`, bubbling, composed and cancelable), then calls `chat.switchThread`, which
   **cancels a run in flight**, as the built-in list does. Call `preventDefault()` to route to the
   conversation yourself; otherwise it is the moment to close a popover the list sits in.
-- **No run marks yet.** A row shows its title and whether it is the thread on screen, nothing
-  about its runs: running, waiting, failed and unread marks wait for a store that reports run
-  status across tabs.
+- **Run marks.** A row whose store reports [thread status](#thread-status) carries one mark:
+  `waiting`, `failed`, `running` or `unread`, in that order of precedence, as `data-status` on
+  the row and a dot with its word for a screen reader inside the row's button.
 - **`refresh()`** reads the store again. The list does so after every thread, title and
-  run-finished event; call it when something else
+  run-finished event, and takes the rows of every `ag-ui-threads-change`; call it when something else
   changed the store, such as another tab. **`threads`** *(read-only)* is the rows on screen, as the
   store last listed them. A redraw keeps keyboard focus on the row, delete or confirm it was on.
 - **`strings`** translates every piece of text (`label`, `untitled`, `empty`, `delete`,
-  `deleteConfirm`, `deleteYes`, `deleteNo`), merged over the English, so `{ deleteNo: "Abbrechen" }`
+  `deleteConfirm`, `deleteYes`, `deleteNo`, and the marks' `running`, `waiting`, `failed`,
+  `unread`), merged over the English, so `{ deleteNo: "Abbrechen" }`
   changes that one string.
 - **Styling.** Parts `list`, `row` (plus `row-active` on the thread on screen), `row-button`,
-  `delete`, `confirm`, `empty`. The chat's colour tokens apply, and the list takes the light or
-  dark half of each from the page's own `color-scheme`, since it sits in your chrome rather than
-  in the chat's. The host carries `data-empty` when the chat has no conversations.
+  `mark` (plus `mark-running`, `mark-waiting`, `mark-failed` or `mark-unread`), `delete`,
+  `confirm`, `empty`. The chat's colour tokens apply, plus `--ag-ui-danger` (the delete
+  confirmation and the failed mark) and `--ag-ui-waiting` (the waiting mark). The list takes the
+  light or dark half of each from the page's own `color-scheme`, since it sits in your chrome
+  rather than in the chat's. The host carries `data-empty` when the chat has no conversations.
 
 The main `/bundle` does not carry the element. Without a build step, load
 `/threads/bundle` beside it:
@@ -2179,6 +2195,43 @@ The main `/bundle` does not carry the element. Without a build step, load
   defineThreads();
 </script>
 ```
+
+### Thread status
+
+django-ag-ui 0.84.0, on a mount with a run store, lists each thread with its run's `status`
+(`idle`, `running`, `waiting`, `failed`), its `last_read_at`, a `reason` when it failed and, when
+it waits, AG-UI `interrupts`. `RemoteConversationStore` (what `data-threads-url` builds) reads
+them onto `ThreadMeta` as `status`, `reason` and `interrupts`, and works out `unread`. An older
+server, or a mount without a run store, lists none of them and nothing below happens.
+
+- **Unread** is a thread that changed after it was last read, by the server's clock on both
+  sides, and is not running now. A thread never read reads as not unread: the server keeps no
+  mark until a thread is read once, so a first turn left before its answer came is counted in
+  that page only, not after a reload.
+- **Read.** When the element reads a thread (`markRead`), the store posts
+  `POST <threads-url><id>/read/`, and only once a list carried `status`, since the route is
+  mounted only beside a run store. The thread then reads as read here until it changes again.
+- **Keeping it fresh is the host's choice, and opt-in.** `data-thread-status="poll"` asks the
+  list again every five seconds with its ETag (a `304` costs nothing); `"stream"` follows the
+  same URL as Server-Sent Events, read with `fetch` so the headers and cookie policy apply,
+  reconnecting when the server ends it. A server that answers the stream request with JSON (a
+  WSGI deployment) is polled instead. Without the attribute the list is read when it always was:
+  when the drawer opens, a thread switches, or `<ag-ui-threads>` re-lists. Each list the watch
+  receives is counted into the [unread badge](#the-unread-badge) and fired as
+  **`ag-ui-threads-change`** (`THREADS_CHANGE_EVENT`, detail `{ threads }`), which
+  `<ag-ui-threads>` draws. A store of your own takes part by implementing
+  `watchThreads(listener, transport)`.
+- **A waiting approval is answered where it waits.** Opening a thread whose run is parked on an
+  approval (`metadata.kind == "approval"`) shows the approval card on its tool call, as a live
+  run's interrupt does, and the answer starts the run again with `resume` built by
+  `@ag-ui/client`'s `buildResumeArray`. Asked of the store when the thread is restored
+  (`waitingInterrupts(threadId)`, which `data-threads-url` answers from the list with its ETag),
+  so it needs no `data-thread-status`. Stop, or leaving the thread, while the person decides
+  sends and writes nothing: the run stays parked and is offered again next time. A `question` or
+  `external` interrupt, or a mix, is marked waiting and not offered: the server maps every resume
+  entry to an approval, so answering one that way would approve it. A host driving its own `AgUiClient`
+  answers a parked run the same way with `client.answerParked(interrupts)`, which asks its
+  `resolveInterrupts` once and sends the resume.
 
 ## A2UI surfaces
 
@@ -3843,6 +3896,7 @@ paths.
 | `DockWidthDetail` | type | `detail` shape of the `ag-ui-dock-width` event (`{ width, side }`). |
 | `ThreadTitleDetail` | type | `detail` shape of the `ag-ui-thread-title` event (`{ threadId, title }`). |
 | `UnreadDetail` | type | `detail` shape of the `ag-ui-unread` event (`{ unread, threadIds }`). |
+| `ThreadsChangeDetail` | type | `detail` shape of the `ag-ui-threads-change` event (`{ threads }`). |
 | `AttachmentsDetail` | type | `detail` shape of the `ag-ui-attachments` event (`{ attachments, pending }`). |
 | `StateDetail` | type | `detail` shape of the `ag-ui-state` event (`{ state }`). |
 
@@ -3923,7 +3977,9 @@ paths.
 | `SessionStorageStore` | class | Default per-tab conversation store. |
 | `RemoteConversationStore` | class | Server-backed store over a `data-threads-url` endpoint. |
 | `ClientConversationStore` | type | The persistence seam. |
-| `ThreadMeta` | type | A thread-drawer row (`{ threadId, title, updatedAt, preview, unread? }`). |
+| `ThreadMeta` | type | A thread-drawer row (`{ threadId, title, updatedAt, preview, unread?, status?, reason?, interrupts? }`); see [Thread status](#thread-status). |
+| `ThreadStatus` | type | A thread's run status as the server lists it: `idle`, `running`, `waiting` or `failed`. |
+| `ThreadsTransport` | type | How `watchThreads` follows the list: `poll` or `stream`. |
 | `NavigationCheckpoint` | type | The pre-reload checkpoint marker. |
 | `RunIndex` | class | Reads a `data-runs-url` run index and derives its resume / fork endpoints. |
 | `RunRow` | type | One run index row (`{ run_id, thread_id, parent_run_id, started_at, continuable, preview? }`). |
@@ -3998,6 +4054,7 @@ paths.
 | `SUBMIT_EVENT` | The submit CustomEvent name. |
 | `THREAD_EVENT` | The conversation-changed CustomEvent name (`ag-ui-thread`). |
 | `THREAD_TITLE_EVENT` | The thread-title CustomEvent name (`ag-ui-thread-title`). |
+| `THREADS_CHANGE_EVENT` | The thread-list CustomEvent name (`ag-ui-threads-change`), fired by a chat watching its list under `data-thread-status`. |
 | `TOGGLE_EVENT` | The collapse-toggle CustomEvent name (`ag-ui-toggle`). |
 | `MAXIMIZE_EVENT` | The maximized-state CustomEvent name (`ag-ui-maximize`). |
 | `BAR_HEIGHT_EVENT` | The bottom bar's height CustomEvent name (`ag-ui-bar-height`). |

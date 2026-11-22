@@ -717,6 +717,13 @@ export const THREADS_TAG = "ag-ui-threads";
 export const THREADS_SELECT_EVENT = "ag-ui-threads-select";
 
 /**
+ * A chat's watch of its thread list (`data-thread-status`) received the list,
+ * changed. `detail` is {@link ThreadsChangeDetail}. `<ag-ui-threads>` draws it;
+ * a host drawing its own list reads the same rows.
+ */
+export const THREADS_CHANGE_EVENT = "ag-ui-threads-change";
+
+/**
  * The tallest an MCP App view's frame grows inline, in CSS pixels: a view that
  * asks for more through `ui/notifications/size-changed` gets this and scrolls.
  */

@@ -122,6 +122,8 @@ const DYNAMIC: Record<string, readonly string[]> = {
     "tool-card-args-label",
     "tool-card-result-label",
   ],
+  // ag_ui_threads #row: mark mark-<status>, one per row the store marks.
+  "#row mark": ["mark", "mark-running", "mark-waiting", "mark-failed", "mark-unread"],
 };
 
 /**
@@ -129,7 +131,7 @@ const DYNAMIC: Record<string, readonly string[]> = {
  * it. Every one is accounted for in {@link DYNAMIC}; a new one moves this number,
  * which is the point.
  */
-const RUNTIME_ASSEMBLED = { template: 16, variable: 1 };
+const RUNTIME_ASSEMBLED = { template: 17, variable: 1 };
 
 function sources(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

@@ -2933,6 +2933,8 @@ describe("AgUiChat", () => {
     it("routes the drawer through data-threads-url when set", async () => {
       const fetchMock = vi.fn().mockResolvedValue({
         ok: true,
+        status: 200,
+        headers: new Headers(),
         json: async () => ({
           threads: [
             { thread_id: "s1", title: "Server thread", updated_at: null, preview: "from server" },
