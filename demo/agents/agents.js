@@ -1,6 +1,7 @@
 // The agents home demo: one <ag-ui-agents> provider over two agents, a button
-// per directory entry switching its chat, the inbox of every agent's threads,
-// and an <ag-ui-threads> bound through the provider. /agents/?stream watches the
+// per directory entry switching its chat, an <ag-ui-inbox> badge in the header
+// and its list in the rail (what waits on the user, every agent), and an
+// <ag-ui-threads> bound through the provider. /agents/?stream watches the
 // inbox by SSE instead of polling.
 import {
   AGENT_CHANGE_EVENT,
@@ -9,6 +10,7 @@ import {
   defineChat,
   INBOX_CHANGE_EVENT,
 } from "/bundle.js";
+import { defineInbox, INBOX_SELECT_EVENT } from "/inbox.bundle.js";
 import { defineThreads } from "/threads.bundle.js";
 
 const home = document.getElementById("home");
@@ -49,22 +51,12 @@ home.addEventListener(AGENT_CHANGE_EVENT, (event) => {
 });
 home.addEventListener(INBOX_CHANGE_EVENT, (event) => {
   log(`ag-ui-inbox-change: ${event.detail.threads.length} rows`);
-  document.getElementById("inbox").replaceChildren(
-    ...event.detail.threads.map((row) => {
-      const item = document.createElement("li");
-      const button = document.createElement("button");
-      button.type = "button";
-      const mark = row.status === undefined || row.status === "idle" ? "" : ` [${row.status}]`;
-      button.textContent = `${row.agentId}: ${row.title}${mark}${row.unread ? " (unread)" : ""}`;
-      button.addEventListener("click", () => {
-        void home.openThread(row.agentId, row.threadId);
-      });
-      item.append(button);
-      return item;
-    }),
-  );
+});
+home.addEventListener(INBOX_SELECT_EVENT, (event) => {
+  log(`ag-ui-inbox-select: ${event.detail.agentId}/${event.detail.threadId}`);
 });
 
 defineAgents();
 defineChat();
 defineThreads();
+defineInbox();

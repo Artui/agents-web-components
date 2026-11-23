@@ -123,6 +123,18 @@ describe("<ag-ui-inbox> in Chromium", () => {
     expect(shadow(inbox).activeElement).toBe(badge);
   });
 
+  it("paints the popover's own ink when the navbar sets a light colour on the host", async () => {
+    const { inbox } = await mount([waiting("a", "First")]);
+    inbox.style.color = "rgb(255, 255, 255)";
+    await userEvent.click(shadow(inbox).querySelector(".badge") as HTMLElement);
+    const panel = shadow(inbox).querySelector(".panel") as HTMLElement;
+    const title = shadow(inbox).querySelector(".title") as HTMLElement;
+    const badge = shadow(inbox).querySelector(".badge") as HTMLElement;
+    expect(getComputedStyle(badge).color).toBe("rgb(255, 255, 255)");
+    expect(getComputedStyle(title).color).not.toBe("rgb(255, 255, 255)");
+    expect(getComputedStyle(title).color).not.toBe(getComputedStyle(panel).backgroundColor);
+  });
+
   it("follows the page's colour scheme and the shared tokens", async () => {
     const { inbox, provider } = await mount([waiting("a", "First")]);
     const count = shadow(inbox).querySelector(".count") as HTMLElement;
@@ -135,5 +147,28 @@ describe("<ag-ui-inbox> in Chromium", () => {
 
     provider.dispatchEvent(new CustomEvent(INBOX_CHANGE_EVENT));
     expect(inbox.getAttribute("data-count")).toBe("1");
+  });
+});
+
+describe("<ag-ui-inbox> as a list in a narrow rail", () => {
+  it("stays inside the rail, in the flow, with no popover chrome", async () => {
+    const rail = document.createElement("aside");
+    rail.style.cssText = "width:240px;margin-left:200px;";
+    const provider = fakeProvider([
+      waiting("a", "A long title that has to be cut short somewhere"),
+    ]);
+    const list = document.createElement(INBOX_TAG) as AgUiInbox;
+    list.setAttribute("variant", "list");
+    rail.append(list);
+    document.body.append(provider, rail);
+    list.provider = provider;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    const panel = shadow(list).querySelector(".panel") as HTMLElement;
+    const railBox = rail.getBoundingClientRect();
+    const box = panel.getBoundingClientRect();
+    expect(getComputedStyle(panel).position).toBe("static");
+    expect(box.left).toBeGreaterThanOrEqual(railBox.left);
+    expect(box.right).toBeLessThanOrEqual(railBox.right);
+    expect(list.offsetHeight).toBeGreaterThan(0);
   });
 });

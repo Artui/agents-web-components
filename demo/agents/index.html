@@ -42,15 +42,9 @@
         font-size: 0.9rem;
         margin: 12px 0 6px;
       }
-      #inbox {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-      }
-      #inbox button {
-        width: 100%;
-        text-align: left;
-        margin-bottom: 4px;
+      header ag-ui-inbox {
+        margin-inline-start: auto;
+        color: #fff;
       }
       ag-ui-chat {
         display: block;
@@ -73,11 +67,12 @@
       <header>
         <strong>Agents home</strong>
         <span id="agents" role="group" aria-label="Agents"></span>
+        <ag-ui-inbox></ag-ui-inbox>
       </header>
       <div class="home">
         <aside>
-          <h2>Inbox, every agent</h2>
-          <ul id="inbox"></ul>
+          <h2>Needs you, every agent</h2>
+          <ag-ui-inbox variant="list"></ag-ui-inbox>
           <h2>This agent's conversations</h2>
           <ag-ui-threads></ag-ui-threads>
         </aside>

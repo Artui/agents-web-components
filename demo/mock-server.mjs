@@ -61,6 +61,7 @@ const BUNDLES = new Map([
   ["/a2ui.bundle.js", "agents-web-components.a2ui.bundle.js"],
   ["/mcp-apps.bundle.js", "agents-web-components.mcp-apps.bundle.js"],
   ["/threads.bundle.js", "agents-web-components.threads.bundle.js"],
+  ["/inbox.bundle.js", "agents-web-components.inbox.bundle.js"],
 ]);
 
 /** The page or file a GET path names, or undefined. */

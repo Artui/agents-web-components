@@ -87,7 +87,20 @@ export const INBOX_STYLES: string = `
   border: 1px solid var(--_line);
   border-radius: calc(var(--_radius) + 2px);
   background: var(--_bg);
+  color: var(--_fg);
   box-shadow: 0 8px 24px color-mix(in oklch, var(--_fg) 18%, transparent);
+}
+:host([variant="list"]) .panel {
+  position: static;
+  width: auto;
+  max-height: none;
+  overflow: visible;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  box-shadow: none;
 }
 .heading {
   margin: 0;
