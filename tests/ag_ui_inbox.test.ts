@@ -5,8 +5,10 @@ import { AGENTS_TAG } from "../src/constants.js";
 import {
   type AgUiInbox,
   defineInbox,
+  INBOX_ANSWER_EVENT,
   INBOX_SELECT_EVENT,
   INBOX_TAG,
+  type InboxAnswerDetail,
   type InboxSelectDetail,
 } from "../src/inbox.js";
 
@@ -484,5 +486,262 @@ describe("<ag-ui-inbox> picking a row", () => {
     pick(element, 0);
     await vi.advanceTimersByTimeAsync(0);
     expect(opened).toHaveBeenCalledWith("board", "a");
+  });
+});
+
+const ARCHIVE_TOO = {
+  ...ARCHIVE,
+  id: "int-call-5",
+  toolCallId: "call-5",
+  message: "Archive it too?",
+};
+const UNFLAGGED = {
+  ...ARCHIVE,
+  id: "int-call-6",
+  toolCallId: "call-6",
+  metadata: { kind: "approval" },
+};
+
+const ANSWER_ROWS = [
+  row("a", "board", { status: "waiting", interrupts: [ARCHIVE, ARCHIVE_TOO], run_id: "run-a" }),
+  row("b", "board", { status: "waiting", interrupts: [ARCHIVE, DELETE], run_id: "run-b" }),
+  row("c", "board", { status: "waiting", interrupts: [ARCHIVE] }),
+  row("d", "board", { status: "waiting", interrupts: [UNFLAGGED], run_id: "run-d" }),
+  row("e", "board", { status: "waiting", interrupts: [QUESTION], run_id: "run-e" }),
+  row("f", "nowhere", { status: "waiting", interrupts: [ARCHIVE], run_id: "run-f" }),
+  row("g", "billing", { status: "waiting", interrupts: [ARCHIVE], run_id: "run-g" }),
+];
+
+/** Serve the directory and inbox, and answer each POST with the next of `answers`. */
+function serveAnswers(answers: (Response | Error)[]): { posts: [string, RequestInit][] } {
+  serve(ANSWER_ROWS);
+  const listed = fetchMock.getMockImplementation() as (
+    url: string,
+    init?: RequestInit,
+  ) => Promise<Response>;
+  const posts: [string, RequestInit][] = [];
+  fetchMock.mockImplementation(async (url, init) => {
+    if (init?.method !== "POST") {
+      return listed(url, init);
+    }
+    posts.push([String(url), init]);
+    const next = answers.shift() as Response | Error;
+    if (next instanceof Error) {
+      throw next;
+    }
+    return next;
+  });
+  return { posts };
+}
+
+async function mountAnswering(answers: (Response | Error)[]) {
+  const sent = serveAnswers(answers);
+  const home = provider();
+  home.setAttribute("credentials", "include");
+  home.headers = { "X-CSRFToken": "static", "X-Both": "static" };
+  home.getHeaders = () => ({ "X-Both": "live" });
+  const list = inbox({ variant: "list" });
+  home.append(list);
+  document.body.append(home);
+  await vi.advanceTimersByTimeAsync(0);
+  const answered: InboxAnswerDetail[] = [];
+  document.addEventListener(INBOX_ANSWER_EVENT, (event) =>
+    answered.push((event as CustomEvent<InboxAnswerDetail>).detail),
+  );
+  return { home, list, answered, ...sent };
+}
+
+function action(list: AgUiInbox, threadId: string, name: "approve" | "deny"): HTMLButtonElement {
+  return shadow(list).querySelector(
+    `.row[data-thread-id="${threadId}"] .${name}`,
+  ) as HTMLButtonElement;
+}
+
+function sse(status = 200): Response {
+  return new Response("data: {}\n\n", { status, headers: { "content-type": "text/event-stream" } });
+}
+
+describe("<ag-ui-inbox> answering in place", () => {
+  it("offers Approve and Deny only on a named run whose every call is a safe approval", async () => {
+    const { list } = await mountAnswering([]);
+    const offered = rows(list).map((item) => item.querySelector(".actions") !== null);
+    // a: two safe approvals. b: one destructive. c: no run id (an older server).
+    // d: no destructive flag. e: a question. f: an agent the directory does not list.
+    expect(offered).toEqual([true, false, false, false, false, true, true]);
+    expect(action(list, "a", "approve").textContent).toBe("Approve");
+    expect(action(list, "a", "deny").textContent).toBe("Deny");
+  });
+
+  it("approves every call at once on the mount's resume/<run_id>/, detached, with the provider's headers", async () => {
+    const { list, posts, answered } = await mountAnswering([sse()]);
+    action(list, "a", "approve").click();
+    action(list, "a", "approve").click();
+    expect(action(list, "a", "approve").disabled).toBe(true);
+    expect(action(list, "a", "deny").disabled).toBe(true);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(posts).toHaveLength(1);
+    const [url, init] = posts[0] as [string, RequestInit];
+    expect(url).toBe(new URL("/board/resume/run-a/", location.href).href);
+    expect(init.credentials).toBe("include");
+    expect(init.headers).toEqual({
+      "X-CSRFToken": "static",
+      "X-Both": "live",
+      "Content-Type": "application/json",
+      Accept: "text/event-stream",
+    });
+    const body = JSON.parse(init.body as string);
+    expect(body).toEqual({
+      threadId: "a",
+      runId: expect.any(String),
+      state: {},
+      messages: [],
+      tools: [],
+      context: [],
+      forwardedProps: { detach: true },
+      resume: [
+        { interruptId: "int-call-1", status: "resolved", payload: { approved: true } },
+        { interruptId: "int-call-5", status: "resolved", payload: { approved: true } },
+      ],
+    });
+    expect(body.runId).not.toBe("run-a");
+    expect(answered).toEqual([
+      {
+        agentId: "board",
+        threadId: "a",
+        runId: "run-a",
+        approved: true,
+        outcome: "answered",
+        status: 200,
+      },
+    ]);
+    expect(action(list, "a", "approve").disabled).toBe(true);
+  });
+
+  it("denies every call as cancelled", async () => {
+    const { list, posts, answered } = await mountAnswering([sse()]);
+    action(list, "a", "deny").click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(JSON.parse((posts[0] as [string, RequestInit])[1].body as string).resume).toEqual([
+      { interruptId: "int-call-1", status: "cancelled" },
+      { interruptId: "int-call-5", status: "cancelled" },
+    ]);
+    expect(answered.map((detail) => [detail.approved, detail.outcome])).toEqual([
+      [false, "answered"],
+    ]);
+  });
+
+  it("reads a 409 or 404 as answered elsewhere, and keeps the row's actions off", async () => {
+    const { list, answered } = await mountAnswering([
+      new Response("{}", { status: 409 }),
+      new Response("{}", { status: 404 }),
+    ]);
+    action(list, "a", "approve").click();
+    await vi.advanceTimersByTimeAsync(0);
+    action(list, "g", "approve").click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(answered.map((detail) => [detail.threadId, detail.outcome, detail.status])).toEqual([
+      ["a", "elsewhere", 409],
+      ["g", "elsewhere", 404],
+    ]);
+    expect(action(list, "a", "approve").disabled).toBe(true);
+    expect(shadow(list).querySelector(".answer-error")).toBeNull();
+  });
+
+  it("says a failed answer failed, lets it be sent again, and clears the line when it goes through", async () => {
+    const { list, answered } = await mountAnswering([
+      new Response("{}", { status: 500 }),
+      new TypeError("offline"),
+      sse(),
+    ]);
+    action(list, "a", "approve").click();
+    await vi.advanceTimersByTimeAsync(0);
+    const error = shadow(list).querySelector('.row[data-thread-id="a"] .answer-error');
+    expect(error?.textContent).toBe(
+      "Could not send the answer. Open the conversation to answer there.",
+    );
+    expect(error?.getAttribute("role")).toBe("status");
+    expect(action(list, "a", "approve").disabled).toBe(false);
+
+    action(list, "a", "approve").click();
+    await vi.advanceTimersByTimeAsync(0);
+    action(list, "a", "deny").click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(answered.map((detail) => [detail.outcome, detail.status])).toEqual([
+      ["failed", 500],
+      ["failed", 0],
+      ["answered", 200],
+    ]);
+    expect(shadow(list).querySelector(".answer-error")).toBeNull();
+  });
+
+  it("forgets an answer once its row leaves the inbox", async () => {
+    const { home, list } = await mountAnswering([new Response("{}", { status: 500 }), sse()]);
+    action(list, "a", "approve").click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(shadow(list).querySelector(".answer-error")).not.toBeNull();
+    Object.defineProperty(home, "inbox", { value: [], configurable: true });
+    home.dispatchEvent(new CustomEvent("ag-ui-inbox-change"));
+    delete (home as { inbox?: unknown }).inbox;
+    home.dispatchEvent(new CustomEvent("ag-ui-inbox-change"));
+    expect(shadow(list).querySelector(".answer-error")).toBeNull();
+    action(list, "a", "approve").click();
+    expect(action(list, "a", "approve").disabled).toBe(true);
+  });
+
+  it("keeps an answered row off while the inbox still lists it, and sends no credentials it was not given", async () => {
+    const broken = {
+      status: 200,
+      text: () => Promise.reject(new Error("stream cut")),
+    } as unknown as Response;
+    serveAnswers([broken]);
+    const home = provider();
+    const list = inbox({ variant: "list" });
+    home.append(list);
+    document.body.append(home);
+    await vi.advanceTimersByTimeAsync(0);
+    action(list, "a", "approve").click();
+    await vi.advanceTimersByTimeAsync(0);
+    const [, init] = fetchMock.mock.calls.find(([, sent]) => sent?.method === "POST") as [
+      string,
+      RequestInit,
+    ];
+    expect("credentials" in init).toBe(false);
+    expect(init.headers).toEqual({
+      "Content-Type": "application/json",
+      Accept: "text/event-stream",
+    });
+    home.dispatchEvent(new CustomEvent("ag-ui-inbox-change"));
+    expect(action(list, "a", "approve").disabled).toBe(true);
+  });
+
+  it("sends nothing for an agent the directory does not list", async () => {
+    const { list, posts } = await mountAnswering([]);
+    action(list, "f", "approve").click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(posts).toEqual([]);
+    expect(action(list, "f", "approve").disabled).toBe(false);
+  });
+
+  it("sends nothing from a row left over once the inbox lost its provider", async () => {
+    const { list, posts } = await mountAnswering([]);
+    const stale = action(list, "a", "approve");
+    list.remove();
+    stale.click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(posts).toEqual([]);
+  });
+
+  it("hands on a waiting row's run id, and none for a row not waiting", async () => {
+    serve([
+      row("a", "board", { status: "waiting", interrupts: [ARCHIVE], run_id: "run-a" }),
+      row("b", "board", { status: "running", run_id: "run-b" }),
+      row("c", "board", { status: "waiting", interrupts: [ARCHIVE] }),
+    ]);
+    const home = provider();
+    document.body.append(home);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(home.inbox.map((item) => item.runId)).toEqual(["run-a", undefined, undefined]);
+    expect("runId" in (home.inbox[1] as object)).toBe(false);
   });
 });

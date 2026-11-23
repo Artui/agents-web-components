@@ -26,12 +26,16 @@ export interface AgentEntry {
 /** A thread row as `inbox/` lists it: a mount's `threads/` row, plus the agent it belongs to. */
 export interface InboxServerRow extends ServerThreadRow {
   readonly agent_id: string;
+  /** A waiting row's parked run, which its mount's `resume/<run_id>/` answers. */
+  readonly run_id?: string;
 }
 
 /** An inbox row as `<ag-ui-agents>` hands it on: a {@link ThreadMeta}, plus its agent. */
 export interface InboxRow extends ThreadMeta {
   /** The {@link AgentEntry.id} the thread belongs to. */
   readonly agentId: string;
+  /** A waiting row's parked run, when its mount serves `resume/<run_id>/` (django-ag-ui 0.88.0). */
+  readonly runId?: string;
 }
 
 /** How the inbox is kept fresh: `poll` (the default) asks with the ETag, `stream` follows SSE. */

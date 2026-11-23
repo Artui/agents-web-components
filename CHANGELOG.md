@@ -21,9 +21,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   badge outside the provider reads it, else to the nearest provider, or by the `provider`
   property. Picking a row fires the cancelable `ag-ui-inbox-select` (`INBOX_SELECT_EVENT`,
   `InboxSelectDetail`, `{ agentId, threadId }`), then calls the provider's
-  `openThread(agentId, threadId)`. Themed by the shared `--ag-ui-*` tokens; parts `badge`,
-  `icon`, `count`, `panel`, `heading`, `list`, `row`, `row-button`, `mark`, `agent`, `summary`,
-  `destructive`, `empty`; strings `InboxStrings`.
+  `openThread(agentId, threadId)`. A row whose every interrupt is a non-destructive approval
+  is answered in place with Approve or Deny, which POST the agent's `resume/<run_id>/` as a
+  detached run and fire `ag-ui-inbox-answer` (`INBOX_ANSWER_EVENT`, `InboxAnswerDetail`); this
+  needs django-ag-ui 0.88.0, whose waiting rows name the parked run (`run_id`, on a mount with
+  a `step_store`). On an older server every row only opens its conversation. Themed by the
+  shared `--ag-ui-*` tokens; parts `badge`, `icon`, `count`, `panel`, `heading`, `list`, `row`,
+  `row-button`, `mark`, `agent`, `summary`, `destructive`, `actions`, `approve-button`,
+  `deny-button`, `answer-error`, `empty`; strings `InboxStrings`.
+- **`InboxRow.runId`** on `<ag-ui-agents>`' inbox: a waiting row's parked run, when the server
+  names it (`run_id`, django-ag-ui 0.88.0).
 
 ## [0.10.0] — 2026-11-23
 

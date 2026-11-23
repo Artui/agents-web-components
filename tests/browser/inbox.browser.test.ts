@@ -172,3 +172,36 @@ describe("<ag-ui-inbox> as a list in a narrow rail", () => {
     expect(list.offsetHeight).toBeGreaterThan(0);
   });
 });
+
+describe("<ag-ui-inbox> answering in place in Chromium", () => {
+  it("lays Approve and Deny inside the popover on a phone, reachable by Tab from the row", async () => {
+    await page.viewport(360, 640);
+    const answerable = {
+      ...waiting("a", "A long title that has to be cut short somewhere in a narrow popover"),
+      runId: "run-a",
+    } as InboxRow;
+    const { inbox, provider } = await mount([answerable]);
+    Object.assign(provider, {
+      agents: [{ id: "board", name: "Board", endpoint: "/board/" }],
+    });
+    provider.dispatchEvent(new CustomEvent(INBOX_CHANGE_EVENT));
+    await userEvent.click(shadow(inbox).querySelector(".badge") as HTMLElement);
+    const panel = (shadow(inbox).querySelector(".panel") as HTMLElement).getBoundingClientRect();
+    const approve = shadow(inbox).querySelector(".approve") as HTMLButtonElement;
+    const deny = shadow(inbox).querySelector(".deny") as HTMLButtonElement;
+    for (const button of [approve, deny]) {
+      const box = button.getBoundingClientRect();
+      expect(box.left).toBeGreaterThanOrEqual(panel.left);
+      expect(box.right).toBeLessThanOrEqual(panel.right);
+      expect(box.height).toBeGreaterThanOrEqual(28);
+    }
+    expect(approve.getBoundingClientRect().right).toBeLessThanOrEqual(
+      deny.getBoundingClientRect().left,
+    );
+    expect(getComputedStyle(approve).backgroundColor).not.toBe(
+      getComputedStyle(deny).backgroundColor,
+    );
+    await userEvent.keyboard("{Tab}");
+    expect(shadow(inbox).activeElement).toBe(approve);
+  });
+});

@@ -787,3 +787,10 @@ export const INBOX_TAG = "ag-ui-inbox";
  * `preventDefault()` and the element leaves the provider alone.
  */
 export const INBOX_SELECT_EVENT = "ag-ui-inbox-select";
+
+/**
+ * Fired by `<ag-ui-inbox>` (bubbling, composed) after it answered an approval
+ * in place, with what came of it: `answered`, `elsewhere` (another answer or
+ * the run's end got there first) or `failed`.
+ */
+export const INBOX_ANSWER_EVENT = "ag-ui-inbox-answer";

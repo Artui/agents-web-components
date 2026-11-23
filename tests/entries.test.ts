@@ -89,6 +89,7 @@ describe("the package entries", () => {
   it("publishes the inbox as its own entry and its own vendored file", () => {
     expect(Object.keys(inbox).sort()).toEqual([
       "AgUiInbox",
+      "INBOX_ANSWER_EVENT",
       "INBOX_SELECT_EVENT",
       "INBOX_TAG",
       "defineInbox",

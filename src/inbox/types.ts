@@ -11,6 +11,9 @@ export type InboxItem = InboxRow & { readonly interrupts: readonly Interrupt[] }
 export type InboxProvider = HTMLElement & {
   readonly inbox: readonly InboxRow[];
   readonly agents: readonly AgentEntry[];
+  readonly headers?: Record<string, string>;
+  readonly getHeaders?: (() => Record<string, string>) | null;
+  readonly credentials?: RequestCredentials | null;
   openThread(agentId: string, threadId: string): Promise<void>;
 };
 
@@ -26,6 +29,22 @@ export interface InboxSelectDetail {
   readonly agentId: string;
   /** The conversation picked. */
   readonly threadId: string;
+}
+
+/** What came of an answer given in place. */
+export type InboxAnswerOutcome = "answered" | "elsewhere" | "failed";
+
+/** `detail` shape of the {@link INBOX_ANSWER_EVENT} CustomEvent. */
+export interface InboxAnswerDetail {
+  readonly agentId: string;
+  readonly threadId: string;
+  /** The parked run answered. */
+  readonly runId: string;
+  /** `true` for Approve, `false` for Deny. */
+  readonly approved: boolean;
+  readonly outcome: InboxAnswerOutcome;
+  /** The HTTP status, or `0` when the request never got an answer. */
+  readonly status: number;
 }
 
 /** Every piece of text the inbox draws; set `strings` to translate it. */
@@ -48,6 +67,12 @@ export interface InboxStrings {
   readonly destructive: string;
   /** After a row's first interrupt, when there are more; `{count}` is how many more. */
   readonly more: string;
+  /** The in-place answer that runs the approved calls. */
+  readonly approve: string;
+  /** The in-place answer that declines them. */
+  readonly deny: string;
+  /** Under a row whose in-place answer failed. */
+  readonly answerFailed: string;
 }
 
 /** What the `strings` setter takes: any of {@link InboxStrings}. */

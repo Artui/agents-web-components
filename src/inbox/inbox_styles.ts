@@ -140,8 +140,41 @@ export const INBOX_STYLES: string = `
   text-align: start;
   cursor: pointer;
 }
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 10px 8px 28px;
+}
+.action {
+  min-height: 28px;
+  padding: 2px 10px;
+  border: 1px solid var(--_line);
+  border-radius: calc(var(--_radius) - 2px);
+  background: var(--_bg);
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.approve {
+  border-color: transparent;
+  background: var(--_accent);
+  color: var(--_bg);
+}
+.action:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.answer-error {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--_danger);
+  font-size: 13px;
+}
 .badge:focus-visible,
-.row-main:focus-visible {
+.row-main:focus-visible,
+.action:focus-visible {
   outline: 2px solid var(--_ring);
   outline-offset: -2px;
 }

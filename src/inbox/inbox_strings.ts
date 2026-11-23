@@ -11,4 +11,7 @@ export const DEFAULT_INBOX_STRINGS: InboxStrings = {
   external: "Action needed",
   destructive: "Destructive",
   more: "+{count} more",
+  approve: "Approve",
+  deny: "Deny",
+  answerFailed: "Could not send the answer. Open the conversation to answer there.",
 };

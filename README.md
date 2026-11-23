@@ -2404,11 +2404,23 @@ polling or by SSE as `data-inbox-transport` says, and redraws on each `ag-ui-inb
   the provider's `openThread(agentId, threadId)`, which mounts the chat on that agent and opens
   the conversation, where the approval or question is answered. Call `preventDefault()` to route
   to it yourself, on another page for instance.
+- **Answering in place.** A row whose every interrupt is an approval marked
+  `destructive: false`, on a server that names the parked run (`run_id` on a waiting row,
+  django-ag-ui 0.88.0 with a `step_store`), also shows **Approve** and **Deny**. Either answers
+  every call of the row at once: it POSTs the agent's `resume/<run_id>/` with a detached run, the
+  provider's `headers`, `getHeaders()` and `credentials` (so a session mount's CSRF header goes
+  there), and fires **`ag-ui-inbox-answer`** (`INBOX_ANSWER_EVENT`, detail
+  `{ agentId, threadId, runId, approved, outcome, status }`, bubbling and composed). `outcome` is
+  `answered`, `elsewhere` (a `409` or `404`: another answer, or the run's end, got there first)
+  or `failed`, which draws `answerFailed` under the row and lets it be sent again. A destructive
+  approval, a question, a client tool, and every row on an older server are answered in their
+  conversation only. The row leaves when the provider's inbox next lists it as answered.
 - **`strings`** translates every piece of text (`label`, `badge` with `{count}`, `empty`,
-  `untitled`, `approval`, `question`, `external`, `destructive`, `more` with `{count}`), merged
-  over the English.
+  `untitled`, `approval`, `question`, `external`, `destructive`, `more` with `{count}`,
+  `approve`, `deny`, `answerFailed`), merged over the English.
 - **Styling.** Parts `badge`, `icon`, `count`, `panel`, `heading`, `list`, `row`, `row-button`,
-  `mark`, `agent`, `summary`, `destructive`, `empty`. The chat's colour tokens apply, plus
+  `mark`, `agent`, `summary`, `destructive`, `actions`, `approve-button`, `deny-button`,
+  `answer-error`, `empty`. The chat's colour tokens apply, plus
   `--ag-ui-waiting` (the count and the marks) and `--ag-ui-danger` (a destructive approval), in
   the page's own `color-scheme`, since it sits in your chrome.
 

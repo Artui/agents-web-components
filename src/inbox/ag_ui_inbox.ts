@@ -3,12 +3,15 @@ import type { InboxRow } from "../agents/types.js";
 import {
   AGENTS_CHANGE_EVENT,
   AGENTS_TAG,
+  INBOX_ANSWER_EVENT,
   INBOX_CHANGE_EVENT,
   INBOX_SELECT_EVENT,
 } from "../constants.js";
 import { DEFAULT_INBOX_STRINGS } from "./inbox_strings.js";
 import { INBOX_STYLES } from "./inbox_styles.js";
 import type {
+  InboxAnswerDetail,
+  InboxAnswerOutcome,
   InboxItem,
   InboxKind,
   InboxProvider,
@@ -34,6 +37,11 @@ const SVG_NS = "http://www.w3.org/2000/svg";
  * cancelable {@link INBOX_SELECT_EVENT}, then has the provider open it in its
  * chat (`openThread`).
  *
+ * A row whose every interrupt is a non-destructive approval, and whose mount
+ * names the parked run (`runId`), also offers Approve and Deny: they POST the
+ * mount's `resume/<run_id>/` with a detached run and report the outcome as
+ * {@link INBOX_ANSWER_EVENT}. Anything else is answered in its conversation.
+ *
  * `variant="badge"` (the default) is a button counting the waiting
  * conversations that opens the list in a popover, for a host's navbar;
  * `variant="list"` is the list alone, for a home page's "needs you" section.
@@ -58,6 +66,10 @@ export class AgUiInbox extends HTMLElement {
   #root: Node | null = null;
   /** Set on first connect: a constructor may not write its host's attributes. */
   #upgraded = false;
+  /** Threads with an answer sent and their row still listed, so it cannot be sent twice. */
+  readonly #answering = new Set<string>();
+  /** Threads whose last in-place answer failed. */
+  readonly #failed = new Set<string>();
 
   constructor() {
     super();
@@ -223,6 +235,14 @@ export class AgUiInbox extends HTMLElement {
 
   #read(): void {
     this.#items = (this.#provider?.inbox ?? []).filter(needsYou);
+    const listed = new Set(this.#items.map((item) => item.threadId));
+    for (const pending of [this.#answering, this.#failed]) {
+      for (const threadId of pending) {
+        if (!listed.has(threadId)) {
+          pending.delete(threadId);
+        }
+      }
+    }
     this.#render();
   }
 
@@ -321,7 +341,131 @@ export class AgUiInbox extends HTMLElement {
     main.append(mark, title, this.#summary(item.interrupts));
     main.addEventListener("click", () => this.#select(item));
     row.append(main);
+    if (answerable(item)) {
+      row.append(this.#actions(item));
+    }
     return row;
+  }
+
+  /** Approve and Deny, and the line saying the last answer failed. */
+  #actions(item: InboxItem & { runId: string }): HTMLDivElement {
+    const strings = this.#strings;
+    const actions = document.createElement("div");
+    actions.className = "actions";
+    actions.setAttribute("part", "actions");
+    const busy = this.#answering.has(item.threadId);
+    const approve = this.#action("approve", strings.approve, busy);
+    approve.setAttribute("part", "approve-button");
+    approve.addEventListener("click", () => void this.#answer(item, true));
+    const deny = this.#action("deny", strings.deny, busy);
+    deny.setAttribute("part", "deny-button");
+    deny.addEventListener("click", () => void this.#answer(item, false));
+    actions.append(approve, deny);
+    if (this.#failed.has(item.threadId)) {
+      const error = document.createElement("p");
+      error.className = "answer-error";
+      error.setAttribute("part", "answer-error");
+      error.setAttribute("role", "status");
+      error.textContent = strings.answerFailed;
+      actions.append(error);
+    }
+    return actions;
+  }
+
+  #action(name: "approve" | "deny", label: string, busy: boolean): HTMLButtonElement {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `action ${name}`;
+    button.textContent = label;
+    button.disabled = busy;
+    return button;
+  }
+
+  /** Answer every interrupt of the row at once: a partial answer is a `400`. */
+  async #answer(item: InboxItem & { runId: string }, approved: boolean): Promise<void> {
+    const provider = this.#provider;
+    const entry = provider?.agents.find((agent) => agent.id === item.agentId);
+    if (provider === null || entry === undefined || this.#answering.has(item.threadId)) {
+      return;
+    }
+    this.#answering.add(item.threadId);
+    this.#failed.delete(item.threadId);
+    this.#render();
+    const status = await this.#post(provider, entry.endpoint, item, approved);
+    const outcome: InboxAnswerOutcome =
+      status >= 200 && status < 300
+        ? "answered"
+        : status === 404 || status === 409
+          ? "elsewhere"
+          : "failed";
+    if (outcome === "failed") {
+      this.#answering.delete(item.threadId);
+      this.#failed.add(item.threadId);
+    }
+    this.#render();
+    this.dispatchEvent(
+      new CustomEvent<InboxAnswerDetail>(INBOX_ANSWER_EVENT, {
+        detail: {
+          agentId: item.agentId,
+          threadId: item.threadId,
+          runId: item.runId,
+          approved,
+          outcome,
+          status,
+        },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
+  /** The resume's HTTP status, or `0` on a network error. */
+  async #post(
+    provider: InboxProvider,
+    endpoint: string,
+    item: InboxItem & { runId: string },
+    approved: boolean,
+  ): Promise<number> {
+    const url = new URL(
+      `resume/${encodeURIComponent(item.runId)}/`,
+      new URL(endpoint, location.href),
+    );
+    const resume = item.interrupts.map((interrupt) =>
+      approved
+        ? { interruptId: interrupt.id, status: "resolved", payload: { approved: true } }
+        : { interruptId: interrupt.id, status: "cancelled" },
+    );
+    const body = {
+      threadId: item.threadId,
+      runId: crypto.randomUUID(),
+      state: {},
+      messages: [],
+      tools: [],
+      context: [],
+      forwardedProps: { detach: true },
+      resume,
+    };
+    const init: RequestInit = {
+      method: "POST",
+      headers: {
+        ...provider.headers,
+        ...provider.getHeaders?.(),
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
+      },
+      body: JSON.stringify(body),
+    };
+    if (typeof provider.credentials === "string") {
+      init.credentials = provider.credentials;
+    }
+    try {
+      const response = await fetch(url, init);
+      // The detached run goes on without this reader; drained, not aborted, the stream ends cleanly.
+      response.text().catch(() => undefined);
+      return response.status;
+    } catch {
+      return 0;
+    }
   }
 
   /** What the row waits on: its first interrupt's kind and message, and how many more. */
@@ -368,6 +512,16 @@ export class AgUiInbox extends HTMLElement {
       this.#provider?.openThread(item.agentId, item.threadId).catch(() => undefined);
     }
   }
+}
+
+/** Whether a row is answered in place: its run is named and every call is a safe approval. */
+function answerable(item: InboxItem): item is InboxItem & { runId: string } {
+  return (
+    typeof item.runId === "string" &&
+    item.interrupts.every(
+      (interrupt) => kindOf(interrupt) === "approval" && !isDestructive(interrupt),
+    )
+  );
 }
 
 /** Whether a row waits on the user: a parked run with at least one interrupt. */
