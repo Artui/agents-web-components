@@ -7,6 +7,85 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] — 2026-11-23
+
+### Added
+
+- **Child sessions: the card that started one links to the child's thread, and still does after a
+  reload. No opt-in.** A `start_session` call's result (django-spec-agents 0.25.0's
+  `ChildSessionReceipt`, `{ agent_id, thread_id, run_id, note }`) is read on the live result and
+  on a restore alike, so the link is drawn from what persists rather than from `SUBAGENT_*`
+  events, which a child session never sends. A refusal draws no link. When the thread list the
+  chat holds shows the child `waiting`, the link reads "needs you" (`childSessionNeedsYou`) and
+  still only opens the child: the parent never draws the child's approval. With
+  `data-threads-url` on django-ag-ui 0.86.0+, `ThreadMeta` gains `parent` (`ThreadParent`,
+  `{ threadId, scope }`); the chat shows a breadcrumb back to the parent (`parentThread`, or
+  `parentThreadUnlisted` when the list does not hold it) while a child is on screen, and the
+  history drawer nests each child under its parent's row (parts `drawer-row-child`,
+  `drawer-children`) in the parent's date group, an orphan or a child a filter matched alone at
+  the top level. A link or the breadcrumb dispatches the new cancelable `ag-ui-open-thread`
+  (`OPEN_THREAD_EVENT`, detail `OpenThreadDetail`, `{ agentId, threadId }`) and then opens the
+  thread in place unless a listener calls `preventDefault()`: a host whose child agent lives on
+  another mount takes the event and opens it there. New parts `child-session-link`,
+  `parent-breadcrumb`, `parent-breadcrumb-link`; new strings `childSessionOpen`,
+  `childSessionNeedsYou`, `parentThread`, `parentThreadUnlisted`. Without a list held (a reload
+  straight onto a child under a remote store), the breadcrumb and the needs-you wording wait for
+  the first drawer open, switch or `data-thread-status` tick. Deleting the parent hides the
+  breadcrumb at once, and it stays hidden over the lists that follow. The link is underlined at
+  rest, in the accent (the danger colour when the child needs you), since the default accent is
+  close to the body colour. A child opened before its first answer, which the held list shows
+  `running` or `waiting`, draws no "the previous response didn't finish" notice.
+
+- **`<ag-ui-agents>`, a headless provider for several agents; a host opts in by wrapping its
+  elements in one, and a lone `<ag-ui-chat>` is unchanged.** It reads django-ag-ui 0.87.0's
+  agents directory (`data-agents-url`, with the ETag; `agents`, `refresh()`,
+  `ag-ui-agents-change`) and watches its inbox of every agent's threads (`data-inbox-url`, by
+  ETag polling or, with `data-inbox-transport="stream"`, SSE; `inbox`, `ag-ui-inbox-change`, rows
+  carrying `agentId`). It mounts its chat (the `<ag-ui-chat>` inside it, or `chat`) on the entry
+  `agent` names, the first by default: the chat is taken out, given the entry's URLs, and put
+  back, so its connect-time attributes stay connect-time and no warning is raised; a run in flight
+  is cancelled as by any remount. Each agent's conversation is stored under the entry id, so
+  switching back restores its thread; a host's own store, a `RemoteConversationStore` it made
+  included, is left alone, and a second chat on the same entry gets a throwaway namespace and a
+  warning, as a second chat on one namespace does. `RemoteConversationStore` gains a read-only
+  `local`, the store it keeps the thread pointer in. `ag-ui-agent-change`
+  fires on each switch, and `openThread(agentId, threadId)` opens an inbox row. Exported from the
+  root entry with `defineAgents`, `AgUiAgents`, the `AGENTS_TAG`, `AGENTS_CHANGE_EVENT`,
+  `INBOX_CHANGE_EVENT` and `AGENT_CHANGE_EVENT` constants, and the `AgentEntry`, `InboxRow`,
+  `InboxServerRow`, `InboxTransport`, `AgentsChat` and detail types.
+- **`<ag-ui-agents>` takes a child session on another agent. No opt-in beyond the provider.** It
+  listens to its chat's cancelable `ag-ui-open-thread`: when `detail.agentId` names a listed
+  entry other than the one mounted, it calls `preventDefault()` and `openThread(agentId,
+  threadId)`, so a child-session link or the parent breadcrumb switches agent and shows the
+  thread. The same agent, an unlisted one and a `null` `agentId` leave the chat to open in place,
+  as does a request a listener on the chat prevented first. A host that already handles
+  `ag-ui-open-thread` for the same job can drop its listener.
+- **`<ag-ui-threads>` binds through a provider.** Without `for` or `chat`, it binds to the chat of
+  the `<ag-ui-agents>` named by its new `agents="<id>"` attribute, else the nearest one around it,
+  and lists again when the provider switches agents. `for` keeps working and wins when both are
+  present. Nothing changes for a list with `for`.
+
+- **Open threads (tabs) on `<ag-ui-chat>`, a model with no rendering, behind a host opt-in: the
+  first `openTab` call starts tracking; until then nothing is kept, written or announced, so a
+  host that never calls it sees no change.** `tabs` is the open threads in order, each
+  `{ threadId, title }` (`ThreadTab`); `openTab(threadId, title?)` opens one without showing it
+  (the first also opens the thread on screen), and `closeTab(threadId)` closes one while the thread
+  stays in history, unlike `deleteThread`, which closes the tab too. Once tracking, showing a thread
+  (`switchThread`, `newChat`, the drawer, a child-session link, the parent breadcrumb) opens it, and closing the thread on screen shows its
+  neighbour, else a new chat. The set persists per browser tab in `sessionStorage` under the
+  conversation's namespace, so it survives a reload, and a `user-key` handover drops it. Every
+  change fires `ag-ui-tabs` (`TABS_EVENT`, `TabsDetail { tabs, reason }`).
+
+### Fixed
+
+- **A chat put back on another namespace no longer writes the run it left there. No opt-in.**
+  An `<ag-ui-agents>` switch, or an `id` or `endpoint` changed while the chat was out of the
+  document, cancels the run in flight on the way out, and that run's last save arrived after the
+  chat was back: read against the new store, it wrote the thread it left, title and messages,
+  into the next agent's history (a thread parked on an approval did this on every switch). A
+  client built before such a remount now writes nothing, as one built before a `user-key`
+  handover already did; what it had saved before the switch stays where it was.
+
 ## [0.9.0] — 2026-11-21
 
 ### Added
@@ -550,7 +629,8 @@ move page walks a host over. Each entry below says whether a host opts in.
   kept offering the moon under `theme="dark"`. Only the toggle's own click redrew it before. A host
   opts in to nothing.
 
-[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/Artui/agents-web-components/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/Artui/agents-web-components/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/Artui/agents-web-components/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Artui/agents-web-components/compare/v0.6.0...v0.7.0

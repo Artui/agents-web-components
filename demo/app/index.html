@@ -23,6 +23,7 @@
       </a>
       <div id="nav-groups"></div>
       <a class="nav-out" href="/page/">Full page route</a>
+      <a class="nav-out" href="/agents/">Agents home (provider)</a>
     </nav>
 
     <main id="main">
@@ -979,6 +980,116 @@
             <li>
               <strong>Both placements at both widths.</strong> Floating and embedded, at about 360px
               and at desktop width: the chip row, the Stop button and the replayed answer.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section data-scenario="child-sessions" hidden>
+        <div class="panel">
+          <h2>A parent and its children</h2>
+          <div class="controls">
+            <div class="ctl wide">
+              <span>Open</span>
+              <span class="inline">
+                <button type="button" id="cs-parent">chat.switchThread("children-parent")</button>
+                <button type="button" id="cs-offsite">chat.switchThread("children-offsite")</button>
+              </span>
+            </div>
+            <label class="ctl check" title="Call preventDefault() on ag-ui-open-thread, as a host routing threads across agents would"
+              ><input type="checkbox" id="cs-route" /><span>Host takes ag-ui-open-thread</span></label
+            >
+            <label class="ctl"
+              ><span>Placement</span>
+              <select id="cs-placement">
+                <option value="floating">floating</option>
+                <option value="embedded">embedded</option>
+              </select></label
+            >
+            <div class="ctl wide"><span>Last ag-ui-open-thread</span><output id="cs-last">-</output></div>
+          </div>
+        </div>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>The links survive a reload.</strong> Open the parent: each of its two
+              start_session cards carries a link to its child, read from the receipt in the
+              result. Reload the page; the links are still there.
+            </li>
+            <li>
+              <strong>A child that needs you.</strong> The reconcile child is parked on an
+              approval, so its link reads "The researcher task needs you", in the danger colour,
+              and the parent shows no approve button. Follow it: the approval is in the child's
+              thread.
+            </li>
+            <li>
+              <strong>The breadcrumb.</strong> On a child, a line under the header reads "From
+              Research the March invoices" and opens the parent. Shorten the panel to about 240px:
+              it stays one line, ellipsised.
+            </li>
+            <li>
+              <strong>The drawer.</strong> Open the history: the two children sit indented under
+              the parent; the venue child, from today, sits under the ten-day-old offsite plan in
+              Older; the orphan stands at the top level. Type "suppliers" in the filter and the
+              child shows alone, without its parent.
+            </li>
+            <li>
+              <strong>A live link.</strong> Send the prompt: the start_session card gets its link
+              as the result streams in.
+            </li>
+            <li>
+              <strong>Grouped tool display.</strong> Set the tool display to grouped: the two
+              cards fold into one step row, and the links, the needs-you one included, show only
+              once the row is opened.
+            </li>
+            <li>
+              <strong>Host routing.</strong> Tick the box and follow a link: the event is logged and
+              the chat stays where it is.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section data-scenario="tabs" hidden>
+        <div class="panel">
+          <h2>The host's tab strip</h2>
+          <div class="controls">
+            <div class="ctl wide">
+              <span>Tabs</span>
+              <span class="inline" id="tabs-strip"></span>
+            </div>
+            <div class="ctl wide">
+              <span>Open</span>
+              <span class="inline">
+                <button type="button" id="tabs-new">chat.newChat()</button>
+                <button type="button" id="tabs-history">chat.openTab(next from history)</button>
+              </span>
+            </div>
+            <div class="ctl wide"><span>Last ag-ui-tabs</span><output id="tabs-out">-</output></div>
+          </div>
+        </div>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>The strip is the host's.</strong> This page calls <code>chat.openTab</code> on
+              load, which starts tracking; every button in the strip is drawn here from
+              <code>ag-ui-tabs</code>, and the active one is marked from <code>ag-ui-thread</code>.
+            </li>
+            <li>
+              <strong>Close is not delete.</strong> Send a turn, press New chat, send another, then
+              close a tab with its x: the thread is still in the history drawer, and
+              <em>openTab(next from history)</em> brings it back. Deleting it from the drawer closes
+              its tab too.
+            </li>
+            <li>
+              <strong>Closing the tab on screen</strong> shows the next tab, else the one before,
+              else a new chat. New chat on an untouched thread reuses its tab.
+            </li>
+            <li>
+              <strong>Reload.</strong> The tabs and their titles come back, reported as
+              <code>restore</code>. Check the strip at about 360px and at desktop width.
             </li>
           </ul>
         </div>

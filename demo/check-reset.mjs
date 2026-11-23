@@ -1,5 +1,6 @@
 // Checks that every scenario's Try buttons and its Reset start over: the same
-// Try pressed twice leaves the same conversation as pressing it once, and Reset
+// Try pressed twice leaves the same conversation as pressing it once (or, on a
+// row with inPlace, carries the first into the second), and Reset
 // leaves an empty conversation with every control at its default. Also that
 // every visible select keeps room for its chevron.
 //
@@ -73,7 +74,8 @@ for (const scenario of SCENARIOS) {
     await press(label);
     await settle();
     const twice = count(await transcript(), text);
-    if (once === 0 || twice !== once) {
+    const expected = scenario.inPlace === true ? once * 2 : once;
+    if (once === 0 || twice !== expected) {
       failures.push(`${scenario.slug}: Try "${label}" twice left ${twice} copies, once left ${once}`);
     }
   }

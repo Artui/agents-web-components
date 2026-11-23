@@ -10,6 +10,7 @@ import {
   TOOL_CALL_STATUS,
 } from "../constants.js";
 import { attachCopyButtons } from "../ui/excerpts/attach_copy_buttons.js";
+import type { ChildSessions } from "../ui/progress/child_sessions.js";
 import type { RunAnnouncer } from "../ui/progress/run_announcer.js";
 import type { SubAgentProgress } from "../ui/progress/subagent_progress.js";
 import type { AnswerActions } from "../ui/transcript/answer_actions.js";
@@ -41,6 +42,8 @@ export interface RunHandlersHost {
   readonly activities: ActivityRegistry;
   /** A delegated sub-agent's progress, on the card that delegated. */
   readonly subagents: SubAgentProgress;
+  /** Links a settled `start_session` card to the child session it started. */
+  readonly childSessions: ChildSessions;
   /** The screen-reader status region. */
   readonly announcer: RunAnnouncer;
   /** The resolved string table. */
@@ -423,6 +426,7 @@ export class RunHandlers {
         // unrecognised outcome still means DONE, so a server that never states
         // one renders every call as done.
         card.settle(toolStatusFromOutcome(outcome), content, answeredBy);
+        this.#host.childSessions.attach(card, content);
         this.#host.transcript.markServerSettled(toolCallId);
         ledger.serverSettled.add(toolCallId);
         // The card stops being the live thing the moment it settles, and the

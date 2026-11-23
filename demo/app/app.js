@@ -37,7 +37,7 @@ const on = (...slugs) => slugs.includes(slug);
 // so nothing an earlier run left behind (a filled form, a pending approval, a
 // readout) carries into the next. Try keeps the scenario's control values and
 // sends its prompt once the page is up; Reset leaves every control at its
-// default.
+// default. A scenario row with inPlace has Try send into the chat as it is.
 const RESTART_KEY = "demo:restart";
 const restart = (() => {
   try {
@@ -142,7 +142,7 @@ if (scenario === null) {
   }
   for (const [label, text] of scenario.prompts) {
     const button = el("button", { type: "button", title: text }, label);
-    button.addEventListener("click", () => startOver(text));
+    button.addEventListener("click", () => (scenario.inPlace === true ? send(text) : startOver(text)));
     tryRow.append(button);
   }
   const reset = el("button", { type: "button", className: "reset", title: "A fresh conversation, every control at its default" }, "Reset");
@@ -967,3 +967,51 @@ new MutationObserver(detachedState).observe(chat, {
   attributes: true,
   attributeFilter: ["data-running"],
 });
+
+// ── Child sessions ───────────────────────────────────────────────────────────
+
+$("cs-parent").addEventListener("click", () => void chat.switchThread("children-parent"));
+$("cs-offsite").addEventListener("click", () => void chat.switchThread("children-offsite"));
+$("cs-placement").addEventListener("change", (event) => {
+  chat.setAttribute("placement", event.target.value);
+});
+chat.addEventListener("ag-ui-open-thread", (event) => {
+  $("cs-last").textContent = JSON.stringify(event.detail);
+  if ($("cs-route").checked) {
+    event.preventDefault();
+  }
+});
+
+// ── Open threads (tabs) ──────────────────────────────────────────────────────
+
+if (on("tabs")) {
+  const drawTabs = () => {
+    const strip = $("tabs-strip");
+    strip.replaceChildren();
+    for (const { threadId, title } of chat.tabs) {
+      const pick = el("button", { type: "button" }, title === "" ? "New chat" : title);
+      pick.setAttribute("aria-pressed", String(threadId === chat.threadId));
+      pick.addEventListener("click", () => void chat.switchThread(threadId));
+      const close = el("button", { type: "button", title: "chat.closeTab" }, "x");
+      close.addEventListener("click", () => chat.closeTab(threadId));
+      strip.append(pick, close);
+    }
+  };
+  chat.addEventListener("ag-ui-tabs", (event) => {
+    $("tabs-out").textContent = `${event.detail.reason}: ${event.detail.tabs.length} open`;
+    drawTabs();
+  });
+  chat.addEventListener("ag-ui-thread", drawTabs);
+  $("tabs-new").addEventListener("click", () => chat.newChat());
+  $("tabs-history").addEventListener("click", async () => {
+    const open = new Set(chat.tabs.map((tab) => tab.threadId));
+    const next = (await chat.conversationStore.listThreads()).find((row) => !open.has(row.threadId));
+    if (next !== undefined) {
+      chat.openTab(next.threadId, next.title);
+    }
+  });
+  if (chat.threadId !== null) {
+    chat.openTab(chat.threadId);
+  }
+  drawTabs();
+}

@@ -324,6 +324,39 @@ export const TOOL_STEP_STYLES: string = `
 /* The collapsed row is the status and the expander at once, which is what keeps
    a ten-step child one row until somebody opens it. Full width and left-aligned,
    because it is a line of the card rather than a button on it. */
+.child-session-link {
+  display: flex;
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 2px 0;
+  border: none;
+  background: none;
+  font: inherit;
+  text-align: left;
+  color: var(--_accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.child-session-link[hidden] {
+  display: none;
+}
+
+/* Underlined at rest, because the default accent is close to the body colour
+   and the line is what says it is a link; hover thickens the line. */
+.child-session-link:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* A child parked on a person: worded so, and drawn in the danger colour so it
+   is seen. Still only a link; the answer is given in the child's thread. */
+.child-session-link[data-status="waiting"] {
+  color: var(--_danger);
+  font-weight: 600;
+}
+
 .subagent-row {
   display: flex;
   align-items: center;

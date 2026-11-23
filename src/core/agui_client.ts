@@ -651,7 +651,7 @@ export class AgUiClient {
    * restored while waiting on an approval), then carry on as the run would
    * have: the host's resolver is asked, and its answers resume the run.
    *
-   * A Stop while the person decides sends nothing and writes nothing, so the
+   * A Stop while the person decides sends nothing and adds nothing, so the
    * run stays parked on the server for the next visit to offer again.
    */
   async answerParked(interrupts: readonly Interrupt[]): Promise<void> {

@@ -56,6 +56,7 @@ This package is the successor of `@artooi/ag-ui-web-component`. Coming from it? 
   - [Maximizing the panel](#maximizing-the-panel)
   - [Collapsing to the launcher](#collapsing-to-the-launcher)
   - [Collapsing to a bottom bar](#collapsing-to-a-bottom-bar)
+- [Several agents under one provider](#several-agents-under-one-provider)
 - [A2UI surfaces](#a2ui-surfaces)
 - [MCP Apps views](#mcp-apps-views)
 - [Tool-call display modes](#tool-call-display-modes)
@@ -308,7 +309,7 @@ element after the fact.
 `approveWithEdits`, `agentFactory`, `getTools`, `getContext`, `routeMap`, `navigate`, `getPageMap`,
 `autoInjectPageMap`, `getPlace`, `conversationStore`, `uploadHandler`, `transcribeHandler`, `navigationResult`,
 `skillContext`, `toolSummaries`, `formatToolPayload`, `formatRelativeTime`, `strings`,
-`resolvePageTarget`, `sharedState`, `anchor` (an element, which wins over the attribute's selector), `extraStyles` ([unstable](#d-extrastyles-the-last-mile)), plus the read-only `unread`, `unhandledActivityTypes`, `threadId`, `threadTitle`, `running`, `barHeight`, `dockWidth`, `uiStrings`, `colorScheme` and `locale`, and
+`resolvePageTarget`, `sharedState`, `anchor` (an element, which wins over the attribute's selector), `extraStyles` ([unstable](#d-extrastyles-the-last-mile)), plus the read-only `unread`, `unhandledActivityTypes`, `threadId`, `threadTitle`, `tabs`, `running`, `barHeight`, `dockWidth`, `uiStrings`, `colorScheme` and `locale`, and
 the attribute mirrors `endpoint` / `userKey` / `userName` / `toolDisplay` / `toolGroupDisplay` / `collapsed` /
 `maximized` / `credentials` / `detachRuns`.
 
@@ -343,7 +344,7 @@ the `copyCode` / `copied` / `copyFailed` strings.
 **Methods**: `registerTool`, `registerPageState`, `registerActivityRenderer`, `registerContext`,
 `setSkills`, `openSkillEditor`, `closeSkillEditor`, `sendMessage`, `run`, `attachFile`, `appendMessage`, `retryLastTurn`, `quote`, `offerQuoteInPage`,
 `enableCharts`, `newChat`, `setCollapsed`, `toggleCollapsed`, `setMaximized`, `toggleMaximized`,
-`describeSurface`, `moveTo`, `resetSize`, `toggleTheme`, `openThreads`, `closeThreads`, `switchThread`, `deleteThread`,
+`describeSurface`, `moveTo`, `resetSize`, `toggleTheme`, `openThreads`, `closeThreads`, `switchThread`, `deleteThread`, `openTab`, `closeTab`,
 `openCheckpoints`, `closeCheckpoints`, `toggleCheckpoints`, `refreshPlace`, `request`, `tokenValues` and `reload`.
 
 `request(url, init?)` is `fetch` as the element authenticates: `headers` and `getHeaders()` under
@@ -1533,6 +1534,50 @@ chat.addEventListener("ag-ui-thread", (e) => myBar.markActive(e.detail.threadId)
 myBar.onPick = (threadId) => chat.switchThread(threadId);
 ```
 
+#### Open threads (tabs)
+
+A host that draws conversations as tabs keeps the open set on the element rather than beside
+it. The element draws nothing for it: the tabs are the host's chrome. **Tracking starts at the
+host's first `openTab`**, which opens the thread on screen with it, or at connect when this tab
+already stored a set. Until then nothing is kept, written or announced, so a host that never
+calls `openTab` sees no change.
+
+- `tabs` *(read-only)* — the open threads in the order they were opened, each
+  `{ threadId, title }` (typed `ThreadTab`), frozen. `title` is `""` until one is known. Empty
+  until tracking starts.
+- `openTab(threadId, title?)` — open a thread as the last tab without showing it; `switchThread`
+  shows it. Without a `title`, the store's list names it. A thread already open stays where it is.
+- `closeTab(threadId)` — close a tab. **The thread stays in history**, which is what sets a close
+  apart from `deleteThread`. Closing the thread on screen shows the next tab, else the one before
+  it, else a new chat, cancelling a run in flight as `switchThread` does.
+
+Once tracking has started, showing a thread opens it: `switchThread`, `newChat`, the drawer, a
+[child-session](#child-sessions) link and the parent breadcrumb each open the thread they show
+(a link or breadcrumb a host prevents shows nothing and adds no tab), so the thread on screen
+always has a tab, except when a closed tab's neighbour cannot be
+loaded. A new chat leaving a thread nothing was sent in takes over that thread's tab, since the
+store drops the empty thread. `deleteThread` closes the tab as it deletes the thread.
+
+The set is kept per browser tab in `sessionStorage`, under the conversation's namespace (the
+element's `id` and `user-key`, or, under `<ag-ui-agents>`, the agent's: `agent:<id>`, so each
+agent keeps its own tabs), so a reload reads the same tabs back, titles included. A
+`user-key` handover drops the previous user's tabs; a first `user-key` naming the user already
+there keeps them.
+
+Every change fires one **`ag-ui-tabs`** event (`TABS_EVENT`, detail `{ tabs, reason }`,
+typed `TabsDetail`), with `reason` one of `open`, `close`, `delete`, `title`, `restore`
+(connect or `reload()`) and `rescope` (a `user-key` handover). Ignore a `reason` you do not know.
+A thread shown is in `tabs` by the time its `ag-ui-thread` fires, and its `ag-ui-tabs` follows.
+Switching between two open tabs changes no tab, so mark the active one from `ag-ui-thread`.
+
+```js
+chat.addEventListener("ag-ui-tabs", (e) => myTabs.draw(e.detail.tabs));
+chat.addEventListener("ag-ui-thread", (e) => myTabs.markActive(e.detail.threadId));
+chat.openTab(chat.threadId); // start tracking
+myTabs.onPick = (threadId) => chat.switchThread(threadId);
+myTabs.onClose = (threadId) => chat.closeTab(threadId);
+```
+
 ### The composer's own keys
 
 **Enter during a run queues.** A second run cannot start while one is in flight —
@@ -2157,7 +2202,10 @@ on screen as current, and drives the chat through the [thread API](#driving-the-
 
 - **Binding.** `for` names the chat's `id`, looked up in the list's own root, the document or the
   shadow root it sits in; a chat added later is picked up when it first reports its thread. Or set
-  the `chat` property, which wins over `for` until it is set back to `null`.
+  the `chat` property, which wins over `for` until it is set back to `null`. With neither, the
+  list binds to the chat of an [`<ag-ui-agents>` provider](#several-agents-under-one-provider):
+  the one its `agents` attribute names by id, else the nearest one around it, and lists again each
+  time the provider moves its chat to another agent. `for` wins when both are present.
 - **`variant`.** `list` (the default) draws rows and an empty text. `pills` draws a strip that
   stays on one line and scrolls sideways, and no empty text. Both give each conversation a delete
   behind an inline confirm, which calls `chat.deleteThread`; in a pill the confirm opens on the
@@ -2232,6 +2280,77 @@ server, or a mount without a run store, lists none of them and nothing below hap
   entry to an approval, so answering one that way would approve it. A host driving its own `AgUiClient`
   answers a parked run the same way with `client.answerParked(interrupts)`, which asks its
   `resolveInterrupts` once and sends the resume.
+
+## Several agents under one provider
+
+A host that serves more than one agent (django-ag-ui 0.87.0's `AgentsDirectory`) can put one
+chat in front of all of them. `<ag-ui-agents>` is a headless provider: it draws nothing, reads the
+directory of agents and keeps the inbox of every agent's threads fresh, and mounts its chat on one
+agent at a time.
+
+```html
+<ag-ui-agents id="home" data-agents-url="/agents-home/agents/"
+              data-inbox-url="/agents-home/inbox/" data-inbox-transport="stream"
+              style="display: contents">
+  <ag-ui-threads></ag-ui-threads>
+  <ag-ui-chat></ag-ui-chat>
+</ag-ui-agents>
+
+<script type="module">
+  import { defineAgents } from "@artooi/agents-web-components";
+  import { defineChat } from "@artooi/agents-web-components/chat";
+  import { defineThreads } from "@artooi/agents-web-components/threads";
+  defineAgents();
+  defineChat();
+  defineThreads();
+</script>
+```
+
+- **The directory.** `data-agents-url` answers `{ agents: [...] }`, each entry an `id`, `name`,
+  `description`, `endpoint` and one URL per route its mount serves (`null` for one it does not).
+  It is read on connect and by `refresh()`, with the last ETag, and listed in **`agents`**
+  *(read-only)* and **`ag-ui-agents-change`** (`AGENTS_CHANGE_EVENT`, detail `{ agents }`).
+- **Its chat** is the first `<ag-ui-chat>` inside it, or the element set as **`chat`**.
+- **Switching agents is a remount.** The chat is mounted on the entry **`agent`** names (the
+  first entry without it): taken out of the document, given the entry's `endpoint`,
+  `data-tools-url`, `data-threads-url`, `data-runs-url`, `data-skills-url`,
+  `data-skill-editor-url`, `data-attachments-url` and `data-transcribe-url` (removed where the
+  entry has `null`), and put back where it was. That is how a chat applies its
+  [connect-time attributes](#when-each-attribute-is-read), so no warning is raised, and like any
+  remount it cancels a run in flight. Setting `agent` (attribute or property) switches;
+  **`ag-ui-agent-change`** (`AGENT_CHANGE_EVENT`, detail `{ agent }`) fires each time. The
+  getter answers the id of the entry the chat is on.
+- **Each agent keeps its own conversations.** The chat's built-in store is replaced by one under
+  the entry's id (`agent:<id>`, plus `#<user-key>` when one is set), so each agent has its own
+  thread pointer, history and messages, and coming back to an agent restores where it was. A
+  store of your own kind, a `RemoteConversationStore` you made included, is left alone and keeps
+  its own keying, across every switch, even one to an entry whose `threads_url` wraps it in the
+  chat's remote; the layout preferences stay on the chat's own `id`. Two chats on one entry on
+  the same page (two providers listing it) are kept apart as two chats on one namespace are: the
+  second gets a throwaway namespace and a console warning.
+- **The inbox.** `data-inbox-url` answers `{ threads: [...] }` in the `threads/` shape, every
+  row with its `agent_id`. It is watched while connected, by ETag polling every five seconds or,
+  when `data-inbox-transport` is `stream`, by the server's event stream (polled when the server
+  answers with JSON). Each change is in **`inbox`** *(read-only)* and
+  **`ag-ui-inbox-change`** (`INBOX_CHANGE_EVENT`, detail `{ threads }`), each row a `ThreadMeta`
+  with `agentId`. **`openThread(agentId, threadId)`** mounts the chat on that agent and opens the
+  thread; for an agent the directory does not list (yet), it opens nothing.
+- **A child session on another agent opens through the provider.** The provider listens to its
+  chat's cancelable [`ag-ui-open-thread`](#child-sessions). When `detail.agentId` names a listed
+  entry other than the one mounted, it calls `preventDefault()` and `openThread(agentId,
+  threadId)`, so a child link or the parent breadcrumb switches agent and shows the thread. The
+  same agent, an agent the directory does not list and a `null` `agentId` are left alone, and the
+  chat opens the thread in place; so is a request a listener on the chat prevented first. The
+  `agentId` is the directory entry's `id`: a child-session receipt's `agent_id`, or a parent's
+  `scope`.
+- **Requests** carry **`headers`**, **`getHeaders()`** (winning per key) and the
+  **`credentials`** attribute, as on the chat. They are the provider's own; the chat keeps its
+  own for its requests.
+
+The provider is exported from the root entry (and so from `/bundle`) with `defineAgents`, which
+throws naming the tag when another class holds it. A lone `<ag-ui-chat>` needs none of this and
+works as it always has. Runs and reattach stay in the chat. The element is an ordinary inline
+element, so give it `display: contents` when it should not affect layout.
 
 ## A2UI surfaces
 
@@ -2679,6 +2798,52 @@ properties and its spinner speed, so re-theming the cards re-themes these. The
 row's own chrome comes from `subAgentWorking` and `subAgentSteps` in
 [`UiStrings`](#internationalization-i18n); everything else on the row is the
 server's text.
+
+### Child sessions
+
+A child session (django-spec-agents' `start_session`) runs headless in a thread
+of its own and sends nothing into the parent's stream. What persists is its
+receipt, the call's tool result (`{ agent_id, thread_id, run_id, note }`), so the
+link is read from that, on the live result and on a restore alike: **the card
+that started a child links to the child's thread, and still does after a
+reload.** A refusal, or any other result, draws no link.
+
+- **A child that needs you.** When the thread list the chat holds (the drawer's
+  listing, or `data-thread-status`'s watch) shows the child's row `waiting`, the
+  link reads `childSessionNeedsYou` ("The researcher task needs you") instead of
+  `childSessionOpen`, and carries `data-status`. It still only opens the child:
+  the parent never draws the child's approval or any control that answers it.
+- **The breadcrumb.** When the thread on screen is a child (django-ag-ui 0.86.0
+  lists `parent` on its row, read onto `ThreadMeta.parent`), a line between the
+  header and the transcript reads `parentThread` ("From {title}"), or
+  `parentThreadUnlisted` when the list does not hold the parent, and opens it.
+- **The drawer** nests each child under its parent's row (`drawer-row-child`,
+  inside a `drawer-children` group), in the parent's date group whatever the
+  child's own date. A child whose parent is not listed, or that a filter matched
+  without its parent, stands at the top level.
+
+**Opening a thread asks first.** A link or the breadcrumb dispatches
+**`ag-ui-open-thread`** (`OPEN_THREAD_EVENT`, detail `{ agentId, threadId }`,
+typed `OpenThreadDetail`), bubbling, composed and cancelable. `agentId` is the
+receipt's `agent_id`, or the parent's store `scope` (`null` when unscoped). The
+chat cannot tell which agent it serves, so unless a listener calls
+`preventDefault()` it then opens the thread in place, as a drawer pick does,
+letting go of a run in flight. A host whose child runs on another agent's mount
+takes the event, opens that thread where it lives, and prevents the default (under an
+[`<ag-ui-agents>` provider](#several-agents-under-one-provider) that is done for a listed agent):
+
+```js
+chat.addEventListener("ag-ui-open-thread", (event) => {
+  if (event.detail.agentId !== null && event.detail.agentId !== "assistant") {
+    event.preventDefault();
+    openAgentThread(event.detail.agentId, event.detail.threadId);
+  }
+});
+```
+
+Nothing to opt into. The breadcrumb and the needs-you wording wait for a list:
+after a reload straight onto a child under a remote store, that is the first
+drawer open, switch or `data-thread-status` tick.
 
 ---
 
@@ -3379,6 +3544,11 @@ chat.conversationStore = new RemoteConversationStore(
 );
 ```
 
+`RemoteConversationStore.local` *(read-only)* is the store it keeps the client-only state in (the
+thread pointer and the navigation checkpoint): the third constructor argument, a
+`SessionStorageStore` by default. A host wrapping the chat's store reads it to reach what the
+remote delegates.
+
 A conversation store you assign yourself is never replaced by a change of `user-key`, whether you
 assign it before the element connects or after. The one exception is a plain `SessionStorageStore`
 assigned before the element connects: that is the same kind as the element's own default, which is
@@ -3890,6 +4060,7 @@ paths.
 | `MessageRole` | type | Role of a rendered chat message. |
 | `SubmitDetail` | type | `detail` shape of the submit event. |
 | `ThreadDetail` | type | `detail` shape of the `ag-ui-thread` event (`{ threadId, previousThreadId, reason }`). |
+| `OpenThreadDetail` | type | `detail` shape of the `ag-ui-open-thread` event (`{ agentId, threadId }`). |
 | `ToggleDetail` | type | `detail` shape of the `ag-ui-toggle` event (`{ collapsed }`). |
 | `MaximizeDetail` | type | `detail` shape of the `ag-ui-maximize` event (`{ maximized }`). |
 | `BarHeightDetail` | type | `detail` shape of the `ag-ui-bar-height` event (`{ height }`). |
@@ -3897,6 +4068,16 @@ paths.
 | `ThreadTitleDetail` | type | `detail` shape of the `ag-ui-thread-title` event (`{ threadId, title }`). |
 | `UnreadDetail` | type | `detail` shape of the `ag-ui-unread` event (`{ unread, threadIds }`). |
 | `ThreadsChangeDetail` | type | `detail` shape of the `ag-ui-threads-change` event (`{ threads }`). |
+| `AgUiAgents` | class | The headless `<ag-ui-agents>` provider: the agents directory, the inbox, and the chat it mounts on an entry. See [Several agents under one provider](#several-agents-under-one-provider). |
+| `defineAgents()` | function | Register `<ag-ui-agents>`; a no-op if it is already registered, and throws if another class holds the tag. |
+| `AgentEntry` | type | One directory entry: `id`, `name`, `description`, `endpoint` and one URL per route, `null` where the mount serves none. |
+| `InboxRow` | type | An inbox row: a `ThreadMeta` plus `agentId`. |
+| `InboxServerRow` | type | An inbox row as the server lists it: a thread row plus `agent_id`. |
+| `InboxTransport` | type | How the inbox is watched: `poll` or `stream`. |
+| `AgentsChat` | type | The part of `<ag-ui-chat>` the provider drives. |
+| `AgentsChangeDetail` | type | `detail` shape of the `ag-ui-agents-change` event (`{ agents }`). |
+| `InboxChangeDetail` | type | `detail` shape of the `ag-ui-inbox-change` event (`{ threads }`). |
+| `AgentChangeDetail` | type | `detail` shape of the `ag-ui-agent-change` event (`{ agent }`). |
 | `AttachmentsDetail` | type | `detail` shape of the `ag-ui-attachments` event (`{ attachments, pending }`). |
 | `StateDetail` | type | `detail` shape of the `ag-ui-state` event (`{ state }`). |
 
@@ -3975,9 +4156,12 @@ paths.
 | Export | Kind | Summary |
 | --- | --- | --- |
 | `SessionStorageStore` | class | Default per-tab conversation store. |
-| `RemoteConversationStore` | class | Server-backed store over a `data-threads-url` endpoint. |
+| `RemoteConversationStore` | class | Server-backed store over a `data-threads-url` endpoint; its read-only `local` is the store holding the thread pointer and checkpoints. |
 | `ClientConversationStore` | type | The persistence seam. |
-| `ThreadMeta` | type | A thread-drawer row (`{ threadId, title, updatedAt, preview, unread?, status?, reason?, interrupts? }`); see [Thread status](#thread-status). |
+| `ThreadTab` | type | One open thread in `tabs` (`{ threadId, title }`). |
+| `TabsDetail` | type | `ag-ui-tabs` event detail (`{ tabs, reason }`). |
+| `ThreadMeta` | type | A thread-drawer row (`{ threadId, title, updatedAt, preview, unread?, status?, reason?, interrupts?, parent? }`); see [Thread status](#thread-status) and [Child sessions](#child-sessions). |
+| `ThreadParent` | type | A child thread's parent, as `ThreadMeta.parent` names it (`{ threadId, scope }`, `scope` `null` in an unscoped store). |
 | `ThreadStatus` | type | A thread's run status as the server lists it: `idle`, `running`, `waiting` or `failed`. |
 | `ThreadsTransport` | type | How `watchThreads` follows the list: `poll` or `stream`. |
 | `NavigationCheckpoint` | type | The pre-reload checkpoint marker. |
@@ -4053,8 +4237,14 @@ paths.
 | `ELEMENT_TAG` | The registered tag name (`ag-ui-chat`). |
 | `SUBMIT_EVENT` | The submit CustomEvent name. |
 | `THREAD_EVENT` | The conversation-changed CustomEvent name (`ag-ui-thread`). |
+| `OPEN_THREAD_EVENT` | The open-another-thread CustomEvent name (`ag-ui-open-thread`), fired cancelable by a child-session link or a parent breadcrumb; see [Child sessions](#child-sessions). |
 | `THREAD_TITLE_EVENT` | The thread-title CustomEvent name (`ag-ui-thread-title`). |
+| `TABS_EVENT` | The tabs CustomEvent name (`ag-ui-tabs`); see [Open threads (tabs)](#open-threads-tabs). |
 | `THREADS_CHANGE_EVENT` | The thread-list CustomEvent name (`ag-ui-threads-change`), fired by a chat watching its list under `data-thread-status`. |
+| `AGENTS_TAG` | The provider's tag name (`ag-ui-agents`). |
+| `AGENTS_CHANGE_EVENT` | The directory CustomEvent name (`ag-ui-agents-change`). |
+| `INBOX_CHANGE_EVENT` | The inbox CustomEvent name (`ag-ui-inbox-change`). |
+| `AGENT_CHANGE_EVENT` | The agent-switch CustomEvent name (`ag-ui-agent-change`). |
 | `TOGGLE_EVENT` | The collapse-toggle CustomEvent name (`ag-ui-toggle`). |
 | `MAXIMIZE_EVENT` | The maximized-state CustomEvent name (`ag-ui-maximize`). |
 | `BAR_HEIGHT_EVENT` | The bottom bar's height CustomEvent name (`ag-ui-bar-height`). |
@@ -4622,6 +4812,7 @@ component sets, so a new one cannot ship undocumented.
 | Tool cards | `tool-card` (plus one status modifier: `tool-card-pending`, `tool-card-deferred`, `tool-card-done`, `tool-card-error`, `tool-card-declined`, `tool-card-interrupted`), `tool-card-head`, `tool-card-icon`, `tool-card-name`, `tool-card-status` (plus `tool-card-status-pending`, `tool-card-status-deferred`, `tool-card-status-done`, `tool-card-status-error`, `tool-card-status-declined`, `tool-card-status-interrupted`), `tool-card-decision`, `tool-card-answered-by`, `tool-card-toggle`, `tool-card-body`, `tool-card-section` (plus `tool-card-args-section`, `tool-card-result-section`), `tool-card-section-label` (plus `tool-card-args-label`, `tool-card-result-label`), `tool-card-args`, `tool-card-result`, `tool-card-approval`, `tool-card-subagent`, `tool-card-repeat` |
 | Tool-step group | `tool-group` (plus one state modifier: `tool-group-waiting`, `tool-group-running`, `tool-group-done`, `tool-group-error`), `tool-group-head`, `tool-group-icon`, `tool-group-label`, `tool-group-meta`, `tool-group-list` |
 | Delegated sub-agents | `subagent`, `subagent-row`, `subagent-icon`, `subagent-status`, `subagent-steps`, `subagent-step`, `subagent-step-icon`, `subagent-step-name` |
+| Child sessions | `child-session-link`, `parent-breadcrumb`, `parent-breadcrumb-link` |
 | Client-side confirmation | `confirm`, `confirm-body`, `confirm-args`, `confirm-actions`, `confirm-button` (plus `confirm-confirm`, `confirm-cancel`, `confirm-always`) |
 | An MCP Apps view's consent card | the same parts as the confirmation card, with `mcp-app-consent` beside `confirm` on the card |
 | Server-side approval | `approval`, `approval-body`, `approval-actions`, `approval-button` (plus `approval-approve`, `approval-deny`), `approval-edit`, `approval-args`, `approval-error` |
@@ -4632,7 +4823,7 @@ component sets, so a new one cannot ship undocumented.
 | Skills | `skill-chips`, `skill-chip`, `skill-palette`, `skill-item`, `skill-item-title`, `skill-item-desc`, `skill-item-token`, `skill-hint` (the composer hint: a skill’s missing placeholders, and a run continuation picked with nothing typed or while a run is in flight), `skill-manage` (the "Manage skills" row, also a `skill-item`) |
 | Full-panel view | `panel-view`, `panel-view-bar`, `panel-view-title`, `panel-view-body`, `panel-view-footer`, and in its bar `back-button` |
 | Skill editor | `skill-rows`, `skill-row`, `skill-empty`, `skill-form`, and in the view's bar `new-skill-button` |
-| Thread drawer | `drawer`, `drawer-backdrop`, `drawer-panel`, `drawer-header`, `drawer-title`, `drawer-new`, `drawer-close`, `drawer-filter`, `drawer-list`, `drawer-empty`, `drawer-group-label`, `drawer-row`, `drawer-row-select`, `drawer-row-title`, `drawer-row-time`, `drawer-row-preview`, `drawer-row-actions`, `drawer-row-rename`, `drawer-row-delete`, `drawer-rename-input`, `drawer-confirm`, `drawer-confirm-label`, `drawer-confirm-yes`, `drawer-confirm-no` |
+| Thread drawer | `drawer`, `drawer-backdrop`, `drawer-panel`, `drawer-header`, `drawer-title`, `drawer-new`, `drawer-close`, `drawer-filter`, `drawer-list`, `drawer-empty`, `drawer-group-label`, `drawer-row` (plus `drawer-row-child` on a child session's row), `drawer-children`, `drawer-row-select`, `drawer-row-title`, `drawer-row-time`, `drawer-row-preview`, `drawer-row-actions`, `drawer-row-rename`, `drawer-row-delete`, `drawer-rename-input`, `drawer-confirm`, `drawer-confirm-label`, `drawer-confirm-yes`, `drawer-confirm-no` |
 | Charts | `chart-block`, `chart-title`, `chart-legend` |
 | Checkpoints panel | `checkpoints`, `checkpoints-header`, `checkpoints-title`, `checkpoints-list`, `checkpoints-empty`, `checkpoint-row`, `checkpoint-label`, `checkpoint-time`, `checkpoint-id`, `checkpoint-branch`, `checkpoint-actions` (the pair's wrapper), `checkpoint-action` (plus `checkpoint-resume`, `checkpoint-fork`) |
 

@@ -1,0 +1,23 @@
+[
+  {
+    "thread_id": "child-thread-1",
+    "title": "Invoices research",
+    "updated_at": "2026-11-23T12:00:00+00:00",
+    "preview": "Researching.",
+    "parent": { "thread_id": "parent-thread", "scope": "assistant" }
+  },
+  {
+    "thread_id": "child-thread-2",
+    "title": "Unscoped child",
+    "updated_at": "2026-11-23T12:00:00+00:00",
+    "preview": "",
+    "parent": { "thread_id": "parent-thread", "scope": null }
+  },
+  {
+    "thread_id": "parent-thread",
+    "title": "Research the invoices",
+    "updated_at": "2026-11-23T12:00:00+00:00",
+    "preview": "Started a researcher on it.",
+    "parent": null
+  }
+]

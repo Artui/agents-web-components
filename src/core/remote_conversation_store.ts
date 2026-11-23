@@ -4,6 +4,7 @@ import {
   type NavigationCheckpoint,
   SessionStorageStore,
   type ThreadMeta,
+  type ThreadParent,
   type ThreadStatus,
   type ThreadsTransport,
   threadTitleFrom,
@@ -24,6 +25,7 @@ export interface ServerThreadRow {
   readonly last_read_at?: string | null;
   readonly reason?: string | null;
   readonly interrupts?: readonly Interrupt[];
+  readonly parent?: unknown;
 }
 
 /** What a listing answered: the rows, or `null` when the list could not be read. */
@@ -114,6 +116,11 @@ export class RemoteConversationStore implements ClientConversationStore {
     this.#local = local;
     this.#credentials = credentials;
     this.#cacheMessages = cacheMessages;
+  }
+
+  /** The store this one keeps the client-only state in: the thread pointer and checkpoints. */
+  get local(): ClientConversationStore {
+    return this.#local;
   }
 
   threadId(): string {
@@ -351,6 +358,7 @@ export class RemoteConversationStore implements ClientConversationStore {
       title: this.#renamed.get(row.thread_id) ?? row.title,
       updatedAt,
       preview: row.preview,
+      ...parentOf(row),
     };
     if (row.status === undefined) {
       return meta;
@@ -430,4 +438,22 @@ export class RemoteConversationStore implements ClientConversationStore {
  */
 function updatedAtOf(row: ServerThreadRow): number {
   return row.updated_at === null ? Number.NaN : Date.parse(row.updated_at);
+}
+
+/**
+ * A child row's `parent` as {@link ThreadMeta.parent}, spread into the meta, or
+ * nothing for a top-level row. Narrowed off the wire rather than trusted: a row
+ * whose parent has no thread id is listed as top-level, and a scope that is not
+ * a string is read as unscoped.
+ */
+function parentOf(row: ServerThreadRow): { parent?: ThreadParent } {
+  const parent: unknown = row.parent;
+  if (typeof parent !== "object" || parent === null) {
+    return {};
+  }
+  const { thread_id: threadId, scope } = parent as Record<string, unknown>;
+  if (typeof threadId !== "string" || threadId === "") {
+    return {};
+  }
+  return { parent: { threadId, scope: typeof scope === "string" ? scope : null } };
 }

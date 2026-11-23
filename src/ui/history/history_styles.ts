@@ -377,6 +377,50 @@ export const HISTORY_STYLES: string = `
   background: var(--_assistant-bg);
 }
 
+/* Child sessions' rows, in a group under their parent's row. The groups nest,
+   so a grandchild steps in again without a rule per level. */
+.drawer-children {
+  padding-inline-start: 14px;
+}
+
+/* The breadcrumb from a child session back to its parent: one muted line
+   between the header and the transcript. */
+.parent-breadcrumb {
+  display: flex;
+  min-width: 0;
+  padding: 4px 14px;
+  border-bottom: 1px solid var(--_border);
+}
+
+.parent-breadcrumb[hidden] {
+  display: none;
+}
+
+.parent-breadcrumb-link {
+  min-width: 0;
+  max-width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: var(--_text-xs);
+  color: var(--_muted);
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.parent-breadcrumb-link::before {
+  content: "\\2190\\00a0";
+}
+
+.parent-breadcrumb-link:hover {
+  color: var(--_fg);
+  text-decoration: underline;
+}
+
 .drawer-row-select {
   flex: 1;
   min-width: 0;

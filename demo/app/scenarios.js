@@ -8,7 +8,9 @@
 //
 // `prompts` are [label, text] pairs the scenario's Try buttons send. The text
 // is what the mock agent (mock-server.mjs) matches on, so it is the
-// documentation of that agent too: the start page lists every one.
+// documentation of that agent too: the start page lists every one. Try starts
+// over from a fresh load, unless the row sets `inPlace`, whose walkthrough
+// carries one conversation into the next: then Try sends into the chat as it is.
 
 export const GROUPS = [
   "Layout",
@@ -284,6 +286,35 @@ export const SCENARIOS = [
       "data-threads-url": "/detached/threads/",
       "data-detach-runs": "",
     },
+  },
+  {
+    slug: "child-sessions",
+    group: "Conversation",
+    title: "Child sessions",
+    since: "0.10.0",
+    summary:
+      "A start_session card links to the child session it started, read from the receipt in its result, so the link survives a reload; a child parked on a person reads needs-you in the parent and is answered only in its own thread; a child thread opens with a breadcrumb back to its parent; the drawer nests children under their parents.",
+    prompts: [["Start a child session", "Compare the supplier prices"]],
+    attrs: {
+      endpoint: "/children/agent/",
+      "data-threads-url": "/children/threads/",
+      "data-thread-status": "poll",
+      "data-threads-search": "always",
+      "data-tool-display": "full",
+    },
+  },
+  {
+    slug: "tabs",
+    group: "Conversation",
+    title: "Open threads (tabs)",
+    since: "0.10.0",
+    summary:
+      "chat.tabs, openTab and closeTab keep the open conversations apart from history; the element draws nothing, so the strip here is the host's own, drawn from ag-ui-tabs.",
+    prompts: [
+      ["Send a turn", "echo hello"],
+      ["Send another", "echo a second thread"],
+    ],
+    inPlace: true,
   },
 ];
 

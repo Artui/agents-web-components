@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>agents-web-components — agents home</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        color: #1a1a2e;
+        background: #f7f7fb;
+      }
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 12px;
+        padding: 10px 20px;
+        background: #15151f;
+        color: #fff;
+      }
+      header button[aria-pressed="true"] {
+        background: #9cc2ff;
+        color: #15151f;
+      }
+      .home {
+        display: grid;
+        grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+        gap: 16px;
+        padding: 16px 20px;
+      }
+      @media (max-width: 640px) {
+        .home {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+      aside h2 {
+        font-size: 0.9rem;
+        margin: 12px 0 6px;
+      }
+      #inbox {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      #inbox button {
+        width: 100%;
+        text-align: left;
+        margin-bottom: 4px;
+      }
+      ag-ui-chat {
+        display: block;
+        height: 70vh;
+      }
+      .log {
+        font: 12px ui-monospace, monospace;
+        padding: 0 20px 20px;
+        overflow-wrap: anywhere;
+      }
+    </style>
+  </head>
+  <body>
+    <ag-ui-agents
+      id="home"
+      data-agents-url="/agents-home/agents/"
+      data-inbox-url="/agents-home/inbox/"
+      style="display: contents"
+    >
+      <header>
+        <strong>Agents home</strong>
+        <span id="agents" role="group" aria-label="Agents"></span>
+      </header>
+      <div class="home">
+        <aside>
+          <h2>Inbox, every agent</h2>
+          <ul id="inbox"></ul>
+          <h2>This agent's conversations</h2>
+          <ag-ui-threads></ag-ui-threads>
+        </aside>
+        <ag-ui-chat placement="inline" data-start-open></ag-ui-chat>
+      </div>
+    </ag-ui-agents>
+    <ol class="log" id="log" aria-label="Provider events"></ol>
+    <script type="module" src="/agents/agents.js"></script>
+    <script src="/viewport-readout.js"></script>
+  </body>
+</html>
