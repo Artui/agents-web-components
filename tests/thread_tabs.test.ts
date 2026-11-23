@@ -299,10 +299,13 @@ describe("<ag-ui-chat> open threads", () => {
     expect(el.tabs[2]).toEqual({ threadId: "ghost-2", title: "" });
   });
 
-  it("takes a title the store's watched list brings into a tab behind the screen", async () => {
+  /** A chat over a host's store (kept as is, not scoped) whose watched list `hand` pushes. */
+  async function watched(): Promise<{
+    el: AgUiChat;
+    hand: (threads: readonly ThreadMeta[]) => void;
+  }> {
     let hand: ((threads: readonly ThreadMeta[]) => void) | undefined;
     const inner = new SessionStorageStore("watched");
-    // A host's store, so the element keeps it rather than scoping its own.
     const store: ClientConversationStore = {
       threadId: () => inner.threadId(),
       newThread: () => inner.newThread(),
@@ -322,9 +325,22 @@ describe("<ag-ui-chat> open threads", () => {
     const el = document.createElement(ELEMENT_TAG) as AgUiChat;
     el.setAttribute("endpoint", "/agent/");
     el.setAttribute("data-thread-status", "poll");
+    el.agentFactory = () =>
+      makeFakeAgent({
+        script: async (emit: Emit) => {
+          emit.runStart();
+          emit.textEnd("answer");
+          emit.runEnd();
+        },
+      }).agent;
     el.conversationStore = store;
     document.body.appendChild(el);
     await flush();
+    return { el, hand: (threads) => hand?.(threads) };
+  }
+
+  it("takes a title the store's watched list brings into a tab behind the screen", async () => {
+    const { el, hand } = await watched();
     el.openTab(el.threadId as string);
     el.openTab("t1", "first words");
     const seen: TabsDetail[] = [];
@@ -332,10 +348,23 @@ describe("<ag-ui-chat> open threads", () => {
       seen.push((event as CustomEvent<TabsDetail>).detail);
     });
 
-    hand?.([{ threadId: "t1", title: "Renamed", updatedAt: 1, preview: "" }]);
+    hand([{ threadId: "t1", title: "Renamed", updatedAt: 1, preview: "" }]);
 
     expect(el.tabs[1]).toEqual({ threadId: "t1", title: "Renamed" });
     expect(seen.map((detail) => detail.reason)).toEqual(["title"]);
+  });
+
+  it("keeps the element's own title for the thread on screen when the watched list names it", async () => {
+    const { el, hand } = await watched();
+    el.openTab(el.threadId as string);
+    await el.sendMessage("plan a trip");
+    await flush();
+    const active = el.threadId as string;
+    expect(el.tabs).toEqual([{ threadId: active, title: "plan a trip" }]);
+
+    hand([{ threadId: active, title: "Server's idea", updatedAt: 1, preview: "" }]);
+
+    expect(el.tabs).toEqual([{ threadId: active, title: "plan a trip" }]);
   });
 
   it("opens a thread switched to, and a new chat", async () => {
@@ -389,6 +418,22 @@ describe("<ag-ui-chat> open threads", () => {
     expect(seen.map((detail) => detail.reason)).toEqual(["close"]);
     const listed = await el.conversationStore.listThreads();
     expect(listed.map((row) => row.threadId)).toContain("t1");
+  });
+
+  it("closing a tab behind the screen leaves the thread on screen where it is", async () => {
+    const { el } = mount();
+    await flush();
+    await el.sendMessage("first words");
+    await flush();
+    const first = el.threadId as string;
+    el.openTab("t1");
+    el.openTab("t2");
+
+    el.closeTab("t1");
+    await flush();
+
+    expect(el.threadId).toBe(first);
+    expect(ids(el)).toEqual([first, "t2"]);
   });
 
   it("closing the tab on screen shows its right neighbour, else its left", async () => {

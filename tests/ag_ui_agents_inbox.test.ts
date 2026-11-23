@@ -137,6 +137,56 @@ describe("<ag-ui-agents> inbox by polling", () => {
     expect(got).toHaveLength(1);
   });
 
+  it("carries a reason only on a failed row and interrupts only on a waiting one", async () => {
+    fetchMock.mockResolvedValueOnce(
+      inbox([
+        { ...failed, thread_id: "f-none", reason: undefined },
+        { ...failed, thread_id: "f-null", reason: null },
+        { ...failed, thread_id: "f-number", reason: 7 },
+        { ...running, thread_id: "r-reason", reason: "stale" },
+        { ...waiting, thread_id: "w-reason", reason: "stale" },
+        { ...waiting, thread_id: "w-none", interrupts: undefined },
+        { ...running, thread_id: "r-interrupts", interrupts: waiting.interrupts },
+        { ...failed, thread_id: "f-interrupts", interrupts: waiting.interrupts },
+      ]),
+    );
+    const home = provider();
+    document.body.append(home);
+    await vi.advanceTimersByTimeAsync(0);
+
+    const byId = Object.fromEntries(home.inbox.map((row) => [row.threadId, row]));
+    for (const id of ["f-none", "f-null", "f-number", "r-reason", "w-reason", "w-none"]) {
+      expect(byId[id], id).toBeDefined();
+    }
+    for (const id of ["f-none", "f-null", "f-number", "r-reason", "w-reason"]) {
+      expect(byId[id], id).not.toHaveProperty("reason");
+    }
+    for (const id of ["w-none", "r-interrupts", "f-interrupts"]) {
+      expect(byId[id], id).not.toHaveProperty("interrupts");
+    }
+    expect(byId["w-reason"]).toHaveProperty("interrupts", waiting.interrupts);
+    expect(byId["f-none"]).toHaveProperty("status", "failed");
+  });
+
+  it("polls for an explicit poll and for a transport it does not know", async () => {
+    fetchMock.mockImplementation(() => Promise.resolve(inbox([plain])));
+    const home = provider({ "data-inbox-transport": "poll" });
+    document.body.append(home);
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls.map((call) => call[1]?.headers)).toEqual([
+      {},
+      { "If-None-Match": '"i1"' },
+    ]);
+
+    home.setAttribute("data-inbox-transport", "websocket");
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(fetchMock.mock.calls.at(-1)?.[1]?.headers).not.toHaveProperty("Accept");
+  });
+
   it("hands on nothing for a failed, refused or malformed answer, and keeps asking", async () => {
     fetchMock
       .mockRejectedValueOnce(new TypeError("offline"))

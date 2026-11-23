@@ -187,6 +187,27 @@ describe("<ag-ui-agents> directory", () => {
     expect(switches).toEqual(["/board/", "/board/"]);
   });
 
+  it("switches between two entries that differ only in id", async () => {
+    const twin = { endpoint: "/same/", runs_url: "/same/runs/" };
+    fetchMock.mockResolvedValue(listing([entry("a", twin), entry("b", twin)]));
+    const home = provider({ agent: "a" });
+    const inner = chat();
+    home.append(inner);
+    document.body.append(home);
+    await flush();
+    const switches: AgentChangeDetail[] = [];
+    home.addEventListener(AGENT_CHANGE_EVENT, (event) =>
+      switches.push((event as CustomEvent<AgentChangeDetail>).detail),
+    );
+    expect((inner.conversationStore as AgentStore).agentId).toBe("a");
+
+    home.agent = "b";
+    await flush();
+
+    expect(switches.map((detail) => detail.agent.id)).toEqual(["b"]);
+    expect((inner.conversationStore as AgentStore).agentId).toBe("b");
+  });
+
   it("warns when `agent` names no entry, and leaves the chat where it is", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const home = provider({ agent: "nobody" });
