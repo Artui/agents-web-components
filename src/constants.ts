@@ -794,3 +794,6 @@ export const INBOX_SELECT_EVENT = "ag-ui-inbox-select";
  * the run's end got there first) or `failed`.
  */
 export const INBOX_ANSWER_EVENT = "ag-ui-inbox-answer";
+
+/** The header's More button, which opens the menu of controls the row has no room for. */
+export const ICON_MORE = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg>`;

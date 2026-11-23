@@ -417,6 +417,14 @@ $("cfg-min-page").addEventListener("change", (event) => {
     chat.style.setProperty("--ag-ui-min-page-width", value);
   }
 });
+$("cfg-width").addEventListener("change", (event) => {
+  const value = event.target.value;
+  if (value === "") {
+    chat.style.removeProperty("--ag-ui-width");
+  } else {
+    chat.style.setProperty("--ag-ui-width", value);
+  }
+});
 chat.addEventListener("ag-ui-maximize", (event) => {
   $("cfg-maximized").textContent = `maximized: ${event.detail.maximized}`;
 });

@@ -30,6 +30,7 @@ const DYNAMIC: Record<string, readonly string[]> = {
     "checkpoints-button",
     "new-button",
     "collapse-button",
+    "more-button",
   ],
   // ag_ui_chat #appendNotice(icon, text, kind).
   run_notice: [

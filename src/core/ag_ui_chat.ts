@@ -80,6 +80,7 @@ import { adoptStyles } from "../ui/shell/adopt_styles.js";
 import { buildHeader } from "../ui/shell/build_header.js";
 import { buildLauncher } from "../ui/shell/build_launcher.js";
 import { collapseGlyph } from "../ui/shell/collapse_glyph.js";
+import type { HeaderOverflow } from "../ui/shell/header_overflow.js";
 import { iconElement } from "../ui/shell/icon_element.js";
 import { isUnreadBadgeEnabled } from "../ui/shell/is_unread_badge_enabled.js";
 import { PanelView } from "../ui/shell/panel_view.js";
@@ -790,6 +791,8 @@ export class AgUiChat extends HTMLElement {
   /** The maximized state listeners were last told, which a mount settles once. */
   #maximizedHeard = false;
   /** The header's maximize and collapse controls, once rendered. */
+  /** The header's More button and menu, refitted when the row gains or loses a control. */
+  #headerOverflow: HeaderOverflow | null = null;
   #maximizeControl: { readonly button: HTMLButtonElement; readonly before: HTMLElement } | null =
     null;
   /** The header's collapse control, once rendered, repainted for its placement. */
@@ -2742,6 +2745,7 @@ export class AgUiChat extends HTMLElement {
     } else if (!control.button.isConnected) {
       control.before.before(control.button);
     }
+    this.#headerOverflow?.fit();
   }
 
   /** Name the control for what pressing it does now. */
@@ -3401,7 +3405,7 @@ export class AgUiChat extends HTMLElement {
 
     const titleText = this.#titleText();
     const themed = this.getAttribute("data-theme-toggle") !== null;
-    const { header, checkpoints, maximize, collapse } = buildHeader({
+    const { header, checkpoints, maximize, collapse, overflow } = buildHeader({
       host: this,
       title: this.#title,
       titleText,
@@ -3435,6 +3439,7 @@ export class AgUiChat extends HTMLElement {
 
     // A panel is a window and a header is its title bar.
     this.#placement.enablePanelDrag(header);
+    this.#headerOverflow = overflow;
     this.#maximizeControl = { button: maximize, before: collapse };
     this.#collapseControl = collapse;
     this.#paintCollapseControl();
@@ -3523,6 +3528,7 @@ export class AgUiChat extends HTMLElement {
     this.#dropSkillEditor();
     this.#chat.replaceChildren(
       header,
+      overflow.menu,
       this.#childSessions.breadcrumb,
       this.#panelView.element,
       this.#messagesWrap,

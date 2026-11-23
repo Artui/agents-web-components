@@ -29,7 +29,7 @@ export const SCENARIOS = [
     title: "Placements and size",
     since: "0.1.0",
     summary:
-      "Where the panel lives: floating, sidebar, page, embedded and the three undocumented placements, with resize, maximize and the host's own move.",
+      "Where the panel lives: floating, sidebar, page, embedded and the three undocumented placements, with resize, maximize and the host's own move. Narrow the panel to watch the header move its optional controls into the More menu (0.11.0).",
     prompts: [["Send a turn", "echo hello"]],
   },
   {
