@@ -1543,7 +1543,7 @@ already stored a set. Until then nothing is kept, written or announced, so a hos
 calls `openTab` sees no change.
 
 - `tabs` *(read-only)* — the open threads in the order they were opened, each
-  `{ threadId, title }` (typed `OpenThread`), frozen. `title` is `""` until one is known. Empty
+  `{ threadId, title }` (typed `ThreadTab`), frozen. `title` is `""` until one is known. Empty
   until tracking starts.
 - `openTab(threadId, title?)` — open a thread as the last tab without showing it; `switchThread`
   shows it. Without a `title`, the store's list names it. A thread already open stays where it is.
@@ -1561,8 +1561,8 @@ element's `id` and `user-key`), so a reload reads the same tabs back, titles inc
 `user-key` handover drops the previous user's tabs; a first `user-key` naming the user already
 there keeps them.
 
-Every change fires one **`ag-ui-tabs`** event (`OPEN_THREADS_EVENT`, detail `{ tabs, reason }`,
-typed `OpenThreadsDetail`), with `reason` one of `open`, `close`, `delete`, `title`, `restore`
+Every change fires one **`ag-ui-tabs`** event (`TABS_EVENT`, detail `{ tabs, reason }`,
+typed `TabsDetail`), with `reason` one of `open`, `close`, `delete`, `title`, `restore`
 (connect or `reload()`) and `rescope` (a `user-key` handover). Ignore a `reason` you do not know.
 A thread shown is in `tabs` by the time its `ag-ui-thread` fires, and its `ag-ui-tabs` follows.
 Switching between two open tabs changes no tab, so mark the active one from `ag-ui-thread`.
@@ -4141,8 +4141,8 @@ paths.
 | `SessionStorageStore` | class | Default per-tab conversation store. |
 | `RemoteConversationStore` | class | Server-backed store over a `data-threads-url` endpoint. |
 | `ClientConversationStore` | type | The persistence seam. |
-| `OpenThread` | type | One open thread in `tabs` (`{ threadId, title }`). |
-| `OpenThreadsDetail` | type | `ag-ui-tabs` event detail (`{ tabs, reason }`). |
+| `ThreadTab` | type | One open thread in `tabs` (`{ threadId, title }`). |
+| `TabsDetail` | type | `ag-ui-tabs` event detail (`{ tabs, reason }`). |
 | `ThreadMeta` | type | A thread-drawer row (`{ threadId, title, updatedAt, preview, unread?, status?, reason?, interrupts?, parent? }`); see [Thread status](#thread-status) and [Child sessions](#child-sessions). |
 | `ThreadParent` | type | A child thread's parent, as `ThreadMeta.parent` names it (`{ threadId, scope }`, `scope` `null` in an unscoped store). |
 | `ThreadStatus` | type | A thread's run status as the server lists it: `idle`, `running`, `waiting` or `failed`. |
@@ -4222,7 +4222,7 @@ paths.
 | `THREAD_EVENT` | The conversation-changed CustomEvent name (`ag-ui-thread`). |
 | `OPEN_THREAD_EVENT` | The open-another-thread CustomEvent name (`ag-ui-open-thread`), fired cancelable by a child-session link or a parent breadcrumb; see [Child sessions](#child-sessions). |
 | `THREAD_TITLE_EVENT` | The thread-title CustomEvent name (`ag-ui-thread-title`). |
-| `OPEN_THREADS_EVENT` | The open-threads CustomEvent name (`ag-ui-tabs`); see [Open threads (tabs)](#open-threads-tabs). |
+| `TABS_EVENT` | The tabs CustomEvent name (`ag-ui-tabs`); see [Open threads (tabs)](#open-threads-tabs). |
 | `THREADS_CHANGE_EVENT` | The thread-list CustomEvent name (`ag-ui-threads-change`), fired by a chat watching its list under `data-thread-status`. |
 | `AGENTS_TAG` | The provider's tag name (`ag-ui-agents`). |
 | `AGENTS_CHANGE_EVENT` | The directory CustomEvent name (`ag-ui-agents-change`). |

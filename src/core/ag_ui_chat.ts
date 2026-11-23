@@ -12,13 +12,13 @@ import {
   ICON_SUN,
   MAXIMIZE_EVENT,
   MESSAGE_ROLE,
-  OPEN_THREADS_EVENT,
-  OPEN_THREADS_KEY,
   PAGE_MAP_CONTEXT,
   STATE_EVENT,
   STORAGE_ROOT,
   SUBMIT_EVENT,
   SUGGESTIONS_ACTIVITY_TYPE,
+  TABS_EVENT,
+  TABS_KEY,
   THEME_EVENT,
   THREAD_EVENT,
   THREAD_TITLE_EVENT,
@@ -117,22 +117,22 @@ import { DetachedRuns } from "./detached_runs.js";
 import type { BarHeightDetail } from "./events/bar_height_detail.js";
 import type { DockWidthDetail } from "./events/dock_width_detail.js";
 import type { MaximizeDetail } from "./events/maximize_detail.js";
-import type { OpenThreadsDetail } from "./events/open_threads_detail.js";
 import type { StateDetail } from "./events/state_detail.js";
 import type { SubmitDetail } from "./events/submit_detail.js";
+import type { TabsDetail } from "./events/tabs_detail.js";
 import type { ThreadDetail } from "./events/thread_detail.js";
 import type { ThreadTitleDetail } from "./events/thread_title_detail.js";
 import type { ThreadsChangeDetail } from "./events/threads_change_detail.js";
 import type { ToggleDetail } from "./events/toggle_detail.js";
 import type { UnreadDetail } from "./events/unread_detail.js";
 import type { MessageRole } from "./message_role.js";
-import { type OpenThread, OpenThreads } from "./open_threads.js";
 import { readFlag } from "./read_flag.js";
 import { readJsonAttribute } from "./read_json_attribute.js";
 import { readMaxToolRounds } from "./read_max_tool_rounds.js";
 import { RemoteConversationStore } from "./remote_conversation_store.js";
 import { RunHandlers } from "./run_handlers.js";
 import { StorageScope } from "./storage_scope.js";
+import { type ThreadTab, ThreadTabs } from "./thread_tabs.js";
 // biome-ignore lint/style/useImportType: the emitted declaration file copies this form
 import { type TranscribeHandler } from "./transcribe_audio.js";
 // biome-ignore lint/style/useImportType: the emitted declaration file copies this form
@@ -1027,7 +1027,7 @@ export class AgUiChat extends HTMLElement {
     endpoint: () => this.endpoint,
   });
   /** The open threads (tabs), kept per tab under the conversation's namespace. */
-  readonly #tabs = new OpenThreads({
+  readonly #tabs = new ThreadTabs({
     read: () => sessionStorage.getItem(this.#tabsKey(this.userKey)),
     write: (value) => writeStoredItem(this.#tabsKey(this.userKey), value, this.#tabsWriteFailure),
   });
@@ -3062,9 +3062,9 @@ export class AgUiChat extends HTMLElement {
    * stored thread; a thread opens when it is shown ({@link switchThread},
    * {@link newChat}) or by {@link openTab}. Persisted per browser tab, so a
    * reload reads the same set back. Empty before the element first connects.
-   * {@link OPEN_THREADS_EVENT} says when it changes.
+   * {@link TABS_EVENT} says when it changes.
    */
-  get tabs(): readonly OpenThread[] {
+  get tabs(): readonly ThreadTab[] {
     return this.#tabs.tabs;
   }
 
@@ -3975,7 +3975,7 @@ export class AgUiChat extends HTMLElement {
   /** The storage key of the open threads under `principal`'s conversation namespace. */
   #tabsKey(principal: string): string {
     const namespace = this.#storage.conversationNamespace(principal);
-    return namespace === "" ? OPEN_THREADS_KEY : `${OPEN_THREADS_KEY}@${namespace}`;
+    return namespace === "" ? TABS_KEY : `${TABS_KEY}@${namespace}`;
   }
 
   /** Move the open threads to a principal adopting the conversation, over any stray. */
@@ -3999,8 +3999,8 @@ export class AgUiChat extends HTMLElement {
     this.#tabsOn ||= this.#tabs.tabs.length > 0;
   }
 
-  #emitTabs(reason: OpenThreadsDetail["reason"]): void {
-    this.#emit<OpenThreadsDetail>(OPEN_THREADS_EVENT, { tabs: this.#tabs.tabs, reason });
+  #emitTabs(reason: TabsDetail["reason"]): void {
+    this.#emit<TabsDetail>(TABS_EVENT, { tabs: this.#tabs.tabs, reason });
   }
 
   /** Delete a thread, from the API or the drawer, closing its tab first. */
@@ -4016,7 +4016,7 @@ export class AgUiChat extends HTMLElement {
    * restore reads the stored set back first, and a new chat leaving an untouched
    * thread, which the store reaps, takes its tab.
    */
-  #showTab(threadId: string, reason: ThreadDetail["reason"]): OpenThreadsDetail["reason"] | null {
+  #showTab(threadId: string, reason: ThreadDetail["reason"]): TabsDetail["reason"] | null {
     const title = this.#titled.title;
     const untouched = reason === "new" ? this.#untouchedTab : null;
     this.#untouchedTab = null;

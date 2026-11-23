@@ -1,12 +1,12 @@
 /** One open thread: a tab a host draws, without the messages behind it. */
-export interface OpenThread {
+export interface ThreadTab {
   readonly threadId: string;
   /** The thread's title; `""` until one is known (nothing sent yet, or not listed). */
   readonly title: string;
 }
 
-/** Where an {@link OpenThreads} keeps its list; the owner decides the key. */
-export interface OpenThreadsStorage {
+/** Where an {@link ThreadTabs} keeps its list; the owner decides the key. */
+export interface ThreadTabsStorage {
   readonly read: () => string | null;
   readonly write: (value: string) => void;
 }
@@ -21,16 +21,16 @@ export interface OpenThreadsStorage {
  * Each mutator answers whether anything changed, so the element reports a
  * change exactly when there was one.
  */
-export class OpenThreads {
-  readonly #storage: OpenThreadsStorage;
-  #tabs: readonly OpenThread[] = Object.freeze([]);
+export class ThreadTabs {
+  readonly #storage: ThreadTabsStorage;
+  #tabs: readonly ThreadTab[] = Object.freeze([]);
 
-  constructor(storage: OpenThreadsStorage) {
+  constructor(storage: ThreadTabsStorage) {
     this.#storage = storage;
   }
 
   /** The open threads in order, frozen; a later change does not reach a copy handed out. */
-  get tabs(): readonly OpenThread[] {
+  get tabs(): readonly ThreadTab[] {
     return this.#tabs;
   }
 
@@ -97,17 +97,17 @@ export class OpenThreads {
       .map((open) => open.threadId);
   }
 
-  #save(tabs: readonly OpenThread[]): void {
+  #save(tabs: readonly ThreadTab[]): void {
     this.#tabs = Object.freeze(tabs);
     this.#storage.write(JSON.stringify(tabs));
   }
 }
 
-function tab(threadId: string, title: string): OpenThread {
+function tab(threadId: string, title: string): ThreadTab {
   return Object.freeze({ threadId, title });
 }
 
-function parse(stored: string | null): OpenThread[] {
+function parse(stored: string | null): ThreadTab[] {
   let value: unknown;
   try {
     value = JSON.parse(stored ?? "[]");
@@ -117,7 +117,7 @@ function parse(stored: string | null): OpenThread[] {
   if (!Array.isArray(value)) {
     return [];
   }
-  const tabs: OpenThread[] = [];
+  const tabs: ThreadTab[] = [];
   for (const entry of value as unknown[]) {
     if (typeof entry !== "object" || entry === null) {
       continue;

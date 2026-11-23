@@ -1,6 +1,6 @@
 import type { Message } from "@ag-ui/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ELEMENT_TAG, OPEN_THREADS_EVENT, OPEN_THREADS_KEY } from "../src/constants.js";
+import { ELEMENT_TAG, TABS_EVENT, TABS_KEY } from "../src/constants.js";
 import type { AgUiChat } from "../src/core/ag_ui_chat.js";
 import {
   type ClientConversationStore,
@@ -8,8 +8,8 @@ import {
   type ThreadMeta,
 } from "../src/core/conversation_store.js";
 import { defineChat } from "../src/core/define_chat.js";
-import type { OpenThreadsDetail } from "../src/core/events/open_threads_detail.js";
-import { OpenThreads } from "../src/core/open_threads.js";
+import type { TabsDetail } from "../src/core/events/tabs_detail.js";
+import { ThreadTabs } from "../src/core/thread_tabs.js";
 import { type Emit, makeFakeAgent } from "./helpers/fake_agent.js";
 
 defineChat();
@@ -30,7 +30,7 @@ function mount(
   tabs = true,
 ): {
   el: AgUiChat;
-  seen: OpenThreadsDetail[];
+  seen: TabsDetail[];
 } {
   const el = document.createElement(ELEMENT_TAG) as AgUiChat;
   el.setAttribute("endpoint", "/agent/");
@@ -45,9 +45,9 @@ function mount(
         emit.runEnd();
       },
     }).agent;
-  const seen: OpenThreadsDetail[] = [];
-  el.addEventListener(OPEN_THREADS_EVENT, (event) => {
-    seen.push((event as CustomEvent<OpenThreadsDetail>).detail);
+  const seen: TabsDetail[] = [];
+  el.addEventListener(TABS_EVENT, (event) => {
+    seen.push((event as CustomEvent<TabsDetail>).detail);
   });
   document.body.appendChild(el);
   if (tabs) {
@@ -71,10 +71,10 @@ afterEach(() => {
   sessionStorage.clear();
 });
 
-describe("OpenThreads", () => {
-  function model(stored: string | null = null): { tabs: OpenThreads; written: string[] } {
+describe("ThreadTabs", () => {
+  function model(stored: string | null = null): { tabs: ThreadTabs; written: string[] } {
     const written: string[] = [];
-    const tabs = new OpenThreads({ read: () => stored, write: (value) => written.push(value) });
+    const tabs = new ThreadTabs({ read: () => stored, write: (value) => written.push(value) });
     tabs.load();
     return { tabs, written };
   }
@@ -183,7 +183,7 @@ describe("<ag-ui-chat> open threads", () => {
   it("is empty and inert before connecting", () => {
     const el = document.createElement(ELEMENT_TAG) as AgUiChat;
     const seen: unknown[] = [];
-    el.addEventListener(OPEN_THREADS_EVENT, (event) => seen.push(event));
+    el.addEventListener(TABS_EVENT, (event) => seen.push(event));
     el.openTab("t1", "One");
     el.closeTab("t1");
     expect(el.tabs).toEqual([]);
@@ -204,7 +204,7 @@ describe("<ag-ui-chat> open threads", () => {
     expect(el.tabs).toEqual([]);
     expect(seen).toEqual([]);
     const keys = Array.from({ length: sessionStorage.length }, (_, i) => sessionStorage.key(i));
-    expect(keys.filter((key) => key?.startsWith(OPEN_THREADS_KEY))).toEqual([]);
+    expect(keys.filter((key) => key?.startsWith(TABS_KEY))).toEqual([]);
   });
 
   it("the first tab opened brings the thread on screen with it", async () => {
@@ -327,9 +327,9 @@ describe("<ag-ui-chat> open threads", () => {
     await flush();
     el.openTab(el.threadId as string);
     el.openTab("t1", "first words");
-    const seen: OpenThreadsDetail[] = [];
-    el.addEventListener(OPEN_THREADS_EVENT, (event) => {
-      seen.push((event as CustomEvent<OpenThreadsDetail>).detail);
+    const seen: TabsDetail[] = [];
+    el.addEventListener(TABS_EVENT, (event) => {
+      seen.push((event as CustomEvent<TabsDetail>).detail);
     });
 
     hand?.([{ threadId: "t1", title: "Renamed", updatedAt: 1, preview: "" }]);
@@ -501,7 +501,7 @@ describe("<ag-ui-chat> open threads", () => {
 
     expect(again.el.tabs).toEqual(before);
     expect(again.seen).toEqual([{ tabs: before, reason: "restore" }]);
-    expect(sessionStorage.getItem(`${OPEN_THREADS_KEY}@chat-a`)).not.toBeNull();
+    expect(sessionStorage.getItem(`${TABS_KEY}@chat-a`)).not.toBeNull();
   });
 
   it("keeps the tabs under the root key for an element with nothing to key on", async () => {
@@ -511,7 +511,7 @@ describe("<ag-ui-chat> open threads", () => {
 
     el.openTab("t1", "One");
 
-    expect(JSON.parse(sessionStorage.getItem(OPEN_THREADS_KEY) ?? "[]")).toEqual(el.tabs);
+    expect(JSON.parse(sessionStorage.getItem(TABS_KEY) ?? "[]")).toEqual(el.tabs);
   });
 
   it("keeps two elements' tabs apart", async () => {
@@ -536,7 +536,7 @@ describe("<ag-ui-chat> open threads", () => {
     expect(ids(el)).toEqual([el.threadId]);
     expect(JSON.stringify(el.tabs)).not.toContain("Alice");
     expect(seen.at(-1)?.reason).toBe("rescope");
-    expect(sessionStorage.getItem(`${OPEN_THREADS_KEY}@c#alice`)).toBeNull();
+    expect(sessionStorage.getItem(`${TABS_KEY}@c#alice`)).toBeNull();
   });
 
   it("never carries the previous principal's titles into the next one's tabs", async () => {
@@ -548,7 +548,7 @@ describe("<ag-ui-chat> open threads", () => {
 
     expect(JSON.stringify(el.tabs)).not.toContain("alice secret");
     await flush();
-    expect(sessionStorage.getItem(`${OPEN_THREADS_KEY}@c#bob`) ?? "").not.toContain("alice");
+    expect(sessionStorage.getItem(`${TABS_KEY}@c#bob`) ?? "").not.toContain("alice");
     expect(ids(el)).toEqual([el.threadId]);
   });
 
@@ -582,7 +582,7 @@ describe("<ag-ui-chat> open threads", () => {
 
   it("an adoption moves the tabs on screen over any stray stored for the principal", async () => {
     sessionStorage.setItem(
-      `${OPEN_THREADS_KEY}@c#alice`,
+      `${TABS_KEY}@c#alice`,
       JSON.stringify([{ threadId: "stray", title: "Stray" }]),
     );
     const { el } = mount({ id: "c" });
@@ -596,6 +596,6 @@ describe("<ag-ui-chat> open threads", () => {
     await flush();
 
     expect(el.tabs).toEqual(before);
-    expect(sessionStorage.getItem(`${OPEN_THREADS_KEY}@c`)).toBeNull();
+    expect(sessionStorage.getItem(`${TABS_KEY}@c`)).toBeNull();
   });
 });

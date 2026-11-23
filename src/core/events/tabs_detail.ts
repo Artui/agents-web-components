@@ -1,9 +1,9 @@
-import type { OpenThread } from "../open_threads.js";
+import type { ThreadTab } from "../thread_tabs.js";
 
-/** `detail` shape of the {@link OPEN_THREADS_EVENT} CustomEvent. */
-export interface OpenThreadsDetail {
+/** `detail` shape of the {@link TABS_EVENT} CustomEvent. */
+export interface TabsDetail {
   /** The open threads, in the order they were opened. */
-  readonly tabs: readonly OpenThread[];
+  readonly tabs: readonly ThreadTab[];
   /**
    * What changed them:
    *
