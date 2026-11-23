@@ -64,8 +64,12 @@ const startOver = (prompt) => {
     }
   }
   sessionStorage.setItem(RESTART_KEY, JSON.stringify({ slug, prompt, controls }));
-  location.replace(location.pathname);
+  // A replace to the same URL is a reload, which skips the view transition.
+  location.replace(`${location.pathname}?restart`);
 };
+if (location.search === "?restart") {
+  history.replaceState(history.state, "", location.pathname);
+}
 
 // ── The shell ────────────────────────────────────────────────────────────────
 
