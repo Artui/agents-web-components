@@ -14,20 +14,6 @@
   color-scheme: light;
 }
 
-/* Each scenario is its own page. Chrome holds the old frame until the next one
-   paints; Safari blanks it, so a sidebar click reads as a reload. A
-   cross-document view transition keeps the frame in both. */
-@view-transition {
-  navigation: auto;
-}
-@media (prefers-reduced-motion: reduce) {
-  ::view-transition-group(*),
-  ::view-transition-old(*),
-  ::view-transition-new(*) {
-    animation: none;
-  }
-}
-
 * {
   box-sizing: border-box;
 }

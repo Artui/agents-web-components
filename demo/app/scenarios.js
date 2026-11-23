@@ -9,7 +9,7 @@
 // `prompts` are [label, text] pairs the scenario's Try buttons send. The text
 // is what the mock agent (mock-server.mjs) matches on, so it is the
 // documentation of that agent too: the start page lists every one. Try starts
-// over from a fresh load, unless the row sets `inPlace`, whose walkthrough
+// over with a freshly mounted chat, unless the row sets `inPlace`, whose walkthrough
 // carries one conversation into the next: then Try sends into the chat as it is.
 
 export const GROUPS = [
