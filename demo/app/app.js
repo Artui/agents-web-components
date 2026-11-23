@@ -967,3 +967,37 @@ new MutationObserver(detachedState).observe(chat, {
   attributes: true,
   attributeFilter: ["data-running"],
 });
+
+// ── Open threads (tabs) ──────────────────────────────────────────────────────
+
+if (on("tabs")) {
+  const drawTabs = () => {
+    const strip = $("tabs-strip");
+    strip.replaceChildren();
+    for (const { threadId, title } of chat.tabs) {
+      const pick = el("button", { type: "button" }, title === "" ? "New chat" : title);
+      pick.setAttribute("aria-pressed", String(threadId === chat.threadId));
+      pick.addEventListener("click", () => void chat.switchThread(threadId));
+      const close = el("button", { type: "button", title: "chat.closeTab" }, "x");
+      close.addEventListener("click", () => chat.closeTab(threadId));
+      strip.append(pick, close);
+    }
+  };
+  chat.addEventListener("ag-ui-tabs", (event) => {
+    $("tabs-out").textContent = `${event.detail.reason}: ${event.detail.tabs.length} open`;
+    drawTabs();
+  });
+  chat.addEventListener("ag-ui-thread", drawTabs);
+  $("tabs-new").addEventListener("click", () => chat.newChat());
+  $("tabs-history").addEventListener("click", async () => {
+    const open = new Set(chat.tabs.map((tab) => tab.threadId));
+    const next = (await chat.conversationStore.listThreads()).find((row) => !open.has(row.threadId));
+    if (next !== undefined) {
+      chat.openTab(next.threadId, next.title);
+    }
+  });
+  if (chat.threadId !== null) {
+    chat.openTab(chat.threadId);
+  }
+  drawTabs();
+}
