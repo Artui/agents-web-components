@@ -118,6 +118,11 @@ export class RemoteConversationStore implements ClientConversationStore {
     this.#cacheMessages = cacheMessages;
   }
 
+  /** The store this one keeps the client-only state in: the thread pointer and checkpoints. */
+  get local(): ClientConversationStore {
+    return this.#local;
+  }
+
   threadId(): string {
     this.#active = this.#local.threadId();
     return this.#active;

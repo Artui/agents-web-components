@@ -20,6 +20,7 @@ import type { AgUiChat } from "../src/core/ag_ui_chat.js";
 import type { ClientConversationStore } from "../src/core/conversation_store.js";
 import { SessionStorageStore } from "../src/core/conversation_store.js";
 import { defineChat } from "../src/core/define_chat.js";
+import { RemoteConversationStore } from "../src/core/remote_conversation_store.js";
 import { makeFakeAgent } from "./helpers/fake_agent.js";
 
 defineChat();
@@ -261,6 +262,53 @@ describe("<ag-ui-agents> directory", () => {
     await flush();
 
     expect(inner.conversationStore).toBe(custom);
+  });
+
+  it("keeps a remote the host made itself", async () => {
+    const remote = new RemoteConversationStore("/host/threads/");
+    const home = provider();
+    const inner = chat();
+    inner.conversationStore = remote;
+    home.append(inner);
+    document.body.append(home);
+    await flush();
+    home.agent = "support";
+    await flush();
+
+    expect(inner.getAttribute("endpoint")).toBe("/support/");
+    expect(inner.conversationStore).toBe(remote);
+  });
+
+  it("keeps two providers on one entry apart, as two chats on one namespace are", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    fetchMock.mockImplementation(() => Promise.resolve(listing([BOARD, SUPPORT])));
+    const first = provider();
+    const second = provider();
+    const one = chat();
+    const two = chat();
+    two.id = "other";
+    first.append(one);
+    second.append(two);
+    document.body.append(first);
+    await flush();
+    const theirs = one.threadId as string;
+    one.conversationStore.saveMessages(theirs, [
+      { id: "u1", role: "user", content: "first's words" } as Message,
+    ]);
+    document.body.append(second);
+    await flush();
+
+    expect(second.agent).toBe("board");
+    expect(two.threadId).not.toBe(theirs);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('"agent:board"'));
+
+    second.agent = "support";
+    await flush();
+    second.agent = "board";
+    await flush();
+
+    expect(two.threadId).not.toBe(theirs);
+    expect(warn).toHaveBeenCalledTimes(1);
   });
 
   it("replaces the remote the chat wrapped its own store in", async () => {

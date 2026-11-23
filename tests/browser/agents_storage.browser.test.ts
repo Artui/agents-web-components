@@ -1,5 +1,5 @@
 import type { Message } from "@ag-ui/core";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AgUiAgents } from "../../src/agents/ag_ui_agents.js";
 import { defineAgents } from "../../src/agents/define_agents.js";
 import type { AgentEntry } from "../../src/agents/types.js";
@@ -41,6 +41,7 @@ const original = globalThis.fetch;
 
 afterEach(() => {
   globalThis.fetch = original;
+  vi.restoreAllMocks();
   document.body.replaceChildren();
   sessionStorage.clear();
 });
@@ -76,5 +77,32 @@ describe("<ag-ui-agents> in the browser's own sessionStorage", () => {
     expect(await chat.conversationStore.loadMessages(boardThread)).toHaveLength(1);
     expect(storageKeys().some((key) => key.includes("agent:board"))).toBe(true);
     expect(storageKeys().some((key) => key.includes("agent:support"))).toBe(true);
+  });
+
+  it("gives a second chat on the same entry a namespace of its own", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) =>
+      new URL(String(input), location.href).pathname === "/home/agents/"
+        ? Promise.resolve(Response.json({ agents: [entry("board")] }))
+        : original(input, init)) as typeof fetch;
+    const homes = [0, 1].map((index) => {
+      const home = document.createElement(AGENTS_TAG) as AgUiAgents;
+      home.setAttribute("data-agents-url", "/home/agents/");
+      const chat = document.createElement(ELEMENT_TAG) as AgUiChat;
+      chat.id = `chat-${index}`;
+      home.append(chat);
+      return { home, chat };
+    });
+    for (const { home } of homes) {
+      document.body.append(home);
+      await expect.poll(() => home.agent).toBe("board");
+    }
+    const [first, second] = homes.map(({ chat }) => chat.threadId as string);
+
+    expect(second).not.toBe(first);
+    expect(storageKeys().some((key) => key.startsWith("agents-web-components@agent:board~"))).toBe(
+      true,
+    );
+    expect(warn).toHaveBeenCalledTimes(1);
   });
 });

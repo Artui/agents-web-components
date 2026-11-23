@@ -39,7 +39,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `agent` names, the first by default: the chat is taken out, given the entry's URLs, and put
   back, so its connect-time attributes stay connect-time and no warning is raised; a run in flight
   is cancelled as by any remount. Each agent's conversation is stored under the entry id, so
-  switching back restores its thread; a host's own store is left alone. `ag-ui-agent-change`
+  switching back restores its thread; a host's own store, a `RemoteConversationStore` it made
+  included, is left alone, and a second chat on the same entry gets a throwaway namespace and a
+  warning, as a second chat on one namespace does. `RemoteConversationStore` gains a read-only
+  `local`, the store it keeps the thread pointer in. `ag-ui-agent-change`
   fires on each switch, and `openThread(agentId, threadId)` opens an inbox row. Exported from the
   root entry with `defineAgents`, `AgUiAgents`, the `AGENTS_TAG`, `AGENTS_CHANGE_EVENT`,
   `INBOX_CHANGE_EVENT` and `AGENT_CHANGE_EVENT` constants, and the `AgentEntry`, `InboxRow`,
