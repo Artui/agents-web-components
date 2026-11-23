@@ -435,6 +435,28 @@ describe("the breadcrumb", () => {
     expect(breadcrumbOf(el).hidden).toBe(true);
   });
 
+  it("goes when its parent is deleted, and stays gone over the list that follows", async () => {
+    const rows = [PARENT_ROW, CHILD_ROW];
+    const store = family(rows);
+    store.clear = (threadId: string) => {
+      rows.splice(0, rows.length, ...rows.filter((row) => row.threadId !== threadId));
+    };
+    const el = mountOver(store);
+    const seen = openRequests(el);
+    await settle();
+    linkIn(el).click();
+    await settle();
+    expect(breadcrumbOf(el).hidden).toBe(false);
+
+    el.deleteThread("parent-thread");
+    expect(breadcrumbOf(el).hidden).toBe(true);
+    await settle();
+
+    expect(breadcrumbOf(el).hidden).toBe(true);
+    breadcrumbOf(el).querySelector("button")?.click();
+    expect(seen.filter((event) => event.detail.threadId === "parent-thread")).toEqual([]);
+  });
+
   it("is reworded when the strings change", async () => {
     const el = mountOver(family());
     await settle();

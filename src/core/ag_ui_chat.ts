@@ -1370,7 +1370,10 @@ export class AgUiChat extends HTMLElement {
         this.#takeListedUnread(threads);
         this.#childSessions.listed(threads);
       },
-      threadDeleted: (threadId) => this.#forgetUnread([threadId]),
+      threadDeleted: (threadId) => {
+        this.#forgetUnread([threadId]);
+        this.#childSessions.deleted(threadId);
+      },
     });
   }
 

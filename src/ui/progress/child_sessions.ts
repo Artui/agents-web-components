@@ -39,6 +39,7 @@ export class ChildSessions {
   readonly #breadcrumb: ParentBreadcrumb;
   readonly #links = new Set<ChildSessionLink>();
   #threads: readonly ThreadMeta[] = [];
+  readonly #gone = new Set<string>();
 
   constructor(host: ChildSessionsHost) {
     this.#host = host;
@@ -69,8 +70,18 @@ export class ChildSessions {
 
   /** Take a thread list the chat received, rewording every link and the breadcrumb. */
   listed(threads: readonly ThreadMeta[]): void {
-    this.#threads = threads;
+    this.#threads = threads.map((meta) =>
+      meta.parent !== undefined && this.#gone.has(meta.parent.threadId)
+        ? withoutParent(meta)
+        : meta,
+    );
     this.relocalize();
+  }
+
+  /** A thread was deleted: no list, now or later, names it as a parent. */
+  deleted(threadId: string): void {
+    this.#gone.add(threadId);
+    this.listed(this.#threads);
   }
 
   /** The thread on screen changed: the breadcrumb follows it. */
@@ -107,4 +118,9 @@ export class ChildSessions {
       this.#host.open(threadId);
     }
   }
+}
+
+function withoutParent(meta: ThreadMeta): ThreadMeta {
+  const { parent: _parent, ...rest } = meta;
+  return rest;
 }
