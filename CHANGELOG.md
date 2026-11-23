@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The header fits any number of controls: the optional ones move into a More menu. No opt-in.**
+  While the row fits, every control stays in it. When it does not, or when it would hold more
+  than five, the theme toggle, Skills, checkpoints and History move into a More menu (the
+  three dots), in that order, until at most four remain beside More. New chat, Maximize and
+  Collapse never move. A control in the menu is the same `<button>`, with the same class, `part`
+  and `icon-*` slot, so `::part(history-button)` and a host's
+  `.header-btn--history` `.click()` keep working; it gains `role="menuitem"` there and shows its
+  name beside its glyph, in the panel's ink rather than the header's. New parts `more-button` and
+  `header-menu`, new string `moreControls`. The menu takes Enter, Space and the arrows on More,
+  the arrows, Home and End inside it, and Escape back to More. A header with the theme toggle and
+  `data-runs-url` on (six controls) now shows the theme toggle and checkpoints in the menu even
+  on a wide panel; a host's own row of four or five is unchanged.
+
 ## [0.10.0] — 2026-11-23
 
 ### Added

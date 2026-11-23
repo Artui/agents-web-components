@@ -778,3 +778,6 @@ export const TABS_KEY = `${STORAGE_ROOT}.open-threads`;
 
 /** The Custom Element tag name registered by {@link defineInbox}. */
 export const INBOX_TAG = "ag-ui-inbox";
+
+/** The header's More button, which opens the menu of controls the row has no room for. */
+export const ICON_MORE = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg>`;

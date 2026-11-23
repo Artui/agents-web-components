@@ -83,7 +83,12 @@ describe("header control icons (real browser)", () => {
   });
 
   it.each(MODIFIERS)("draws %s as a glyph that fits inside its button", (modifier) => {
-    const control = button(mount(), modifier);
+    const el = mount();
+    const control = button(el, modifier);
+    // Six controls is one over the row's cap, so some sit in the More menu: open it to see them.
+    if (control.closest(".header-menu") !== null) {
+      button(el, "more").dispatchEvent(new MouseEvent("click", { detail: 1 }));
+    }
 
     expectInside(control);
     // One size for the row, the theme toggle's holder included.
@@ -189,7 +194,8 @@ describe("header control icons (real browser)", () => {
         const ink = getComputedStyle(control).color;
         const path = glyph(control).querySelector("path, circle") as SVGElement;
         expect(getComputedStyle(path).stroke).toBe(ink);
-        if (accent) {
+        // A control in the More menu sits on the panel, so it takes the panel's ink instead.
+        if (accent && control.closest(".header-menu") === null) {
           expect(ink).toBe("rgb(255, 255, 255)");
         }
       }
