@@ -227,7 +227,7 @@ function run(req, res) {
         ],
       });
       threads.set(child, {
-        title: "Compare the supplier prices",
+        title: "Supplier price comparison",
         updated: now,
         parent: threadId,
         status: "running",
