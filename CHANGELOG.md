@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Open threads (tabs) on `<ag-ui-chat>`, a model with no rendering: a host opts in by reading
+  `tabs` or listening for `ag-ui-tabs`; nothing changes for a host that does neither.** `tabs` is
+  the open threads in order, each `{ threadId, title }` (`OpenThread`); `openTab(threadId,
+  title?)` opens one without showing it, and `closeTab(threadId)` closes one while the thread
+  stays in history, unlike `deleteThread`, which now closes the tab too. Showing a thread
+  (`switchThread`, `newChat`, the drawer) opens it, and closing the thread on screen shows its
+  neighbour, else a new chat. The set persists per browser tab in `sessionStorage` under the
+  conversation's namespace, so it survives a reload, and a `user-key` handover drops it. Every
+  change fires `ag-ui-tabs` (`OPEN_THREADS_EVENT`, `OpenThreadsDetail { tabs, reason }`).
+
 ## [0.9.0] — 2026-11-21
 
 ### Added

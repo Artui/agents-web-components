@@ -735,3 +735,13 @@ export const MCP_APP_MAX_HEIGHT = 640;
  * under this name, since a `DOMException` carries a numeric `code` of its own.
  */
 export const MCP_APPS_ROUTE_ERROR = "McpAppsRouteError";
+
+/**
+ * The open threads (`tabs`) of a chat changed: one opened, closed, deleted or
+ * retitled, or the set restored on connect or replaced on a `user-key`
+ * handover. `detail` is {@link OpenThreadsDetail}.
+ */
+export const OPEN_THREADS_EVENT = "ag-ui-tabs";
+
+/** The per-tab `sessionStorage` key base of a chat's open threads. */
+export const OPEN_THREADS_KEY = `${STORAGE_ROOT}.open-threads`;
