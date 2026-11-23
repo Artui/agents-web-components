@@ -87,7 +87,12 @@ describe("the package entries", () => {
   });
 
   it("publishes the inbox as its own entry and its own vendored file", () => {
-    expect(Object.keys(inbox).sort()).toEqual(["AgUiInbox", "INBOX_TAG", "defineInbox"]);
+    expect(Object.keys(inbox).sort()).toEqual([
+      "AgUiInbox",
+      "INBOX_SELECT_EVENT",
+      "INBOX_TAG",
+      "defineInbox",
+    ]);
     expect(Object.keys(index).filter((name) => name in inbox)).toEqual([]);
     expect(MANIFEST.exports["./inbox"]).toEqual({
       types: "./dist/inbox.d.ts",

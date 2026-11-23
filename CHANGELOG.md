@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`<ag-ui-inbox>`, what waits on the user across agents, in a new `./inbox` entry (and
+  `./inbox/bundle`). Opt-in: a host imports it and calls `defineInbox()`.** It reads the inbox
+  of an `<ag-ui-agents>` provider, which keeps it fresh by ETag polling or SSE as
+  `data-inbox-transport` says, and lists each conversation whose run is `waiting` on an
+  interrupt: its title, its agent, and what it waits on (an approval, marked destructive unless
+  the server says otherwise, a question, or any other parked call). `variant="badge"` (the
+  default) is a navbar button counting those conversations that opens the list in a popover
+  (Escape and a press outside close it, the arrow keys move between rows); `variant="list"` is
+  the list alone, for a home page's "needs you" section. Bound by `agents="<provider id>"`, so a
+  badge outside the provider reads it, else to the nearest provider, or by the `provider`
+  property. Picking a row fires the cancelable `ag-ui-inbox-select` (`INBOX_SELECT_EVENT`,
+  `InboxSelectDetail`, `{ agentId, threadId }`), then calls the provider's
+  `openThread(agentId, threadId)`. Themed by the shared `--ag-ui-*` tokens; parts `badge`,
+  `icon`, `count`, `panel`, `heading`, `list`, `row`, `row-button`, `mark`, `agent`, `summary`,
+  `destructive`, `empty`; strings `InboxStrings`.
+
 ## [0.10.0] — 2026-11-23
 
 ### Added

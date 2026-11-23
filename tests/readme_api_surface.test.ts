@@ -86,14 +86,17 @@ function sources(dir: string): string[] {
   });
 }
 
-/** The thread list and the provider are elements of their own, each with a README section checked below. */
+/** The thread list, the provider and the inbox are elements of their own, each with a README section checked below. */
 const THREADS_DIR = join("src", "threads");
 const AGENTS_DIR = join("src", "agents");
+const INBOX_DIR = join("src", "inbox");
 
 const SOURCE = sources("src")
   .filter((_, index) => {
     const path = sourcePaths("src")[index] ?? "";
-    return !path.startsWith(THREADS_DIR) && !path.startsWith(AGENTS_DIR);
+    return (
+      !path.startsWith(THREADS_DIR) && !path.startsWith(AGENTS_DIR) && !path.startsWith(INBOX_DIR)
+    );
   })
   .join("\n");
 
@@ -689,6 +692,20 @@ describe("the README's provider section", () => {
     const reference = section("## Several agents under one provider");
     const read = [
       ...sources(AGENTS_DIR)
+        .join("\n")
+        .matchAll(/getAttribute\("([a-z][a-z0-9-]*)"\)/g),
+    ].map((match) => match[1] ?? "");
+
+    expect(read.length).toBeGreaterThan(0);
+    expect([...new Set(read)].filter((name) => !reference.includes(`\`${name}\``))).toEqual([]);
+  });
+});
+
+describe("the README's inbox section", () => {
+  it("names every attribute the inbox reads", () => {
+    const reference = section("## What needs the user, across agents");
+    const read = [
+      ...sources(INBOX_DIR)
         .join("\n")
         .matchAll(/getAttribute\("([a-z][a-z0-9-]*)"\)/g),
     ].map((match) => match[1] ?? "");

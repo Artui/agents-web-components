@@ -778,3 +778,12 @@ export const TABS_KEY = `${STORAGE_ROOT}.open-threads`;
 
 /** The Custom Element tag name registered by {@link defineInbox}. */
 export const INBOX_TAG = "ag-ui-inbox";
+
+/**
+ * A row of `<ag-ui-inbox>` was picked. `detail` is {@link InboxSelectDetail}.
+ *
+ * Fires before the provider opens the conversation, and is cancelable: a host
+ * that routes to it itself (another page, its own chat) calls
+ * `preventDefault()` and the element leaves the provider alone.
+ */
+export const INBOX_SELECT_EVENT = "ag-ui-inbox-select";

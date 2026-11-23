@@ -57,6 +57,7 @@ This package is the successor of `@artooi/ag-ui-web-component`. Coming from it? 
   - [Collapsing to the launcher](#collapsing-to-the-launcher)
   - [Collapsing to a bottom bar](#collapsing-to-a-bottom-bar)
 - [Several agents under one provider](#several-agents-under-one-provider)
+- [What needs the user, across agents](#what-needs-the-user-across-agents)
 - [A2UI surfaces](#a2ui-surfaces)
 - [MCP Apps views](#mcp-apps-views)
 - [Tool-call display modes](#tool-call-display-modes)
@@ -98,6 +99,8 @@ The package ships two builds (see [`package.json` exports](package.json)):
 | `@artooi/agents-web-components/chat` | The same library build's `<ag-ui-chat>` entry: `AgUiChat` and `defineChat` | Beside the root entry; the two share one module instance, so import from both freely. |
 | `@artooi/agents-web-components/threads` | `<ag-ui-threads>`, the conversation list for your own bar or rail: `AgUiThreads` and `defineThreads` | Beside `./chat`, when you draw the list of conversations yourself. |
 | `@artooi/agents-web-components/threads/bundle` | The same entry as a vendored file, minified, inlining none of the element | Beside `/bundle` with no build step; the main bundle does not carry the list. |
+| `@artooi/agents-web-components/inbox` | `<ag-ui-inbox>`, what waits on the user across agents, as a navbar badge or a list: `AgUiInbox` and `defineInbox` | Beside `./chat` and an `<ag-ui-agents>` provider. |
+| `@artooi/agents-web-components/inbox/bundle` | The same entry as a vendored file, minified, inlining none of the element or the provider | Beside `/bundle` with no build step; the main bundle does not carry the inbox. |
 | `@artooi/agents-web-components/bundle` | ESM bundle with `@ag-ui/*` **inlined**, minified | Drop in via a single `<script type="module">` with no build step. |
 
 ### The vendored-bundle story
@@ -2351,6 +2354,66 @@ The provider is exported from the root entry (and so from `/bundle`) with `defin
 throws naming the tag when another class holds it. A lone `<ag-ui-chat>` needs none of this and
 works as it always has. Runs and reattach stay in the chat. The element is an ordinary inline
 element, so give it `display: contents` when it should not affect layout.
+
+## What needs the user, across agents
+
+`<ag-ui-inbox>` shows the conversations that wait on the user, across every agent of an
+[`<ag-ui-agents>` provider](#several-agents-under-one-provider): a run parked on an approval, a
+question, or a client tool a detached run could not call. As a badge it is a count for your
+navbar that opens the list; as a list it is the "needs you" section of a home page. It keeps
+nothing of its own: it reads the provider's `inbox`, which the provider keeps fresh by ETag
+polling or by SSE as `data-inbox-transport` says, and redraws on each `ag-ui-inbox-change`.
+
+```html
+<nav><ag-ui-inbox agents="home"></ag-ui-inbox></nav>
+
+<ag-ui-agents id="home" data-agents-url="/agents-home/agents/"
+              data-inbox-url="/agents-home/inbox/" style="display: contents">
+  <section><ag-ui-inbox variant="list"></ag-ui-inbox></section>
+  <ag-ui-chat></ag-ui-chat>
+</ag-ui-agents>
+
+<script type="module">
+  import { defineAgents } from "@artooi/agents-web-components";
+  import { defineChat } from "@artooi/agents-web-components/chat";
+  import { defineInbox } from "@artooi/agents-web-components/inbox";
+  defineAgents();
+  defineChat();
+  defineInbox();
+</script>
+```
+
+- **What it counts.** One row per conversation whose `status` is `waiting` with at least one
+  interrupt. The badge's number is the number of rows, not of interrupts; a row parked on several
+  calls says how many more after its first. **`items`** *(read-only)* is the rows, in the
+  provider's order (newest first). The host carries `data-count`, and `data-empty` when nothing
+  waits.
+- **Binding.** `agents` names the provider's `id`, looked up in the inbox's own root, so a badge
+  in a navbar outside the provider still reads it; a provider added later is picked up when it
+  first lists its inbox or directory. Without `agents`, the nearest `<ag-ui-agents>` around it.
+  Or set the **`provider`** property, which wins until it is set back to `null`.
+- **`variant`.** `badge` (the default) is a button with the count that opens the list in a
+  popover below it, aligned to its inline end; a press outside it or Escape closes it (Escape
+  hands focus back to the badge), and the arrow keys move between rows. **`open`** reads and sets
+  whether the popover is open. `list` draws the list alone, with its empty text and no badge.
+- **Each row** names the conversation (`untitled` when it has none) and its agent, then what it
+  waits on: `approval` (marked `destructive` unless the server says `destructive: false`),
+  `question`, or `external` for any other kind, followed by the interrupt's message.
+- **Picking a row** fires **`ag-ui-inbox-select`** (`INBOX_SELECT_EVENT`, detail
+  `{ agentId, threadId }`, bubbling, composed and cancelable) and closes the popover, then calls
+  the provider's `openThread(agentId, threadId)`, which mounts the chat on that agent and opens
+  the conversation, where the approval or question is answered. Call `preventDefault()` to route
+  to it yourself, on another page for instance.
+- **`strings`** translates every piece of text (`label`, `badge` with `{count}`, `empty`,
+  `untitled`, `approval`, `question`, `external`, `destructive`, `more` with `{count}`), merged
+  over the English.
+- **Styling.** Parts `badge`, `icon`, `count`, `panel`, `heading`, `list`, `row`, `row-button`,
+  `mark`, `agent`, `summary`, `destructive`, `empty`. The chat's colour tokens apply, plus
+  `--ag-ui-waiting` (the count and the marks) and `--ag-ui-danger` (a destructive approval), in
+  the page's own `color-scheme`, since it sits in your chrome.
+
+The main `/bundle` does not carry the element. Without a build step, load `/inbox/bundle` beside
+it; it inlines neither the chat nor the provider, which come from `/bundle`.
 
 ## A2UI surfaces
 
