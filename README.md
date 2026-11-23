@@ -309,7 +309,7 @@ element after the fact.
 `approveWithEdits`, `agentFactory`, `getTools`, `getContext`, `routeMap`, `navigate`, `getPageMap`,
 `autoInjectPageMap`, `getPlace`, `conversationStore`, `uploadHandler`, `transcribeHandler`, `navigationResult`,
 `skillContext`, `toolSummaries`, `formatToolPayload`, `formatRelativeTime`, `strings`,
-`resolvePageTarget`, `sharedState`, `anchor` (an element, which wins over the attribute's selector), `extraStyles` ([unstable](#d-extrastyles-the-last-mile)), plus the read-only `unread`, `unhandledActivityTypes`, `threadId`, `threadTitle`, `running`, `barHeight`, `dockWidth`, `uiStrings`, `colorScheme` and `locale`, and
+`resolvePageTarget`, `sharedState`, `anchor` (an element, which wins over the attribute's selector), `extraStyles` ([unstable](#d-extrastyles-the-last-mile)), plus the read-only `unread`, `unhandledActivityTypes`, `threadId`, `threadTitle`, `tabs`, `running`, `barHeight`, `dockWidth`, `uiStrings`, `colorScheme` and `locale`, and
 the attribute mirrors `endpoint` / `userKey` / `userName` / `toolDisplay` / `toolGroupDisplay` / `collapsed` /
 `maximized` / `credentials` / `detachRuns`.
 
@@ -344,7 +344,7 @@ the `copyCode` / `copied` / `copyFailed` strings.
 **Methods**: `registerTool`, `registerPageState`, `registerActivityRenderer`, `registerContext`,
 `setSkills`, `openSkillEditor`, `closeSkillEditor`, `sendMessage`, `run`, `attachFile`, `appendMessage`, `retryLastTurn`, `quote`, `offerQuoteInPage`,
 `enableCharts`, `newChat`, `setCollapsed`, `toggleCollapsed`, `setMaximized`, `toggleMaximized`,
-`describeSurface`, `moveTo`, `resetSize`, `toggleTheme`, `openThreads`, `closeThreads`, `switchThread`, `deleteThread`,
+`describeSurface`, `moveTo`, `resetSize`, `toggleTheme`, `openThreads`, `closeThreads`, `switchThread`, `deleteThread`, `openTab`, `closeTab`,
 `openCheckpoints`, `closeCheckpoints`, `toggleCheckpoints`, `refreshPlace`, `request`, `tokenValues` and `reload`.
 
 `request(url, init?)` is `fetch` as the element authenticates: `headers` and `getHeaders()` under
@@ -1532,6 +1532,47 @@ reports it as `restore`. Ignore a `reason` you do not know: more may be added.
 ```js
 chat.addEventListener("ag-ui-thread", (e) => myBar.markActive(e.detail.threadId));
 myBar.onPick = (threadId) => chat.switchThread(threadId);
+```
+
+#### Open threads (tabs)
+
+A host that draws conversations as tabs keeps the open set on the element rather than beside
+it. The element draws nothing for it: the tabs are the host's chrome. **Tracking starts at the
+host's first `openTab`**, which opens the thread on screen with it, or at connect when this tab
+already stored a set. Until then nothing is kept, written or announced, so a host that never
+calls `openTab` sees no change.
+
+- `tabs` *(read-only)* — the open threads in the order they were opened, each
+  `{ threadId, title }` (typed `OpenThread`), frozen. `title` is `""` until one is known. Empty
+  until tracking starts.
+- `openTab(threadId, title?)` — open a thread as the last tab without showing it; `switchThread`
+  shows it. Without a `title`, the store's list names it. A thread already open stays where it is.
+- `closeTab(threadId)` — close a tab. **The thread stays in history**, which is what sets a close
+  apart from `deleteThread`. Closing the thread on screen shows the next tab, else the one before
+  it, else a new chat, cancelling a run in flight as `switchThread` does.
+
+Once tracking has started, showing a thread opens it: `switchThread`, `newChat` and the drawer
+each open the thread they show, so the thread on screen always has a tab, except when a closed tab's neighbour cannot be
+loaded. A new chat leaving a thread nothing was sent in takes over that thread's tab, since the
+store drops the empty thread. `deleteThread` closes the tab as it deletes the thread.
+
+The set is kept per browser tab in `sessionStorage`, under the conversation's namespace (the
+element's `id` and `user-key`), so a reload reads the same tabs back, titles included. A
+`user-key` handover drops the previous user's tabs; a first `user-key` naming the user already
+there keeps them.
+
+Every change fires one **`ag-ui-tabs`** event (`OPEN_THREADS_EVENT`, detail `{ tabs, reason }`,
+typed `OpenThreadsDetail`), with `reason` one of `open`, `close`, `delete`, `title`, `restore`
+(connect or `reload()`) and `rescope` (a `user-key` handover). Ignore a `reason` you do not know.
+A thread shown is in `tabs` by the time its `ag-ui-thread` fires, and its `ag-ui-tabs` follows.
+Switching between two open tabs changes no tab, so mark the active one from `ag-ui-thread`.
+
+```js
+chat.addEventListener("ag-ui-tabs", (e) => myTabs.draw(e.detail.tabs));
+chat.addEventListener("ag-ui-thread", (e) => myTabs.markActive(e.detail.threadId));
+chat.openTab(chat.threadId); // start tracking
+myTabs.onPick = (threadId) => chat.switchThread(threadId);
+myTabs.onClose = (threadId) => chat.closeTab(threadId);
 ```
 
 ### The composer's own keys
@@ -4100,6 +4141,8 @@ paths.
 | `SessionStorageStore` | class | Default per-tab conversation store. |
 | `RemoteConversationStore` | class | Server-backed store over a `data-threads-url` endpoint. |
 | `ClientConversationStore` | type | The persistence seam. |
+| `OpenThread` | type | One open thread in `tabs` (`{ threadId, title }`). |
+| `OpenThreadsDetail` | type | `ag-ui-tabs` event detail (`{ tabs, reason }`). |
 | `ThreadMeta` | type | A thread-drawer row (`{ threadId, title, updatedAt, preview, unread?, status?, reason?, interrupts?, parent? }`); see [Thread status](#thread-status) and [Child sessions](#child-sessions). |
 | `ThreadParent` | type | A child thread's parent, as `ThreadMeta.parent` names it (`{ threadId, scope }`, `scope` `null` in an unscoped store). |
 | `ThreadStatus` | type | A thread's run status as the server lists it: `idle`, `running`, `waiting` or `failed`. |
@@ -4179,6 +4222,7 @@ paths.
 | `THREAD_EVENT` | The conversation-changed CustomEvent name (`ag-ui-thread`). |
 | `OPEN_THREAD_EVENT` | The open-another-thread CustomEvent name (`ag-ui-open-thread`), fired cancelable by a child-session link or a parent breadcrumb; see [Child sessions](#child-sessions). |
 | `THREAD_TITLE_EVENT` | The thread-title CustomEvent name (`ag-ui-thread-title`). |
+| `OPEN_THREADS_EVENT` | The open-threads CustomEvent name (`ag-ui-tabs`); see [Open threads (tabs)](#open-threads-tabs). |
 | `THREADS_CHANGE_EVENT` | The thread-list CustomEvent name (`ag-ui-threads-change`), fired by a chat watching its list under `data-thread-status`. |
 | `AGENTS_TAG` | The provider's tag name (`ag-ui-agents`). |
 | `AGENTS_CHANGE_EVENT` | The directory CustomEvent name (`ag-ui-agents-change`). |

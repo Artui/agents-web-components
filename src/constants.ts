@@ -765,3 +765,13 @@ export const INBOX_CHANGE_EVENT = "ag-ui-inbox-change";
  * {@link AgentChangeDetail}. Elements bound to the provider list again on it.
  */
 export const AGENT_CHANGE_EVENT = "ag-ui-agent-change";
+
+/**
+ * The open threads (`tabs`) of a chat changed: one opened, closed, deleted or
+ * retitled, or the set restored on connect or replaced on a `user-key`
+ * handover. `detail` is {@link OpenThreadsDetail}.
+ */
+export const OPEN_THREADS_EVENT = "ag-ui-tabs";
+
+/** The per-tab `sessionStorage` key base of a chat's open threads. */
+export const OPEN_THREADS_KEY = `${STORAGE_ROOT}.open-threads`;

@@ -301,6 +301,18 @@ export const SCENARIOS = [
       "data-tool-display": "full",
     },
   },
+  {
+    slug: "tabs",
+    group: "Conversation",
+    title: "Open threads (tabs)",
+    since: "0.10.0",
+    summary:
+      "chat.tabs, openTab and closeTab keep the open conversations apart from history; the element draws nothing, so the strip here is the host's own, drawn from ag-ui-tabs.",
+    prompts: [
+      ["Send a turn", "echo hello"],
+      ["Send another", "echo a second thread"],
+    ],
+  },
 ];
 
 /** The scenario a path names, or null for the start page. */

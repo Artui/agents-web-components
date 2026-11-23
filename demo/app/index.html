@@ -1050,6 +1050,50 @@
         </div>
       </section>
 
+      <section data-scenario="tabs" hidden>
+        <div class="panel">
+          <h2>The host's tab strip</h2>
+          <div class="controls">
+            <div class="ctl wide">
+              <span>Tabs</span>
+              <span class="inline" id="tabs-strip"></span>
+            </div>
+            <div class="ctl wide">
+              <span>Open</span>
+              <span class="inline">
+                <button type="button" id="tabs-new">chat.newChat()</button>
+                <button type="button" id="tabs-history">chat.openTab(next from history)</button>
+              </span>
+            </div>
+            <div class="ctl wide"><span>Last ag-ui-tabs</span><output id="tabs-out">-</output></div>
+          </div>
+        </div>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>The strip is the host's.</strong> This page calls <code>chat.openTab</code> on
+              load, which starts tracking; every button in the strip is drawn here from
+              <code>ag-ui-tabs</code>, and the active one is marked from <code>ag-ui-thread</code>.
+            </li>
+            <li>
+              <strong>Close is not delete.</strong> Send a turn, press New chat, send another, then
+              close a tab with its x: the thread is still in the history drawer, and
+              <em>openTab(next from history)</em> brings it back. Deleting it from the drawer closes
+              its tab too.
+            </li>
+            <li>
+              <strong>Closing the tab on screen</strong> shows the next tab, else the one before,
+              else a new chat. New chat on an untouched thread reuses its tab.
+            </li>
+            <li>
+              <strong>Reload.</strong> The tabs and their titles come back, reported as
+              <code>restore</code>. Check the strip at about 360px and at desktop width.
+            </li>
+          </ul>
+        </div>
+      </section>
+
       <!-- Where the widget renders under placement="embedded". -->
       <div class="embed-slot">
         <ag-ui-chat
