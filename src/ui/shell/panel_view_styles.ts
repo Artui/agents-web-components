@@ -4,7 +4,7 @@ export const PANEL_VIEW_STYLES: string = `
    is out of the layout. Hidden, not detached: a live view in the transcript
    keeps its frame, and the scroll position survives the visit. The attribute
    selector outranks the display each of these siblings sets at rest. */
-.chat[data-panel-view] > :not(.header, .panel-view, .resize-handle) {
+.chat[data-panel-view] > :not(.header, .header-menu, .panel-view, .resize-handle) {
   display: none;
 }
 

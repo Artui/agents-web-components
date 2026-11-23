@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import * as buildConfig from "../esbuild.config.mjs";
 import {
   A2UI_BUNDLE,
+  INBOX_BUNDLE,
   LIBRARY,
   MCP_APPS_BUNDLE,
   THREADS_BUNDLE,
@@ -16,6 +17,7 @@ import * as a2ui from "../src/a2ui.js";
 import * as bundle from "../src/bundle.js";
 import * as chat from "../src/chat.js";
 import { ELEMENT_TAG } from "../src/constants.js";
+import * as inbox from "../src/inbox.js";
 import * as index from "../src/index.js";
 import * as mcpApps from "../src/mcp_apps.js";
 import * as threads from "../src/threads.js";
@@ -84,9 +86,58 @@ describe("the package entries", () => {
     ).toEqual([]);
   });
 
+  it("publishes the inbox as its own entry and its own vendored file", () => {
+    expect(Object.keys(inbox).sort()).toEqual([
+      "AgUiInbox",
+      "INBOX_ANSWER_EVENT",
+      "INBOX_SELECT_EVENT",
+      "INBOX_TAG",
+      "defineInbox",
+    ]);
+    expect(Object.keys(index).filter((name) => name in inbox)).toEqual([]);
+    expect(MANIFEST.exports["./inbox"]).toEqual({
+      types: "./dist/inbox.d.ts",
+      import: "./dist/inbox.js",
+    });
+    expect(INBOX_BUNDLE.entryPoints).toEqual(["src/inbox.ts"]);
+    expect(MANIFEST.exports["./inbox/bundle"]).toEqual({
+      types: "./dist/inbox.d.ts",
+      import: `./${INBOX_BUNDLE.outfile}`,
+    });
+  });
+
+  it("keeps the inbox out of the main bundle", async () => {
+    expect(Object.keys(bundle)).not.toContain("defineInbox");
+    expect(Object.keys(bundle)).not.toContain("AgUiInbox");
+    const result = await build({ ...VENDORED_BUNDLE, write: false, metafile: true });
+    const inputs = Object.keys(result.metafile.inputs);
+    expect(inputs.filter((path) => path.startsWith("src/inbox"))).toEqual([]);
+  });
+
+  it("keeps the element, its string table and the protocol packages out of the inbox bundle", async () => {
+    const result = await build({ ...INBOX_BUNDLE, write: false, metafile: true });
+    const inputs = Object.keys(result.metafile.inputs);
+    expect(inputs).toContain("src/inbox.ts");
+    expect(
+      inputs.filter(
+        (path) =>
+          path === "src/index.ts" ||
+          path === "src/chat.ts" ||
+          path === "src/core/ag_ui_chat.ts" ||
+          path === "src/agents/ag_ui_agents.ts" ||
+          path === "src/ui/ui_strings.ts" ||
+          path.startsWith("src/a2ui") ||
+          path.startsWith("src/mcp_apps") ||
+          path.startsWith("src/threads") ||
+          path.includes("@ag-ui"),
+      ),
+    ).toEqual([]);
+  });
+
   it("defines nothing at import", () => {
     expect(customElements.get(ELEMENT_TAG)).toBeUndefined();
     expect(customElements.get(threads.THREADS_TAG)).toBeUndefined();
+    expect(customElements.get(inbox.INBOX_TAG)).toBeUndefined();
   });
 
   it("declares itself free of import side effects", () => {

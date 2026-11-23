@@ -357,5 +357,6 @@ function toInboxRow(row: InboxServerRow): InboxRow {
     ...(row.status === "waiting" && row.interrupts !== undefined
       ? { interrupts: row.interrupts }
       : {}),
+    ...(row.status === "waiting" && typeof row.run_id === "string" ? { runId: row.run_id } : {}),
   };
 }

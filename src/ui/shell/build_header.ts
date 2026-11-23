@@ -8,6 +8,7 @@ import {
 } from "../../constants.js";
 import type { UiStrings } from "../ui_strings.js";
 import { headerButton } from "./header_button.js";
+import { HeaderOverflow } from "./header_overflow.js";
 import { iconElement } from "./icon_element.js";
 
 /** What {@link buildHeader} needs from the element that owns the header. */
@@ -46,6 +47,8 @@ export interface BuiltHeader {
   readonly maximize: HTMLButtonElement;
   /** The collapse control, which the maximize control is placed before. */
   readonly collapse: HTMLButtonElement;
+  /** The More button and its menu; the element puts the menu after the header and refits. */
+  readonly overflow: HeaderOverflow;
 }
 
 /**
@@ -98,19 +101,11 @@ export function buildHeader(options: HeaderOptions): BuiltHeader {
   const maximize = headerButton("maximize", strings.maximize, ICON_MAXIMIZE);
   maximize.addEventListener("click", options.onMaximize);
 
-  // Only offered when the server actually indexes runs — without
-  // `data-runs-url` there is nothing to continue and the button would open
-  // a permanently empty panel.
-  if (options.withCheckpoints) {
-    controls.append(history, checkpoints, newChat);
-  } else {
-    controls.append(history, newChat);
-  }
   // Offered only with a skill editor endpoint: without one it would open nothing.
+  let skills: HTMLButtonElement | null = null;
   if (options.onSkills !== null) {
-    const skills = headerButton("skills", strings.skills, ICON_SKILLS);
+    skills = headerButton("skills", strings.skills, ICON_SKILLS);
     skills.addEventListener("click", options.onSkills);
-    controls.prepend(skills);
   }
   // Optional built-in theme toggle: off unless the host opts in, so
   // it never competes with a host-supplied switch in `slot="header-actions"`.
@@ -122,9 +117,25 @@ export function buildHeader(options: HeaderOptions): BuiltHeader {
     toggle.title = strings.toggleTheme;
     toggle.setAttribute("aria-label", strings.toggleTheme);
     toggle.addEventListener("click", options.onToggleTheme, { signal: options.signal });
-    controls.append(toggle);
   }
-  controls.append(collapse);
+  // Checkpoints only when the server indexes runs: without data-runs-url the
+  // button would open a permanently empty panel.
+  const shown = options.withCheckpoints ? checkpoints : null;
+  const present = (xs: readonly (HTMLButtonElement | null)[]): HTMLButtonElement[] =>
+    xs.filter((x): x is HTMLButtonElement => x !== null);
+  const row = present([skills, history, shown, newChat, toggle, maximize, collapse]);
+  controls.append(...present([skills, history, shown, newChat, toggle, collapse]));
   header.append(title, headerActions, controls);
-  return { header, checkpoints, maximize, collapse };
+  const overflow = new HeaderOverflow({
+    header,
+    title,
+    controls,
+    row,
+    // The first to leave the row as it narrows; new chat and the window controls never do.
+    movable: present([toggle, skills, shown, history]),
+    label: strings.moreControls,
+    signal: options.signal,
+  });
+  overflow.fit();
+  return { header, checkpoints, maximize, collapse, overflow };
 }

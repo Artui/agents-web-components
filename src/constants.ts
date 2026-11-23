@@ -775,3 +775,25 @@ export const TABS_EVENT = "ag-ui-tabs";
 
 /** The per-tab `sessionStorage` key base of a chat's open threads. */
 export const TABS_KEY = `${STORAGE_ROOT}.open-threads`;
+
+/** The Custom Element tag name registered by {@link defineInbox}. */
+export const INBOX_TAG = "ag-ui-inbox";
+
+/**
+ * A row of `<ag-ui-inbox>` was picked. `detail` is {@link InboxSelectDetail}.
+ *
+ * Fires before the provider opens the conversation, and is cancelable: a host
+ * that routes to it itself (another page, its own chat) calls
+ * `preventDefault()` and the element leaves the provider alone.
+ */
+export const INBOX_SELECT_EVENT = "ag-ui-inbox-select";
+
+/**
+ * Fired by `<ag-ui-inbox>` (bubbling, composed) after it answered an approval
+ * in place, with what came of it: `answered`, `elsewhere` (another answer or
+ * the run's end got there first) or `failed`.
+ */
+export const INBOX_ANSWER_EVENT = "ag-ui-inbox-answer";
+
+/** The header's More button, which opens the menu of controls the row has no room for. */
+export const ICON_MORE = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg>`;

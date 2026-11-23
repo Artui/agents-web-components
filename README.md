@@ -53,10 +53,12 @@ This package is the successor of `@artooi/ag-ui-web-component`. Coming from it? 
   - [DOM-driver and animation primitives](#dom-driver-and-animation-primitives)
   - [Page-action tools](#page-action-tools)
 - [New chat and collapse](#new-chat-and-collapse)
+  - [The header row and its More menu](#the-header-row-and-its-more-menu)
   - [Maximizing the panel](#maximizing-the-panel)
   - [Collapsing to the launcher](#collapsing-to-the-launcher)
   - [Collapsing to a bottom bar](#collapsing-to-a-bottom-bar)
 - [Several agents under one provider](#several-agents-under-one-provider)
+- [What needs the user, across agents](#what-needs-the-user-across-agents)
 - [A2UI surfaces](#a2ui-surfaces)
 - [MCP Apps views](#mcp-apps-views)
 - [Tool-call display modes](#tool-call-display-modes)
@@ -98,6 +100,8 @@ The package ships two builds (see [`package.json` exports](package.json)):
 | `@artooi/agents-web-components/chat` | The same library build's `<ag-ui-chat>` entry: `AgUiChat` and `defineChat` | Beside the root entry; the two share one module instance, so import from both freely. |
 | `@artooi/agents-web-components/threads` | `<ag-ui-threads>`, the conversation list for your own bar or rail: `AgUiThreads` and `defineThreads` | Beside `./chat`, when you draw the list of conversations yourself. |
 | `@artooi/agents-web-components/threads/bundle` | The same entry as a vendored file, minified, inlining none of the element | Beside `/bundle` with no build step; the main bundle does not carry the list. |
+| `@artooi/agents-web-components/inbox` | `<ag-ui-inbox>`, what waits on the user across agents, as a navbar badge or a list: `AgUiInbox` and `defineInbox` | Beside `./chat` and an `<ag-ui-agents>` provider. |
+| `@artooi/agents-web-components/inbox/bundle` | The same entry as a vendored file, minified, inlining none of the element or the provider | Beside `/bundle` with no build step; the main bundle does not carry the inbox. |
 | `@artooi/agents-web-components/bundle` | ESM bundle with `@ag-ui/*` **inlined**, minified | Drop in via a single `<script type="module">` with no build step. |
 
 ### The vendored-bundle story
@@ -198,7 +202,7 @@ another origin, add `credentials="include"` too; see
 | `data-skills` | — | Inline JSON skill catalog. A value that will not parse is ignored and reported on the console, rather than reading as an empty catalog. |
 | `data-skills-url` | — | URL of a JSON skill catalog (fetched with the element's headers and cookie policy). |
 | `data-skill-editor-url` | — | URL of django-ag-ui's skill editor endpoint (`skills/editor/`). Opts into the [skill editor](#the-skill-editor): a "Manage skills" row at the foot of the `/` palette under `data-slash-commands`, a header button with `data-skill-editor-button`, or `openSkillEditor()`. |
-| `data-skill-editor-button` | absent | With `data-skill-editor-url`, also puts a Skills button in the header. Off by default: with every header control on, the row needs about 262px. |
+| `data-skill-editor-button` | absent | With `data-skill-editor-url`, also puts a Skills button in the header. Off by default. On a narrow panel it moves into the header's [More menu](#the-header-row-and-its-more-menu) like the other optional controls. |
 | `data-tools-url` | — | URL of a server tool-label catalog (`[{ name, summary, description? }]`), fetched with the element's headers and cookie policy; labels tool-call cards for server-side tools. |
 | `user-key` | `userKey` | Who the stored conversation belongs to — any string identifying the signed-in principal. Joins the storage namespace, and **changing it purges what the previous principal left behind**. Live (not connect-time): a logout is the host's to announce. See [Who the stored conversation belongs to](#who-the-stored-conversation-belongs-to-user-key). |
 | `user-name` | `userName` | The signed-in user's display name, for the [greeting](#the-greeting-on-an-empty-page) an empty conversation shows under `placement="page"`. Presentation only: unlike `user-key` it scopes nothing and is never sent. Absent or blank gives the nameless greeting. Live. |
@@ -1434,6 +1438,24 @@ chat.toggleCollapsed();
 chat.addEventListener("ag-ui-toggle", (e) => console.log(e.detail.collapsed));
 ```
 
+### The header row and its More menu
+
+The header shows every control it has while they fit. When they stop fitting, or when the row
+would hold more than five, the optional controls move into a More menu (the three dots), one at
+a time in this order: the theme toggle, Skills, checkpoints, then History. New chat, Maximize
+and Collapse always stay in the row. Once anything has moved, the row holds at most four
+controls beside More, so a header with every opt-in on still fits a 240px panel with its title
+readable.
+
+Nothing to opt into, and nothing a host drives changes: a control in the menu is the same
+`<button>`, with the same class (`header-btn--history`), `part` and `icon-*` slot, so
+`::part(history-button)` still styles it and `shadowRoot.querySelector(".header-btn--history").click()`
+still opens the drawer. In the menu it is a `menuitem` row showing its glyph and its name.
+The menu takes `::part(header-menu)` and the button `::part(more-button)`; its name is the
+`moreControls` string. From the keyboard, Enter, Space or the down arrow on More opens the menu
+on its first row (the up arrow on its last); the arrows, Home and End move between rows, Escape
+closes it and returns focus to More, and Tab or a click elsewhere closes it.
+
 ### Maximizing the panel
 
 The maximize control (two arrows pointing out, `maximize-button` part, `icon-maximize` slot) grows the open panel,
@@ -2351,6 +2373,85 @@ The provider is exported from the root entry (and so from `/bundle`) with `defin
 throws naming the tag when another class holds it. A lone `<ag-ui-chat>` needs none of this and
 works as it always has. Runs and reattach stay in the chat. The element is an ordinary inline
 element, so give it `display: contents` when it should not affect layout.
+
+## What needs the user, across agents
+
+`<ag-ui-inbox>` shows the conversations that wait on the user, across every agent of an
+[`<ag-ui-agents>` provider](#several-agents-under-one-provider): a run parked on an approval, a
+question, or a client tool a detached run could not call. As a badge it is a count for your
+navbar that opens the list; as a list it is the "needs you" section of a home page. It keeps
+nothing of its own: it reads the provider's `inbox`, which the provider keeps fresh by ETag
+polling or by SSE as `data-inbox-transport` says, and redraws on each `ag-ui-inbox-change`.
+
+```html
+<nav><ag-ui-inbox agents="home"></ag-ui-inbox></nav>
+
+<ag-ui-agents id="home" data-agents-url="/agents-home/agents/"
+              data-inbox-url="/agents-home/inbox/" style="display: contents">
+  <section><ag-ui-inbox variant="list"></ag-ui-inbox></section>
+  <ag-ui-chat></ag-ui-chat>
+</ag-ui-agents>
+
+<script type="module">
+  import { defineAgents } from "@artooi/agents-web-components";
+  import { defineChat } from "@artooi/agents-web-components/chat";
+  import { defineInbox } from "@artooi/agents-web-components/inbox";
+  defineAgents();
+  defineChat();
+  defineInbox();
+</script>
+```
+
+- **What it counts.** One row per conversation whose `status` is `waiting` with at least one
+  interrupt. The badge's number is the number of rows, not of interrupts; a row parked on several
+  calls says how many more after its first. **`items`** *(read-only)* is the rows, in the
+  provider's order (newest first). The host carries `data-count`, and `data-empty` when nothing
+  waits.
+- **Binding.** `agents` names the provider's `id`, looked up in the inbox's own root, so a badge
+  in a navbar outside the provider still reads it; a provider added later is picked up when it
+  first lists its inbox or directory. Without `agents`, the nearest `<ag-ui-agents>` around it.
+  Or set the **`provider`** property, which wins until it is set back to `null`.
+- **`variant`.** `badge` (the default) is a button with the count that opens the list in a
+  popover below it, aligned to its inline end; a press outside it or Escape closes it (Escape
+  hands focus back to the badge), and the arrow keys move between rows. **`open`** reads and sets
+  whether the popover is open. `list` draws the list alone, with its empty text and no badge.
+- **Each row** names the conversation (`untitled` when it has none) and its agent, then what it
+  waits on: `approval` (marked `destructive` unless the server says `destructive: false`),
+  `question`, or `external` for any other kind, followed by the interrupt's message.
+- **Picking a row** fires **`ag-ui-inbox-select`** (`INBOX_SELECT_EVENT`, detail
+  `{ agentId, threadId }`, bubbling, composed and cancelable) and closes the popover, then calls
+  the provider's `openThread(agentId, threadId)`, which mounts the chat on that agent and opens
+  the conversation, where the approval or question is answered. Call `preventDefault()` to route
+  to it yourself, on another page for instance.
+- **Answering in place.** A row whose every interrupt is an approval marked
+  `destructive: false`, whose agent the provider's directory lists, on a server that names the
+  parked run (`run_id` on a waiting row, django-ag-ui 0.88.0 with a `step_store`), also shows
+  **Approve** and **Deny**. Either answers every call of the row at once: it POSTs the agent's
+  `resume/<run_id>/` (under its `endpoint`, with or without a trailing slash) with a detached
+  run, the provider's `headers`, `getHeaders()` and `credentials` (so a session mount's CSRF
+  header goes there), and fires **`ag-ui-inbox-answer`** (`INBOX_ANSWER_EVENT`, detail
+  `{ agentId, threadId, runId, approved, outcome, status }`, bubbling and composed). `outcome` is
+  `answered`, `elsewhere` (a `409` or `404`: another answer, or the run's end, got there first)
+  or `failed`, which draws `answerFailed` under the row and lets it be sent again. A destructive
+  approval, a question, a client tool, a row whose agent is not listed, and every row on an older
+  server are answered in their conversation only. The row leaves when the provider's inbox next
+  lists it as answered. Keyboard focus stays on the control it was on (or the row's button, once
+  Approve is busy) as the list redraws.
+- **`strings`** translates every piece of text (`label`, `badge` with `{count}`, `empty`,
+  `untitled`, `approval`, `question`, `external`, `destructive`, `more` with `{count}`,
+  `approve`, `deny`, `answerFailed`), merged over the English.
+- **Styling.** Parts `badge`, `icon`, `count`, `panel`, `heading`, `list`, `row`, `row-button`,
+  `mark`, `agent`, `summary`, `destructive`, `actions`, `approve-button`, `deny-button`,
+  `answer-error`, `empty`. The chat's colour tokens apply, plus
+  `--ag-ui-waiting` (the count and the marks) and `--ag-ui-danger` (a destructive approval), in
+  the page's own `color-scheme`, since it sits in your chrome. The badge's popover stacks one
+  above `--ag-ui-z-index` (the chat's layer, `2147483000` by default), so it opens over a floating
+  `<ag-ui-chat>`. A navbar that creates its own stacking context (`position: fixed` or `sticky`,
+  `transform`, `backdrop-filter`, an `opacity` below 1) caps it there: give that navbar a
+  `z-index` above the chat's, or place the badge outside it.
+
+The main `/bundle` does not carry the element. Without a build step, load `/inbox/bundle` beside
+it; it inlines neither the chat nor the provider, which come from `/bundle`.
 
 ## A2UI surfaces
 
@@ -4801,7 +4902,7 @@ component sets, so a new one cannot ship undocumented.
 | Feature | Parts |
 | --- | --- |
 | Shell | `panel`, `header`, `title`, `icon`, `header-controls`, `messages`, `empty`, `greeting`, `pending`, `stopped`, `usage-line`, `jump-latest`, and one per resize grip: `resize-handle` plus `resize-handle-top`, `resize-handle-bottom`, `resize-handle-left`, `resize-handle-right`, `resize-handle-top-left`, `resize-handle-top-right`, `resize-handle-bottom-left`, `resize-handle-bottom-right` |
-| Header buttons | `header-button` on each, plus `skills-button` (with `data-skill-editor-button`), `history-button`, `checkpoints-button`, `new-button`, `maximize-button`, `collapse-button`, `theme-toggle` |
+| Header buttons | `header-button` on each, plus `skills-button` (with `data-skill-editor-button`), `history-button`, `checkpoints-button`, `new-button`, `maximize-button`, `collapse-button`, `theme-toggle`, `more-button` (only while the row has moved a control into its menu); `header-menu` on the [More menu](#the-header-row-and-its-more-menu) |
 | Collapsed widget | `launcher`, `launcher-icon`, `launcher-badge`, `rail-label`, `bar` (the [bottom bar](#collapsing-to-a-bottom-bar)'s wrapper, around the launcher), `bar-place` (the place beside the bar's title; its text carries `place-label` and `place-detail`), `bar-history` |
 | Answers | `answer` (the per-turn group), `message` (plus `message-user`, `message-assistant`), `code-copy`, `enqueued-messages` and `enqueued-messages-note` (user messages a run took in mid-turn) |
 | Reasoning | `thoughts`, `thoughts-toggle`, `thoughts-body`, `thoughts-label` |

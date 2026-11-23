@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] — 2026-11-23
+
+### Added
+
+- **`<ag-ui-inbox>`, what waits on the user across agents, in a new `./inbox` entry (and
+  `./inbox/bundle`). Opt-in: a host imports it and calls `defineInbox()`.** It reads the inbox
+  of an `<ag-ui-agents>` provider, which keeps it fresh by ETag polling or SSE as
+  `data-inbox-transport` says, and lists each conversation whose run is `waiting` on an
+  interrupt: its title, its agent, and what it waits on (an approval, marked destructive unless
+  the server says otherwise, a question, or any other parked call). `variant="badge"` (the
+  default) is a navbar button counting those conversations that opens the list in a popover
+  (Escape and a press outside close it, the arrow keys move between rows); `variant="list"` is
+  the list alone, for a home page's "needs you" section. Bound by `agents="<provider id>"`, so a
+  badge outside the provider reads it, else to the nearest provider, or by the `provider`
+  property. Picking a row fires the cancelable `ag-ui-inbox-select` (`INBOX_SELECT_EVENT`,
+  `InboxSelectDetail`, `{ agentId, threadId }`), then calls the provider's
+  `openThread(agentId, threadId)`. A row whose every interrupt is a non-destructive approval
+  is answered in place with Approve or Deny, which POST the agent's `resume/<run_id>/` as a
+  detached run and fire `ag-ui-inbox-answer` (`INBOX_ANSWER_EVENT`, `InboxAnswerDetail`); this
+  needs django-ag-ui 0.88.0, whose waiting rows name the parked run (`run_id`, on a mount with
+  a `step_store`), and only for an agent the provider's directory lists. On an older server every
+  row only opens its conversation. The badge's popover opens over a floating `<ag-ui-chat>` (one
+  above `--ag-ui-z-index`), keeps keyboard focus through a redraw, and closes on Escape from the
+  badge too. Themed by the
+  shared `--ag-ui-*` tokens; parts `badge`, `icon`, `count`, `panel`, `heading`, `list`, `row`,
+  `row-button`, `mark`, `agent`, `summary`, `destructive`, `actions`, `approve-button`,
+  `deny-button`, `answer-error`, `empty`; strings `InboxStrings`.
+- **`InboxRow.runId`** on `<ag-ui-agents>`' inbox: a waiting row's parked run, when the server
+  names it (`run_id`, django-ag-ui 0.88.0).
+
+### Changed
+
+- **The header fits any number of controls: the optional ones move into a More menu. No opt-in.**
+  While the row fits, every control stays in it. When it does not, or when it would hold more
+  than five, the theme toggle, Skills, checkpoints and History move into a More menu (the
+  three dots), in that order, until at most four remain beside More. New chat, Maximize and
+  Collapse never move. A control in the menu is the same `<button>`, with the same class, `part`
+  and `icon-*` slot, so `::part(history-button)` and a host's
+  `.header-btn--history` `.click()` keep working; it gains `role="menuitem"` there and shows its
+  name beside its glyph, in the panel's ink rather than the header's. New parts `more-button` and
+  `header-menu`, new string `moreControls`. The menu takes Enter, Space and the arrows on More,
+  the arrows, Home and End inside it, and Escape back to More. A header with the theme toggle and
+  `data-runs-url` on (six controls) now shows the theme toggle and checkpoints in the menu even
+  on a wide panel; a host's own row of four or five is unchanged.
+
 ## [0.10.0] — 2026-11-23
 
 ### Added
@@ -629,7 +674,8 @@ move page walks a host over. Each entry below says whether a host opts in.
   kept offering the moon under `theme="dark"`. Only the toggle's own click redrew it before. A host
   opts in to nothing.
 
-[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/Artui/agents-web-components/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/Artui/agents-web-components/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/Artui/agents-web-components/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/Artui/agents-web-components/compare/v0.7.0...v0.8.0

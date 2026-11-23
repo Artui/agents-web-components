@@ -471,6 +471,10 @@ export interface UiStrings {
   daysAgo: string;
   /** Weeks ago. Token: `{n}`. */
   weeksAgo: string;
+
+  // ── Header ──────────────────────────────────────────────────────────────────
+  /** The header button, and its menu, holding the controls the row has no room for. */
+  moreControls: string;
 }
 
 /** The built-in English strings — the fallback every override merges over. */
@@ -686,6 +690,8 @@ export const DEFAULT_UI_STRINGS: UiStrings = {
   hoursAgo: "{n}h ago",
   daysAgo: "{n}d ago",
   weeksAgo: "{n}w ago",
+
+  moreControls: "More",
 };
 
 /**

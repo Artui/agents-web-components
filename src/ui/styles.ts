@@ -38,6 +38,7 @@ import { THOUGHTS_STYLES } from "./progress/thoughts_styles.js";
 import { TOOL_GROUP_STYLES } from "./progress/tool_group_styles.js";
 import { TOOL_STEP_STYLES } from "./progress/tool_step_styles.js";
 import { FRAME_STYLES } from "./shell/frame_styles.js";
+import { HEADER_MENU_STYLES } from "./shell/header_menu_styles.js";
 import { PANEL_VIEW_STYLES } from "./shell/panel_view_styles.js";
 import { THEME_STYLES } from "./shell/theme_styles.js";
 import { TOKEN_STYLES } from "./shell/token_styles.js";
@@ -114,4 +115,7 @@ export const STYLES: string = [
   QUIET_STYLES,
   SOFT_STYLES,
   LEDGER_STYLES,
+  // After the themes: it restates, inside the More menu, the header button ink
+  // each theme sets, at the same weight.
+  HEADER_MENU_STYLES,
 ].join("");
