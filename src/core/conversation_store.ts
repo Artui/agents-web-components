@@ -46,6 +46,21 @@ export interface ThreadMeta {
    * whether an approval is for a destructive call.
    */
   readonly interrupts?: readonly Interrupt[];
+  /**
+   * The thread that started this one as a child session, as a server store
+   * knows it. Absent for a top-level thread and for a store that cannot tell.
+   */
+  readonly parent?: ThreadParent;
+}
+
+/**
+ * A child thread's parent, as {@link ThreadMeta.parent} names it: its thread,
+ * and its `scope` (the parent's agent id or store scope), `null` in an unscoped
+ * store.
+ */
+export interface ThreadParent {
+  readonly threadId: string;
+  readonly scope: string | null;
 }
 
 /** A thread's run status, as {@link ThreadMeta.status} reports it. */

@@ -279,6 +279,14 @@ export interface UiStrings {
   subAgentFailed: string;
   /** `aria-label` of the region holding the sub-agent's own tool calls. */
   subAgentSteps: string;
+  /** The link from a card to the child session it started. Token: `{agent}`. */
+  childSessionOpen: string;
+  /** The same link while the child waits on the user. Token: `{agent}`. */
+  childSessionNeedsYou: string;
+  /** The breadcrumb from a child session back to its parent. Token: `{title}`. */
+  parentThread: string;
+  /** The breadcrumb when the thread list does not hold the parent's title. */
+  parentThreadUnlisted: string;
 
   // ── Confirmation card ───────────────────────────────────────────────────────
   /** `aria-label` of the editable arguments field on an approval card. */
@@ -590,6 +598,10 @@ export const DEFAULT_UI_STRINGS: UiStrings = {
   subAgentFinished: "{agent} finished",
   subAgentFailed: "The sub-agent failed",
   subAgentSteps: "Steps the sub-agent took",
+  childSessionOpen: "Open the {agent} task",
+  childSessionNeedsYou: "The {agent} task needs you",
+  parentThread: "From {title}",
+  parentThreadUnlisted: "From the conversation that started this one",
 
   approvalEditArgs: "Edit the arguments before approving",
   approvalArgsInvalid: "That is not valid JSON, so nothing was sent.",

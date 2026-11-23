@@ -68,6 +68,7 @@ import { PlaceChip } from "../ui/place/place_chip.js";
 import { placeFromRoute } from "../ui/place/place_from_route.js";
 import { PanelPlacement } from "../ui/placement/panel_placement.js";
 import { type Surface, surfaceFor } from "../ui/placement/surface_for.js";
+import { ChildSessions } from "../ui/progress/child_sessions.js";
 import { RunAnnouncer } from "../ui/progress/run_announcer.js";
 import { renderRunNotice } from "../ui/progress/run_notice.js";
 import { SubAgentProgress } from "../ui/progress/subagent_progress.js";
@@ -609,6 +610,14 @@ export class AgUiChat extends HTMLElement {
     strings: () => this.#strings,
     follow: () => this.#transcript.follow(),
   });
+  /** Child sessions: the link in a card that started one, the breadcrumb back to a parent. */
+  readonly #childSessions = new ChildSessions({
+    element: this,
+    transcript: () => this.#messagesWrap,
+    strings: () => this.#strings,
+    activeThread: () => this.#history.threadId,
+    open: (threadId) => this.#history.switchThread(threadId).catch(() => undefined),
+  });
   /**
    * The context providers {@link registerContext} added, in registration order.
    * Replaced rather than changed in place, so a round reading it is not moved
@@ -1084,6 +1093,7 @@ export class AgUiChat extends HTMLElement {
       actions: this.#actions,
       activities: this.#activities,
       subagents: this.#subagents,
+      childSessions: this.#childSessions,
       announcer: this.#announcer,
       strings: () => this.#strings,
       running: () => this.#running,
@@ -1261,6 +1271,7 @@ export class AgUiChat extends HTMLElement {
       actions: this.#actions,
       activities: this.#activities,
       tools: this.#tools,
+      childSessions: this.#childSessions,
       input: this.#input,
       hint: this.#composerHint,
       strings: () => this.#strings,
@@ -1337,6 +1348,7 @@ export class AgUiChat extends HTMLElement {
       threadsListed: (threads) => {
         this.#takeListedTitle(threads);
         this.#takeListedUnread(threads);
+        this.#childSessions.listed(threads);
       },
       threadDeleted: (threadId) => this.#forgetUnread([threadId]),
     });
@@ -1888,6 +1900,7 @@ export class AgUiChat extends HTMLElement {
     }
     this.#render();
     this.#drawer.setStrings(this.#strings);
+    this.#childSessions.relocalize();
     this.#checkpoints.setStrings(this.#strings);
     // Gated on the placement, not just on the stored value: the key is
     // namespaced per instance but not per placement, so a tab that collapsed a
@@ -2168,6 +2181,7 @@ export class AgUiChat extends HTMLElement {
     this.#unwatch =
       store.watchThreads?.((threads) => {
         this.#takeListedUnread(threads);
+        this.#childSessions.listed(threads);
         this.#emit<ThreadsChangeDetail>(THREADS_CHANGE_EVENT, { threads });
       }, transport) ?? null;
   }
@@ -3397,6 +3411,7 @@ export class AgUiChat extends HTMLElement {
     this.#dropSkillEditor();
     this.#chat.replaceChildren(
       header,
+      this.#childSessions.breadcrumb,
       this.#panelView.element,
       this.#messagesWrap,
       this.#skillsMenu.palette,
@@ -3792,6 +3807,7 @@ export class AgUiChat extends HTMLElement {
   #dispatchThread(threadId: string, reason: ThreadDetail["reason"]): void {
     const detail: ThreadDetail = { threadId, previousThreadId: this.#shownThread, reason };
     this.#shownThread = threadId;
+    this.#childSessions.shown();
     const seen = this.#markSeen();
     if (seen.length > 0) {
       this.#unreadChanged(seen);

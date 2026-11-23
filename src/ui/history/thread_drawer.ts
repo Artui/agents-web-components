@@ -280,7 +280,9 @@ export class ThreadDrawer {
       this.#list.appendChild(empty);
       return;
     }
-    const groups = this.#groups(shown);
+    const { roots, children } = this.#forest(shown);
+    const groups = this.#groups(roots);
+    const drawn = new Set<string>();
     for (const [label, metas] of groups) {
       // One group would label the whole list, which says nothing the rows do not.
       if (groups.length > 1) {
@@ -293,9 +295,86 @@ export class ThreadDrawer {
         this.#list.appendChild(heading);
       }
       for (const meta of metas) {
-        this.#list.appendChild(this.#renderRow(meta));
+        this.#renderTree(meta, children, drawn, this.#list, false);
       }
     }
+  }
+
+  /**
+   * A row, then its children in a group under it, each row once however the
+   * list nests them. Nested rather than marked with a depth, so each level's
+   * indent adds to its parent's without a rule per level.
+   */
+  #renderTree(
+    meta: ThreadMeta,
+    children: ReadonlyMap<string, readonly ThreadMeta[]>,
+    drawn: Set<string>,
+    into: HTMLElement,
+    child: boolean,
+  ): void {
+    drawn.add(meta.threadId);
+    into.appendChild(this.#renderRow(meta, child));
+    const below = (children.get(meta.threadId) ?? []).filter((row) => !drawn.has(row.threadId));
+    if (below.length === 0) {
+      return;
+    }
+    const group = document.createElement("div");
+    group.className = "drawer-children";
+    group.setAttribute("part", "drawer-children");
+    into.appendChild(group);
+    for (const row of below) {
+      this.#renderTree(row, children, drawn, group, true);
+    }
+  }
+
+  /**
+   * The shown rows as top-level rows and, by parent id, the children under each.
+   *
+   * A child nests only under a parent that is itself shown, so an orphan, or a
+   * child the filter matched without its parent, stands at the top level. A
+   * row only reachable through a cycle of parents is promoted too, or the
+   * malformed list would draw none of the cycle.
+   */
+  #forest(shown: readonly ThreadMeta[]): {
+    roots: ThreadMeta[];
+    children: Map<string, ThreadMeta[]>;
+  } {
+    const ids = new Set(shown.map((meta) => meta.threadId));
+    const roots: ThreadMeta[] = [];
+    const children = new Map<string, ThreadMeta[]>();
+    for (const meta of shown) {
+      const parentId = meta.parent?.threadId;
+      if (parentId === undefined || !ids.has(parentId)) {
+        roots.push(meta);
+        continue;
+      }
+      const siblings = children.get(parentId);
+      if (siblings === undefined) {
+        children.set(parentId, [meta]);
+      } else {
+        siblings.push(meta);
+      }
+    }
+    const reached = new Set<string>();
+    const reach = (meta: ThreadMeta): void => {
+      if (reached.has(meta.threadId)) {
+        return;
+      }
+      reached.add(meta.threadId);
+      for (const child of children.get(meta.threadId) ?? []) {
+        reach(child);
+      }
+    };
+    for (const root of roots) {
+      reach(root);
+    }
+    for (const meta of shown) {
+      if (!reached.has(meta.threadId)) {
+        roots.push(meta);
+        reach(meta);
+      }
+    }
+    return { roots, children };
   }
 
   /**
@@ -340,10 +419,14 @@ export class ThreadDrawer {
     );
   }
 
-  #renderRow(meta: ThreadMeta): HTMLDivElement {
+  #renderRow(meta: ThreadMeta, child: boolean): HTMLDivElement {
     const row = document.createElement("div");
     row.className = "drawer-row";
     row.setAttribute("part", "drawer-row");
+    if (child) {
+      row.classList.add("drawer-row--child");
+      row.setAttribute("part", "drawer-row drawer-row-child");
+    }
     if (meta.threadId === this.#activeId) {
       row.classList.add("drawer-row--active");
     }

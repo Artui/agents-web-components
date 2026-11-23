@@ -984,6 +984,67 @@
         </div>
       </section>
 
+      <section data-scenario="child-sessions" hidden>
+        <div class="panel">
+          <h2>A parent and its children</h2>
+          <div class="controls">
+            <div class="ctl wide">
+              <span>Open</span>
+              <span class="inline">
+                <button type="button" id="cs-parent">chat.switchThread("children-parent")</button>
+                <button type="button" id="cs-offsite">chat.switchThread("children-offsite")</button>
+              </span>
+            </div>
+            <label class="ctl check" title="Call preventDefault() on ag-ui-open-thread, as a host routing threads across agents would"
+              ><input type="checkbox" id="cs-route" /><span>Host takes ag-ui-open-thread</span></label
+            >
+            <label class="ctl"
+              ><span>Placement</span>
+              <select id="cs-placement">
+                <option value="floating">floating</option>
+                <option value="embedded">embedded</option>
+              </select></label
+            >
+            <div class="ctl wide"><span>Last ag-ui-open-thread</span><output id="cs-last">-</output></div>
+          </div>
+        </div>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>The links survive a reload.</strong> Open the parent: each of its two
+              start_session cards carries a link to its child, read from the receipt in the
+              result. Reload the page; the links are still there.
+            </li>
+            <li>
+              <strong>A child that needs you.</strong> The reconcile child is parked on an
+              approval, so its link reads "The researcher task needs you", in the danger colour,
+              and the parent shows no approve button. Follow it: the approval is in the child's
+              thread.
+            </li>
+            <li>
+              <strong>The breadcrumb.</strong> On a child, a line under the header reads "From
+              Research the March invoices" and opens the parent. Shorten the panel to about 240px:
+              it stays one line, ellipsised.
+            </li>
+            <li>
+              <strong>The drawer.</strong> Open the history: the two children sit indented under
+              the parent; the venue child, from today, sits under the ten-day-old offsite plan in
+              Older; the orphan stands at the top level. Type "suppliers" in the filter and the
+              child shows alone, without its parent.
+            </li>
+            <li>
+              <strong>A live link.</strong> Send the prompt: the start_session card gets its link
+              as the result streams in.
+            </li>
+            <li>
+              <strong>Host routing.</strong> Tick the box and follow a link: the event is logged and
+              the chat stays where it is.
+            </li>
+          </ul>
+        </div>
+      </section>
+
       <!-- Where the widget renders under placement="embedded". -->
       <div class="embed-slot">
         <ag-ui-chat

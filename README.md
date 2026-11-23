@@ -2680,6 +2680,51 @@ row's own chrome comes from `subAgentWorking` and `subAgentSteps` in
 [`UiStrings`](#internationalization-i18n); everything else on the row is the
 server's text.
 
+### Child sessions
+
+A child session (django-spec-agents' `start_session`) runs headless in a thread
+of its own and sends nothing into the parent's stream. What persists is its
+receipt, the call's tool result (`{ agent_id, thread_id, run_id, note }`), so the
+link is read from that, on the live result and on a restore alike: **the card
+that started a child links to the child's thread, and still does after a
+reload.** A refusal, or any other result, draws no link.
+
+- **A child that needs you.** When the thread list the chat holds (the drawer's
+  listing, or `data-thread-status`'s watch) shows the child's row `waiting`, the
+  link reads `childSessionNeedsYou` ("The researcher task needs you") instead of
+  `childSessionOpen`, and carries `data-status`. It still only opens the child:
+  the parent never draws the child's approval or any control that answers it.
+- **The breadcrumb.** When the thread on screen is a child (django-ag-ui 0.86.0
+  lists `parent` on its row, read onto `ThreadMeta.parent`), a line between the
+  header and the transcript reads `parentThread` ("From {title}"), or
+  `parentThreadUnlisted` when the list does not hold the parent, and opens it.
+- **The drawer** nests each child under its parent's row (`drawer-row-child`,
+  inside a `drawer-children` group), in the parent's date group whatever the
+  child's own date. A child whose parent is not listed, or that a filter matched
+  without its parent, stands at the top level.
+
+**Opening a thread asks first.** A link or the breadcrumb dispatches
+**`ag-ui-open-thread`** (`OPEN_THREAD_EVENT`, detail `{ agentId, threadId }`,
+typed `OpenThreadDetail`), bubbling, composed and cancelable. `agentId` is the
+receipt's `agent_id`, or the parent's store `scope` (`null` when unscoped). The
+chat cannot tell which agent it serves, so unless a listener calls
+`preventDefault()` it then opens the thread in place, as a drawer pick does,
+letting go of a run in flight. A host whose child runs on another agent's mount
+takes the event, opens that thread where it lives, and prevents the default:
+
+```js
+chat.addEventListener("ag-ui-open-thread", (event) => {
+  if (event.detail.agentId !== null && event.detail.agentId !== "assistant") {
+    event.preventDefault();
+    openAgentThread(event.detail.agentId, event.detail.threadId);
+  }
+});
+```
+
+Nothing to opt into. The breadcrumb and the needs-you wording wait for a list:
+after a reload straight onto a child under a remote store, that is the first
+drawer open, switch or `data-thread-status` tick.
+
 ---
 
 ## Resizing the panel
@@ -3890,6 +3935,7 @@ paths.
 | `MessageRole` | type | Role of a rendered chat message. |
 | `SubmitDetail` | type | `detail` shape of the submit event. |
 | `ThreadDetail` | type | `detail` shape of the `ag-ui-thread` event (`{ threadId, previousThreadId, reason }`). |
+| `OpenThreadDetail` | type | `detail` shape of the `ag-ui-open-thread` event (`{ agentId, threadId }`). |
 | `ToggleDetail` | type | `detail` shape of the `ag-ui-toggle` event (`{ collapsed }`). |
 | `MaximizeDetail` | type | `detail` shape of the `ag-ui-maximize` event (`{ maximized }`). |
 | `BarHeightDetail` | type | `detail` shape of the `ag-ui-bar-height` event (`{ height }`). |
@@ -3977,7 +4023,8 @@ paths.
 | `SessionStorageStore` | class | Default per-tab conversation store. |
 | `RemoteConversationStore` | class | Server-backed store over a `data-threads-url` endpoint. |
 | `ClientConversationStore` | type | The persistence seam. |
-| `ThreadMeta` | type | A thread-drawer row (`{ threadId, title, updatedAt, preview, unread?, status?, reason?, interrupts? }`); see [Thread status](#thread-status). |
+| `ThreadMeta` | type | A thread-drawer row (`{ threadId, title, updatedAt, preview, unread?, status?, reason?, interrupts?, parent? }`); see [Thread status](#thread-status) and [Child sessions](#child-sessions). |
+| `ThreadParent` | type | A child thread's parent, as `ThreadMeta.parent` names it (`{ threadId, scope }`, `scope` `null` in an unscoped store). |
 | `ThreadStatus` | type | A thread's run status as the server lists it: `idle`, `running`, `waiting` or `failed`. |
 | `ThreadsTransport` | type | How `watchThreads` follows the list: `poll` or `stream`. |
 | `NavigationCheckpoint` | type | The pre-reload checkpoint marker. |
@@ -4053,6 +4100,7 @@ paths.
 | `ELEMENT_TAG` | The registered tag name (`ag-ui-chat`). |
 | `SUBMIT_EVENT` | The submit CustomEvent name. |
 | `THREAD_EVENT` | The conversation-changed CustomEvent name (`ag-ui-thread`). |
+| `OPEN_THREAD_EVENT` | The open-another-thread CustomEvent name (`ag-ui-open-thread`), fired cancelable by a child-session link or a parent breadcrumb; see [Child sessions](#child-sessions). |
 | `THREAD_TITLE_EVENT` | The thread-title CustomEvent name (`ag-ui-thread-title`). |
 | `THREADS_CHANGE_EVENT` | The thread-list CustomEvent name (`ag-ui-threads-change`), fired by a chat watching its list under `data-thread-status`. |
 | `TOGGLE_EVENT` | The collapse-toggle CustomEvent name (`ag-ui-toggle`). |
@@ -4622,6 +4670,7 @@ component sets, so a new one cannot ship undocumented.
 | Tool cards | `tool-card` (plus one status modifier: `tool-card-pending`, `tool-card-deferred`, `tool-card-done`, `tool-card-error`, `tool-card-declined`, `tool-card-interrupted`), `tool-card-head`, `tool-card-icon`, `tool-card-name`, `tool-card-status` (plus `tool-card-status-pending`, `tool-card-status-deferred`, `tool-card-status-done`, `tool-card-status-error`, `tool-card-status-declined`, `tool-card-status-interrupted`), `tool-card-decision`, `tool-card-answered-by`, `tool-card-toggle`, `tool-card-body`, `tool-card-section` (plus `tool-card-args-section`, `tool-card-result-section`), `tool-card-section-label` (plus `tool-card-args-label`, `tool-card-result-label`), `tool-card-args`, `tool-card-result`, `tool-card-approval`, `tool-card-subagent`, `tool-card-repeat` |
 | Tool-step group | `tool-group` (plus one state modifier: `tool-group-waiting`, `tool-group-running`, `tool-group-done`, `tool-group-error`), `tool-group-head`, `tool-group-icon`, `tool-group-label`, `tool-group-meta`, `tool-group-list` |
 | Delegated sub-agents | `subagent`, `subagent-row`, `subagent-icon`, `subagent-status`, `subagent-steps`, `subagent-step`, `subagent-step-icon`, `subagent-step-name` |
+| Child sessions | `child-session-link`, `parent-breadcrumb`, `parent-breadcrumb-link` |
 | Client-side confirmation | `confirm`, `confirm-body`, `confirm-args`, `confirm-actions`, `confirm-button` (plus `confirm-confirm`, `confirm-cancel`, `confirm-always`) |
 | An MCP Apps view's consent card | the same parts as the confirmation card, with `mcp-app-consent` beside `confirm` on the card |
 | Server-side approval | `approval`, `approval-body`, `approval-actions`, `approval-button` (plus `approval-approve`, `approval-deny`), `approval-edit`, `approval-args`, `approval-error` |
@@ -4632,7 +4681,7 @@ component sets, so a new one cannot ship undocumented.
 | Skills | `skill-chips`, `skill-chip`, `skill-palette`, `skill-item`, `skill-item-title`, `skill-item-desc`, `skill-item-token`, `skill-hint` (the composer hint: a skill’s missing placeholders, and a run continuation picked with nothing typed or while a run is in flight), `skill-manage` (the "Manage skills" row, also a `skill-item`) |
 | Full-panel view | `panel-view`, `panel-view-bar`, `panel-view-title`, `panel-view-body`, `panel-view-footer`, and in its bar `back-button` |
 | Skill editor | `skill-rows`, `skill-row`, `skill-empty`, `skill-form`, and in the view's bar `new-skill-button` |
-| Thread drawer | `drawer`, `drawer-backdrop`, `drawer-panel`, `drawer-header`, `drawer-title`, `drawer-new`, `drawer-close`, `drawer-filter`, `drawer-list`, `drawer-empty`, `drawer-group-label`, `drawer-row`, `drawer-row-select`, `drawer-row-title`, `drawer-row-time`, `drawer-row-preview`, `drawer-row-actions`, `drawer-row-rename`, `drawer-row-delete`, `drawer-rename-input`, `drawer-confirm`, `drawer-confirm-label`, `drawer-confirm-yes`, `drawer-confirm-no` |
+| Thread drawer | `drawer`, `drawer-backdrop`, `drawer-panel`, `drawer-header`, `drawer-title`, `drawer-new`, `drawer-close`, `drawer-filter`, `drawer-list`, `drawer-empty`, `drawer-group-label`, `drawer-row` (plus `drawer-row-child` on a child session's row), `drawer-children`, `drawer-row-select`, `drawer-row-title`, `drawer-row-time`, `drawer-row-preview`, `drawer-row-actions`, `drawer-row-rename`, `drawer-row-delete`, `drawer-rename-input`, `drawer-confirm`, `drawer-confirm-label`, `drawer-confirm-yes`, `drawer-confirm-no` |
 | Charts | `chart-block`, `chart-title`, `chart-legend` |
 | Checkpoints panel | `checkpoints`, `checkpoints-header`, `checkpoints-title`, `checkpoints-list`, `checkpoints-empty`, `checkpoint-row`, `checkpoint-label`, `checkpoint-time`, `checkpoint-id`, `checkpoint-branch`, `checkpoint-actions` (the pair's wrapper), `checkpoint-action` (plus `checkpoint-resume`, `checkpoint-fork`) |
 

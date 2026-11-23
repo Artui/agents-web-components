@@ -16,6 +16,7 @@ import { RunIndex } from "../../core/run_index.js";
 import { toolStatusFromOutcome } from "../../core/tool_outcome.js";
 import { answerUnansweredCalls, metadataOrTopLevel, mintThread } from "../../core/utils.js";
 import type { ToolCatalog } from "../../tools/tool_catalog.js";
+import type { ChildSessions } from "../progress/child_sessions.js";
 import type { AnswerActions } from "../transcript/answer_actions.js";
 import { renderAttachmentChips } from "../transcript/attachment_chips.js";
 import type { Transcript } from "../transcript/transcript.js";
@@ -43,6 +44,8 @@ export interface ConversationHistoryHost {
   readonly activities: ActivityRegistry;
   /** The frontend tools, whose renderers a restored call is redrawn with. */
   readonly tools: ToolCatalog;
+  /** Links a restored `start_session` card to the child session it started. */
+  readonly childSessions: ChildSessions;
   /** The composer, whose text a continuation sends. */
   readonly input: HTMLTextAreaElement;
   /** The one-line hint above the composer. */
@@ -1099,6 +1102,7 @@ export class ConversationHistory {
     if (message.role === "tool") {
       const card = this.#host.transcript.card(message.toolCallId);
       if (card !== undefined) {
+        const text = contentToText(message.content);
         // The outcome in the message's metadata -- folded there from a server's
         // result by `@ag-ui/client`, or written there by `AgUiClient` for a
         // result it made itself -- read back through the same mapping the live
@@ -1113,13 +1117,15 @@ export class ConversationHistory {
           toolStatusFromOutcome(metadataOrTopLevel(message, "outcome")),
           // Flattened exactly as the live path flattens it, so a reload shows
           // the card the user watched settle.
-          contentToText(message.content),
+          text,
           // Metadata only: django-ag-ui never states it at the top level, and
           // a mark is not worth trusting from anywhere it did not write it.
           (Object((message as { metadata?: unknown }).metadata) as Record<string, unknown>)[
             "answered_by"
           ],
         );
+        // From the same flattened text the live settle reads, so a reload links where the run did.
+        this.#host.childSessions.attach(card, text);
       }
     }
   }

@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Child sessions: the card that started one links to the child's thread, and still does after a
+  reload. No opt-in.** A `start_session` call's result (django-spec-agents 0.25.0's
+  `ChildSessionReceipt`, `{ agent_id, thread_id, run_id, note }`) is read on the live result and
+  on a restore alike, so the link is drawn from what persists rather than from `SUBAGENT_*`
+  events, which a child session never sends. A refusal draws no link. When the thread list the
+  chat holds shows the child `waiting`, the link reads "needs you" (`childSessionNeedsYou`) and
+  still only opens the child: the parent never draws the child's approval. With
+  `data-threads-url` on django-ag-ui 0.86.0+, `ThreadMeta` gains `parent` (`ThreadParent`,
+  `{ threadId, scope }`); the chat shows a breadcrumb back to the parent (`parentThread`, or
+  `parentThreadUnlisted` when the list does not hold it) while a child is on screen, and the
+  history drawer nests each child under its parent's row (parts `drawer-row-child`,
+  `drawer-children`) in the parent's date group, an orphan or a child a filter matched alone at
+  the top level. A link or the breadcrumb dispatches the new cancelable `ag-ui-open-thread`
+  (`OPEN_THREAD_EVENT`, detail `OpenThreadDetail`, `{ agentId, threadId }`) and then opens the
+  thread in place unless a listener calls `preventDefault()`: a host whose child agent lives on
+  another mount takes the event and opens it there. New parts `child-session-link`,
+  `parent-breadcrumb`, `parent-breadcrumb-link`; new strings `childSessionOpen`,
+  `childSessionNeedsYou`, `parentThread`, `parentThreadUnlisted`. Without a list held (a reload
+  straight onto a child under a remote store), the breadcrumb and the needs-you wording wait for
+  the first drawer open, switch or `data-thread-status` tick.
+
 ## [0.9.0] — 2026-11-21
 
 ### Added

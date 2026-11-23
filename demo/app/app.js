@@ -967,3 +967,17 @@ new MutationObserver(detachedState).observe(chat, {
   attributes: true,
   attributeFilter: ["data-running"],
 });
+
+// ── Child sessions ───────────────────────────────────────────────────────────
+
+$("cs-parent").addEventListener("click", () => void chat.switchThread("children-parent"));
+$("cs-offsite").addEventListener("click", () => void chat.switchThread("children-offsite"));
+$("cs-placement").addEventListener("change", (event) => {
+  chat.setAttribute("placement", event.target.value);
+});
+chat.addEventListener("ag-ui-open-thread", (event) => {
+  $("cs-last").textContent = JSON.stringify(event.detail);
+  if ($("cs-route").checked) {
+    event.preventDefault();
+  }
+});

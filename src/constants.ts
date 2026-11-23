@@ -735,3 +735,12 @@ export const MCP_APP_MAX_HEIGHT = 640;
  * under this name, since a `DOMException` carries a numeric `code` of its own.
  */
 export const MCP_APPS_ROUTE_ERROR = "McpAppsRouteError";
+
+/**
+ * A child-session link or a parent breadcrumb asks to open another thread.
+ * `detail` is {@link OpenThreadDetail}. Bubbles out of the shadow root, and is
+ * cancelable: the chat cannot tell which agent it serves, so it opens the thread
+ * in place after the event unless a host routing threads across agents calls
+ * `preventDefault()`.
+ */
+export const OPEN_THREAD_EVENT = "ag-ui-open-thread";

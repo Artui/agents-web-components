@@ -18,6 +18,7 @@ import { createServer } from "node:http";
 import { networkInterfaces } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { childSessionsRoute } from "./child-sessions.mjs";
 import { detachedRoute } from "./detached-runs.mjs";
 import { statusRoute } from "./thread-status.mjs";
 
@@ -1139,7 +1140,11 @@ const server = createServer((req, res) => {
   // The pages are matched on their path alone, so `/page/?readout` is the same
   // page as `/page/`. The API routes below still match the whole URL.
   const path = req.url.split("?")[0];
-  if (detachedRoute(req, res, path) || statusRoute(req, res, path)) {
+  if (
+    detachedRoute(req, res, path) ||
+    statusRoute(req, res, path) ||
+    childSessionsRoute(req, res, path)
+  ) {
     return;
   }
   if (req.method === "POST" && req.url === "/viewport-readout/") {
