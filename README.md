@@ -56,6 +56,7 @@ This package is the successor of `@artooi/ag-ui-web-component`. Coming from it? 
   - [Maximizing the panel](#maximizing-the-panel)
   - [Collapsing to the launcher](#collapsing-to-the-launcher)
   - [Collapsing to a bottom bar](#collapsing-to-a-bottom-bar)
+- [Several agents under one provider](#several-agents-under-one-provider)
 - [A2UI surfaces](#a2ui-surfaces)
 - [MCP Apps views](#mcp-apps-views)
 - [Tool-call display modes](#tool-call-display-modes)
@@ -2157,7 +2158,10 @@ on screen as current, and drives the chat through the [thread API](#driving-the-
 
 - **Binding.** `for` names the chat's `id`, looked up in the list's own root, the document or the
   shadow root it sits in; a chat added later is picked up when it first reports its thread. Or set
-  the `chat` property, which wins over `for` until it is set back to `null`.
+  the `chat` property, which wins over `for` until it is set back to `null`. With neither, the
+  list binds to the chat of an [`<ag-ui-agents>` provider](#several-agents-under-one-provider):
+  the one its `agents` attribute names by id, else the nearest one around it, and lists again each
+  time the provider moves its chat to another agent. `for` wins when both are present.
 - **`variant`.** `list` (the default) draws rows and an empty text. `pills` draws a strip that
   stays on one line and scrolls sideways, and no empty text. Both give each conversation a delete
   behind an inline confirm, which calls `chat.deleteThread`; in a pill the confirm opens on the
@@ -2232,6 +2236,67 @@ server, or a mount without a run store, lists none of them and nothing below hap
   entry to an approval, so answering one that way would approve it. A host driving its own `AgUiClient`
   answers a parked run the same way with `client.answerParked(interrupts)`, which asks its
   `resolveInterrupts` once and sends the resume.
+
+## Several agents under one provider
+
+A host that serves more than one agent (django-ag-ui 0.87.0's `AgentsDirectory`) can put one
+chat in front of all of them. `<ag-ui-agents>` is a headless provider: it draws nothing, reads the
+directory of agents and keeps the inbox of every agent's threads fresh, and mounts its chat on one
+agent at a time.
+
+```html
+<ag-ui-agents id="home" data-agents-url="/agents-home/agents/"
+              data-inbox-url="/agents-home/inbox/" data-inbox-transport="stream"
+              style="display: contents">
+  <ag-ui-threads></ag-ui-threads>
+  <ag-ui-chat></ag-ui-chat>
+</ag-ui-agents>
+
+<script type="module">
+  import { defineAgents } from "@artooi/agents-web-components";
+  import { defineChat } from "@artooi/agents-web-components/chat";
+  import { defineThreads } from "@artooi/agents-web-components/threads";
+  defineAgents();
+  defineChat();
+  defineThreads();
+</script>
+```
+
+- **The directory.** `data-agents-url` answers `{ agents: [...] }`, each entry an `id`, `name`,
+  `description`, `endpoint` and one URL per route its mount serves (`null` for one it does not).
+  It is read on connect and by `refresh()`, with the last ETag, and listed in **`agents`**
+  *(read-only)* and **`ag-ui-agents-change`** (`AGENTS_CHANGE_EVENT`, detail `{ agents }`).
+- **Its chat** is the first `<ag-ui-chat>` inside it, or the element set as **`chat`**.
+- **Switching agents is a remount.** The chat is mounted on the entry **`agent`** names (the
+  first entry without it): taken out of the document, given the entry's `endpoint`,
+  `data-tools-url`, `data-threads-url`, `data-runs-url`, `data-skills-url`,
+  `data-skill-editor-url`, `data-attachments-url` and `data-transcribe-url` (removed where the
+  entry has `null`), and put back where it was. That is how a chat applies its
+  [connect-time attributes](#when-each-attribute-is-read), so no warning is raised, and like any
+  remount it cancels a run in flight. Setting `agent` (attribute or property) switches;
+  **`ag-ui-agent-change`** (`AGENT_CHANGE_EVENT`, detail `{ agent }`) fires each time. The
+  getter answers the id of the entry the chat is on.
+- **Each agent keeps its own conversations.** The chat's built-in store is replaced by one under
+  the entry's id (`agent:<id>`, plus `#<user-key>` when one is set), so each agent has its own
+  thread pointer, history and messages, and coming back to an agent restores where it was. A
+  store of your own kind is left alone and keeps its own keying, across every switch, even one
+  to an entry whose `threads_url` wraps it in the chat's remote; the layout preferences stay on
+  the chat's own `id`.
+- **The inbox.** `data-inbox-url` answers `{ threads: [...] }` in the `threads/` shape, every
+  row with its `agent_id`. It is watched while connected, by ETag polling every five seconds or,
+  when `data-inbox-transport` is `stream`, by the server's event stream (polled when the server
+  answers with JSON). Each change is in **`inbox`** *(read-only)* and
+  **`ag-ui-inbox-change`** (`INBOX_CHANGE_EVENT`, detail `{ threads }`), each row a `ThreadMeta`
+  with `agentId`. **`openThread(agentId, threadId)`** mounts the chat on that agent and opens the
+  thread; for an agent the directory does not list (yet), it opens nothing.
+- **Requests** carry **`headers`**, **`getHeaders()`** (winning per key) and the
+  **`credentials`** attribute, as on the chat. They are the provider's own; the chat keeps its
+  own for its requests.
+
+The provider is exported from the root entry (and so from `/bundle`) with `defineAgents`, which
+throws naming the tag when another class holds it. A lone `<ag-ui-chat>` needs none of this and
+works as it always has. Runs and reattach stay in the chat. The element is an ordinary inline
+element, so give it `display: contents` when it should not affect layout.
 
 ## A2UI surfaces
 
@@ -3943,6 +4008,16 @@ paths.
 | `ThreadTitleDetail` | type | `detail` shape of the `ag-ui-thread-title` event (`{ threadId, title }`). |
 | `UnreadDetail` | type | `detail` shape of the `ag-ui-unread` event (`{ unread, threadIds }`). |
 | `ThreadsChangeDetail` | type | `detail` shape of the `ag-ui-threads-change` event (`{ threads }`). |
+| `AgUiAgents` | class | The headless `<ag-ui-agents>` provider: the agents directory, the inbox, and the chat it mounts on an entry. See [Several agents under one provider](#several-agents-under-one-provider). |
+| `defineAgents()` | function | Register `<ag-ui-agents>`; a no-op if it is already registered, and throws if another class holds the tag. |
+| `AgentEntry` | type | One directory entry: `id`, `name`, `description`, `endpoint` and one URL per route, `null` where the mount serves none. |
+| `InboxRow` | type | An inbox row: a `ThreadMeta` plus `agentId`. |
+| `InboxServerRow` | type | An inbox row as the server lists it: a thread row plus `agent_id`. |
+| `InboxTransport` | type | How the inbox is watched: `poll` or `stream`. |
+| `AgentsChat` | type | The part of `<ag-ui-chat>` the provider drives. |
+| `AgentsChangeDetail` | type | `detail` shape of the `ag-ui-agents-change` event (`{ agents }`). |
+| `InboxChangeDetail` | type | `detail` shape of the `ag-ui-inbox-change` event (`{ threads }`). |
+| `AgentChangeDetail` | type | `detail` shape of the `ag-ui-agent-change` event (`{ agent }`). |
 | `AttachmentsDetail` | type | `detail` shape of the `ag-ui-attachments` event (`{ attachments, pending }`). |
 | `StateDetail` | type | `detail` shape of the `ag-ui-state` event (`{ state }`). |
 
@@ -4103,6 +4178,10 @@ paths.
 | `OPEN_THREAD_EVENT` | The open-another-thread CustomEvent name (`ag-ui-open-thread`), fired cancelable by a child-session link or a parent breadcrumb; see [Child sessions](#child-sessions). |
 | `THREAD_TITLE_EVENT` | The thread-title CustomEvent name (`ag-ui-thread-title`). |
 | `THREADS_CHANGE_EVENT` | The thread-list CustomEvent name (`ag-ui-threads-change`), fired by a chat watching its list under `data-thread-status`. |
+| `AGENTS_TAG` | The provider's tag name (`ag-ui-agents`). |
+| `AGENTS_CHANGE_EVENT` | The directory CustomEvent name (`ag-ui-agents-change`). |
+| `INBOX_CHANGE_EVENT` | The inbox CustomEvent name (`ag-ui-inbox-change`). |
+| `AGENT_CHANGE_EVENT` | The agent-switch CustomEvent name (`ag-ui-agent-change`). |
 | `TOGGLE_EVENT` | The collapse-toggle CustomEvent name (`ag-ui-toggle`). |
 | `MAXIMIZE_EVENT` | The maximized-state CustomEvent name (`ag-ui-maximize`). |
 | `BAR_HEIGHT_EVENT` | The bottom bar's height CustomEvent name (`ag-ui-bar-height`). |

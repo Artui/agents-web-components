@@ -104,7 +104,10 @@ keep it that way. `demo/page/` is the chat as a host's full-page route.
    templating, parsing). `index.ts`, `constants.ts`, and `version.ts` stay at the `src/`
    root. `src/a2ui/` is a sixth group of its own (`core/`, `display/`, `functions/`,
    `inputs/`), its own entry and in no other entry's tree; `src/mcp_apps/` is a seventh, and
-   `src/threads/` an eighth, the same way.
+   `src/threads/` an eighth, the same way. `src/agents/` is a ninth, the headless
+   `<ag-ui-agents>` provider, which is in the root `.` entry rather than an entry of its own;
+   `<ag-ui-threads>` binds to it structurally (by tag and a `chat` property) and never imports
+   it, so the threads bundle stays free of it.
 
    Every rule above this one governs a *file*, so a package can obey all eight and still
    put everything it owns in one flat directory — which is what `src/ui/` was at 37

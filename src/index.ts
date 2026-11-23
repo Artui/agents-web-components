@@ -1,6 +1,21 @@
 // The package root. The element itself is the `./chat` entry (src/chat.ts).
 
+export { AgUiAgents } from "./agents/ag_ui_agents.js";
+export { defineAgents } from "./agents/define_agents.js";
+export type {
+  AgentChangeDetail,
+  AgentEntry,
+  AgentsChangeDetail,
+  AgentsChat,
+  InboxChangeDetail,
+  InboxRow,
+  InboxServerRow,
+  InboxTransport,
+} from "./agents/types.js";
 export {
+  AGENT_CHANGE_EVENT,
+  AGENTS_CHANGE_EVENT,
+  AGENTS_TAG,
   ATTACHMENT_EVENT,
   BAR_HEIGHT_EVENT,
   CHART_ACTIVITY_TYPE,
@@ -9,6 +24,7 @@ export {
   DOCK_WIDTH_EVENT,
   ELEMENT_TAG,
   FEEDBACK_EVENT,
+  INBOX_CHANGE_EVENT,
   INVALIDATE_CUSTOM_NAME,
   INVALIDATE_EVENT,
   LOAD_CAPABILITY_TOOL,

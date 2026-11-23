@@ -86,11 +86,15 @@ function sources(dir: string): string[] {
   });
 }
 
-/** The thread list is its own element, with its own README section checked below. */
+/** The thread list and the provider are elements of their own, each with a README section checked below. */
 const THREADS_DIR = join("src", "threads");
+const AGENTS_DIR = join("src", "agents");
 
 const SOURCE = sources("src")
-  .filter((_, index) => !sourcePaths("src")[index]?.startsWith(THREADS_DIR))
+  .filter((_, index) => {
+    const path = sourcePaths("src")[index] ?? "";
+    return !path.startsWith(THREADS_DIR) && !path.startsWith(AGENTS_DIR);
+  })
   .join("\n");
 
 /** Members of `HTMLElement` the README's `chat.…` examples legitimately call. */
@@ -671,6 +675,20 @@ describe("the README's thread list section", () => {
     const reference = section("## The conversation list in your own chrome");
     const read = [
       ...sources(THREADS_DIR)
+        .join("\n")
+        .matchAll(/getAttribute\("([a-z][a-z0-9-]*)"\)/g),
+    ].map((match) => match[1] ?? "");
+
+    expect(read.length).toBeGreaterThan(0);
+    expect([...new Set(read)].filter((name) => !reference.includes(`\`${name}\``))).toEqual([]);
+  });
+});
+
+describe("the README's provider section", () => {
+  it("names every attribute the provider reads", () => {
+    const reference = section("## Several agents under one provider");
+    const read = [
+      ...sources(AGENTS_DIR)
         .join("\n")
         .matchAll(/getAttribute\("([a-z][a-z0-9-]*)"\)/g),
     ].map((match) => match[1] ?? "");
