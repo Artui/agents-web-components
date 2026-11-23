@@ -201,9 +201,34 @@ function run(req, res) {
       // A new child session, started live: the receipt is the call's result.
       const child = `children-live-${threads.size}`;
       const call = `live-call-${threads.size}`;
+      const now = Date.now() - started;
+      // The thread the prompt was sent in is the child's parent, and listed as
+      // one, so the drawer nests the child under it and the breadcrumb names it.
+      const asked = input.messages.findLast((message) => message.role === "user");
+      const parent = threads.get(threadId) ?? {
+        title: typeof asked?.content === "string" ? asked.content : "A live parent",
+        parent: null,
+        status: "idle",
+        messages: [],
+      };
+      threads.set(threadId, {
+        ...parent,
+        updated: now,
+        messages: [
+          ...input.messages,
+          {
+            id: `${call}-a1`,
+            role: "assistant",
+            content: "",
+            toolCalls: [start(call, "researcher", "Compare the supplier prices")],
+          },
+          { id: `${call}-result`, role: "tool", toolCallId: call, content: receipt("researcher", child) },
+          { id: `${call}-answer`, role: "assistant", content: "A child session is comparing the prices." },
+        ],
+      });
       threads.set(child, {
         title: "Compare the supplier prices",
-        updated: Date.now() - started,
+        updated: now,
         parent: threadId,
         status: "running",
         messages: [{ id: `${child}-u1`, role: "user", content: "Compare the supplier prices" }],

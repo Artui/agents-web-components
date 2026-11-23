@@ -37,7 +37,7 @@ const on = (...slugs) => slugs.includes(slug);
 // so nothing an earlier run left behind (a filled form, a pending approval, a
 // readout) carries into the next. Try keeps the scenario's control values and
 // sends its prompt once the page is up; Reset leaves every control at its
-// default.
+// default. A scenario row with inPlace has Try send into the chat as it is.
 const RESTART_KEY = "demo:restart";
 const restart = (() => {
   try {
@@ -142,7 +142,7 @@ if (scenario === null) {
   }
   for (const [label, text] of scenario.prompts) {
     const button = el("button", { type: "button", title: text }, label);
-    button.addEventListener("click", () => startOver(text));
+    button.addEventListener("click", () => (scenario.inPlace === true ? send(text) : startOver(text)));
     tryRow.append(button);
   }
   const reset = el("button", { type: "button", className: "reset", title: "A fresh conversation, every control at its default" }, "Reset");

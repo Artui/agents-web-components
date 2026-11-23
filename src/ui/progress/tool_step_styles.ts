@@ -334,6 +334,8 @@ export const TOOL_STEP_STYLES: string = `
   font: inherit;
   text-align: left;
   color: var(--_accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
   cursor: pointer;
   overflow-wrap: anywhere;
 }
@@ -342,8 +344,10 @@ export const TOOL_STEP_STYLES: string = `
   display: none;
 }
 
+/* Underlined at rest, because the default accent is close to the body colour
+   and the line is what says it is a link; hover thickens the line. */
 .child-session-link:hover {
-  text-decoration: underline;
+  text-decoration-thickness: 2px;
 }
 
 /* A child parked on a person: worded so, and drawn in the danger colour so it

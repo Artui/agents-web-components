@@ -8,7 +8,9 @@
 //
 // `prompts` are [label, text] pairs the scenario's Try buttons send. The text
 // is what the mock agent (mock-server.mjs) matches on, so it is the
-// documentation of that agent too: the start page lists every one.
+// documentation of that agent too: the start page lists every one. Try starts
+// over from a fresh load, unless the row sets `inPlace`, whose walkthrough
+// carries one conversation into the next: then Try sends into the chat as it is.
 
 export const GROUPS = [
   "Layout",
@@ -312,6 +314,7 @@ export const SCENARIOS = [
       ["Send a turn", "echo hello"],
       ["Send another", "echo a second thread"],
     ],
+    inPlace: true,
   },
 ];
 

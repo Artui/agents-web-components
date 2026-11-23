@@ -31,7 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `childSessionNeedsYou`, `parentThread`, `parentThreadUnlisted`. Without a list held (a reload
   straight onto a child under a remote store), the breadcrumb and the needs-you wording wait for
   the first drawer open, switch or `data-thread-status` tick. Deleting the parent hides the
-  breadcrumb at once, and it stays hidden over the lists that follow.
+  breadcrumb at once, and it stays hidden over the lists that follow. The link is underlined at
+  rest, in the accent (the danger colour when the child needs you), since the default accent is
+  close to the body colour. A child opened before its first answer, which the held list shows
+  `running` or `waiting`, draws no "the previous response didn't finish" notice.
 
 - **`<ag-ui-agents>`, a headless provider for several agents; a host opts in by wrapping its
   elements in one, and a lone `<ag-ui-chat>` is unchanged.** It reads django-ag-ui 0.87.0's
@@ -72,6 +75,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   neighbour, else a new chat. The set persists per browser tab in `sessionStorage` under the
   conversation's namespace, so it survives a reload, and a `user-key` handover drops it. Every
   change fires `ag-ui-tabs` (`TABS_EVENT`, `TabsDetail { tabs, reason }`).
+
+### Fixed
+
+- **A chat put back on another namespace no longer writes the run it left there. No opt-in.**
+  An `<ag-ui-agents>` switch, or an `id` or `endpoint` changed while the chat was out of the
+  document, cancels the run in flight on the way out, and that run's last save arrived after the
+  chat was back: read against the new store, it wrote the thread it left, title and messages,
+  into the next agent's history (a thread parked on an approval did this on every switch). A
+  client built before such a remount now writes nothing, as one built before a `user-key`
+  handover already did; what it had saved before the switch stays where it was.
 
 ## [0.9.0] — 2026-11-21
 

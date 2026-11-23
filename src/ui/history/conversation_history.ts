@@ -9,6 +9,7 @@ import type {
   ClientConversationStore,
   NavigationCheckpoint,
   ThreadMeta,
+  ThreadStatus,
 } from "../../core/conversation_store.js";
 import type { ThreadDetail } from "../../core/events/thread_detail.js";
 import type { MessageRole } from "../../core/message_role.js";
@@ -146,6 +147,8 @@ export interface ConversationHistoryHost {
   readonly threadChanged: (threadId: string, reason: ThreadDetail["reason"]) => void;
   /** Hear the rows the conversation list was just given, for the title on screen. */
   readonly threadsListed: (threads: readonly ThreadMeta[]) => void;
+  /** The status the thread list the element holds gives `threadId`, or `null`. */
+  readonly listedStatus: (threadId: string) => ThreadStatus | null;
   /** A thread was deleted, so whatever the element kept about it goes too. */
   readonly threadDeleted: (threadId: string) => void;
 }
@@ -829,7 +832,7 @@ export class ConversationHistory {
       // A thread whose run is still going ends on its turn because the answer
       // is still coming, which the reattach below is about to show.
       if (checkpoint === null && !running) {
-        this.#noticeIfRunUnfinished(messages);
+        this.#noticeIfRunUnfinished(threadId, messages);
       }
       // Said once the transcript is the restored one, and only by a restore
       // still current: one that was stopped returned above, so two quick
@@ -1004,9 +1007,15 @@ export class ConversationHistory {
    * primitive, and re-sending the accumulated messages is semantically a new
    * run, so any server-side tool already executed would run a second time.
    */
-  #noticeIfRunUnfinished(messages: readonly Message[] | null): void {
+  #noticeIfRunUnfinished(threadId: string, messages: readonly Message[] | null): void {
     const last = messages?.at(-1);
     if (last === undefined || last.role !== MESSAGE_ROLE.USER) {
+      return;
+    }
+    // A thread the list says is running or parked has its answer still coming,
+    // from a run elsewhere: a child session opened from its parent's link.
+    const listed = this.#host.listedStatus(threadId);
+    if (listed === "running" || listed === "waiting") {
       return;
     }
     this.#host.transcript.appendNotice("⚠", this.#host.strings().runInterrupted, "interrupted");

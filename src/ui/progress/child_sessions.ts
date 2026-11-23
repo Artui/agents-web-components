@@ -1,5 +1,5 @@
 import { OPEN_THREAD_EVENT } from "../../constants.js";
-import type { ThreadMeta } from "../../core/conversation_store.js";
+import type { ThreadMeta, ThreadStatus } from "../../core/conversation_store.js";
 import type { OpenThreadDetail } from "../../core/events/open_thread_detail.js";
 import { ParentBreadcrumb } from "../history/parent_breadcrumb.js";
 import type { UiStrings } from "../ui_strings.js";
@@ -76,6 +76,11 @@ export class ChildSessions {
         : meta,
     );
     this.relocalize();
+  }
+
+  /** The status the held list gives `threadId`, or `null` when it lists none. */
+  status(threadId: string): ThreadStatus | null {
+    return this.#threads.find((meta) => meta.threadId === threadId)?.status ?? null;
   }
 
   /** A thread was deleted: no list, now or later, names it as a parent. */

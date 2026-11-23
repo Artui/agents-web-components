@@ -6,6 +6,7 @@ import type { AgentEntry } from "../../src/agents/types.js";
 import { AGENTS_TAG, ELEMENT_TAG } from "../../src/constants.js";
 import type { AgUiChat } from "../../src/core/ag_ui_chat.js";
 import { defineChat } from "../../src/core/define_chat.js";
+import recorded from "../fixtures/thread_status.json";
 
 defineChat();
 defineAgents();
@@ -104,5 +105,113 @@ describe("<ag-ui-agents> in the browser's own sessionStorage", () => {
       true,
     );
     expect(warn).toHaveBeenCalledTimes(1);
+  });
+});
+
+const STATUS_THREADS = "/status/threads/";
+
+function serveStatus(run: (signal: AbortSignal | null) => Response): void {
+  globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+    const path = new URL(String(input), location.href).pathname;
+    if (path === "/home/agents/") {
+      return Promise.resolve(
+        Response.json({
+          agents: [{ ...entry("status"), threads_url: STATUS_THREADS }, entry("echo")],
+        }),
+      );
+    }
+    if (path === STATUS_THREADS) {
+      const listed = structuredClone(recorded.listed.body);
+      for (const row of listed.threads) {
+        for (const interrupt of row.interrupts ?? []) {
+          interrupt.metadata.kind = "approval";
+        }
+      }
+      return Promise.resolve(Response.json(listed));
+    }
+    if (path === `${STATUS_THREADS}t-approve/`) {
+      return Promise.resolve(Response.json({ messages: recorded.approvalHistory }));
+    }
+    if (path === "/status/" && init?.method === "POST") {
+      return Promise.resolve(run(init?.signal ?? null));
+    }
+    return Promise.resolve(new Response(null, { status: 404 }));
+  }) as typeof fetch;
+}
+
+/** Every stored entry under the echo agent's namespace that names `threadId`. */
+function echoEntriesNaming(threadId: string): string[] {
+  return storageKeys().filter(
+    (key) =>
+      key.includes("agent:echo") &&
+      (key.includes(threadId) || (sessionStorage.getItem(key) ?? "").includes(threadId)),
+  );
+}
+
+async function statusHome(): Promise<{ home: AgUiAgents; chat: AgUiChat }> {
+  const home = document.createElement(AGENTS_TAG) as AgUiAgents;
+  home.setAttribute("data-agents-url", "/home/agents/");
+  const chat = document.createElement(ELEMENT_TAG) as AgUiChat;
+  home.append(chat);
+  document.body.append(home);
+  await expect.poll(() => home.agent).toBe("status");
+  await settle();
+  return { home, chat };
+}
+
+describe("<ag-ui-agents> switching away from a run in flight", () => {
+  it("writes nothing of a thread parked on an approval under the next agent", async () => {
+    serveStatus(() => new Response(null, { status: 500 }));
+    const { home, chat } = await statusHome();
+    await chat.switchThread("t-approve");
+    const shadow = chat.shadowRoot as ShadowRoot;
+    await expect.poll(() => shadow.querySelector(".approval-btn--approve") !== null).toBe(true);
+    expect(chat.hasAttribute("data-running")).toBe(true);
+
+    home.agent = "echo";
+    for (let i = 0; i < 10; i += 1) {
+      await settle();
+    }
+
+    expect(home.agent).toBe("echo");
+    expect(echoEntriesNaming("t-approve")).toEqual([]);
+    expect((await chat.conversationStore.listThreads()).map((row) => row.threadId)).not.toContain(
+      "t-approve",
+    );
+  });
+
+  it("writes nothing of a run still streaming under the next agent", async () => {
+    const encoder = new TextEncoder();
+    serveStatus(
+      (signal) =>
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              signal?.addEventListener("abort", () =>
+                controller.error(new DOMException("aborted", "AbortError")),
+              );
+              controller.enqueue(
+                encoder.encode(
+                  `data: ${JSON.stringify({ type: "RUN_STARTED", threadId: "x", runId: "r" })}\n\n`,
+                ),
+              );
+            },
+          }),
+          { headers: { "content-type": "text/event-stream" } },
+        ),
+    );
+    const { home, chat } = await statusHome();
+    const thread = chat.threadId as string;
+    void chat.sendMessage("a long one");
+    await expect.poll(() => chat.hasAttribute("data-running")).toBe(true);
+    await settle();
+
+    home.agent = "echo";
+    for (let i = 0; i < 10; i += 1) {
+      await settle();
+    }
+
+    expect(home.agent).toBe("echo");
+    expect(echoEntriesNaming(thread)).toEqual([]);
   });
 });

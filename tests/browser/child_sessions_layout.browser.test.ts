@@ -197,3 +197,52 @@ describe("child sessions (real browser)", () => {
     expect(child?.right ?? 0).toBeCloseTo(parent?.right ?? 0, 0);
   });
 });
+
+describe("the child-session link at rest (real browser)", () => {
+  beforeAll(() => {
+    defineChat();
+  });
+
+  afterEach(() => {
+    document.body.replaceChildren();
+  });
+
+  function mountListed(listed: boolean): AgUiChat {
+    const el = mount("380px");
+    el.remove();
+    el.style.setProperty("--ag-ui-accent", "rgb(1, 2, 3)");
+    el.style.setProperty("--ag-ui-danger", "rgb(200, 0, 0)");
+    if (listed) {
+      el.setAttribute("data-thread-status", "poll");
+      el.conversationStore = {
+        ...store(),
+        watchThreads: (listener) => {
+          listener(THREADS);
+          return () => {};
+        },
+      };
+    }
+    document.body.appendChild(el);
+    return el;
+  }
+
+  it("reads as a link before the pointer reaches it: the accent, underlined", async () => {
+    const el = mountListed(false);
+    await settle();
+    const link = part(el, ".child-session-link");
+    expect(link.hasAttribute("data-status")).toBe(false);
+    const style = getComputedStyle(link);
+    expect(style.color).toBe("rgb(1, 2, 3)");
+    expect(style.textDecorationLine).toBe("underline");
+  });
+
+  it("keeps the danger colour, underlined, for a child that needs the user", async () => {
+    const el = mountListed(true);
+    await settle();
+    const link = part(el, ".child-session-link");
+    expect(link.getAttribute("data-status")).toBe("waiting");
+    const style = getComputedStyle(link);
+    expect(style.color).toBe("rgb(200, 0, 0)");
+    expect(style.textDecorationLine).toBe("underline");
+  });
+});

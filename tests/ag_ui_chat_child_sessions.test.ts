@@ -469,3 +469,39 @@ describe("the breadcrumb", () => {
     expect(breadcrumbOf(el).textContent).toBe("Back to Research the invoices");
   });
 });
+
+describe("a child opened before its first answer", () => {
+  const ASKED = [{ id: "c1", role: "user", content: "invoices" }] as Message[];
+
+  async function openChild(row: ThreadMeta): Promise<AgUiChat> {
+    const store = memoryStore({
+      "parent-thread": delegated(RECEIPT_CONTENT),
+      "child-thread-1": ASKED,
+    });
+    const el = mountOver(store, "full", { "data-thread-status": "poll" });
+    await settle();
+    store.push([PARENT_ROW, row]);
+    linkIn(el).click();
+    await settle();
+    expect(el.threadId).toBe("child-thread-1");
+    return el;
+  }
+
+  it.each(["running", "waiting"] as const)(
+    "says nothing unfinished when the list holds it %s",
+    async (status) => {
+      const el = await openChild({ ...CHILD_ROW, status });
+      expect(shadow(el).querySelector(".run-notice--interrupted")).toBeNull();
+    },
+  );
+
+  const { status: _status, ...UNMARKED } = CHILD_ROW;
+
+  it.each([
+    ["idle", CHILD_ROW],
+    ["with no status", UNMARKED],
+  ] as const)("still says the run did not finish when it is listed %s", async (_, row) => {
+    const el = await openChild(row);
+    expect(shadow(el).querySelector(".run-notice--interrupted")).not.toBeNull();
+  });
+});

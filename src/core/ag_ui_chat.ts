@@ -897,8 +897,9 @@ export class AgUiChat extends HTMLElement {
    */
   #principalKey: string | null = null;
   /**
-   * The current principal's tenure: replaced on every handover, and captured by
-   * each client as it is built. A client outlives the handover that stops it (a
+   * The current principal's tenure: replaced on every handover, and on a
+   * reconnect onto another namespace (an agent switch), and captured by each
+   * client as it is built. A client outlives the handover that stops it (a
    * stopped run's last save, a tool result, an event already read off the
    * wire), and one whose tenure has passed writes nothing, into either
    * principal's storage or state. An identity rather than the key: a first key
@@ -1370,6 +1371,7 @@ export class AgUiChat extends HTMLElement {
         this.#takeListedUnread(threads);
         this.#childSessions.listed(threads);
       },
+      listedStatus: (threadId) => this.#childSessions.status(threadId),
       threadDeleted: (threadId) => {
         this.#forgetUnread([threadId]);
         this.#childSessions.deleted(threadId);
@@ -1889,6 +1891,9 @@ export class AgUiChat extends HTMLElement {
     if (this.#connectedBefore) {
       this.#resetConversation();
     }
+    // The namespace the conversation left on, before claiming reads the next
+    // one; null on a first connect, which leaves nothing behind.
+    const left = this.#connectedBefore ? this.#storage.conversationNamespace("") : null;
     this.#connectedBefore = true;
     // Resolve the per-instance storage namespace before any key read/write, so
     // this instance doesn't share collapsed/theme/thread state with another on
@@ -1993,6 +1998,14 @@ export class AgUiChat extends HTMLElement {
     // Namespace the built-in default store too (a host-injected store is used
     // verbatim). Must precede #wireThreadStore, which wraps the current store.
     this.conversationStore = this.#storage.scopeStore(this.#unwrappedStore(), this.userKey);
+    // Back on another namespace -- another agent, id or endpoint -- the client
+    // stopped on the way out is the last one's: its stopped run saves a moment
+    // from now, and read live that save would land under this namespace, the
+    // thread and its title with it. So it writes nothing, as after a handover.
+    // A user-key adoption keeps the base, and a handover replaced the tenure.
+    if (left !== null && left !== this.#storage.conversationNamespace("")) {
+      this.#tenure = {};
+    }
     // After the store is scoped: the tabs' key reads the agent that scoping sets.
     this.#loadTabs();
     window.addEventListener("resize", this.#onViewportResize);
