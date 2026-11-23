@@ -28,7 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `parent-breadcrumb`, `parent-breadcrumb-link`; new strings `childSessionOpen`,
   `childSessionNeedsYou`, `parentThread`, `parentThreadUnlisted`. Without a list held (a reload
   straight onto a child under a remote store), the breadcrumb and the needs-you wording wait for
-  the first drawer open, switch or `data-thread-status` tick.
+  the first drawer open, switch or `data-thread-status` tick. Deleting the parent hides the
+  breadcrumb at once, and it stays hidden over the lists that follow.
 
 - **`<ag-ui-agents>`, a headless provider for several agents; a host opts in by wrapping its
   elements in one, and a lone `<ag-ui-chat>` is unchanged.** It reads django-ag-ui 0.87.0's
@@ -65,7 +66,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `{ threadId, title }` (`ThreadTab`); `openTab(threadId, title?)` opens one without showing it
   (the first also opens the thread on screen), and `closeTab(threadId)` closes one while the thread
   stays in history, unlike `deleteThread`, which closes the tab too. Once tracking, showing a thread
-  (`switchThread`, `newChat`, the drawer) opens it, and closing the thread on screen shows its
+  (`switchThread`, `newChat`, the drawer, a child-session link, the parent breadcrumb) opens it, and closing the thread on screen shows its
   neighbour, else a new chat. The set persists per browser tab in `sessionStorage` under the
   conversation's namespace, so it survives a reload, and a `user-key` handover drops it. Every
   change fires `ag-ui-tabs` (`TABS_EVENT`, `TabsDetail { tabs, reason }`).

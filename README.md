@@ -1553,7 +1553,8 @@ calls `openTab` sees no change.
 
 Once tracking has started, showing a thread opens it: `switchThread`, `newChat`, the drawer, a
 [child-session](#child-sessions) link and the parent breadcrumb each open the thread they show
-(a link or breadcrumb a host prevents shows nothing and adds no tab), so the thread on screen always has a tab, except when a closed tab's neighbour cannot be
+(a link or breadcrumb a host prevents shows nothing and adds no tab), so the thread on screen
+always has a tab, except when a closed tab's neighbour cannot be
 loaded. A new chat leaving a thread nothing was sent in takes over that thread's tab, since the
 store drops the empty thread. `deleteThread` closes the tab as it deletes the thread.
 
