@@ -1,4 +1,5 @@
 import { randomUUID } from "@ag-ui/client";
+import { AgentStore } from "../agents/agent_store.js";
 import {
   type ClientConversationStore,
   SessionStorageStore,
@@ -62,6 +63,10 @@ export class StorageScope {
   // keying and must not guess at it.
   #builtinStore: SessionStorageStore | null = null;
   readonly #writeFailure: WriteFailureReport = { reported: false };
+  // The directory entry the conversation is scoped to, learned from the
+  // AgentStore an <ag-ui-agents> provider handed the element; `null` for a
+  // chat on its own, whose conversation stays on the element's namespace.
+  #agent: string | null = null;
 
   constructor(host: StorageScopeHost) {
     this.#host = host;
@@ -101,20 +106,27 @@ export class StorageScope {
    * user who had only just signed in.
    */
   conversationNamespace(key: string): string {
-    return key === "" ? this.#storageNs : `${this.#storageNs}#${key}`;
+    const base = this.#agent === null ? this.#storageNs : AgentStore.namespaceOf(this.#agent);
+    return key === "" ? base : `${base}#${key}`;
   }
 
   /**
-   * Namespace the built-in default store, and hand back the store to use. A
+   * Namespace the built-in default store, and hand back the store to use. An
+   * {@link AgentStore} moves the conversation onto its agent's namespace. A
    * host-injected store is used verbatim; the built-in one is remembered
    * either way, because it is the element's own store and a later `user-key`
    * change may move it to another namespace.
    */
   scopeStore(store: ClientConversationStore, key: string): ClientConversationStore {
+    this.#agent = store instanceof AgentStore ? store.agentId : null;
     if (!(store instanceof SessionStorageStore)) {
       return store;
     }
     const namespace = this.conversationNamespace(key);
+    if (this.#agent !== null) {
+      this.#builtinStore = new AgentStore(this.#agent, namespace);
+      return this.#builtinStore;
+    }
     this.#builtinStore = namespace === "" ? store : new SessionStorageStore(namespace);
     return this.#builtinStore;
   }
@@ -138,7 +150,10 @@ export class StorageScope {
     if (current !== this.#builtinStore) {
       return null;
     }
-    this.#builtinStore = new SessionStorageStore(namespace);
+    this.#builtinStore =
+      this.#agent === null
+        ? new SessionStorageStore(namespace)
+        : new AgentStore(this.#agent, namespace);
     return this.#builtinStore;
   }
 

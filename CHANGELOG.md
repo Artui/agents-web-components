@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`<ag-ui-agents>`, a headless provider for several agents; a host opts in by wrapping its
+  elements in one, and a lone `<ag-ui-chat>` is unchanged.** It reads django-ag-ui 0.87.0's
+  agents directory (`data-agents-url`, with the ETag; `agents`, `refresh()`,
+  `ag-ui-agents-change`) and watches its inbox of every agent's threads (`data-inbox-url`, by
+  ETag polling or, with `data-inbox-transport="stream"`, SSE; `inbox`, `ag-ui-inbox-change`, rows
+  carrying `agentId`). It mounts its chat (the `<ag-ui-chat>` inside it, or `chat`) on the entry
+  `agent` names, the first by default: the chat is taken out, given the entry's URLs, and put
+  back, so its connect-time attributes stay connect-time and no warning is raised; a run in flight
+  is cancelled as by any remount. Each agent's conversation is stored under the entry id, so
+  switching back restores its thread; a host's own store is left alone. `ag-ui-agent-change`
+  fires on each switch, and `openThread(agentId, threadId)` opens an inbox row. Exported from the
+  root entry with `defineAgents`, `AgUiAgents`, the `AGENTS_TAG`, `AGENTS_CHANGE_EVENT`,
+  `INBOX_CHANGE_EVENT` and `AGENT_CHANGE_EVENT` constants, and the `AgentEntry`, `InboxRow`,
+  `InboxServerRow`, `InboxTransport`, `AgentsChat` and detail types.
+- **`<ag-ui-threads>` binds through a provider.** Without `for` or `chat`, it binds to the chat of
+  the `<ag-ui-agents>` named by its new `agents="<id>"` attribute, else the nearest one around it,
+  and lists again when the provider switches agents. `for` keeps working and wins when both are
+  present. Nothing changes for a list with `for`.
+
 ## [0.9.0] — 2026-11-21
 
 ### Added

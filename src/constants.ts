@@ -735,3 +735,24 @@ export const MCP_APP_MAX_HEIGHT = 640;
  * under this name, since a `DOMException` carries a numeric `code` of its own.
  */
 export const MCP_APPS_ROUTE_ERROR = "McpAppsRouteError";
+
+/** The Custom Element tag name registered by {@link defineAgents}. */
+export const AGENTS_TAG = "ag-ui-agents";
+
+/**
+ * The directory `<ag-ui-agents>` reads (`data-agents-url`) was listed, changed.
+ * `detail` is {@link AgentsChangeDetail}.
+ */
+export const AGENTS_CHANGE_EVENT = "ag-ui-agents-change";
+
+/**
+ * The inbox `<ag-ui-agents>` watches (`data-inbox-url`) received the merged
+ * thread rows of every agent, changed. `detail` is {@link InboxChangeDetail}.
+ */
+export const INBOX_CHANGE_EVENT = "ag-ui-inbox-change";
+
+/**
+ * `<ag-ui-agents>` mounted its chat on another directory entry. `detail` is
+ * {@link AgentChangeDetail}. Elements bound to the provider list again on it.
+ */
+export const AGENT_CHANGE_EVENT = "ag-ui-agent-change";

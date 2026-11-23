@@ -1,4 +1,6 @@
 import {
+  AGENT_CHANGE_EVENT,
+  AGENTS_TAG,
   RUN_FINISHED_EVENT,
   THREAD_EVENT,
   THREAD_TITLE_EVENT,
@@ -18,6 +20,9 @@ import type {
   ThreadsVariant,
 } from "./types.js";
 
+/** The part of an `<ag-ui-agents>` provider the list reads, kept structural so this entry never imports it. */
+type ThreadsProvider = HTMLElement & { readonly chat: HTMLElement | null };
+
 /** The chat events the list re-lists on: a switch, a new title, a run that moved a thread up. */
 const LISTEN_TO = [THREAD_EVENT, THREAD_TITLE_EVENT, RUN_FINISHED_EVENT] as const;
 
@@ -32,11 +37,14 @@ const LISTEN_TO = [THREAD_EVENT, THREAD_TITLE_EVENT, RUN_FINISHED_EVENT] as cons
  * variants) calls `deleteThread`.
  *
  * Bound by `for="<chat id>"`, looked up in the list's own root (the document,
- * or the shadow root it sits in), or by setting {@link chat}. A chat that is
- * not there yet is picked up when it first reports its thread.
+ * or the shadow root it sits in), or by setting {@link chat}. Without either,
+ * it binds to the chat of an `<ag-ui-agents>` provider: the one named by
+ * `agents="<provider id>"`, else the nearest one around it, following the
+ * provider as it moves its chat between agents. `for` wins over a provider.
+ * A chat that is not there yet is picked up when it first reports its thread.
  */
 export class AgUiThreads extends HTMLElement {
-  static readonly observedAttributes = ["for", "variant"];
+  static readonly observedAttributes = ["for", "agents", "variant"];
 
   readonly #list: HTMLUListElement;
   readonly #empty: HTMLParagraphElement;
@@ -50,6 +58,8 @@ export class AgUiThreads extends HTMLElement {
   #listing = 0;
   #pending: Promise<void> | null = null;
   #root: Node | null = null;
+  /** The provider whose chat this list follows, while it binds through one. */
+  #provider: ThreadsProvider | null = null;
 
   constructor() {
     super();
@@ -115,11 +125,12 @@ export class AgUiThreads extends HTMLElement {
   disconnectedCallback(): void {
     this.#root?.removeEventListener(THREAD_EVENT, this.#onRootThread);
     this.#root = null;
+    this.#follow(null);
     this.#unbind();
   }
 
   attributeChangedCallback(name: string): void {
-    if (name === "for") {
+    if (name === "for" || name === "agents") {
       this.#bind();
     } else {
       this.#render();
@@ -163,6 +174,8 @@ export class AgUiThreads extends HTMLElement {
   }
 
   #bind(): void {
+    const viaProvider = this.#explicit === null && !this.hasAttribute("for");
+    this.#follow(viaProvider && this.#root !== null ? this.#findProvider() : null);
     const chat = this.#explicit ?? this.#lookup();
     if (chat === this.#chat) {
       return;
@@ -197,19 +210,41 @@ export class AgUiThreads extends HTMLElement {
   #lookup(): ThreadsChat | null {
     const id = this.getAttribute("for");
     if (id === null || this.#root === null) {
-      return null;
+      return (this.#provider?.chat ?? null) as ThreadsChat | null;
     }
     const root = this.#root as Document | ShadowRoot;
     return root.getElementById(id) as ThreadsChat | null;
   }
 
-  /** A chat named by `for` that was not there when the list connected, reporting in. */
-  readonly #onRootThread = (event: Event): void => {
-    if (this.#chat === null && event.target instanceof HTMLElement) {
-      const id = this.getAttribute("for");
-      if (id !== null && event.target.id === id) {
-        this.#bind();
-      }
+  /** The provider named by `agents`, else the nearest `<ag-ui-agents>` around the list. */
+  #findProvider(): ThreadsProvider | null {
+    const id = this.getAttribute("agents");
+    if (id === null) {
+      return this.closest<ThreadsProvider>(AGENTS_TAG);
+    }
+    const root = this.#root as Document | ShadowRoot;
+    return root.getElementById(id) as ThreadsProvider | null;
+  }
+
+  #follow(provider: ThreadsProvider | null): void {
+    if (provider === this.#provider) {
+      return;
+    }
+    this.#provider?.removeEventListener(AGENT_CHANGE_EVENT, this.#onAgentChange);
+    this.#provider = provider;
+    provider?.addEventListener(AGENT_CHANGE_EVENT, this.#onAgentChange);
+  }
+
+  /** The provider moved its chat to another agent: the same element, now another agent's store. */
+  readonly #onAgentChange = (): void => {
+    this.#bind();
+    void this.refresh();
+  };
+
+  /** A chat that was not there when the list connected, reporting in. */
+  readonly #onRootThread = (): void => {
+    if (this.#chat === null) {
+      this.#bind();
     }
   };
 

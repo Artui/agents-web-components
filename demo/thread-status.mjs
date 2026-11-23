@@ -68,7 +68,8 @@ function rows() {
     }));
 }
 
-function listing() {
+/** The list as GET /status/threads/ answers it: its JSON body and its ETag. */
+export function listing() {
   const body = JSON.stringify({ threads: rows() });
   return { body, etag: `"${createHash("sha1").update(body).digest("hex").slice(0, 16)}"` };
 }
