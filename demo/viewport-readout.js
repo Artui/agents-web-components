@@ -24,7 +24,6 @@ if (params.has("readout")) {
 }
 
 function start() {
-  const chat = document.querySelector("ag-ui-chat");
   const visual = window.visualViewport;
 
   const box = document.createElement("pre");
@@ -128,6 +127,8 @@ function start() {
   };
 
   const read = () => {
+    // Looked up on each reading: the demo mounts a new element per scenario.
+    const chat = document.querySelector("ag-ui-chat");
     const root = chat?.shadowRoot;
     const style = chat ? getComputedStyle(chat) : null;
     const probeStyle = getComputedStyle(probe);

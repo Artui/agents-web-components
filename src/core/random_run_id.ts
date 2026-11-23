@@ -1,5 +1,5 @@
 /**
- * A fresh version 4 UUID for an action's run.
+ * A fresh version 4 UUID for a run the page starts.
  *
  * Built on `crypto.getRandomValues`, which every page has, rather than
  * `crypto.randomUUID`, which only a secure context does.

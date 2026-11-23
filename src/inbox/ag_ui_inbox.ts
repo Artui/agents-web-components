@@ -7,6 +7,7 @@ import {
   INBOX_CHANGE_EVENT,
   INBOX_SELECT_EVENT,
 } from "../constants.js";
+import { randomRunId } from "../core/random_run_id.js";
 import { DEFAULT_INBOX_STRINGS } from "./inbox_strings.js";
 import { INBOX_STYLES } from "./inbox_styles.js";
 import type {
@@ -475,7 +476,7 @@ export class AgUiInbox extends HTMLElement {
     );
     const body = {
       threadId: item.threadId,
-      runId: crypto.randomUUID(),
+      runId: randomRunId(),
       state: {},
       messages: [],
       tools: [],

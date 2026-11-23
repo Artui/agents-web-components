@@ -2,12 +2,15 @@
 // Try pressed twice leaves the same conversation as pressing it once (or, on a
 // row with inPlace, carries the first into the second), and Reset
 // leaves an empty conversation with every control at its default. Also that
-// every visible select keeps room for its chevron.
+// every visible select keeps room for its chevron. And that none of it, nor
+// moving between scenarios by the sidebar and Back and Forward, loads a page:
+// the demo is one document that mounts each scenario in place.
 //
 // Serves the demo itself on a spare port; run it after `pnpm build`
-// (`make demo-check` does both). Exits non-zero naming each scenario that fails.
+// (`make demo-check` does both). BROWSER=webkit runs it in WebKit. Exits non-zero
+// naming each scenario that fails.
 import { spawn } from "node:child_process";
-import { chromium } from "playwright";
+import { chromium, webkit } from "playwright";
 import { SCENARIOS } from "./app/scenarios.js";
 
 const PORT = Number(process.env.PORT ?? 5199);
@@ -26,8 +29,14 @@ for (let i = 0; ; i += 1) {
   }
 }
 
-const browser = await chromium.launch();
+const browser = await (process.env.BROWSER === "webkit" ? webkit : chromium).launch();
 const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
+const failures = [];
+// WebKit raises the ResizeObserver loop notice as a page error (the charts
+// scenario's Try does it on a fresh page load too); nothing threw.
+page.on("pageerror", (error) => {
+  if (!error.message.startsWith("ResizeObserver loop")) failures.push(`page error: ${error.message}`);
+});
 // The transcript's text with the stylesheet left out, so a count of a prompt's
 // occurrences counts the bubbles and answers that carry it.
 const transcript = () =>
@@ -50,15 +59,36 @@ const controls = () =>
 // A DOM click, because some controls move the panel over the page's own buttons.
 const press = (label) =>
   page.evaluate((name) => [...document.querySelectorAll(".try button")].find((b) => b.textContent === name).click(), label);
+// Nothing navigates any more, so a load state says nothing: wait, then for the run.
 const settle = async () => {
-  await page.waitForLoadState("networkidle");
   await page.waitForTimeout(2500);
+  await page
+    .waitForFunction(() => document.querySelector("ag-ui-chat")?.running === false, null, { timeout: 15000 })
+    .catch(() => {});
+};
+// A marker on window outlives every mount and dies with the document.
+const stayed = async (step) => {
+  const { marker, entries } = await page.evaluate(() => ({
+    marker: window.demoCheckMarker === true,
+    entries: performance.getEntriesByType("navigation").length,
+  }));
+  if (!marker || entries !== 1) failures.push(`${step}: loaded a page`);
+};
+const shows = async (step, slug) => {
+  const at = await page.evaluate(() => [location.pathname, document.querySelector("ag-ui-chat")?.id]);
+  if (at[0] !== `/scenarios/${slug}/` || at[1] !== `chat-${slug}`) failures.push(`${step}: showed ${at.join(" ")}`);
 };
 
-const failures = [];
+await page.goto(`${BASE}/scenarios/${SCENARIOS[0].slug}/`);
+await page.evaluate(() => {
+  window.demoCheckMarker = true;
+});
 for (const scenario of SCENARIOS) {
-  await page.goto(`${BASE}/scenarios/${scenario.slug}/`);
+  // A DOM click on the sidebar's link, which the page follows in place.
+  await page.evaluate((slug) => document.querySelector(`#nav-groups a[href="/scenarios/${slug}/"]`).click(), scenario.slug);
   await settle();
+  await shows(`${scenario.slug}: sidebar`, scenario.slug);
+  await stayed(`${scenario.slug}: sidebar`);
   const defaults = await controls();
   // The chevron needs room: every visible select keeps its own inset arrow clear of the border.
   const cramped = await page.evaluate(() =>
@@ -74,6 +104,7 @@ for (const scenario of SCENARIOS) {
     await press(label);
     await settle();
     const twice = count(await transcript(), text);
+    await stayed(`${scenario.slug}: Try "${label}"`);
     const expected = scenario.inPlace === true ? once * 2 : once;
     if (once === 0 || twice !== expected) {
       failures.push(`${scenario.slug}: Try "${label}" twice left ${twice} copies, once left ${once}`);
@@ -92,6 +123,7 @@ for (const scenario of SCENARIOS) {
   });
   await press("Reset");
   await settle();
+  await stayed(`${scenario.slug}: Reset`);
   const after = await controls();
   if (JSON.stringify(after) !== JSON.stringify(defaults)) {
     failures.push(`${scenario.slug}: Reset left controls off their defaults`);
@@ -103,10 +135,20 @@ for (const scenario of SCENARIOS) {
   }
 }
 
+// Back and Forward walk the scenarios the sidebar visited, still in place.
+const [last, previous] = SCENARIOS.slice(-2).reverse();
+await page.evaluate(() => history.back());
+await settle();
+await shows("Back", previous.slug);
+await page.evaluate(() => history.forward());
+await settle();
+await shows("Forward", last.slug);
+await stayed("Back and Forward");
+
 await browser.close();
 server.kill();
 if (failures.length > 0) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log(`Try and Reset start over in all ${SCENARIOS.length} scenarios.`);
+console.log(`Try and Reset start over in place in all ${SCENARIOS.length} scenarios.`);

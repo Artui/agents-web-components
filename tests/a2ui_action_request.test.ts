@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { actionRequest } from "../src/a2ui/action_request.js";
 import type { UserAction } from "../src/a2ui/core/user_action.js";
-import { randomRunId } from "../src/a2ui/random_run_id.js";
+import { randomRunId } from "../src/core/random_run_id.js";
 import fixture from "./fixtures/a2ui_server.json" with { type: "json" };
 
 describe("actionRequest", () => {

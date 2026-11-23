@@ -726,6 +726,19 @@ describe("<ag-ui-inbox> answering in place", () => {
     expect(stale.disabled).toBe(false);
   });
 
+  it("mints the resume's run id outside a secure context, where crypto has no randomUUID", async () => {
+    const { list, posts, answered } = await mountAnswering([sse()]);
+    vi.stubGlobal("crypto", { getRandomValues: crypto.getRandomValues.bind(crypto) });
+    action(list, "a", "approve").click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(posts).toHaveLength(1);
+    const body = JSON.parse((posts[0] as [string, RequestInit])[1].body as string);
+    expect(body.runId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+    expect(answered.map((detail) => detail.outcome)).toEqual(["answered"]);
+  });
+
   it("posts to resume/<run_id>/ under an endpoint with no trailing slash", async () => {
     const { home, list, posts } = await mountAnswering([sse()]);
     const [board, ...rest] = home.agents;

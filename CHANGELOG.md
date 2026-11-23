@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`<ag-ui-inbox>` answers a row in place on a page served over plain HTTP.** Approve and
+  Deny minted the resume's run id with `crypto.randomUUID`, which a browser offers only in a
+  secure context, so on a LAN address or any non-HTTPS origin other than localhost the click
+  threw and nothing was sent. The id is now built on `crypto.getRandomValues`, as the A2UI
+  actions' run ids already were, which keeps the protocol packages out of the inbox bundle.
+  No opt-in: a host that already answers in place gets the fix.
+
 ## [0.11.0] — 2026-11-23
 
 ### Added
