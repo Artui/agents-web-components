@@ -43,6 +43,14 @@
     "./threads/bundle": {
       "types": "./dist/threads.d.ts",
       "import": "./dist/agents-web-components.threads.bundle.js"
+    },
+    "./inbox": {
+      "types": "./dist/inbox.d.ts",
+      "import": "./dist/inbox.js"
+    },
+    "./inbox/bundle": {
+      "types": "./dist/inbox.d.ts",
+      "import": "./dist/agents-web-components.inbox.bundle.js"
     }
   },
   "sideEffects": false,

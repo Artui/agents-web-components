@@ -6,6 +6,7 @@
 //   - dist/agents-web-components.a2ui.bundle.js — the A2UI renderer alone, vendored beside it
 //   - dist/agents-web-components.mcp-apps.bundle.js — the MCP Apps host alone, likewise
 //   - dist/agents-web-components.threads.bundle.js — the thread list alone, likewise
+//   - dist/agents-web-components.inbox.bundle.js — the inbox alone, likewise
 //   - dist/sandbox-proxy.html — the MCP Apps sandbox proxy page, its script inlined
 //
 // The vendored bundle is what django-admin-agent ships under its
@@ -105,7 +106,14 @@ export const zodNamespaceImport = {
  */
 export const LIBRARY = {
   ...SHARED,
-  entryPoints: ["src/index.ts", "src/chat.ts", "src/a2ui.ts", "src/mcp_apps.ts", "src/threads.ts"],
+  entryPoints: [
+    "src/index.ts",
+    "src/chat.ts",
+    "src/a2ui.ts",
+    "src/mcp_apps.ts",
+    "src/threads.ts",
+    "src/inbox.ts",
+  ],
   outdir: "dist",
   splitting: true,
   external: ["@ag-ui/client", "@ag-ui/core"],
@@ -165,6 +173,20 @@ export const THREADS_BUNDLE = {
   ...SHARED,
   entryPoints: ["src/threads.ts"],
   outfile: "dist/agents-web-components.threads.bundle.js",
+  minify: true,
+};
+
+/**
+ * The inbox as a fifth vendored file, loaded beside the main bundle by a host
+ * that draws a needs-you badge or list. It reaches the chat only through the
+ * `<ag-ui-agents>` provider, so it inlines none of it (tests/entries.test.ts).
+ *
+ * @type {import("esbuild").BuildOptions}
+ */
+export const INBOX_BUNDLE = {
+  ...SHARED,
+  entryPoints: ["src/inbox.ts"],
+  outfile: "dist/agents-web-components.inbox.bundle.js",
   minify: true,
 };
 
@@ -249,6 +271,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
     build(A2UI_BUNDLE),
     build(MCP_APPS_BUNDLE),
     build(THREADS_BUNDLE),
+    build(INBOX_BUNDLE),
     buildSandboxProxyPage(SANDBOX_PROXY_PAGE),
   ]);
   const jsonSchema = zodJsonSchemaInputs(vendored.metafile);

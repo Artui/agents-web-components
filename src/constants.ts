@@ -775,3 +775,6 @@ export const TABS_EVENT = "ag-ui-tabs";
 
 /** The per-tab `sessionStorage` key base of a chat's open threads. */
 export const TABS_KEY = `${STORAGE_ROOT}.open-threads`;
+
+/** The Custom Element tag name registered by {@link defineInbox}. */
+export const INBOX_TAG = "ag-ui-inbox";
