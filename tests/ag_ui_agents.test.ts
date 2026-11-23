@@ -420,6 +420,42 @@ describe("<ag-ui-agents> directory", () => {
   });
 });
 
+describe("<ag-ui-agents> open tabs", () => {
+  const BOARD_KEY = "agents-web-components.open-threads@agent:board";
+  const SUPPORT_KEY = "agents-web-components.open-threads@agent:support";
+
+  it("keeps each agent's tabs apart across a remount", async () => {
+    const home = provider({ agent: "board" });
+    const inner = chat();
+    home.append(inner);
+    document.body.append(home);
+    await flush();
+    const active = inner.threadId as string;
+    inner.openTab(active);
+    inner.openTab("b-2");
+    const heard: (readonly { threadId: string }[])[] = [];
+    home.addEventListener(AGENT_CHANGE_EVENT, (event) => {
+      if ((event as CustomEvent<AgentChangeDetail>).detail.agent.id === "support") {
+        heard.push(inner.tabs);
+        inner.openTab("s-host");
+      }
+    });
+
+    home.agent = "support";
+
+    expect(heard).toHaveLength(1);
+    expect(heard[0]?.map((tab) => tab.threadId)).toEqual([]);
+    expect(sessionStorage.getItem(SUPPORT_KEY)).not.toContain("b-2");
+    expect(sessionStorage.getItem(SUPPORT_KEY)).not.toContain(active);
+    expect(sessionStorage.getItem(SUPPORT_KEY)).toContain("s-host");
+
+    home.agent = "board";
+
+    expect(inner.tabs.map((tab) => tab.threadId)).toEqual([active, "b-2"]);
+    expect(sessionStorage.getItem(BOARD_KEY)).toContain("b-2");
+  });
+});
+
 describe("<ag-ui-agents> directory requests", () => {
   it("sends the headers, the cookie policy and the ETag, and keeps the list on a 304", async () => {
     const home = provider({ credentials: "include" });

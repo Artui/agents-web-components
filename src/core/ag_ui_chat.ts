@@ -1987,10 +1987,11 @@ export class AgUiChat extends HTMLElement {
       this.#changePrincipal(held, this.userKey);
     }
     this.#principalKey = this.userKey;
-    this.#loadTabs();
     // Namespace the built-in default store too (a host-injected store is used
     // verbatim). Must precede #wireThreadStore, which wraps the current store.
     this.conversationStore = this.#storage.scopeStore(this.#unwrappedStore(), this.userKey);
+    // After the store is scoped: the tabs' key reads the agent that scoping sets.
+    this.#loadTabs();
     window.addEventListener("resize", this.#onViewportResize);
     // The visual viewport changes without the window resizing -- a keyboard
     // opening, a pinch-zoom, the URL bar collapsing -- and `scroll` is what
