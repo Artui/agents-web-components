@@ -9,6 +9,8 @@
 // - POST /status/threads/<id>/read/  records the read, 204 or 404
 // - POST /status/agent/              a run; one carrying `resume` runs the
 //                                    approved delete and leaves the thread idle
+// - POST /status/agent/resume/<id>/  the same, as the inbox answers a parked run
+//                                    whose row carries its run_id
 //
 // One thread runs for twenty seconds after the server starts and then finishes
 // away from the page, which is what turns it unread: watch its mark go from
@@ -18,6 +20,7 @@ import { createHash } from "node:crypto";
 
 const THREADS = /^\/status\/threads\/(?:([^/]+)\/(read\/)?)?$/;
 const AGENT = "/status/agent/";
+const RESUME = /^\/status\/agent\/resume\/[^/]+\/$/;
 const RUN_MS = 20000;
 const started = Date.now();
 const at = (offset) => new Date(started + offset).toISOString();
@@ -37,6 +40,25 @@ const threads = new Map([
           message: "delete_invoice",
           toolCallId: "call-1",
           metadata: { destructive: true, kind: "approval" },
+        },
+      ],
+    },
+  ],
+  [
+    "status-label",
+    {
+      title: "Label the March invoices as paid",
+      status: "waiting",
+      updated: -45000,
+      read: -45000,
+      runId: "run-label-1",
+      interrupts: [
+        {
+          id: "int-call-2",
+          reason: "tool_call",
+          message: "label_invoices",
+          toolCallId: "call-2",
+          metadata: { destructive: false, kind: "approval" },
         },
       ],
     },
@@ -65,6 +87,7 @@ function rows() {
       last_read_at: row.read === null ? null : at(row.read),
       ...(row.reason === undefined ? {} : { reason: row.reason }),
       ...(row.status === "waiting" ? { interrupts: row.interrupts } : {}),
+      ...(row.status === "waiting" && row.runId !== undefined ? { run_id: row.runId } : {}),
     }));
 }
 
@@ -96,6 +119,7 @@ function run(req, res) {
     const input = JSON.parse(raw);
     const row = threads.get(input.threadId);
     const approved = input.resume?.[0]?.payload?.approved === true;
+    const call = row?.interrupts?.[0]?.toolCallId ?? "call-1";
     const text = input.resume === undefined ? "Nothing to do here." : approved ? "Deleted." : "Kept.";
     const events = [
       { type: "RUN_STARTED", threadId: input.threadId, runId: input.runId },
@@ -105,7 +129,7 @@ function run(req, res) {
             {
               type: "TOOL_CALL_RESULT",
               messageId: "status-result",
-              toolCallId: "call-1",
+              toolCallId: call,
               content: approved ? "deleted invoice-7" : "declined",
               role: "tool",
             },
@@ -120,7 +144,7 @@ function run(req, res) {
       row.updated = Date.now() - started;
       row.read = row.updated;
       row.answer = [
-        { id: "status-result", role: "tool", toolCallId: "call-1", content: events[1].content },
+        { id: "status-result", role: "tool", toolCallId: call, content: events[1].content },
         { id: "status-answer", role: "assistant", content: text },
       ];
     }
@@ -131,7 +155,7 @@ function run(req, res) {
 
 /** Answer a /status/ request; false for any other path. */
 export function statusRoute(req, res, path) {
-  if (req.method === "POST" && path === AGENT) {
+  if (req.method === "POST" && (path === AGENT || RESUME.test(path))) {
     process.stdout.write(`thread-status ${req.method} ${req.url}\n`);
     run(req, res);
     return true;
@@ -168,9 +192,9 @@ export function statusRoute(req, res, path) {
             role: "assistant",
             toolCalls: [
               {
-                id: "call-1",
+                id: row.interrupts[0].toolCallId,
                 type: "function",
-                function: { name: "delete_invoice", arguments: '{"target":"invoice-7"}' },
+                function: { name: row.interrupts[0].message, arguments: '{"target":"invoice-7"}' },
               },
             ],
           }
