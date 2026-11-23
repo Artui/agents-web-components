@@ -2279,9 +2279,11 @@ agent at a time.
 - **Each agent keeps its own conversations.** The chat's built-in store is replaced by one under
   the entry's id (`agent:<id>`, plus `#<user-key>` when one is set), so each agent has its own
   thread pointer, history and messages, and coming back to an agent restores where it was. A
-  store of your own kind is left alone and keeps its own keying, across every switch, even one
-  to an entry whose `threads_url` wraps it in the chat's remote; the layout preferences stay on
-  the chat's own `id`.
+  store of your own kind, a `RemoteConversationStore` you made included, is left alone and keeps
+  its own keying, across every switch, even one to an entry whose `threads_url` wraps it in the
+  chat's remote; the layout preferences stay on the chat's own `id`. Two chats on one entry on
+  the same page (two providers listing it) are kept apart as two chats on one namespace are: the
+  second gets a throwaway namespace and a console warning.
 - **The inbox.** `data-inbox-url` answers `{ threads: [...] }` in the `threads/` shape, every
   row with its `agent_id`. It is watched while connected, by ETag polling every five seconds or,
   when `data-inbox-transport` is `stream`, by the server's event stream (polled when the server

@@ -74,8 +74,6 @@ export class AgUiAgents extends HTMLElement {
   /** Bumped per directory listing and on disconnect, so a late answer is dropped. */
   #listing = 0;
   #unwatch: (() => void) | null = null;
-  /** Each chat's store of the host's own kind, which a remote the chat wraps it in hides. */
-  readonly #hostStores = new WeakMap<AgentsChat, ClientConversationStore>();
 
   /** The directory as last listed. */
   get agents(): readonly AgentEntry[] {
@@ -211,27 +209,10 @@ export class AgUiAgents extends HTMLElement {
         chat.setAttribute(attribute, value);
       }
     }
-    if (this.#isChatsOwnStore(chat)) {
+    if (isProvidersStore(chat.conversationStore)) {
       chat.conversationStore = new AgentStore(entry.id);
     }
     parent?.insertBefore(chat, next);
-  }
-
-  /**
-   * Whether the chat's store is its own (built in, or the remote it wrapped one
-   * in), which the provider replaces, rather than a host's, which it keeps.
-   */
-  #isChatsOwnStore(chat: AgentsChat): boolean {
-    const store = chat.conversationStore;
-    if (store instanceof SessionStorageStore) {
-      this.#hostStores.delete(chat);
-      return true;
-    }
-    if (store instanceof RemoteConversationStore) {
-      return !this.#hostStores.has(chat);
-    }
-    this.#hostStores.set(chat, store);
-    return false;
   }
 
   #watchInbox(): void {
@@ -307,6 +288,18 @@ function sameMount(entry: AgentEntry, mounted: AgentEntry | null): boolean {
     mounted !== null &&
     entry.id === mounted.id &&
     CHAT_ATTRIBUTES.every(([key]) => entry[key] === mounted[key])
+  );
+}
+
+/**
+ * Whether `store` is one the provider replaces: the chat's built-in store, the
+ * agent's store it handed over, or the remote the chat wrapped that one in.
+ * Any other store, a remote the host made included, is the host's to key.
+ */
+function isProvidersStore(store: ClientConversationStore): boolean {
+  return (
+    store instanceof SessionStorageStore ||
+    (store instanceof RemoteConversationStore && store.local instanceof AgentStore)
   );
 }
 

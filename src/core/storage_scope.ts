@@ -23,6 +23,42 @@ import {
  */
 const CLAIMED_NAMESPACES = new Set<string>();
 
+/**
+ * One claim on a namespace in {@link CLAIMED_NAMESPACES}: the namespace held,
+ * to give back on disconnect, and the fallback minted when another element
+ * held it first, kept across remounts so the element does not drift back onto
+ * a namespace the other may since have released and swap conversations.
+ */
+class NamespaceClaim {
+  #held: string | null = null;
+  #mintedFor = "";
+  #minted = "";
+
+  /** Claim `preferred`, or answer this claim's own fallback, calling `warn` when one is minted. */
+  take(preferred: string, warn: (preferred: string) => void): string {
+    this.give();
+    if (this.#mintedFor === preferred) {
+      return this.#minted;
+    }
+    if (!CLAIMED_NAMESPACES.has(preferred)) {
+      CLAIMED_NAMESPACES.add(preferred);
+      this.#held = preferred;
+      return preferred;
+    }
+    this.#mintedFor = preferred;
+    this.#minted = `${preferred}~${randomUUID()}`;
+    warn(preferred);
+    return this.#minted;
+  }
+
+  give(): void {
+    if (this.#held !== null) {
+      CLAIMED_NAMESPACES.delete(this.#held);
+      this.#held = null;
+    }
+  }
+}
+
 /** What the storage scope needs from the element that owns it. */
 export interface StorageScopeHost {
   /** The element's `id`, the namespace it prefers. */
@@ -46,15 +82,9 @@ export class StorageScope {
   // root keys, for an element with nothing to key on. Resolved on connect; the
   // conversation adds `user-key` on top of it, see conversationNamespace.
   #storageNs = "";
-  // The entry this element put in CLAIMED_NAMESPACES, to take back out on
-  // disconnect. `null` when it claimed nothing (no id, no endpoint, or it lost
-  // the claim to an element that mounted first).
-  #claimedNs: string | null = null;
-  // The fallback namespace minted when the preferred one was already claimed,
-  // with the preferred value it was minted for — so the element keeps it across
-  // remounts, but re-resolves if the host answers the warning with an `id`.
-  #generatedNs = "";
-  #generatedFor = "";
+  // The element's claim on its own namespace, which re-resolves if the host
+  // answers the collision warning with an `id`.
+  readonly #claim = new NamespaceClaim();
   // The `sessionStorage`-backed store this scope handed out, which the element
   // may therefore re-scope on a principal change -- while it is still the store
   // in use, which rescopeStore asks, since a host can assign its own at any
@@ -67,6 +97,10 @@ export class StorageScope {
   // AgentStore an <ag-ui-agents> provider handed the element; `null` for a
   // chat on its own, whose conversation stays on the element's namespace.
   #agent: string | null = null;
+  // The claim on that entry's namespace, so two chats on one entry are kept
+  // apart as two chats on one namespace are; and the namespace it resolved to.
+  readonly #agentClaim = new NamespaceClaim();
+  #agentNs = "";
 
   constructor(host: StorageScopeHost) {
     this.#host = host;
@@ -88,10 +122,8 @@ export class StorageScope {
    * conversation to a false collision.
    */
   release(): void {
-    if (this.#claimedNs !== null) {
-      CLAIMED_NAMESPACES.delete(this.#claimedNs);
-      this.#claimedNs = null;
-    }
+    this.#claim.give();
+    this.#agentClaim.give();
   }
 
   /**
@@ -106,7 +138,7 @@ export class StorageScope {
    * user who had only just signed in.
    */
   conversationNamespace(key: string): string {
-    const base = this.#agent === null ? this.#storageNs : AgentStore.namespaceOf(this.#agent);
+    const base = this.#agent === null ? this.#storageNs : this.#agentNs;
     return key === "" ? base : `${base}#${key}`;
   }
 
@@ -119,6 +151,11 @@ export class StorageScope {
    */
   scopeStore(store: ClientConversationStore, key: string): ClientConversationStore {
     this.#agent = store instanceof AgentStore ? store.agentId : null;
+    if (this.#agent === null) {
+      this.#agentClaim.give();
+    } else {
+      this.#agentNs = this.#agentClaim.take(AgentStore.namespaceOf(this.#agent), warnAgent);
+    }
     if (!(store instanceof SessionStorageStore)) {
       return store;
     }
@@ -280,27 +317,25 @@ export class StorageScope {
     if (preferred === "") {
       return "";
     }
-    // Already lost this claim once. Keep the fallback rather than drifting back
-    // onto a namespace the other element may since have released, which would
-    // swap this panel's conversation for that one's.
-    if (this.#generatedFor === preferred) {
-      return this.#generatedNs;
-    }
-    if (!CLAIMED_NAMESPACES.has(preferred)) {
-      CLAIMED_NAMESPACES.add(preferred);
-      this.#claimedNs = preferred;
-      return preferred;
-    }
-    this.#generatedFor = preferred;
-    this.#generatedNs = `${preferred}~${randomUUID()}`;
-    console.warn(
-      `<ag-ui-chat>: another element on this page already stores its ` +
-        `conversation under "${preferred}", so this one has been given a ` +
-        "throwaway namespace of its own — the two would otherwise share a " +
-        "thread pointer, a history drawer and every message. Give each " +
-        "<ag-ui-chat> its own id to keep them apart and let this one restore " +
-        "its conversation across reloads.",
+    return this.#claim.take(preferred, (taken) =>
+      console.warn(
+        `<ag-ui-chat>: another element on this page already stores its ` +
+          `conversation under "${taken}", so this one has been given a ` +
+          "throwaway namespace of its own — the two would otherwise share a " +
+          "thread pointer, a history drawer and every message. Give each " +
+          "<ag-ui-chat> its own id to keep them apart and let this one restore " +
+          "its conversation across reloads.",
+      ),
     );
-    return this.#generatedNs;
   }
+}
+
+function warnAgent(taken: string): void {
+  console.warn(
+    `<ag-ui-chat>: another chat on this page already stores its conversation ` +
+      `under "${taken}", the same directory entry, so this one has been given a ` +
+      "throwaway namespace of its own — the two would otherwise share a thread " +
+      "pointer, a history drawer and every message. Mount each entry in one " +
+      "<ag-ui-agents> to let its conversation restore across reloads.",
+  );
 }
