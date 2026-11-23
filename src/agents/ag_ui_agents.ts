@@ -74,6 +74,8 @@ export class AgUiAgents extends HTMLElement {
   /** Bumped per directory listing and on disconnect, so a late answer is dropped. */
   #listing = 0;
   #unwatch: (() => void) | null = null;
+  /** Each chat's store of the host's own kind, which a remote the chat wraps it in hides. */
+  readonly #hostStores = new WeakMap<AgentsChat, ClientConversationStore>();
 
   /** The directory as last listed. */
   get agents(): readonly AgentEntry[] {
@@ -162,10 +164,12 @@ export class AgUiAgents extends HTMLElement {
     this.#select();
   }
 
-  /** Mount the chat on `agentId` and open `threadId` there, as an inbox row asks. */
+  /** Mount the chat on `agentId` and open `threadId` there; nothing opens off the directory. */
   async openThread(agentId: string, threadId: string): Promise<void> {
     this.agent = agentId;
-    await this.chat?.switchThread(threadId);
+    if (this.agent === agentId) {
+      await this.chat?.switchThread(threadId);
+    }
   }
 
   #select(): void {
@@ -179,15 +183,55 @@ export class AgUiAgents extends HTMLElement {
       return;
     }
     const chat = this.chat;
-    if (sameMount(entry, this.#mounted) && chat === this.#mountedOn) {
+    const moved = !sameMount(entry, this.#mounted) || chat !== this.#mountedOn;
+    this.#mounted = entry;
+    if (!moved) {
       return;
     }
-    this.#mounted = entry;
     this.#mountedOn = chat;
     if (chat !== null) {
-      remount(chat, entry);
+      this.#remount(chat, entry);
     }
     this.#emit<AgentChangeDetail>(AGENT_CHANGE_EVENT, { agent: entry });
+  }
+
+  /**
+   * Put `chat` on `entry`: out of the document, its URLs and store set, and back
+   * where it was. Set while detached, so none trips the connect-time warning.
+   */
+  #remount(chat: AgentsChat, entry: AgentEntry): void {
+    const parent = chat.parentNode;
+    const next = chat.nextSibling;
+    chat.remove();
+    for (const [key, attribute] of CHAT_ATTRIBUTES) {
+      const value = entry[key];
+      if (value === null) {
+        chat.removeAttribute(attribute);
+      } else {
+        chat.setAttribute(attribute, value);
+      }
+    }
+    if (this.#isChatsOwnStore(chat)) {
+      chat.conversationStore = new AgentStore(entry.id);
+    }
+    parent?.insertBefore(chat, next);
+  }
+
+  /**
+   * Whether the chat's store is its own (built in, or the remote it wrapped one
+   * in), which the provider replaces, rather than a host's, which it keeps.
+   */
+  #isChatsOwnStore(chat: AgentsChat): boolean {
+    const store = chat.conversationStore;
+    if (store instanceof SessionStorageStore) {
+      this.#hostStores.delete(chat);
+      return true;
+    }
+    if (store instanceof RemoteConversationStore) {
+      return !this.#hostStores.has(chat);
+    }
+    this.#hostStores.set(chat, store);
+    return false;
   }
 
   #watchInbox(): void {
@@ -257,28 +301,6 @@ export class AgUiAgents extends HTMLElement {
   }
 }
 
-/**
- * Put `chat` on `entry`: out of the document, its URLs and store set, and back
- * where it was. Set while detached, so none trips the connect-time warning.
- */
-function remount(chat: AgentsChat, entry: AgentEntry): void {
-  const parent = chat.parentNode;
-  const next = chat.nextSibling;
-  chat.remove();
-  for (const [key, attribute] of CHAT_ATTRIBUTES) {
-    const value = entry[key];
-    if (value === null) {
-      chat.removeAttribute(attribute);
-    } else {
-      chat.setAttribute(attribute, value);
-    }
-  }
-  if (isBuiltinStore(chat.conversationStore)) {
-    chat.conversationStore = new AgentStore(entry.id);
-  }
-  parent?.insertBefore(chat, next);
-}
-
 /** Whether `entry` puts the chat where `mounted` already has it: a re-listing remounts nothing. */
 function sameMount(entry: AgentEntry, mounted: AgentEntry | null): boolean {
   return (
@@ -286,14 +308,6 @@ function sameMount(entry: AgentEntry, mounted: AgentEntry | null): boolean {
     entry.id === mounted.id &&
     CHAT_ATTRIBUTES.every(([key]) => entry[key] === mounted[key])
   );
-}
-
-/**
- * The chat's own store, or the remote it wrapped one in: the stores the
- * provider may replace. A store of the host's own kind keeps its own keying.
- */
-function isBuiltinStore(store: ClientConversationStore): boolean {
-  return store instanceof SessionStorageStore || store instanceof RemoteConversationStore;
 }
 
 function toInboxRow(row: InboxServerRow): InboxRow {

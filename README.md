@@ -2279,7 +2279,8 @@ agent at a time.
 - **Each agent keeps its own conversations.** The chat's built-in store is replaced by one under
   the entry's id (`agent:<id>`, plus `#<user-key>` when one is set), so each agent has its own
   thread pointer, history and messages, and coming back to an agent restores where it was. A
-  store of your own kind is left alone and keeps its own keying; the layout preferences stay on
+  store of your own kind is left alone and keeps its own keying, across every switch, even one
+  to an entry whose `threads_url` wraps it in the chat's remote; the layout preferences stay on
   the chat's own `id`.
 - **The inbox.** `data-inbox-url` answers `{ threads: [...] }` in the `threads/` shape, every
   row with its `agent_id`. It is watched while connected, by ETag polling every five seconds or,
@@ -2287,7 +2288,7 @@ agent at a time.
   answers with JSON). Each change is in **`inbox`** *(read-only)* and
   **`ag-ui-inbox-change`** (`INBOX_CHANGE_EVENT`, detail `{ threads }`), each row a `ThreadMeta`
   with `agentId`. **`openThread(agentId, threadId)`** mounts the chat on that agent and opens the
-  thread.
+  thread; for an agent the directory does not list (yet), it opens nothing.
 - **Requests** carry **`headers`**, **`getHeaders()`** (winning per key) and the
   **`credentials`** attribute, as on the chat. They are the provider's own; the chat keeps its
   own for its requests.

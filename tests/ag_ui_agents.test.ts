@@ -4,6 +4,7 @@
  * switch is a remount the chat takes without its connect-time warning.
  */
 
+import type { Message } from "@ag-ui/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgUiAgents } from "../src/agents/ag_ui_agents.js";
 import { AgentStore } from "../src/agents/agent_store.js";
@@ -222,6 +223,46 @@ describe("<ag-ui-agents> directory", () => {
     expect(inner.conversationStore).toBe(custom);
   });
 
+  it("keeps a store of the host's own kind across switches that wrap it in a remote", async () => {
+    const own = new SessionStorageStore("host");
+    const custom: ClientConversationStore = {
+      threadId: () => own.threadId(),
+      loadMessages: (id) => own.loadMessages(id),
+      saveMessages: (id, messages) => own.saveMessages(id, messages),
+      loadCheckpoint: (id) => own.loadCheckpoint(id),
+      saveCheckpoint: (id, checkpoint) => own.saveCheckpoint(id, checkpoint),
+      clear: (id) => own.clear(id),
+      listThreads: () => own.listThreads(),
+      setActiveThread: (id) => own.setActiveThread(id),
+      renameThread: (id, title) => own.renameThread(id, title),
+    };
+    fetchMock.mockImplementation((url) =>
+      Promise.resolve(
+        url === DIRECTORY
+          ? listing([
+              entry("a", { threads_url: "/a/threads/" }),
+              entry("b", { threads_url: "/b/threads/" }),
+              entry("c"),
+            ])
+          : new Response(JSON.stringify({ threads: [] }), { status: 200 }),
+      ),
+    );
+    const home = provider();
+    const inner = chat();
+    inner.conversationStore = custom;
+    home.append(inner);
+    document.body.append(home);
+    await flush();
+    home.agent = "b";
+    await flush();
+    home.agent = "a";
+    await flush();
+    home.agent = "c";
+    await flush();
+
+    expect(inner.conversationStore).toBe(custom);
+  });
+
   it("replaces the remote the chat wrapped its own store in", async () => {
     fetchMock.mockImplementation((url) =>
       Promise.resolve(
@@ -282,6 +323,43 @@ describe("<ag-ui-agents> directory", () => {
 
     expect(home.agent).toBe("support");
     expect(switched).toHaveBeenCalledWith("t9");
+  });
+
+  it("opens no thread on an agent the directory does not hold, or before it is listed", async () => {
+    const home = provider();
+    const inner = chat();
+    home.append(inner);
+    const switched = vi.spyOn(inner, "switchThread").mockResolvedValue(undefined);
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    document.body.append(home);
+
+    await home.openThread("support", "early");
+    await flush();
+    await home.openThread("nobody", "t9");
+
+    expect(home.agent).toBe("support");
+    expect(switched).not.toHaveBeenCalled();
+  });
+
+  it("opens the thread on the real chat, over the active thread the agent restores", async () => {
+    const home = provider({ agent: "support" });
+    const inner = chat();
+    home.append(inner);
+    document.body.append(home);
+    await flush();
+    const theirs = inner.threadId as string;
+    inner.conversationStore.saveMessages(theirs, [
+      { id: "u1", role: "user", content: "support work" } as Message,
+    ]);
+    home.agent = "board";
+    await flush();
+    expect(inner.threadId).not.toBe(theirs);
+
+    await home.openThread("support", theirs);
+    await flush();
+
+    expect(home.agent).toBe("support");
+    expect(inner.threadId).toBe(theirs);
   });
 
   it("opens nothing without a chat", async () => {
