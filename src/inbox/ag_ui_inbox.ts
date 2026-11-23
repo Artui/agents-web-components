@@ -37,10 +37,11 @@ const SVG_NS = "http://www.w3.org/2000/svg";
  * cancelable {@link INBOX_SELECT_EVENT}, then has the provider open it in its
  * chat (`openThread`).
  *
- * A row whose every interrupt is a non-destructive approval, and whose mount
- * names the parked run (`runId`), also offers Approve and Deny: they POST the
- * mount's `resume/<run_id>/` with a detached run and report the outcome as
- * {@link INBOX_ANSWER_EVENT}. Anything else is answered in its conversation.
+ * A row whose every interrupt is a non-destructive approval, whose agent the
+ * provider lists, and whose mount names the parked run (`runId`), also offers
+ * Approve and Deny: they POST the mount's `resume/<run_id>/` with a detached
+ * run and report the outcome as {@link INBOX_ANSWER_EVENT}. Anything else is
+ * answered in its conversation.
  *
  * `variant="badge"` (the default) is a button counting the waiting
  * conversations that opens the list in a popover, for a host's navbar;
@@ -90,6 +91,7 @@ export class AgUiInbox extends HTMLElement {
     this.#count.setAttribute("aria-hidden", "true");
     this.#badge.append(this.#count);
     this.#badge.addEventListener("click", () => this.#toggle(!this.#open));
+    this.#badge.addEventListener("keydown", this.#closeOnEscape);
     this.#panel = document.createElement("div");
     this.#panel.className = "panel";
     this.#panel.setAttribute("part", "panel");
@@ -269,11 +271,19 @@ export class AgUiInbox extends HTMLElement {
     }
   };
 
+  /** Escape closes an open popover and hands focus to the badge; else the key is not ours. */
+  readonly #closeOnEscape = (event: KeyboardEvent): boolean => {
+    if (event.key !== "Escape" || !this.#open) {
+      return false;
+    }
+    event.stopPropagation();
+    this.#toggle(false);
+    this.#badge.focus();
+    return true;
+  };
+
   readonly #onPanelKey = (event: KeyboardEvent): void => {
-    if (event.key === "Escape" && this.#open) {
-      event.stopPropagation();
-      this.#toggle(false);
-      this.#badge.focus();
+    if (this.#closeOnEscape(event)) {
       return;
     }
     if (event.key !== "ArrowDown" && event.key !== "ArrowUp") {
@@ -306,10 +316,40 @@ export class AgUiInbox extends HTMLElement {
     this.#heading.hidden = !badge;
     this.#heading.textContent = strings.label;
     this.#list.setAttribute("aria-label", strings.label);
+    const held = this.#held();
     this.#list.replaceChildren(...this.#items.map((item) => this.#row(item)));
     this.#list.hidden = count === 0;
     this.#empty.hidden = count !== 0;
     this.#empty.textContent = strings.empty;
+    if (held !== null) {
+      this.#refocus(held);
+    }
+  }
+
+  /** The row and control that hold focus in the list, to find again after a redraw. */
+  #held(): { readonly threadId: string; readonly control: string } | null {
+    const active = (this.shadowRoot as ShadowRoot).activeElement;
+    const row = active?.closest<HTMLElement>(".row");
+    if (active === null || active === undefined || row === null || row === undefined) {
+      return null;
+    }
+    const control = ["approve", "deny"].find((name) => active.classList.contains(name));
+    return { threadId: row.dataset["threadId"] as string, control: control ?? "row-main" };
+  }
+
+  /** Refocus the rebuilt control; its row's button when it is gone or disabled; else the badge. */
+  #refocus(held: { readonly threadId: string; readonly control: string }): void {
+    const row = [...this.#list.children].find(
+      (child) => (child as HTMLElement).dataset["threadId"] === held.threadId,
+    );
+    const control = row?.querySelector<HTMLButtonElement>(`.${held.control}`);
+    if (control !== null && control !== undefined && !control.disabled) {
+      control.focus();
+    } else if (row !== undefined) {
+      (row.querySelector(".row-main") as HTMLButtonElement).focus();
+    } else if (this.#open) {
+      this.#badge.focus();
+    }
   }
 
   #row(item: InboxItem): HTMLLIElement {
@@ -341,7 +381,7 @@ export class AgUiInbox extends HTMLElement {
     main.append(mark, title, this.#summary(item.interrupts));
     main.addEventListener("click", () => this.#select(item));
     row.append(main);
-    if (answerable(item)) {
+    if (agent !== undefined && answerable(item)) {
       row.append(this.#actions(item));
     }
     return row;
@@ -426,10 +466,8 @@ export class AgUiInbox extends HTMLElement {
     item: InboxItem & { runId: string },
     approved: boolean,
   ): Promise<number> {
-    const url = new URL(
-      `resume/${encodeURIComponent(item.runId)}/`,
-      new URL(endpoint, location.href),
-    );
+    const base = new URL(endpoint.endsWith("/") ? endpoint : `${endpoint}/`, location.href);
+    const url = new URL(`resume/${encodeURIComponent(item.runId)}/`, base);
     const resume = item.interrupts.map((interrupt) =>
       approved
         ? { interruptId: interrupt.id, status: "resolved", payload: { approved: true } }

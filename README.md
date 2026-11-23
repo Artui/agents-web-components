@@ -2424,9 +2424,203 @@ polling or by SSE as `data-inbox-transport` says, and redraws on each `ag-ui-inb
   the conversation, where the approval or question is answered. Call `preventDefault()` to route
   to it yourself, on another page for instance.
 - **Answering in place.** A row whose every interrupt is an approval marked
-  `destructive: false`, on a server that names the parked run (`run_id` on a waiting row,
+  `destructive: false`, whose agent the provider's directory lists, on a server that names the
+  parked run (`run_id` on a waiting row, django-ag-ui 0.88.0 with a `step_store`), also shows
+  **Approve** and **Deny**. Either answers every call of the row at once: it POSTs the agent's
+  `resume/<run_id>/` (under its `endpoint`, with or without a trailing slash) with a detached
+  run, the provider's `headers`, `getHeaders()` and `credentials` (so a session mount's CSRF
+  header goes there), and fires **`ag-ui-inbox-answer`** (`INBOX_ANSWER_EVENT`, detail
+  `{ agentId, threadId, runId, approved, outcome, status }`, bubbling and composed). `outcome` is
+  `answered`, `elsewhere` (a `409` or `404`: another answer, or the run's end, got there first)
+  or `failed`, which draws `answerFailed` under the row and lets it be sent again. A destructive
+  approval, a question, a client tool, a row whose agent is not listed, and every row on an older
+  server are answered in their conversation only. The row leaves when the provider's inbox next
+  lists it as answered. Keyboard focus stays on the control it was on (or the row's button, once
+  Approve is busy) as the list redraws.
+- **`strings`** translates every piece of text (`label`, `untitled`, `empty`, `delete`,
+  `deleteConfirm`, `deleteYes`, `deleteNo`, and the marks' `running`, `waiting`, `failed`,
+  `unread`), merged over the English, so `{ deleteNo: "Abbrechen" }`
+  changes that one string.
+- **Styling.** Parts `list`, `row` (plus `row-active` on the thread on screen), `row-button`,
+  `mark` (plus `mark-running`, `mark-waiting`, `mark-failed` or `mark-unread`), `delete`,
+  `confirm`, `empty`. The chat's colour tokens apply, plus `--ag-ui-danger` (the delete
+  confirmation and the failed mark) and `--ag-ui-waiting` (the waiting mark). The list takes the
+  light or dark half of each from the page's own `color-scheme`, since it sits in your chrome
+  rather than in the chat's. The host carries `data-empty` when the chat has no conversations.
+
+The main `/bundle` does not carry the element. Without a build step, load
+`/threads/bundle` beside it:
+
+```html
+<script type="module">
+  import { defineChat } from "./agents-web-components.bundle.js";
+  import { defineThreads } from "./agents-web-components.threads.bundle.js";
+  defineChat();
+  defineThreads();
+</script>
+```
+
+### Thread status
+
+django-ag-ui 0.84.0, on a mount with a run store, lists each thread with its run's `status`
+(`idle`, `running`, `waiting`, `failed`), its `last_read_at`, a `reason` when it failed and, when
+it waits, AG-UI `interrupts`. `RemoteConversationStore` (what `data-threads-url` builds) reads
+them onto `ThreadMeta` as `status`, `reason` and `interrupts`, and works out `unread`. An older
+server, or a mount without a run store, lists none of them and nothing below happens.
+
+- **Unread** is a thread that changed after it was last read, by the server's clock on both
+  sides, and is not running now. A thread never read reads as not unread: the server keeps no
+  mark until a thread is read once, so a first turn left before its answer came is counted in
+  that page only, not after a reload.
+- **Read.** When the element reads a thread (`markRead`), the store posts
+  `POST <threads-url><id>/read/`, and only once a list carried `status`, since the route is
+  mounted only beside a run store. The thread then reads as read here until it changes again.
+- **Keeping it fresh is the host's choice, and opt-in.** `data-thread-status="poll"` asks the
+  list again every five seconds with its ETag (a `304` costs nothing); `"stream"` follows the
+  same URL as Server-Sent Events, read with `fetch` so the headers and cookie policy apply,
+  reconnecting when the server ends it. A server that answers the stream request with JSON (a
+  WSGI deployment) is polled instead. Without the attribute the list is read when it always was:
+  when the drawer opens, a thread switches, or `<ag-ui-threads>` re-lists. Each list the watch
+  receives is counted into the [unread badge](#the-unread-badge) and fired as
+  **`ag-ui-threads-change`** (`THREADS_CHANGE_EVENT`, detail `{ threads }`), which
+  `<ag-ui-threads>` draws. A store of your own takes part by implementing
+  `watchThreads(listener, transport)`.
+- **A waiting approval is answered where it waits.** Opening a thread whose run is parked on an
+  approval (`metadata.kind == "approval"`) shows the approval card on its tool call, as a live
+  run's interrupt does, and the answer starts the run again with `resume` built by
+  `@ag-ui/client`'s `buildResumeArray`. Asked of the store when the thread is restored
+  (`waitingInterrupts(threadId)`, which `data-threads-url` answers from the list with its ETag),
+  so it needs no `data-thread-status`. Stop, or leaving the thread, while the person decides
+  sends and writes nothing: the run stays parked and is offered again next time. A `question` or
+  `external` interrupt, or a mix, is marked waiting and not offered: the server maps every resume
+  entry to an approval, so answering one that way would approve it. A host driving its own `AgUiClient`
+  answers a parked run the same way with `client.answerParked(interrupts)`, which asks its
+  `resolveInterrupts` once and sends the resume.
+
+## Several agents under one provider
+
+A host that serves more than one agent (django-ag-ui 0.87.0's `AgentsDirectory`) can put one
+chat in front of all of them. `<ag-ui-agents>` is a headless provider: it draws nothing, reads the
+directory of agents and keeps the inbox of every agent's threads fresh, and mounts its chat on one
+agent at a time.
+
+```html
+<ag-ui-agents id="home" data-agents-url="/agents-home/agents/"
+              data-inbox-url="/agents-home/inbox/" data-inbox-transport="stream"
+              style="display: contents">
+  <ag-ui-threads></ag-ui-threads>
+  <ag-ui-chat></ag-ui-chat>
+</ag-ui-agents>
+
+<script type="module">
+  import { defineAgents } from "@artooi/agents-web-components";
+  import { defineChat } from "@artooi/agents-web-components/chat";
+  import { defineThreads } from "@artooi/agents-web-components/threads";
+  defineAgents();
+  defineChat();
+  defineThreads();
+</script>
+```
+
+- **The directory.** `data-agents-url` answers `{ agents: [...] }`, each entry an `id`, `name`,
+  `description`, `endpoint` and one URL per route its mount serves (`null` for one it does not).
+  It is read on connect and by `refresh()`, with the last ETag, and listed in **`agents`**
+  *(read-only)* and **`ag-ui-agents-change`** (`AGENTS_CHANGE_EVENT`, detail `{ agents }`).
+- **Its chat** is the first `<ag-ui-chat>` inside it, or the element set as **`chat`**.
+- **Switching agents is a remount.** The chat is mounted on the entry **`agent`** names (the
+  first entry without it): taken out of the document, given the entry's `endpoint`,
+  `data-tools-url`, `data-threads-url`, `data-runs-url`, `data-skills-url`,
+  `data-skill-editor-url`, `data-attachments-url` and `data-transcribe-url` (removed where the
+  entry has `null`), and put back where it was. That is how a chat applies its
+  [connect-time attributes](#when-each-attribute-is-read), so no warning is raised, and like any
+  remount it cancels a run in flight. Setting `agent` (attribute or property) switches;
+  **`ag-ui-agent-change`** (`AGENT_CHANGE_EVENT`, detail `{ agent }`) fires each time. The
+  getter answers the id of the entry the chat is on.
+- **Each agent keeps its own conversations.** The chat's built-in store is replaced by one under
+  the entry's id (`agent:<id>`, plus `#<user-key>` when one is set), so each agent has its own
+  thread pointer, history and messages, and coming back to an agent restores where it was. A
+  store of your own kind, a `RemoteConversationStore` you made included, is left alone and keeps
+  its own keying, across every switch, even one to an entry whose `threads_url` wraps it in the
+  chat's remote; the layout preferences stay on the chat's own `id`. Two chats on one entry on
+  the same page (two providers listing it) are kept apart as two chats on one namespace are: the
+  second gets a throwaway namespace and a console warning.
+- **The inbox.** `data-inbox-url` answers `{ threads: [...] }` in the `threads/` shape, every
+  row with its `agent_id`. It is watched while connected, by ETag polling every five seconds or,
+  when `data-inbox-transport` is `stream`, by the server's event stream (polled when the server
+  answers with JSON). Each change is in **`inbox`** *(read-only)* and
+  **`ag-ui-inbox-change`** (`INBOX_CHANGE_EVENT`, detail `{ threads }`), each row a `ThreadMeta`
+  with `agentId`. **`openThread(agentId, threadId)`** mounts the chat on that agent and opens the
+  thread; for an agent the directory does not list (yet), it opens nothing.
+- **A child session on another agent opens through the provider.** The provider listens to its
+  chat's cancelable [`ag-ui-open-thread`](#child-sessions). When `detail.agentId` names a listed
+  entry other than the one mounted, it calls `preventDefault()` and `openThread(agentId,
+  threadId)`, so a child link or the parent breadcrumb switches agent and shows the thread. The
+  same agent, an agent the directory does not list and a `null` `agentId` are left alone, and the
+  chat opens the thread in place; so is a request a listener on the chat prevented first. The
+  `agentId` is the directory entry's `id`: a child-session receipt's `agent_id`, or a parent's
+  `scope`.
+- **Requests** carry **`headers`**, **`getHeaders()`** (winning per key) and the
+  **`credentials`** attribute, as on the chat. They are the provider's own; the chat keeps its
+  own for its requests.
+
+The provider is exported from the root entry (and so from `/bundle`) with `defineAgents`, which
+throws naming the tag when another class holds it. A lone `<ag-ui-chat>` needs none of this and
+works as it always has. Runs and reattach stay in the chat. The element is an ordinary inline
+element, so give it `display: contents` when it should not affect layout.
+
+## What needs the user, across agents
+
+`<ag-ui-inbox>` shows the conversations that wait on the user, across every agent of an
+[`<ag-ui-agents>` provider](#several-agents-under-one-provider): a run parked on an approval, a
+question, or a client tool a detached run could not call. As a badge it is a count for your
+navbar that opens the list; as a list it is the "needs you" section of a home page. It keeps
+nothing of its own: it reads the provider's `inbox`, which the provider keeps fresh by ETag
+polling or by SSE as `data-inbox-transport` says, and redraws on each `ag-ui-inbox-change`.
+
+```html
+<nav><ag-ui-inbox agents="home"></ag-ui-inbox></nav>
+
+<ag-ui-agents id="home" data-agents-url="/agents-home/agents/"
+              data-inbox-url="/agents-home/inbox/" style="display: contents">
+  <section><ag-ui-inbox variant="list"></ag-ui-inbox></section>
+  <ag-ui-chat></ag-ui-chat>
+</ag-ui-agents>
+
+<script type="module">
+  import { defineAgents } from "@artooi/agents-web-components";
+  import { defineChat } from "@artooi/agents-web-components/chat";
+  import { defineInbox } from "@artooi/agents-web-components/inbox";
+  defineAgents();
+  defineChat();
+  defineInbox();
+</script>
+```
+
+- **What it counts.** One row per conversation whose `status` is `waiting` with at least one
+  interrupt. The badge's number is the number of rows, not of interrupts; a row parked on several
+  calls says how many more after its first. **`items`** *(read-only)* is the rows, in the
+  provider's order (newest first). The host carries `data-count`, and `data-empty` when nothing
+  waits.
+- **Binding.** `agents` names the provider's `id`, looked up in the inbox's own root, so a badge
+  in a navbar outside the provider still reads it; a provider added later is picked up when it
+  first lists its inbox or directory. Without `agents`, the nearest `<ag-ui-agents>` around it.
+  Or set the **`provider`** property, which wins until it is set back to `null`.
+- **`variant`.** `badge` (the default) is a button with the count that opens the list in a
+  popover below it, aligned to its inline end; a press outside it or Escape closes it (Escape
+  hands focus back to the badge), and the arrow keys move between rows. **`open`** reads and sets
+  whether the popover is open. `list` draws the list alone, with its empty text and no badge.
+- **Each row** names the conversation (`untitled` when it has none) and its agent, then what it
+  waits on: `approval` (marked `destructive` unless the server says `destructive: false`),
+  `question`, or `external` for any other kind, followed by the interrupt's message.
+- **Picking a row** fires **`ag-ui-inbox-select`** (`INBOX_SELECT_EVENT`, detail
+  `{ agentId, threadId }`, bubbling, composed and cancelable) and closes the popover, then calls
+  the provider's `openThread(agentId, threadId)`, which mounts the chat on that agent and opens
+  the conversation, where the approval or question is answered. Call `preventDefault()` to route
+  to it yourself, on another page for instance.
+- **Answering in place.** A row whose every interrupt is an approval marked
+  `destructive: false`, whose agent the provider's directory lists, on a server that names the parked run (`run_id` on a waiting row,
   django-ag-ui 0.88.0 with a `step_store`), also shows **Approve** and **Deny**. Either answers
-  every call of the row at once: it POSTs the agent's `resume/<run_id>/` with a detached run, the
+  every call of the row at once: it POSTs the agent's `resume/<run_id>/` (under its `endpoint`, with or without a trailing slash) with a detached run, the
   provider's `headers`, `getHeaders()` and `credentials` (so a session mount's CSRF header goes
   there), and fires **`ag-ui-inbox-answer`** (`INBOX_ANSWER_EVENT`, detail
   `{ agentId, threadId, runId, approved, outcome, status }`, bubbling and composed). `outcome` is
@@ -2441,7 +2635,10 @@ polling or by SSE as `data-inbox-transport` says, and redraws on each `ag-ui-inb
   `mark`, `agent`, `summary`, `destructive`, `actions`, `approve-button`, `deny-button`,
   `answer-error`, `empty`. The chat's colour tokens apply, plus
   `--ag-ui-waiting` (the count and the marks) and `--ag-ui-danger` (a destructive approval), in
-  the page's own `color-scheme`, since it sits in your chrome.
+  the page's own `color-scheme`, since it sits in your chrome. The badge's popover stacks one
+  above `--ag-ui-z-index` (the chat's layer, `2147483000` by default), so it opens over a floating
+  `<ag-ui-chat>`; a navbar that is itself a stacking context (fixed or sticky with its own
+  `z-index`) still needs a `z-index` above the chat's.
 
 The main `/bundle` does not carry the element. Without a build step, load `/inbox/bundle` beside
 it; it inlines neither the chat nor the provider, which come from `/bundle`.

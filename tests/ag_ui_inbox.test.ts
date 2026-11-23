@@ -9,6 +9,7 @@ import {
   INBOX_SELECT_EVENT,
   INBOX_TAG,
   type InboxAnswerDetail,
+  type InboxProvider,
   type InboxSelectDetail,
 } from "../src/inbox.js";
 
@@ -567,7 +568,7 @@ describe("<ag-ui-inbox> answering in place", () => {
     const offered = rows(list).map((item) => item.querySelector(".actions") !== null);
     // a: two safe approvals. b: one destructive. c: no run id (an older server).
     // d: no destructive flag. e: a question. f: an agent the directory does not list.
-    expect(offered).toEqual([true, false, false, false, false, true, true]);
+    expect(offered).toEqual([true, false, false, false, false, false, true]);
     expect(action(list, "a", "approve").textContent).toBe("Approve");
     expect(action(list, "a", "deny").textContent).toBe("Deny");
   });
@@ -715,12 +716,28 @@ describe("<ag-ui-inbox> answering in place", () => {
     expect(action(list, "a", "approve").disabled).toBe(true);
   });
 
-  it("sends nothing for an agent the directory does not list", async () => {
-    const { list, posts } = await mountAnswering([]);
-    action(list, "f", "approve").click();
+  it("sends nothing from a stale button once its agent left the directory", async () => {
+    const { home, list, posts } = await mountAnswering([]);
+    const stale = action(list, "a", "approve");
+    vi.spyOn(home, "agents", "get").mockReturnValue([]);
+    stale.click();
     await vi.advanceTimersByTimeAsync(0);
     expect(posts).toEqual([]);
-    expect(action(list, "f", "approve").disabled).toBe(false);
+    expect(stale.disabled).toBe(false);
+  });
+
+  it("posts to resume/<run_id>/ under an endpoint with no trailing slash", async () => {
+    const { home, list, posts } = await mountAnswering([sse()]);
+    const [board, ...rest] = home.agents;
+    vi.spyOn(home, "agents", "get").mockReturnValue([
+      { ...(board as object), endpoint: "/board" },
+      ...rest,
+    ] as typeof home.agents);
+    action(list, "a", "approve").click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect((posts[0] as [string, RequestInit])[0]).toBe(
+      new URL("/board/resume/run-a/", location.href).href,
+    );
   });
 
   it("sends nothing from a row left over once the inbox lost its provider", async () => {
@@ -742,6 +759,93 @@ describe("<ag-ui-inbox> answering in place", () => {
     document.body.append(home);
     await vi.advanceTimersByTimeAsync(0);
     expect(home.inbox.map((item) => item.runId)).toEqual(["run-a", undefined, undefined]);
+    expect("runId" in (home.inbox[1] as object)).toBe(false);
+  });
+});
+
+describe("<ag-ui-inbox> surviving mutants", () => {
+  it("lets Escape through to the host when nothing is open", async () => {
+    serve();
+    const home = provider();
+    const list = inbox({ variant: "list" });
+    home.append(list);
+    document.body.append(home);
+    await vi.advanceTimersByTimeAsync(0);
+    const heard = vi.fn();
+    document.addEventListener("keydown", heard);
+    (rows(list)[0] as HTMLLIElement)
+      .querySelector(".row-main")
+      ?.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true, composed: true }),
+      );
+    badge(list).dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true, composed: true }),
+    );
+    document.removeEventListener("keydown", heard);
+    expect(heard).toHaveBeenCalledTimes(2);
+    expect(list.open).toBe(false);
+  });
+
+  it("closes on Escape pressed on the badge, and keeps the key from the host", async () => {
+    serve();
+    const home = provider();
+    const element = inbox();
+    home.append(element);
+    document.body.append(home);
+    await vi.advanceTimersByTimeAsync(0);
+    const heard = vi.fn();
+    document.addEventListener("keydown", heard);
+    badge(element).click();
+    badge(element).dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true, composed: true }),
+    );
+    document.removeEventListener("keydown", heard);
+    expect(element.open).toBe(false);
+    expect(shadow(element).activeElement).toBe(badge(element));
+    expect(heard).not.toHaveBeenCalled();
+  });
+
+  it("lists no row whose status is not waiting, interrupts or not, from a provider set by property", () => {
+    const element = document.createElement("div") as unknown as InboxProvider;
+    Object.assign(element, {
+      agents: [],
+      openThread: () => Promise.resolve(),
+      inbox: [
+        {
+          threadId: "a",
+          agentId: "board",
+          title: "",
+          updatedAt: 0,
+          preview: "",
+          status: "waiting",
+          interrupts: [ARCHIVE],
+        },
+        {
+          threadId: "b",
+          agentId: "board",
+          title: "",
+          updatedAt: 0,
+          preview: "",
+          status: "running",
+          interrupts: [ARCHIVE],
+        },
+      ],
+    });
+    const list = inbox({ variant: "list" });
+    document.body.append(list);
+    list.provider = element;
+    expect(list.items.map((item) => item.threadId)).toEqual(["a"]);
+  });
+
+  it("names no run on a waiting row the server gave none", async () => {
+    serve([
+      row("a", "board", { status: "waiting", interrupts: [ARCHIVE], run_id: "run-a" }),
+      row("c", "board", { status: "waiting", interrupts: [ARCHIVE] }),
+    ]);
+    const home = provider();
+    document.body.append(home);
+    await vi.advanceTimersByTimeAsync(0);
+    expect("runId" in (home.inbox[0] as object)).toBe(true);
     expect("runId" in (home.inbox[1] as object)).toBe(false);
   });
 });

@@ -10,7 +10,7 @@ import {
   defineChat,
   INBOX_CHANGE_EVENT,
 } from "/bundle.js";
-import { defineInbox, INBOX_SELECT_EVENT } from "/inbox.bundle.js";
+import { defineInbox, INBOX_ANSWER_EVENT, INBOX_SELECT_EVENT } from "/inbox.bundle.js";
 import { defineThreads } from "/threads.bundle.js";
 
 const home = document.getElementById("home");
@@ -54,6 +54,13 @@ home.addEventListener(INBOX_CHANGE_EVENT, (event) => {
 });
 home.addEventListener(INBOX_SELECT_EVENT, (event) => {
   log(`ag-ui-inbox-select: ${event.detail.agentId}/${event.detail.threadId}`);
+});
+
+home.addEventListener(INBOX_ANSWER_EVENT, (event) => {
+  const { agentId, threadId, approved, outcome, status } = event.detail;
+  log(
+    `ag-ui-inbox-answer: ${agentId}/${threadId} ${approved ? "approved" : "denied"} -> ${outcome} (${status})`,
+  );
 });
 
 defineAgents();

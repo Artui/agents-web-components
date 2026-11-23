@@ -790,9 +790,9 @@ export class AgUiChat extends HTMLElement {
   #maximized = false;
   /** The maximized state listeners were last told, which a mount settles once. */
   #maximizedHeard = false;
-  /** The header's maximize and collapse controls, once rendered. */
   /** The header's More button and menu, refitted when the row gains or loses a control. */
   #headerOverflow: HeaderOverflow | null = null;
+  /** The header's maximize control, once rendered. */
   #maximizeControl: { readonly button: HTMLButtonElement; readonly before: HTMLElement } | null =
     null;
   /** The header's collapse control, once rendered, repainted for its placement. */

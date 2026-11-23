@@ -13,6 +13,12 @@ import { defineChat } from "../../src/core/define_chat.js";
  * whether the row is even, crowded or overflowing.
  */
 
+/** Every shipped theme in both schemes, and a word of the host's own (which adds no rules). */
+const THEMES = ["", "quiet", "soft", "ledger", "classic", "modern"].flatMap((name) => [
+  name,
+  `${name} dark`.trim(),
+]);
+
 const EVERY = ["skills", "history", "checkpoints", "new", "theme", "maximize", "collapse"];
 
 function mount(width?: string, extra: Record<string, string> = {}): AgUiChat {
@@ -196,8 +202,8 @@ describe("header controls (real browser)", () => {
     expect(root(el).querySelector(".drawer")?.hasAttribute("hidden")).toBe(false);
   });
 
-  it("sits outside the drag handle, in the panel's ink under any header colour and theme", async () => {
-    for (const theme of ["", "soft", "ledger", "classic"]) {
+  it("sits outside the drag handle, in the panel's ink and background under any header colour and theme", async () => {
+    for (const theme of THEMES) {
       const el = mount("240px", theme === "" ? {} : { theme });
       el.style.setProperty("--ag-ui-header-fg", "rgb(255, 255, 255)");
       el.style.setProperty("--ag-ui-header-bg", "rgb(20, 60, 160)");
@@ -209,8 +215,37 @@ describe("header controls (real browser)", () => {
       const item = menu(el).firstElementChild as HTMLElement;
       expect(getComputedStyle(item).color, theme).not.toBe("rgb(255, 255, 255)");
       expect(getComputedStyle(item).color, theme).toBe(getComputedStyle(menu(el)).color);
+      expect(getComputedStyle(item).backgroundColor, theme).toBe("rgba(0, 0, 0, 0)");
+      expect(getComputedStyle(menu(el)).backgroundColor, theme).not.toBe(
+        getComputedStyle(header).backgroundColor,
+      );
       el.remove();
     }
+  });
+
+  it("keeps focus on Maximize through the refit its Enter causes", async () => {
+    const el = mount("380px");
+    await settle();
+    const maximize = control(el, "maximize");
+    maximize.focus();
+    await userEvent.keyboard("{Enter}");
+    await settle();
+
+    expect(root(el).activeElement).toBe(maximize);
+    el.remove();
+  });
+
+  it("hands focus to More when the focused control moves into the closed menu", async () => {
+    const el = mount("600px");
+    await settle();
+    const history = control(el, "history");
+    expect(history.closest(".header-menu")).toBeNull();
+    history.focus();
+    el.style.setProperty("--ag-ui-width", "240px");
+    await settle();
+
+    expect(history.closest(".header-menu")).not.toBeNull();
+    expect(root(el).activeElement).toBe(control(el, "more"));
   });
 
   it("stays on screen over a full-panel view", async () => {

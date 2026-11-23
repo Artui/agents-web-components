@@ -25,7 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is answered in place with Approve or Deny, which POST the agent's `resume/<run_id>/` as a
   detached run and fire `ag-ui-inbox-answer` (`INBOX_ANSWER_EVENT`, `InboxAnswerDetail`); this
   needs django-ag-ui 0.88.0, whose waiting rows name the parked run (`run_id`, on a mount with
-  a `step_store`). On an older server every row only opens its conversation. Themed by the
+  a `step_store`), and only for an agent the provider's directory lists. On an older server every
+  row only opens its conversation. The badge's popover opens over a floating `<ag-ui-chat>` (one
+  above `--ag-ui-z-index`), keeps keyboard focus through a redraw, and closes on Escape from the
+  badge too. Themed by the
   shared `--ag-ui-*` tokens; parts `badge`, `icon`, `count`, `panel`, `heading`, `list`, `row`,
   `row-button`, `mark`, `agent`, `summary`, `destructive`, `actions`, `approve-button`,
   `deny-button`, `answer-error`, `empty`; strings `InboxStrings`.

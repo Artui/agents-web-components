@@ -77,7 +77,7 @@ export const INBOX_STYLES: string = `
 }
 .panel {
   position: absolute;
-  z-index: 10;
+  z-index: calc(var(--ag-ui-z-index, 2147483000) + 1);
   inset-block-start: calc(100% + 6px);
   inset-inline-end: 0;
   width: min(22rem, calc(100vw - 16px));
