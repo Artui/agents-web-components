@@ -4,7 +4,7 @@ import type { A2uiHost } from "./a2ui/a2ui_host.js";
 import type { A2uiOptions } from "./a2ui/a2ui_options.js";
 import { a2uiRenderer } from "./a2ui/a2ui_renderer.js";
 import { actionRequest } from "./a2ui/action_request.js";
-import { randomRunId } from "./a2ui/random_run_id.js";
+import { randomRunId } from "./core/random_run_id.js";
 
 /**
  * Draw A2UI 1.0 surfaces in `chat` and send their actions back.
