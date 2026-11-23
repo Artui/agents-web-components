@@ -71,7 +71,9 @@ export class HeaderOverflow {
     const { controls, row, movable, header, title } = this.#options;
     const was = this.open;
     // Before the header is attached its root is a plain element, which holds no focus.
-    const held = (controls.getRootNode() as ShadowRoot).activeElement ?? null;
+    const active = (controls.getRootNode() as ShadowRoot).activeElement ?? null;
+    const held =
+      active !== null && (controls.contains(active) || this.menu.contains(active)) ? active : null;
     this.close();
     const present = row.filter((b) => movable.includes(b) || b.parentElement === controls);
     controls.replaceChildren(...present);
@@ -100,9 +102,9 @@ export class HeaderOverflow {
     this.#restore(held);
   }
 
-  /** The reshuffle blurs what had focus: give it back, or More when it now sits in the closed menu. */
+  /** Refocus the header control the reshuffle blurred, or More once it is in the closed menu. */
   #restore(held: Element | null): void {
-    if (held === null || !held.isConnected) {
+    if (held === null) {
       return;
     }
     const hidden = this.menu.contains(held) && !this.open;

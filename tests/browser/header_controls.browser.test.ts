@@ -248,6 +248,35 @@ describe("header controls (real browser)", () => {
     expect(root(el).activeElement).toBe(control(el, "more"));
   });
 
+  it("keeps focus on an item of the open menu through a refit", async () => {
+    const el = mount("240px");
+    await settle();
+    control(el, "more").dispatchEvent(new MouseEvent("click", { detail: 1 }));
+    const item = menu(el).querySelector(".header-btn") as HTMLButtonElement;
+    item.focus();
+    el.style.setProperty("--ag-ui-width", "250px");
+    await settle();
+
+    expect(root(el).activeElement).toBe(item);
+  });
+
+  it("leaves focus inside an embedded view alone through a refit", async () => {
+    const el = mount("600px");
+    await settle();
+    const frame = document.createElement("iframe");
+    frame.srcdoc = "<input id='i'>";
+    const loaded = new Promise((resolve) => frame.addEventListener("load", resolve));
+    (root(el).querySelector(".chat") as HTMLElement).append(frame);
+    await loaded;
+    const doc = frame.contentDocument as Document;
+    (doc.getElementById("i") as HTMLInputElement).focus();
+    expect(root(el).activeElement).toBe(frame);
+    el.style.setProperty("--ag-ui-width", "240px");
+    await settle();
+
+    expect(doc.activeElement?.id).toBe("i");
+  });
+
   it("stays on screen over a full-panel view", async () => {
     const el = mount("240px");
     await settle();

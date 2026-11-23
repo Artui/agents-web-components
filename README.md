@@ -2446,8 +2446,9 @@ polling or by SSE as `data-inbox-transport` says, and redraws on each `ag-ui-inb
   `--ag-ui-waiting` (the count and the marks) and `--ag-ui-danger` (a destructive approval), in
   the page's own `color-scheme`, since it sits in your chrome. The badge's popover stacks one
   above `--ag-ui-z-index` (the chat's layer, `2147483000` by default), so it opens over a floating
-  `<ag-ui-chat>`; a navbar that is itself a stacking context (fixed or sticky with its own
-  `z-index`) still needs a `z-index` above the chat's.
+  `<ag-ui-chat>`. A navbar that creates its own stacking context (`position: fixed` or `sticky`,
+  `transform`, `backdrop-filter`, an `opacity` below 1) caps it there: give that navbar a
+  `z-index` above the chat's, or place the badge outside it.
 
 The main `/bundle` does not carry the element. Without a build step, load `/inbox/bundle` beside
 it; it inlines neither the chat nor the provider, which come from `/bundle`.
