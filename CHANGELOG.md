@@ -47,6 +47,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   root entry with `defineAgents`, `AgUiAgents`, the `AGENTS_TAG`, `AGENTS_CHANGE_EVENT`,
   `INBOX_CHANGE_EVENT` and `AGENT_CHANGE_EVENT` constants, and the `AgentEntry`, `InboxRow`,
   `InboxServerRow`, `InboxTransport`, `AgentsChat` and detail types.
+- **`<ag-ui-agents>` takes a child session on another agent. No opt-in beyond the provider.** It
+  listens to its chat's cancelable `ag-ui-open-thread`: when `detail.agentId` names a listed
+  entry other than the one mounted, it calls `preventDefault()` and `openThread(agentId,
+  threadId)`, so a child-session link or the parent breadcrumb switches agent and shows the
+  thread. The same agent, an unlisted one and a `null` `agentId` leave the chat to open in place,
+  as does a request a listener on the chat prevented first. A host that already handles
+  `ag-ui-open-thread` for the same job can drop its listener.
 - **`<ag-ui-threads>` binds through a provider.** Without `for` or `chat`, it binds to the chat of
   the `<ag-ui-agents>` named by its new `agents="<id>"` attribute, else the nearest one around it,
   and lists again when the provider switches agents. `for` keeps working and wins when both are

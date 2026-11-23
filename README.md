@@ -1551,13 +1551,15 @@ calls `openTab` sees no change.
   apart from `deleteThread`. Closing the thread on screen shows the next tab, else the one before
   it, else a new chat, cancelling a run in flight as `switchThread` does.
 
-Once tracking has started, showing a thread opens it: `switchThread`, `newChat` and the drawer
-each open the thread they show, so the thread on screen always has a tab, except when a closed tab's neighbour cannot be
+Once tracking has started, showing a thread opens it: `switchThread`, `newChat`, the drawer, a
+[child-session](#child-sessions) link and the parent breadcrumb each open the thread they show
+(a link or breadcrumb a host prevents shows nothing and adds no tab), so the thread on screen always has a tab, except when a closed tab's neighbour cannot be
 loaded. A new chat leaving a thread nothing was sent in takes over that thread's tab, since the
 store drops the empty thread. `deleteThread` closes the tab as it deletes the thread.
 
 The set is kept per browser tab in `sessionStorage`, under the conversation's namespace (the
-element's `id` and `user-key`), so a reload reads the same tabs back, titles included. A
+element's `id` and `user-key`, or, under `<ag-ui-agents>`, the agent's: `agent:<id>`, so each
+agent keeps its own tabs), so a reload reads the same tabs back, titles included. A
 `user-key` handover drops the previous user's tabs; a first `user-key` naming the user already
 there keeps them.
 
@@ -2332,6 +2334,14 @@ agent at a time.
   **`ag-ui-inbox-change`** (`INBOX_CHANGE_EVENT`, detail `{ threads }`), each row a `ThreadMeta`
   with `agentId`. **`openThread(agentId, threadId)`** mounts the chat on that agent and opens the
   thread; for an agent the directory does not list (yet), it opens nothing.
+- **A child session on another agent opens through the provider.** The provider listens to its
+  chat's cancelable [`ag-ui-open-thread`](#child-sessions). When `detail.agentId` names a listed
+  entry other than the one mounted, it calls `preventDefault()` and `openThread(agentId,
+  threadId)`, so a child link or the parent breadcrumb switches agent and shows the thread. The
+  same agent, an agent the directory does not list and a `null` `agentId` are left alone, and the
+  chat opens the thread in place; so is a request a listener on the chat prevented first. The
+  `agentId` is the directory entry's `id`: a child-session receipt's `agent_id`, or a parent's
+  `scope`.
 - **Requests** carry **`headers`**, **`getHeaders()`** (winning per key) and the
   **`credentials`** attribute, as on the chat. They are the provider's own; the chat keeps its
   own for its requests.
@@ -2818,7 +2828,8 @@ receipt's `agent_id`, or the parent's store `scope` (`null` when unscoped). The
 chat cannot tell which agent it serves, so unless a listener calls
 `preventDefault()` it then opens the thread in place, as a drawer pick does,
 letting go of a run in flight. A host whose child runs on another agent's mount
-takes the event, opens that thread where it lives, and prevents the default:
+takes the event, opens that thread where it lives, and prevents the default (under an
+[`<ag-ui-agents>` provider](#several-agents-under-one-provider) that is done for a listed agent):
 
 ```js
 chat.addEventListener("ag-ui-open-thread", (event) => {
@@ -3532,6 +3543,11 @@ chat.conversationStore = new RemoteConversationStore(
 );
 ```
 
+`RemoteConversationStore.local` *(read-only)* is the store it keeps the client-only state in (the
+thread pointer and the navigation checkpoint): the third constructor argument, a
+`SessionStorageStore` by default. A host wrapping the chat's store reads it to reach what the
+remote delegates.
+
 A conversation store you assign yourself is never replaced by a change of `user-key`, whether you
 assign it before the element connects or after. The one exception is a plain `SessionStorageStore`
 assigned before the element connects: that is the same kind as the element's own default, which is
@@ -4139,7 +4155,7 @@ paths.
 | Export | Kind | Summary |
 | --- | --- | --- |
 | `SessionStorageStore` | class | Default per-tab conversation store. |
-| `RemoteConversationStore` | class | Server-backed store over a `data-threads-url` endpoint. |
+| `RemoteConversationStore` | class | Server-backed store over a `data-threads-url` endpoint; its read-only `local` is the store holding the thread pointer and checkpoints. |
 | `ClientConversationStore` | type | The persistence seam. |
 | `ThreadTab` | type | One open thread in `tabs` (`{ threadId, title }`). |
 | `TabsDetail` | type | `ag-ui-tabs` event detail (`{ tabs, reason }`). |

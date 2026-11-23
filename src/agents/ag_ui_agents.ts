@@ -3,8 +3,10 @@ import {
   AGENTS_CHANGE_EVENT,
   ELEMENT_TAG,
   INBOX_CHANGE_EVENT,
+  OPEN_THREAD_EVENT,
 } from "../constants.js";
 import { type ClientConversationStore, SessionStorageStore } from "../core/conversation_store.js";
+import type { OpenThreadDetail } from "../core/events/open_thread_detail.js";
 import { RemoteConversationStore } from "../core/remote_conversation_store.js";
 import { ThreadsWatch } from "../core/threads_watch.js";
 import { withCredentials } from "../core/utils.js";
@@ -74,6 +76,8 @@ export class AgUiAgents extends HTMLElement {
   /** Bumped per directory listing and on disconnect, so a late answer is dropped. */
   #listing = 0;
   #unwatch: (() => void) | null = null;
+  /** The chat whose open-thread requests this provider answers. */
+  #listeningOn: AgentsChat | null = null;
 
   /** The directory as last listed. */
   get agents(): readonly AgentEntry[] {
@@ -114,6 +118,7 @@ export class AgUiAgents extends HTMLElement {
   }
 
   connectedCallback(): void {
+    this.#listen();
     void this.refresh();
     this.#watchInbox();
   }
@@ -121,6 +126,7 @@ export class AgUiAgents extends HTMLElement {
   disconnectedCallback(): void {
     this.#listing += 1;
     this.#stopInbox();
+    this.#listen();
   }
 
   attributeChangedCallback(name: string): void {
@@ -170,7 +176,29 @@ export class AgUiAgents extends HTMLElement {
     }
   }
 
+  /** Answer the open-thread requests of the chat in use, and only while connected. */
+  #listen(): void {
+    const chat = this.isConnected ? this.chat : null;
+    if (chat === this.#listeningOn) {
+      return;
+    }
+    this.#listeningOn?.removeEventListener(OPEN_THREAD_EVENT, this.#onOpenThread);
+    chat?.addEventListener(OPEN_THREAD_EVENT, this.#onOpenThread);
+    this.#listeningOn = chat;
+  }
+
+  /** Take a thread of another listed agent over the chat's own open, which stays in place. */
+  readonly #onOpenThread = (event: Event): void => {
+    const { agentId, threadId } = (event as CustomEvent<OpenThreadDetail>).detail;
+    const target = this.#agents.find((agent) => agent.id === agentId);
+    if (!event.defaultPrevented && target !== undefined && target.id !== this.#mounted?.id) {
+      event.preventDefault();
+      void this.openThread(target.id, threadId);
+    }
+  };
+
   #select(): void {
+    this.#listen();
     const wanted = this.getAttribute("agent");
     const entry =
       wanted === null ? this.#agents[0] : this.#agents.find((agent) => agent.id === wanted);

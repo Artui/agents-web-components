@@ -15,6 +15,7 @@ import {
   AGENTS_CHANGE_EVENT,
   AGENTS_TAG,
   ELEMENT_TAG,
+  OPEN_THREAD_EVENT,
 } from "../src/constants.js";
 import type { AgUiChat } from "../src/core/ag_ui_chat.js";
 import type { ClientConversationStore } from "../src/core/conversation_store.js";
@@ -417,6 +418,87 @@ describe("<ag-ui-agents> directory", () => {
 
     await expect(home.openThread("support", "t9")).resolves.toBeUndefined();
     expect(home.agent).toBe("support");
+  });
+});
+
+describe("<ag-ui-agents> open-thread requests", () => {
+  function request(target: HTMLElement, agentId: string | null, threadId = "t9"): CustomEvent {
+    const event = new CustomEvent(OPEN_THREAD_EVENT, {
+      detail: { agentId, threadId },
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    });
+    target.dispatchEvent(event);
+    return event;
+  }
+
+  async function mounted(): Promise<{ home: AgUiAgents; inner: AgUiChat }> {
+    const home = provider();
+    const inner = chat();
+    home.append(inner);
+    document.body.append(home);
+    await flush();
+    return { home, inner };
+  }
+
+  it("takes a thread of another listed agent: prevents the open, switches agent, shows it", async () => {
+    const { home, inner } = await mounted();
+    const switched = vi.spyOn(inner, "switchThread").mockResolvedValue(undefined);
+
+    const event = request(inner, "support");
+    await flush();
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(home.agent).toBe("support");
+    expect(switched).toHaveBeenCalledWith("t9");
+  });
+
+  it("leaves the open in place for the mounted agent, an unlisted one and none", async () => {
+    const { home, inner } = await mounted();
+    const switched = vi.spyOn(inner, "switchThread").mockResolvedValue(undefined);
+
+    const events = [request(inner, "board"), request(inner, "nobody"), request(inner, null)];
+    await flush();
+
+    expect(events.map((event) => event.defaultPrevented)).toEqual([false, false, false]);
+    expect(home.agent).toBe("board");
+    expect(switched).not.toHaveBeenCalled();
+  });
+
+  it("leaves a request a host took first to the host", async () => {
+    const home = provider();
+    const inner = chat();
+    inner.addEventListener(OPEN_THREAD_EVENT, (event) => event.preventDefault());
+    home.append(inner);
+    document.body.append(home);
+    await flush();
+
+    request(inner, "support");
+    await flush();
+
+    expect(home.agent).toBe("board");
+  });
+
+  it("answers the chat set as a property, and nothing once disconnected", async () => {
+    const { home, inner } = await mounted();
+    const other = chat();
+    document.body.append(other);
+    home.chat = other;
+    vi.spyOn(other, "switchThread").mockResolvedValue(undefined);
+
+    expect(request(inner, "support").defaultPrevented).toBe(false);
+    expect(request(other, "support").defaultPrevented).toBe(true);
+    await flush();
+    expect(home.agent).toBe("support");
+
+    home.agent = "board";
+    home.remove();
+    expect(request(other, "support").defaultPrevented).toBe(false);
+    expect(home.agent).toBe("board");
+
+    document.body.append(home);
+    expect(request(other, "support").defaultPrevented).toBe(true);
   });
 });
 
