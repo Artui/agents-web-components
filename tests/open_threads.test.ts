@@ -24,7 +24,11 @@ function turn(id: string, content: string): Message {
   return { id, role: "user", content } as Message;
 }
 
-function mount(attributes: Record<string, string> = {}): {
+/** A connected chat; `tabs` opens the thread on screen, which turns the model on. */
+function mount(
+  attributes: Record<string, string> = {},
+  tabs = true,
+): {
   el: AgUiChat;
   seen: OpenThreadsDetail[];
 } {
@@ -46,6 +50,9 @@ function mount(attributes: Record<string, string> = {}): {
     seen.push((event as CustomEvent<OpenThreadsDetail>).detail);
   });
   document.body.appendChild(el);
+  if (tabs) {
+    el.openTab(el.threadId as string);
+  }
   return { el, seen };
 }
 
@@ -183,11 +190,57 @@ describe("<ag-ui-chat> open threads", () => {
     expect(seen).toEqual([]);
   });
 
-  it("opens the thread on screen at connect, reported as a restore", async () => {
+  it("tracks nothing, writes nothing and says nothing until a host opens a tab", async () => {
+    const { el, seen } = mount({}, false);
+    await flush();
+    await el.sendMessage("not tracked");
+    el.conversationStore.saveMessages("t1", [turn("u1", "one")]);
+    await el.switchThread("t1");
+    el.newChat();
+    el.deleteThread("t1");
+    el.closeTab(el.threadId as string);
+    await flush();
+
+    expect(el.tabs).toEqual([]);
+    expect(seen).toEqual([]);
+    const keys = Array.from({ length: sessionStorage.length }, (_, i) => sessionStorage.key(i));
+    expect(keys.filter((key) => key?.startsWith(OPEN_THREADS_KEY))).toEqual([]);
+  });
+
+  it("the first tab opened brings the thread on screen with it", async () => {
+    const { el, seen } = mount({}, false);
+    await flush();
+    await el.sendMessage("on screen");
+    const active = el.threadId as string;
+
+    el.openTab("t1", "One");
+
+    expect(el.tabs).toEqual([
+      { threadId: active, title: "on screen" },
+      { threadId: "t1", title: "One" },
+    ]);
+    expect(seen.map((detail) => detail.reason)).toEqual(["open"]);
+  });
+
+  it("reports the restore at connect once tracking is on", async () => {
     const { el, seen } = mount();
     await flush();
     expect(ids(el)).toEqual([el.threadId]);
-    expect(seen).toEqual([{ tabs: [{ threadId: el.threadId, title: "" }], reason: "restore" }]);
+    expect(seen.map((detail) => detail.reason)).toEqual(["open", "restore"]);
+  });
+
+  it("has the shown thread's tab open by the time the thread event fires", async () => {
+    const { el } = mount();
+    await flush();
+    el.conversationStore.saveMessages("t1", [turn("u1", "one")]);
+    let open: string[] = [];
+    el.addEventListener("ag-ui-thread", () => {
+      open = ids(el);
+    });
+
+    await el.switchThread("t1");
+
+    expect(open).toContain("t1");
   });
 
   it("opens a tab behind the one on screen, once", async () => {
@@ -272,6 +325,7 @@ describe("<ag-ui-chat> open threads", () => {
     el.conversationStore = store;
     document.body.appendChild(el);
     await flush();
+    el.openTab(el.threadId as string);
     el.openTab("t1", "first words");
     const seen: OpenThreadsDetail[] = [];
     el.addEventListener(OPEN_THREADS_EVENT, (event) => {
@@ -442,7 +496,7 @@ describe("<ag-ui-chat> open threads", () => {
     const before = el.tabs;
     el.remove();
 
-    const again = mount({ id: "chat-a" });
+    const again = mount({ id: "chat-a" }, false);
     await flush();
 
     expect(again.el.tabs).toEqual(before);
@@ -483,6 +537,19 @@ describe("<ag-ui-chat> open threads", () => {
     expect(JSON.stringify(el.tabs)).not.toContain("Alice");
     expect(seen.at(-1)?.reason).toBe("rescope");
     expect(sessionStorage.getItem(`${OPEN_THREADS_KEY}@c#alice`)).toBeNull();
+  });
+
+  it("never carries the previous principal's titles into the next one's tabs", async () => {
+    const { el } = mount({ id: "c", "user-key": "alice" });
+    await flush();
+    await el.sendMessage("alice secret");
+
+    el.setAttribute("user-key", "bob");
+
+    expect(JSON.stringify(el.tabs)).not.toContain("alice secret");
+    await flush();
+    expect(sessionStorage.getItem(`${OPEN_THREADS_KEY}@c#bob`) ?? "").not.toContain("alice");
+    expect(ids(el)).toEqual([el.threadId]);
   });
 
   it("drops them too when the handover happened while detached", async () => {

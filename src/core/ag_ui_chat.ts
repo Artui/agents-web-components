@@ -1026,6 +1026,11 @@ export class AgUiChat extends HTMLElement {
   /** The untouched thread a new chat is leaving, whose tab the new one takes over. */
   #untouchedTab: string | null = null;
   /**
+   * Whether the open threads are tracked: from a host's first {@link openTab},
+   * or a stored set found. Until then nothing is kept, written or announced.
+   */
+  #tabsOn = false;
+  /**
    * The skill catalog: its three sources merged into the menu, and what a pick
    * does to the composer. Built in the constructor, after the menu it fills.
    */
@@ -1969,7 +1974,7 @@ export class AgUiChat extends HTMLElement {
       this.#changePrincipal(held, this.userKey);
     }
     this.#principalKey = this.userKey;
-    this.#tabs.load();
+    this.#loadTabs();
     // Namespace the built-in default store too (a host-injected store is used
     // verbatim). Must precede #wireThreadStore, which wraps the current store.
     this.conversationStore = this.#storage.scopeStore(this.#unwrappedStore(), this.userKey);
@@ -2795,6 +2800,8 @@ export class AgUiChat extends HTMLElement {
     this.#tenure = {};
     SessionStorageStore.purge(previous);
     sessionStorage.removeItem(this.#tabsKey(previousKey));
+    // At once, so nothing saved before the rescope writes the previous tabs under the next key.
+    this.#loadTabs();
     if (live) {
       this.#rescopeStore(next);
     }
@@ -3057,8 +3064,16 @@ export class AgUiChat extends HTMLElement {
     if (!this.#connected) {
       return;
     }
-    const known = title ?? (threadId === this.#titled.threadId ? this.#titled.title : "");
-    if (!this.#tabs.open(threadId, known)) {
+    const known = title ?? this.#shownTitle(threadId);
+    let opened = false;
+    if (!this.#tabsOn) {
+      // The first tab brings the thread on screen with it: the shown thread always has one.
+      this.#tabsOn = true;
+      const active = this.#history.threadId;
+      opened = this.#tabs.open(active, this.#shownTitle(active));
+    }
+    opened = this.#tabs.open(threadId, known) || opened;
+    if (!opened) {
       return;
     }
     this.#emitTabs("open");
@@ -3882,8 +3897,12 @@ export class AgUiChat extends HTMLElement {
     // Settled before the thread event so its listeners read the new title,
     // and announced after it, as the change that follows from the switch.
     const retitled = this.#settleTitle();
+    // Opened before the thread event and announced after it, as the title is.
+    const tabsChange = this.#showTab(threadId, reason);
     this.#emit<ThreadDetail>(THREAD_EVENT, detail);
-    this.#showTab(threadId, reason);
+    if (tabsChange !== null) {
+      this.#emitTabs(tabsChange);
+    }
     if (retitled) {
       this.#announceTitle();
     }
@@ -3953,6 +3972,17 @@ export class AgUiChat extends HTMLElement {
     sessionStorage.removeItem(this.#tabsKey(previousKey));
   }
 
+  /** The title of `threadId` if it is the thread on screen, else `""`. */
+  #shownTitle(threadId: string): string {
+    return threadId === this.#titled.threadId ? this.#titled.title : "";
+  }
+
+  /** Read the stored open threads back; a stored set turns tracking on. */
+  #loadTabs(): void {
+    this.#tabs.load();
+    this.#tabsOn ||= this.#tabs.tabs.length > 0;
+  }
+
   #emitTabs(reason: OpenThreadsDetail["reason"]): void {
     this.#emit<OpenThreadsDetail>(OPEN_THREADS_EVENT, { tabs: this.#tabs.tabs, reason });
   }
@@ -3966,26 +3996,30 @@ export class AgUiChat extends HTMLElement {
   }
 
   /**
-   * Open the thread just shown. A restore reads the stored set back first, and
-   * a new chat leaving an untouched thread, which the store reaps, takes its tab.
+   * Open the thread just shown, answering the change to announce, if any. A
+   * restore reads the stored set back first, and a new chat leaving an untouched
+   * thread, which the store reaps, takes its tab.
    */
-  #showTab(threadId: string, reason: ThreadDetail["reason"]): void {
+  #showTab(threadId: string, reason: ThreadDetail["reason"]): OpenThreadsDetail["reason"] | null {
     const title = this.#titled.title;
-    if (reason === "restore" || reason === "rescope") {
-      this.#tabs.load();
-      this.#tabs.open(threadId, title);
-      this.#emitTabs(reason);
-      void this.#titleTabs();
-      return;
-    }
     const untouched = reason === "new" ? this.#untouchedTab : null;
     this.#untouchedTab = null;
+    if (reason === "restore" || reason === "rescope") {
+      this.#loadTabs();
+      if (!this.#tabsOn) {
+        return null;
+      }
+      this.#tabs.open(threadId, title);
+      void this.#titleTabs();
+      return reason;
+    }
+    if (!this.#tabsOn) {
+      return null;
+    }
     const opened =
       (untouched !== null && this.#tabs.replace(untouched, threadId, title)) ||
       this.#tabs.open(threadId, title);
-    if (opened) {
-      this.#emitTabs("open");
-    }
+    return opened ? "open" : null;
   }
 
   #retitleTab(threadId: string, title: string): void {

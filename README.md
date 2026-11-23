@@ -1536,20 +1536,22 @@ myBar.onPick = (threadId) => chat.switchThread(threadId);
 #### Open threads (tabs)
 
 A host that draws conversations as tabs keeps the open set on the element rather than beside
-it. The element draws nothing for it: the tabs are the host's chrome. Nothing changes for a host
-that does not read them.
+it. The element draws nothing for it: the tabs are the host's chrome. **Tracking starts at the
+host's first `openTab`**, which opens the thread on screen with it, or at connect when this tab
+already stored a set. Until then nothing is kept, written or announced, so a host that never
+calls `openTab` sees no change.
 
 - `tabs` *(read-only)* — the open threads in the order they were opened, each
   `{ threadId, title }` (typed `OpenThread`), frozen. `title` is `""` until one is known. Empty
-  before the element first connects.
+  until tracking starts.
 - `openTab(threadId, title?)` — open a thread as the last tab without showing it; `switchThread`
   shows it. Without a `title`, the store's list names it. A thread already open stays where it is.
 - `closeTab(threadId)` — close a tab. **The thread stays in history**, which is what sets a close
   apart from `deleteThread`. Closing the thread on screen shows the next tab, else the one before
   it, else a new chat, cancelling a run in flight as `switchThread` does.
 
-Showing a thread opens it: `switchThread`, `newChat` and the drawer each open the thread they
-show, so the thread on screen always has a tab, except when a closed tab's neighbour cannot be
+Once tracking has started, showing a thread opens it: `switchThread`, `newChat` and the drawer
+each open the thread they show, so the thread on screen always has a tab, except when a closed tab's neighbour cannot be
 loaded. A new chat leaving a thread nothing was sent in takes over that thread's tab, since the
 store drops the empty thread. `deleteThread` closes the tab as it deletes the thread.
 
@@ -1561,9 +1563,13 @@ there keeps them.
 Every change fires one **`ag-ui-tabs`** event (`OPEN_THREADS_EVENT`, detail `{ tabs, reason }`,
 typed `OpenThreadsDetail`), with `reason` one of `open`, `close`, `delete`, `title`, `restore`
 (connect or `reload()`) and `rescope` (a `user-key` handover). Ignore a `reason` you do not know.
+A thread shown is in `tabs` by the time its `ag-ui-thread` fires, and its `ag-ui-tabs` follows.
+Switching between two open tabs changes no tab, so mark the active one from `ag-ui-thread`.
 
 ```js
-chat.addEventListener("ag-ui-tabs", (e) => myTabs.draw(e.detail.tabs, chat.threadId));
+chat.addEventListener("ag-ui-tabs", (e) => myTabs.draw(e.detail.tabs));
+chat.addEventListener("ag-ui-thread", (e) => myTabs.markActive(e.detail.threadId));
+chat.openTab(chat.threadId); // start tracking
 myTabs.onPick = (threadId) => chat.switchThread(threadId);
 myTabs.onClose = (threadId) => chat.closeTab(threadId);
 ```
