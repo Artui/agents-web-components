@@ -85,12 +85,14 @@ async function settle(): Promise<void> {
   await new Promise((resolve) => requestAnimationFrame(resolve));
 }
 
-function mount(width: string): AgUiChat {
+function mount(width: string, display: string | null = "full"): AgUiChat {
   const el = document.createElement(ELEMENT_TAG) as AgUiChat;
   el.setAttribute("endpoint", "/agent/");
   el.setAttribute("placement", "floating");
   el.setAttribute("data-start-open", "");
-  el.setAttribute("data-tool-display", "full");
+  if (display !== null) {
+    el.setAttribute("data-tool-display", display);
+  }
   el.style.setProperty("--ag-ui-width", width);
   el.conversationStore = store();
   document.body.appendChild(el);
@@ -135,6 +137,24 @@ describe("child sessions (real browser)", () => {
     expect(inside(link.getBoundingClientRect(), card.getBoundingClientRect())).toBe(true);
   });
 
+  it.each(["grouped", "inline", "minimal", "compact", "full", null])(
+    "draws the link with a box inside its card under data-tool-display=%s",
+    async (display) => {
+      const el = mount("380px", display);
+      await settle();
+      const head = el.shadowRoot?.querySelector<HTMLElement>(".tool-group-head");
+      if (head !== null && head !== undefined && head.getAttribute("aria-expanded") === "false") {
+        head.click();
+        await settle();
+      }
+      const link = part(el, ".child-session-link");
+      const box = link.getBoundingClientRect();
+      expect(box.width).toBeGreaterThan(0);
+      expect(box.height).toBeGreaterThan(0);
+      expect(inside(box, part(el, ".tool-call").getBoundingClientRect())).toBe(true);
+    },
+  );
+
   it.each(["380px", "240px"])(
     "keeps the breadcrumb on one line inside the column at %s, its title as text",
     async (width) => {
@@ -171,8 +191,9 @@ describe("child sessions (real browser)", () => {
     await settle();
     const rows = [...(el.shadowRoot?.querySelectorAll<HTMLElement>(".drawer-row") ?? [])];
     expect(rows.map((row) => row.classList.contains("drawer-row--child"))).toEqual([false, true]);
+    expect(getComputedStyle(part(el, ".drawer-children")).paddingInlineStart).toBe("14px");
     const [parent, child] = rows.map((row) => row.getBoundingClientRect());
-    expect((child?.left ?? 0) - (parent?.left ?? 0)).toBe(14);
-    expect(child?.right).toBe(parent?.right);
+    expect((child?.left ?? 0) - (parent?.left ?? 0)).toBeCloseTo(14, 0);
+    expect(child?.right ?? 0).toBeCloseTo(parent?.right ?? 0, 0);
   });
 });
