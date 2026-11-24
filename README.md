@@ -202,6 +202,7 @@ another origin, add `credentials="include"` too; see
 | `data-skills` | — | Inline JSON skill catalog. A value that will not parse is ignored and reported on the console, rather than reading as an empty catalog. |
 | `data-skills-url` | — | URL of a JSON skill catalog (fetched with the element's headers and cookie policy). |
 | `data-skill-editor-url` | — | URL of django-ag-ui's skill editor endpoint (`skills/editor/`). Opts into the [skill editor](#the-skill-editor): a "Manage skills" row at the foot of the `/` palette under `data-slash-commands`, a header button with `data-skill-editor-button`, or `openSkillEditor()`. |
+| `data-routines-url` | — | URL of django-ag-ui's routines editor (`routines/`, from 0.86.0). Opts into [routines](#routines): a Routines button in the header, `openRoutines()` and `makeRoutine()`. Read at connect time, like the other endpoint URLs. |
 | `data-skill-editor-button` | absent | With `data-skill-editor-url`, also puts a Skills button in the header. Off by default. On a narrow panel it moves into the header's [More menu](#the-header-row-and-its-more-menu) like the other optional controls. |
 | `data-tools-url` | — | URL of a server tool-label catalog (`[{ name, summary, description? }]`), fetched with the element's headers and cookie policy; labels tool-call cards for server-side tools. |
 | `user-key` | `userKey` | Who the stored conversation belongs to — any string identifying the signed-in principal. Joins the storage namespace, and **changing it purges what the previous principal left behind**. Live (not connect-time): a logout is the host's to announce. See [Who the stored conversation belongs to](#who-the-stored-conversation-belongs-to-user-key). |
@@ -300,7 +301,7 @@ the element enters the DOM, or remove and re-insert it. See
 [Framework hosts](#framework-hosts-configure-before-you-insert), where the boundary bites hardest.
 The list: `data-attachments-url`, `data-attachment-accept`, `data-attachment-max-bytes`,
 `data-transcribe-url`, `data-threads-url`, `data-threads-cache`, `data-tools-url`,
-`data-skills-url`, `data-skill-editor-url`, `data-skill-editor-button`, `data-skills`, `data-prompt-chips`,
+`data-skills-url`, `data-skill-editor-url`, `data-skill-editor-button`, `data-routines-url`, `data-skills`, `data-prompt-chips`,
 `data-slash-commands`, `data-theme-toggle`, `data-strings`, `data-icon-url`.
 
 What re-inserting costs: the chrome is built again from the attributes as they stand, a run in
@@ -346,7 +347,7 @@ keyboard focus and styleable via the `code-copy` part. Override its labels with
 the `copyCode` / `copied` / `copyFailed` strings.
 
 **Methods**: `registerTool`, `registerPageState`, `registerActivityRenderer`, `registerContext`,
-`setSkills`, `openSkillEditor`, `closeSkillEditor`, `sendMessage`, `run`, `attachFile`, `appendMessage`, `retryLastTurn`, `quote`, `offerQuoteInPage`,
+`setSkills`, `openSkillEditor`, `closeSkillEditor`, `openRoutines`, `makeRoutine`, `closeRoutines`, `sendMessage`, `run`, `attachFile`, `appendMessage`, `retryLastTurn`, `quote`, `offerQuoteInPage`,
 `enableCharts`, `newChat`, `setCollapsed`, `toggleCollapsed`, `setMaximized`, `toggleMaximized`,
 `describeSurface`, `moveTo`, `resetSize`, `toggleTheme`, `openThreads`, `closeThreads`, `switchThread`, `deleteThread`, `openTab`, `closeTab`,
 `openCheckpoints`, `closeCheckpoints`, `toggleCheckpoints`, `refreshPlace`, `request`, `tokenValues` and `reload`.
@@ -3486,6 +3487,30 @@ The palette catches up without a reload: after each save from the editor, on eve
 forwarded to the page as `ag-ui-custom`). A `user-key` handover also closes the editor and drops
 what it held, the previous principal's skill bodies included.
 
+### Routines
+
+django-ag-ui (0.86.0 on, with `routine_model=`) serves a caller's routines: prompts the agent
+runs on a schedule. Point `data-routines-url` at that mount's `routines/` route and the header
+gains a Routines button that opens them in the full-panel view:
+
+```html
+<ag-ui-chat endpoint="/agent/" data-routines-url="/agent/routines/" data-threads-url="/agent/threads/"></ag-ui-chat>
+```
+
+Each row says its schedule in words (in the routine's own timezone, named when it is not the
+viewer's), its next run (or why it is paused) and its last result, which opens that run's thread.
+Pause or Resume and Run now act on the row. The view's bar adds a routine, and a row opens its
+form: name, prompt, a weekly or every-few-hours schedule, the timezone, and the tools each run
+may use without asking, offered from the server's `grantable` list. A destructive tool is marked,
+and granting it asks first, naming it destructive; the grant is then sent in `confirmDestructive`
+on every save, as the server requires. Make this a routine, at the foot of the list and as
+`makeRoutine()`, opens the form with the conversation's own prompts as the routine's.
+
+Writes are JSON and carry `getHeaders()`, so a CSRF header reaches them as it reaches the skill
+editor. With `data-threads-url` on the same mount, a thread a routine started carries a badge with
+the routine's name in the thread list. `openRoutines()` and `closeRoutines()` open and close the
+view; a principal change closes it.
+
 ---
 
 ## MPA durability: surviving full page reloads
@@ -4902,7 +4927,7 @@ component sets, so a new one cannot ship undocumented.
 | Feature | Parts |
 | --- | --- |
 | Shell | `panel`, `header`, `title`, `icon`, `header-controls`, `messages`, `empty`, `greeting`, `pending`, `stopped`, `usage-line`, `jump-latest`, and one per resize grip: `resize-handle` plus `resize-handle-top`, `resize-handle-bottom`, `resize-handle-left`, `resize-handle-right`, `resize-handle-top-left`, `resize-handle-top-right`, `resize-handle-bottom-left`, `resize-handle-bottom-right` |
-| Header buttons | `header-button` on each, plus `skills-button` (with `data-skill-editor-button`), `history-button`, `checkpoints-button`, `new-button`, `maximize-button`, `collapse-button`, `theme-toggle`, `more-button` (only while the row has moved a control into its menu); `header-menu` on the [More menu](#the-header-row-and-its-more-menu) |
+| Header buttons | `header-button` on each, plus `skills-button` (with `data-skill-editor-button`), `routines-button` (with `data-routines-url`), `history-button`, `checkpoints-button`, `new-button`, `maximize-button`, `collapse-button`, `theme-toggle`, `more-button` (only while the row has moved a control into its menu); `header-menu` on the [More menu](#the-header-row-and-its-more-menu) |
 | Collapsed widget | `launcher`, `launcher-icon`, `launcher-badge`, `rail-label`, `bar` (the [bottom bar](#collapsing-to-a-bottom-bar)'s wrapper, around the launcher), `bar-place` (the place beside the bar's title; its text carries `place-label` and `place-detail`), `bar-history` |
 | Answers | `answer` (the per-turn group), `message` (plus `message-user`, `message-assistant`), `code-copy`, `enqueued-messages` and `enqueued-messages-note` (user messages a run took in mid-turn) |
 | Reasoning | `thoughts`, `thoughts-toggle`, `thoughts-body`, `thoughts-label` |
@@ -4924,7 +4949,8 @@ component sets, so a new one cannot ship undocumented.
 | Skills | `skill-chips`, `skill-chip`, `skill-palette`, `skill-item`, `skill-item-title`, `skill-item-desc`, `skill-item-token`, `skill-hint` (the composer hint: a skill’s missing placeholders, and a run continuation picked with nothing typed or while a run is in flight), `skill-manage` (the "Manage skills" row, also a `skill-item`) |
 | Full-panel view | `panel-view`, `panel-view-bar`, `panel-view-title`, `panel-view-body`, `panel-view-footer`, and in its bar `back-button` |
 | Skill editor | `skill-rows`, `skill-row`, `skill-empty`, `skill-form`, and in the view's bar `new-skill-button` |
-| Thread drawer | `drawer`, `drawer-backdrop`, `drawer-panel`, `drawer-header`, `drawer-title`, `drawer-new`, `drawer-close`, `drawer-filter`, `drawer-list`, `drawer-empty`, `drawer-group-label`, `drawer-row` (plus `drawer-row-child` on a child session's row), `drawer-children`, `drawer-row-select`, `drawer-row-title`, `drawer-row-time`, `drawer-row-preview`, `drawer-row-actions`, `drawer-row-rename`, `drawer-row-delete`, `drawer-rename-input`, `drawer-confirm`, `drawer-confirm-label`, `drawer-confirm-yes`, `drawer-confirm-no` |
+| Routines | `routine-rows`, `routine-row`, `routine-empty`, `routine-last`, `routine-toggle`, `routine-run`, `make-routine`, `routine-form`, `routine-tools`, `routine-tool`, `routine-destructive`, and in the view's bar `new-routine-button` |
+| Thread drawer | `drawer`, `drawer-backdrop`, `drawer-panel`, `drawer-header`, `drawer-title`, `drawer-new`, `drawer-close`, `drawer-filter`, `drawer-list`, `drawer-empty`, `drawer-group-label`, `drawer-row` (plus `drawer-row-child` on a child session's row), `drawer-children`, `drawer-row-select`, `drawer-row-title`, `drawer-row-routine` (on a routine's run), `drawer-row-time`, `drawer-row-preview`, `drawer-row-actions`, `drawer-row-rename`, `drawer-row-delete`, `drawer-rename-input`, `drawer-confirm`, `drawer-confirm-label`, `drawer-confirm-yes`, `drawer-confirm-no` |
 | Charts | `chart-block`, `chart-title`, `chart-legend` |
 | Checkpoints panel | `checkpoints`, `checkpoints-header`, `checkpoints-title`, `checkpoints-list`, `checkpoints-empty`, `checkpoint-row`, `checkpoint-label`, `checkpoint-time`, `checkpoint-id`, `checkpoint-branch`, `checkpoint-actions` (the pair's wrapper), `checkpoint-action` (plus `checkpoint-resume`, `checkpoint-fork`) |
 

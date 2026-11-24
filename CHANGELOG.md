@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Routines: a caller's scheduled prompts, from django-ag-ui's routines editor. Opt-in: a
+  standalone host sets `data-routines-url`; under `<ag-ui-agents>`, a mount whose entry serves
+  routines gets it with no host change once the provider passes its `routines_url` on.** A
+  Routines button in the header opens them in the full-panel view: each row says its schedule in
+  words, its next run and its last result, with Pause or Resume and Run now. A routine is created
+  and edited in a form whose pre-approved tools come from the server's `grantable` list; a
+  destructive one is marked and granting it asks first. Make this a routine (`makeRoutine()`)
+  starts one from the conversation's prompts, and a thread a routine started is badged with its
+  name in the thread list (`ThreadMeta.routine`, read off the threads index).
+
 ### Fixed
 
 - **`<ag-ui-inbox>` answers a row in place on a page served over plain HTTP.** Approve and
