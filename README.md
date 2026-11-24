@@ -3713,6 +3713,9 @@ list, Pause or Resume, Run now and the form are the chat's [routines](#routines)
 - **Make this a routine** is at the foot of the list while the bound chat has a prompt on
   screen, and follows that conversation as it moves on. **`makeRoutine()`** opens the form the
   same way. Bound to nothing, it is absent.
+- **The form's time and timezone** take a child of the element with `slot="routine-time"` or
+  `slot="routine-timezone"`, and its `data-routine-minute-step`, as on the chat: see
+  [The time and timezone fields](#the-time-and-timezone-fields).
 - **A last result** fires **`ag-ui-routines-open-thread`** (`ROUTINES_OPEN_THREAD_EVENT`,
   detail `{ threadId }`, bubbling, composed and cancelable). Unless a listener prevents it, a
   chat bound by `for` or the property switches to that thread, and a provider opens it on the

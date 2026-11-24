@@ -24,6 +24,7 @@ interface Seen {
   readonly url: string;
   readonly headers: Headers;
   readonly credentials: RequestCredentials | undefined;
+  readonly body: unknown;
 }
 
 let seen: Seen[];
@@ -69,7 +70,12 @@ function install(): void {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string, init: RequestInit = {}) => {
-      seen.push({ url, headers: new Headers(init.headers), credentials: init.credentials });
+      seen.push({
+        url,
+        headers: new Headers(init.headers),
+        credentials: init.credentials,
+        body: typeof init.body === "string" ? JSON.parse(init.body) : null,
+      });
       if (url === "/agents/") {
         return json(200, { agents: [entry("a", URL_A), entry("b", URL_B)] });
       }
@@ -274,6 +280,38 @@ describe("<ag-ui-routines>", () => {
     await flush();
     expect(title(el)).toBe("Abläufe");
     expect(el.strings.newRoutine).toBe("New routine");
+  });
+
+  it("writes a routine into the controls slotted on it, reads them back, and takes its minute step", async () => {
+    const el = routines({ "data-routines-url": URL_A, "data-routine-minute-step": "15" });
+    const time = document.createElement("select");
+    time.slot = "routine-time";
+    for (const value of ["08:00", "09:30"]) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = value;
+      time.append(option);
+    }
+    const zone = document.createElement("input");
+    zone.slot = "routine-timezone";
+    el.append(time, zone);
+    document.body.append(el);
+    await flush();
+    q<HTMLButtonElement>(el, ".routine-row .skill-row-open").click();
+    expect([time.value, zone.value]).toEqual(["08:00", "Europe/Paris"]);
+    const minute = q<HTMLSelectElement>(el, "#routine-field-at-minute");
+    expect([...minute.options].map((option) => option.value)).toEqual(["00", "15", "30", "45"]);
+    time.value = "09:30";
+    zone.value = "Asia/Tokyo";
+    [...(el.shadowRoot as ShadowRoot).querySelectorAll<HTMLButtonElement>("button")]
+      .find((button) => button.textContent === "Save")
+      ?.click();
+    await flush();
+    const put = seen.find((s) => s.url === `${URL_A}1/`)?.body as {
+      schedule: { at: string };
+      timezone: string;
+    };
+    expect([put.schedule.at, put.timezone]).toEqual(["09:30", "Asia/Tokyo"]);
   });
 
   it("treats a back at the list as nothing to step back to", async () => {

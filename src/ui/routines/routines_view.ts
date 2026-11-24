@@ -275,7 +275,7 @@ export class RoutinesView {
               .map((tool) => tool.name),
           };
     const save = document.createElement("button");
-    const form = buildRoutineForm(draft, tools, strings, () => save.click());
+    const form = buildRoutineForm(draft, tools, strings, () => save.click(), this.#host.element);
     const cancel = document.createElement("button");
     cancel.type = "button";
     cancel.className = "skill-editor-btn skill-editor-btn--ghost";
