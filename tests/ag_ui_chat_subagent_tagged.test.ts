@@ -84,9 +84,12 @@ function cardNames(el: AgUiChat): (string | null)[] {
   return [...shadow(el).querySelectorAll(".tool-call-name")].map((name) => name.textContent);
 }
 
-function mount(store?: ClientConversationStore): { el: AgUiChat; fetch: ReturnType<typeof vi.fn> } {
+function mount(
+  store?: ClientConversationStore,
+  events: readonly unknown[] = fixture.events,
+): { el: AgUiChat; fetch: ReturnType<typeof vi.fn> } {
   const fetch = vi.fn((): Promise<Response> => Promise.resolve(sse(FOLLOW_UP)));
-  fetch.mockImplementationOnce(() => Promise.resolve(sse(fixture.events)));
+  fetch.mockImplementationOnce(() => Promise.resolve(sse(events)));
   vi.stubGlobal("fetch", fetch);
   const el = document.createElement(ELEMENT_TAG) as AgUiChat;
   el.setAttribute("endpoint", "/agent/");
@@ -156,5 +159,25 @@ describe("a sub-agent's tagged tool calls", () => {
 
     expect(store.saved().length).toBeGreaterThan(0);
     expect(cardNames(again.el)).toEqual(["Delegate task", "Delegate task"]);
+  });
+
+  it("owe no parent result for a child's call that never came back", async () => {
+    const events = fixture.events.filter(
+      (event) => !(event.type === "TOOL_CALL_RESULT" && event.toolCallId === "sub-2"),
+    );
+    const { el, fetch } = mount(undefined, events);
+    await send(el);
+    await send(el);
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+    const init = fetch.mock.calls[1]?.[1] as RequestInit;
+    const posted = JSON.parse(init.body as string) as { messages: Message[] };
+    const answers = posted.messages.filter(
+      (message) => message.role === "tool" && message.toolCallId === "sub-2",
+    );
+    expect(answers).toEqual([]);
+    expect(posted.messages.some((message) => message.subagentRunId === "subagent-call-1")).toBe(
+      true,
+    );
   });
 });
