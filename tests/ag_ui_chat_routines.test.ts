@@ -469,6 +469,7 @@ describe("the routines view in <ag-ui-chat>", () => {
     weekly.dispatchEvent(new Event("change"));
     const days = [...shadow(el).querySelectorAll<HTMLInputElement>(".routine-day input")];
     expect(days.map((day) => day.checked)).toEqual([true, true, true, true, true, false, false]);
+    expect(shadow(el).querySelectorAll("[part=routine-day]")).toHaveLength(7);
     (days[0] as HTMLInputElement).checked = false;
     (days[6] as HTMLInputElement).checked = true;
     q<HTMLInputElement>(el, "#routine-field-at").value = "07:15";

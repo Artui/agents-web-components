@@ -1,4 +1,5 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { userEvent } from "vitest/browser";
 import { ELEMENT_TAG } from "../../src/constants.js";
 import type { AgUiChat } from "../../src/core/ag_ui_chat.js";
 import type { ClientConversationStore, ThreadMeta } from "../../src/core/conversation_store.js";
@@ -151,6 +152,37 @@ describe("routines (real browser)", () => {
       expect(inside(button.getBoundingClientRect(), rect)).toBe(true);
     }
   });
+
+  it.each(["", "dark", "classic", "classic dark", "ledger", "ledger dark"])(
+    "draws each weekday as a pill a key toggles, filled when chosen, under theme '%s'",
+    async (theme) => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (url: string) => answer(String(url))),
+      );
+      const el = mount("380px");
+      if (theme !== "") {
+        el.setAttribute("theme", theme);
+      }
+      await settle();
+      part(el, ".header-btn--routines").click();
+      await settle();
+      part(el, ".header-btn--new-routine").click();
+      await settle();
+      const [monday, , , , , saturday] = all(el, "[part=routine-day]");
+      const sat = (saturday as HTMLElement).querySelector("input") as HTMLInputElement;
+      const box = sat.getBoundingClientRect();
+      expect(box.width * box.height).toBeLessThanOrEqual(1);
+      const off = getComputedStyle(saturday as HTMLElement).backgroundColor;
+      expect(getComputedStyle(monday as HTMLElement).backgroundColor).not.toBe(off);
+      sat.focus();
+      expect(el.shadowRoot?.activeElement).toBe(sat);
+      await userEvent.keyboard(" ");
+      expect(sat.checked).toBe(true);
+      expect(getComputedStyle(saturday as HTMLElement).backgroundColor).not.toBe(off);
+      expect(getComputedStyle(saturday as HTMLElement).outlineStyle).toBe("solid");
+    },
+  );
 
   it("badges a routine's run in the drawer without pushing the row's actions out, at 240px", async () => {
     vi.stubGlobal(

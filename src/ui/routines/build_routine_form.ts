@@ -98,6 +98,7 @@ export function buildRoutineForm(
   const dayBoxes = [0, 1, 2, 3, 4, 5, 6].map((day) => {
     const chip = document.createElement("label");
     chip.className = "routine-day";
+    chip.setAttribute("part", "routine-day");
     const box = input("checkbox", String(day));
     box.checked = held.includes(day);
     chip.append(box, weekdayName(day));

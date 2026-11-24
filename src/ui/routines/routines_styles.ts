@@ -58,10 +58,35 @@ button.routine-last {
   cursor: pointer;
 }
 
+/* A day is a toggle pill: its checkbox stays in the tab order and the
+   accessibility tree, out of sight, and the pill shows its state. */
 .routine-day {
-  padding: 2px 8px 2px 4px;
+  position: relative;
+  padding: 2px 10px;
   border: 1px solid var(--_border);
   border-radius: 999px;
+  color: var(--_muted);
+}
+
+.routine-day:has(:checked) {
+  border-color: var(--_accent);
+  background: var(--_accent);
+  color: var(--_on-accent);
+}
+
+.routine-day:has(:focus-visible) {
+  outline: 2px solid var(--_ring);
+  outline-offset: 1px;
+}
+
+.routine-day input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .routine-weekly {

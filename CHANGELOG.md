@@ -32,7 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and edited in a form whose pre-approved tools come from the server's `grantable` list; a
   destructive one is marked and granting it asks first. Make this a routine (`makeRoutine()`)
   starts one from the conversation's prompts, and a thread a routine started is badged with its
-  name in the thread list (`ThreadMeta.routine`, read off the threads index).
+  name in the thread list (`ThreadMeta.routine`, read off the threads index). The form's
+  weekdays are toggle pills, filled in the accent when chosen, each a checkbox for the keyboard
+  and screen readers; a host restyles them through `::part(routine-day)`.
 
 ### Fixed
 
