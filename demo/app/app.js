@@ -14,7 +14,9 @@ import {
   VERSION,
   defineChat,
   fillField,
+  pageMapFrom,
   pressButton,
+  resolvePageMapHandle,
   selectControl,
   showHighlightOverlay,
   toggleCheckbox,
@@ -943,6 +945,35 @@ function mount(pathname, restart) {
     syncPlaceReadout();
   }, { signal });
   $("cfg-place-ask").addEventListener("click", () => send("Where am I?"), { signal });
+
+  // ── The page-map walker ──────────────────────────────────────────────────────
+
+  // The host opts in with one line; the readout prints exactly what read_page
+  // and the page_map context entry carry.
+  if (on("page-map")) {
+    if (!customElements.get("pm-shadow-actions")) {
+      customElements.define(
+        "pm-shadow-actions",
+        class extends HTMLElement {
+          connectedCallback() {
+            if (this.shadowRoot === null) {
+              this.attachShadow({ mode: "open" }).innerHTML = "<button type='button'>Deep save</button>";
+            }
+          }
+        },
+      );
+    }
+    // Rooted at the stand-in host page, so the demo's own nav stays out of it.
+    const walk = () => pageMapFrom(document.getElementById("pm-page") ?? document);
+    chat.getPageMap = walk;
+    const fallback = chat.resolvePageTarget;
+    $("pm-deep").addEventListener("change", (event) => {
+      chat.resolvePageTarget = event.target.checked ? resolvePageMapHandle : fallback;
+    }, { signal });
+    $("pm-read").addEventListener("click", () => {
+      $("pm-out").textContent = JSON.stringify(walk(), null, 2);
+    }, { signal });
+  }
 
   // ── Requests and run context ─────────────────────────────────────────────────
 
