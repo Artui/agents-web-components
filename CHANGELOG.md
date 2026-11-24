@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`pageMapFrom(root?, options?)`, a page-map walker a host opts into** with
+  `chat.getPageMap = () => pageMapFrom()`. It reads the live DOM (open shadow roots included) and
+  lists headings, landmarks, tabs, form fields, buttons, links, table column headers and open
+  dialogs, each capped per kind (`PAGE_MAP_LIMITS`, with a `truncated` count). It never reads
+  what a user put in a control: no field value, no password or hidden input, no
+  `aria-valuenow` / `aria-valuetext`, no `contenteditable` text, no option text, no link query
+  string, and a label never echoes the control it wraps. It skips this package's own elements,
+  anything marked `data-agent-ignore` and anything hidden, `inert` or `aria-hidden`. Each entry
+  carries a handle, `[data-agent-handle="n"]`, stamped on the element, which the default
+  `resolvePageTarget` resolves; for an element inside a shadow root, set
+  `chat.resolvePageTarget = resolvePageMapHandle`. Opt-in: a host that sets its own
+  `getPageMap`, or none, sees no change.
+
 ## [0.14.0] — 2026-11-24
 
 ### Changed

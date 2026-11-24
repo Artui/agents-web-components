@@ -28,8 +28,13 @@ surface (field names/types/labels, button labels+handles — *not* values). It i
 each run's `context` as a `page_map` entry (toggle with `autoInjectPageMap`):
 
 ```js
-chat.getPageMap = () => ({ fields: introspectForm(), buttons: visibleButtons() });
+import { pageMapFrom } from "@artooi/agents-web-components";
+
+chat.getPageMap = () => pageMapFrom();
 ```
+
+`pageMapFrom` is the walker the package ships ([below](#reading-the-page-pagemapfrom)); a host
+with its own model of the page returns that instead, in any shape.
 
 It is recomputed at the top of **every tool round**, not once per `send()` — so after the agent
 acts, the next round already sees the resulting page. Within a round the agent can pull a fresh
@@ -252,6 +257,69 @@ across repos with independent release cadences.
 
 **Note:** it reaches **the page that started the run**, during the run. There is one
 response stream per run and no channel to anybody else's browser.
+
+## Reading the page: `pageMapFrom`
+
+**`pageMapFrom(root?, options?): PageMap`** reads the live DOM under `root` (the document by
+default) and returns what a model needs to act on it, never what the user typed. It is opt-in:
+nothing changes for a host that leaves `getPageMap` unset, or sets its own.
+
+```js
+chat.getPageMap = () => pageMapFrom();
+chat.getPageMap = () => pageMapFrom(document.querySelector("main"), { limits: { links: 10 } });
+```
+
+Each kind is a key holding a list, left out when empty:
+
+| Key | Lists | Each entry has | Cap |
+| --- | --- | --- | --- |
+| `headings` | `h1`-`h6`, `role="heading"` | `level`, `text` | 30 |
+| `landmarks` | `main`, `nav`, `aside`, `search`, a top-level `header` / `footer`, a named `form` / `section`, landmark roles | `role`, `name` | 20 |
+| `tabs` | `role="tab"` | `name`, `selected` | 30 |
+| `fields` | inputs, `textarea`, `select`, field roles (`textbox`, `combobox`, `checkbox`, `slider`, ...), `contenteditable` | `name` (the attribute), `type`, `label`, `required`, `disabled` | 50 |
+| `buttons` | `button`, button inputs, `role="button"` | `name`, `disabled` | 50 |
+| `links` | `a[href]`, `role="link"` | `name`, `href` | 50 |
+| `tables` | `table`, `role="table"` / `"grid"` | `name`, `headers` (column headers, at most 20) | 10 |
+| `dialogs` | an open `dialog`, `role="dialog"` / `"alertdialog"` | `name`, `modal` | 5 |
+
+Past a cap, `truncated` counts what was left out per kind (`{ "links": 12 }`); `options.limits`
+replaces any cap, and `PAGE_MAP_LIMITS` holds the defaults. Names and texts are cut at 80
+characters. `required`, `disabled` appear only when true.
+
+**What it never reads.** A value rides into the model's context, so the walker reads what the page
+*says about* a control, never what is *in* it:
+
+- no field's value, and no password or hidden input at all;
+- no `aria-valuenow` / `aria-valuetext` (a slider lists its label and role, not its position);
+- no text of a `contenteditable` region, nor of a `textarea`, `select`, `input` or `output` inside
+  a label, button or heading, so a label wrapping its control never echoes the control;
+- no option text, so neither the selected option nor the choices are listed;
+- no link's query string or fragment (`href` is the path, with the origin when it is another site);
+- a `placeholder` only as the label of last resort, after `aria-labelledby`, `aria-label`, the
+  field's `<label>`s and `title`, since it is author text.
+
+Text the page itself writes is read as it is: a heading or label that prints user data ("Signed in
+as ...") reaches the model like any other text. Mark such a region `data-agent-ignore`.
+
+**What it skips.** The subtree of every element of this package (`ag-ui-*`, so the chat never lists
+itself), of anything marked `data-agent-ignore`, and of anything hidden (`hidden`, `display: none`,
+`visibility: hidden`), `inert` or `aria-hidden="true"`. It walks open shadow roots of your
+components; a closed one is unreachable by design.
+
+**Handles.** Each listed element is stamped `data-agent-handle="n"`, and its entry carries the
+selector for it, `[data-agent-handle="n"]`, which the default `resolvePageTarget`
+(`document.querySelector`) resolves, so `scroll_to` and `drag_and_drop` act on it with no host
+code. A handle survives later reads, and is given to a new element when a clone carries the same
+stamp. An element inside a shadow root is listed with a handle too, but `document.querySelector`
+cannot reach into a shadow root: for those, set the resolver the package ships, which tries the
+document and then each open shadow root:
+
+```js
+import { pageMapFrom, resolvePageMapHandle } from "@artooi/agents-web-components";
+
+chat.getPageMap = () => pageMapFrom();
+chat.resolvePageTarget = resolvePageMapHandle;
+```
 
 ## Where the user is: the place chip
 

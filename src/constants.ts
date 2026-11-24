@@ -294,6 +294,36 @@ export const READ_PAGE_TOOL = "read_page";
 export const PAGE_MAP_CONTEXT = "page_map";
 
 /**
+ * The attribute {@link pageMapFrom} stamps on each element it lists. An entry's
+ * handle is the selector for it, so the default resolvePageTarget finds it.
+ */
+export const PAGE_MAP_HANDLE_ATTRIBUTE = "data-agent-handle";
+
+/** Marks an element whose subtree the page-map walker never reads. */
+export const PAGE_MAP_IGNORE_ATTRIBUTE = "data-agent-ignore";
+
+/** Every element tag of this package starts so; the walker skips their subtrees. */
+export const ELEMENT_TAG_PREFIX = "ag-ui-";
+
+/** How many entries of each kind the page-map walker lists before it counts the rest. */
+export const PAGE_MAP_LIMITS = {
+  headings: 30,
+  landmarks: 20,
+  tabs: 30,
+  fields: 50,
+  buttons: 50,
+  links: 50,
+  tables: 10,
+  dialogs: 5,
+} as const;
+
+/** The longest name or text, in characters, the page-map walker keeps. */
+export const PAGE_MAP_TEXT_LIMIT = 80;
+
+/** The most column headers the page-map walker lists for one table. */
+export const PAGE_MAP_TABLE_HEADER_LIMIT = 20;
+
+/**
  * The description of the context entry carrying the place the chip shows. Its
  * value is the place as JSON: the label, and the detail and href when set.
  */

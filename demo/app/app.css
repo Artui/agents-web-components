@@ -731,3 +731,10 @@ ag-ui-chat[collapsed] {
     gap: 4px;
   }
 }
+
+/* The page-map walker's readout. */
+#pm-out {
+  max-height: 20rem;
+  overflow: auto;
+  font-size: 12px;
+}

@@ -274,6 +274,20 @@ export const SCENARIOS = [
     prompts: [["Where am I?", "Where am I?"]],
   },
   {
+    slug: "page-map",
+    group: "Host seams",
+    title: "The page-map walker",
+    since: "0.15.0",
+    summary:
+      "pageMapFrom() reads the page's headings, landmarks, tabs, fields, buttons, links, table headers and open dialogs, with no field value, and stamps each with a handle the default resolvePageTarget resolves.",
+    prompts: [
+      ["What is on this page?", "what is on this page"],
+      ["Point at Save", "point at save"],
+      ["Point at the shadow button", "point at deep save"],
+    ],
+    attrs: { "data-page-actions": "scroll" },
+  },
+  {
     slug: "requests",
     group: "Host seams",
     title: "Requests and run context",
