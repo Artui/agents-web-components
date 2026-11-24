@@ -43,6 +43,9 @@ class FakeServer {
     if (url === "/agent/") {
       const frames = [
         { type: "RUN_STARTED", threadId: "t1", runId: "r1" },
+        { type: "TEXT_MESSAGE_START", messageId: "m1", role: "assistant" },
+        { type: "TEXT_MESSAGE_CONTENT", messageId: "m1", delta: "Noted." },
+        { type: "TEXT_MESSAGE_END", messageId: "m1" },
         { type: "RUN_FINISHED", threadId: "t1", runId: "r1" },
       ]
         .map((event) => `data: ${JSON.stringify(event)}\n\n`)
