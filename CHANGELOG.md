@@ -53,6 +53,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   refresh used to drop focus to the page. Focus now moves to the row that took its place,
   else the previous row, else the list itself (its panel, focusable by script only and named
   like the list). The badge variant is unchanged: focus goes back to the badge. No opt-in.
+- **The header's More menu shows its rows' names whole.** A name such as "Toggle theme" was
+  clipped at the baseline, since the row kept the header button's line height of one font
+  size under the clip that ellipsises a long name. The name now has a line height of its own.
+  No opt-in.
 
 ## [0.11.0] — 2026-11-23
 

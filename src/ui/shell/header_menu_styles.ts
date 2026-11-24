@@ -47,8 +47,11 @@ export const HEADER_MENU_STYLES: string = `
   background: var(--_hover);
 }
 
+/* The header button's line-height is one font size, which the clip would cut
+   the descenders at. */
 .header-menu .header-btn::after {
   content: attr(aria-label);
+  line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

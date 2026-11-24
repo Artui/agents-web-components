@@ -137,6 +137,21 @@ describe("header controls (real browser)", () => {
     expect(getComputedStyle(control(el, "skills"), "::after").content).toBe('"Skills"');
   });
 
+  it("gives a menu row's name a box tall enough for its descenders under every theme", async () => {
+    for (const theme of THEMES) {
+      const el = mount("240px", theme === "" ? {} : { theme });
+      await settle();
+      control(el, "more").dispatchEvent(new MouseEvent("click", { detail: 1 }));
+      const label = getComputedStyle(control(el, "theme"), "::after");
+
+      expect(label.overflow, theme).toBe("hidden");
+      expect(Number.parseFloat(label.height), theme).toBeGreaterThanOrEqual(
+        Number.parseFloat(label.fontSize) * 1.2,
+      );
+      el.remove();
+    }
+  });
+
   it("shows a row of five that fits without a More button", async () => {
     const el = document.createElement(ELEMENT_TAG) as AgUiChat;
     el.setAttribute("endpoint", "/agent/");
