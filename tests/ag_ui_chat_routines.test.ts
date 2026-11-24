@@ -566,6 +566,47 @@ describe("the routines view in <ag-ui-chat>", () => {
     expect(q<HTMLTextAreaElement>(el, "#routine-field-prompt").value).toMatch(/^Summarise/);
   });
 
+  it("lists Make this a routine in More only with a routines URL and a prompt, and tracks the conversation", async () => {
+    const item = (el: AgUiChat): HTMLButtonElement | null =>
+      shadow(el).querySelector<HTMLButtonElement>(".header-menu .header-btn--make-routine");
+    const el = mount();
+    await flush();
+    expect(item(el)).toBeNull();
+    expect(shadow(el).querySelector(".header-btn--more")).toBeNull();
+
+    await el.sendMessage("Summarise yesterday's tickets");
+    await flush();
+    const more = q<HTMLButtonElement>(el, ".header-btn--more");
+    expect(item(el)?.getAttribute("role")).toBe("menuitem");
+    expect(item(el)?.getAttribute("aria-label")).toBe("Make this a routine");
+
+    more.focus();
+    more.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    expect(shadow(el).activeElement).toBe(item(el));
+    item(el)?.click();
+    await flush();
+    expect(q(el, ".panel-view-title").textContent).toBe("New routine");
+    expect(q<HTMLTextAreaElement>(el, "#routine-field-prompt").value).toBe(
+      "Summarise yesterday's tickets",
+    );
+    expect(q<HTMLElement>(el, ".header-menu").hidden).toBe(true);
+
+    el.closeRoutines();
+    el.newChat();
+    await flush();
+    expect(item(el)).toBeNull();
+    expect(shadow(el).querySelector(".header-btn--more")).toBeNull();
+  });
+
+  it("offers no Make this a routine in More without a routines URL, even with a prompt", async () => {
+    const el = mount({ "data-routines-url": "" });
+    await flush();
+    await el.sendMessage("Hello");
+    await flush();
+    expect(shadow(el).querySelector(".header-btn--make-routine")).toBeNull();
+    expect(shadow(el).querySelector(".header-btn--more")).toBeNull();
+  });
+
   it("seeds only the user turns that hold text, from a restored conversation", async () => {
     const el = document.createElement(ELEMENT_TAG) as AgUiChat;
     el.setAttribute("endpoint", "/agent/");

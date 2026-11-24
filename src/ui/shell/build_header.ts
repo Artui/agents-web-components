@@ -30,6 +30,8 @@ export interface HeaderOptions {
   readonly onSkills: (() => void) | null;
   /** Opens the routines view; `null` when the host did not configure one. */
   readonly onRoutines: (() => void) | null;
+  /** Opens a routine from the conversation; `null` without a routines endpoint. */
+  readonly onMakeRoutine: (() => void) | null;
   readonly onHistory: () => void;
   readonly onCheckpoints: () => void;
   readonly onNewChat: () => void;
@@ -116,6 +118,12 @@ export function buildHeader(options: HeaderOptions): BuiltHeader {
     routines = headerButton("routines", strings.routines, ICON_ROUTINES);
     routines.addEventListener("click", options.onRoutines);
   }
+  // Menu-only, and only while the conversation has a prompt to suggest.
+  let make: HTMLButtonElement | null = null;
+  if (options.onMakeRoutine !== null) {
+    make = headerButton("make-routine", strings.makeRoutine, ICON_ROUTINES);
+    make.addEventListener("click", options.onMakeRoutine);
+  }
   // Optional built-in theme toggle: off unless the host opts in, so
   // it never competes with a host-supplied switch in `slot="header-actions"`.
   const toggle = options.themeToggle;
@@ -142,6 +150,7 @@ export function buildHeader(options: HeaderOptions): BuiltHeader {
     row,
     // The first to leave the row as it narrows; new chat and the window controls never do.
     movable: present([toggle, skills, routines, shown, history]),
+    menuOnly: make,
     label: strings.moreControls,
     signal: options.signal,
   });

@@ -16,6 +16,8 @@ export interface HeaderOverflowOptions {
   readonly row: readonly HTMLButtonElement[];
   /** The controls that may move into More, the first to go first. */
   readonly movable: readonly HTMLButtonElement[];
+  /** A control that lives only in the menu, and only while {@link HeaderOverflow.offer} says so. */
+  readonly menuOnly?: HTMLButtonElement | null;
   readonly label: string;
   readonly signal: AbortSignal;
 }
@@ -32,6 +34,7 @@ export class HeaderOverflow {
   /** The menu, a sibling of the header so a press on it never drags the panel. */
   readonly menu: HTMLElement;
   readonly #options: HeaderOverflowOptions;
+  #offered = false;
 
   constructor(options: HeaderOverflowOptions) {
     this.#options = options;
@@ -82,6 +85,11 @@ export class HeaderOverflow {
       b.removeAttribute("tabindex");
     }
     this.menu.replaceChildren();
+    const extra = this.#options.menuOnly ?? null;
+    if (extra !== null) {
+      extra.setAttribute("role", "menuitem");
+      extra.tabIndex = -1;
+    }
     const laidOut = header.clientWidth > 0;
     const crowded = (): boolean =>
       laidOut && (header.scrollWidth > header.clientWidth + 1 || title.clientWidth < TITLE_MIN_PX);
@@ -96,10 +104,22 @@ export class HeaderOverflow {
       this.#move(b);
       inline -= 1;
     }
+    if (extra !== null && this.#offered) {
+      this.#seat();
+      this.menu.append(extra);
+    }
     if (was && this.#moved()) {
       this.show(false);
     }
     this.#restore(held);
+  }
+
+  /** Show or hide the menu-only control, which keeps the More button in the row while it shows. */
+  offer(offered: boolean): void {
+    if (this.#offered !== offered) {
+      this.#offered = offered;
+      this.fit();
+    }
   }
 
   /** Refocus the header control the reshuffle blurred, or More once it is in the closed menu. */
@@ -152,17 +172,22 @@ export class HeaderOverflow {
   }
 
   #move(button: HTMLButtonElement): void {
-    const { row, controls } = this.#options;
-    if (!this.#moved()) {
-      // Ahead of the window controls, which close the row.
-      const tail = controls.querySelector(".header-btn--maximize") ?? controls.lastElementChild;
-      controls.insertBefore(this.trigger, tail);
-    }
+    const { row } = this.#options;
+    this.#seat();
     button.setAttribute("role", "menuitem");
     button.tabIndex = -1;
     // The menu keeps the row's order, whichever went first.
     const after = this.#items().find((item) => row.indexOf(item) > row.indexOf(button));
     this.menu.insertBefore(button, after ?? null);
+  }
+
+  /** Put the More button in the row, ahead of the window controls, which close it. */
+  #seat(): void {
+    const { controls } = this.#options;
+    if (this.trigger.parentElement !== controls) {
+      const tail = controls.querySelector(".header-btn--maximize") ?? controls.lastElementChild;
+      controls.insertBefore(this.trigger, tail);
+    }
   }
 
   #items(): HTMLButtonElement[] {
