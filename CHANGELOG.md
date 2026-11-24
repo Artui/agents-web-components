@@ -36,6 +36,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   0.12.0. New methods for an editor element to call: `refreshSkills()` and `routineSeed()` on
   the chat, and `request(url, init?)` on `<ag-ui-agents>`, which sends the provider's `headers`,
   `getHeaders()` and `credentials`.
+- **The routine form's time and timezone fields can be replaced through two named slots.** A
+  control slotted as `routine-time` (value `HH:MM`, 24-hour) or `routine-timezone` (an IANA zone
+  name) on the element takes the built-in field's place: the form writes the routine's value into
+  its `value` when it opens and reads `value` on save. Opt-in: a host slots a control; without one
+  the built-in fields are used.
+- **`data-routine-minute-step`** sets the minute step of the routine form's time field (1 to 30,
+  default 5), read when the form opens. Opt-in.
+- **The routine form's timezone field suggests the browser's IANA zones** from a datalist, the
+  routine's and the viewer's zone among them. No opt-in.
+
+### Changed
+
+- **The routine form's time is two themed selects, hour and minute, instead of a native time
+  input**, so its drop-down follows the panel's theme rather than the browser's (a dark popup
+  over a light panel before). The pair is one group named by its caption, and the wire still
+  carries `HH:MM`. A minute off the five-minute step is kept as its own option. New strings
+  `routineHour` and `routineMinute` name the two selects; a host that localises the form adds
+  them. The pair is the new
+  `routine-time` part. No opt-in.
 
 ### Fixed
 

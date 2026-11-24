@@ -472,7 +472,8 @@ describe("the routines view in <ag-ui-chat>", () => {
     expect(shadow(el).querySelectorAll("[part=routine-day]")).toHaveLength(7);
     (days[0] as HTMLInputElement).checked = false;
     (days[6] as HTMLInputElement).checked = true;
-    q<HTMLInputElement>(el, "#routine-field-at").value = "07:15";
+    q<HTMLSelectElement>(el, "#routine-field-at-hour").value = "07";
+    q<HTMLSelectElement>(el, "#routine-field-at-minute").value = "15";
     button(el, "Save").click();
     await flush();
     expect(writes()[0]?.body?.["schedule"]).toEqual({

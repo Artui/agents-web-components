@@ -1,6 +1,9 @@
 import { fillUiString } from "../fill_ui_string.js";
 import type { GrantableTool, RoutineDraft } from "./routines_client.js";
 import type { RoutinesStrings } from "./routines_strings.js";
+import { slottedField } from "./slotted_field.js";
+import { buildTimeField } from "./time_field.js";
+import { buildTimezoneField } from "./timezone_field.js";
 import { weekdayName } from "./utils.js";
 
 /** The routine form, what it holds now, and where a refusal is shown. */
@@ -18,6 +21,13 @@ export interface RoutineForm {
  * A destructive tool is granted only through an inline confirmation naming it
  * destructive; one already in `draft.confirmDestructive` (held by the routine)
  * starts granted. `onSubmit` runs on Enter in a one-line field.
+ *
+ * The time and the timezone are the named slots routine-time and
+ * routine-timezone of the element the form is shown in, falling back to the
+ * built-in fields. Once the form is in that element's shadow root (a microtask
+ * after building, since the caller shows it straight away) it writes the
+ * routine's values into any plugged control and reads the host's
+ * data-routine-minute-step.
  */
 export function buildRoutineForm(
   draft: RoutineDraft,
@@ -39,7 +49,13 @@ export function buildRoutineForm(
   formError.setAttribute("role", "alert");
   formError.hidden = true;
 
-  const field = (key: string, label: string, control: HTMLElement, hint?: string) => {
+  const field = (
+    key: string,
+    label: string,
+    control: HTMLElement,
+    hint?: string,
+    shown: Node = control,
+  ) => {
     const wrap = document.createElement("div");
     wrap.className = "skill-field";
     wrap.dataset["field"] = key;
@@ -48,7 +64,7 @@ export function buildRoutineForm(
     caption.textContent = label;
     control.id = `routine-field-${key}`;
     caption.htmlFor = control.id;
-    wrap.append(caption, control);
+    wrap.append(caption, shown);
     if (hint !== undefined) {
       const note = document.createElement("div");
       note.className = "skill-field-hint";
@@ -105,8 +121,18 @@ export function buildRoutineForm(
     days.append(chip);
     return box;
   });
-  const at = input("time", draft.schedule.kind === "weekly" ? draft.schedule.at : "09:00");
-  weeklyPart.append(days, field("at", strings.routineAt, at));
+  const atValue = draft.schedule.kind === "weekly" ? draft.schedule.at : "09:00";
+  const atCaption = document.createElement("span");
+  atCaption.className = "skill-field-label";
+  atCaption.id = "routine-label-at";
+  atCaption.textContent = strings.routineAt;
+  const time = buildTimeField(atValue, atCaption.id, strings);
+  const at = slottedField("routine-time", atValue, [time.element], time.value);
+  const atField = document.createElement("div");
+  atField.className = "skill-field";
+  atField.dataset["field"] = "at";
+  atField.append(atCaption, at.slot);
+  weeklyPart.append(days, atField);
 
   const every = input(
     "number",
@@ -116,20 +142,33 @@ export function buildRoutineForm(
   every.max = "8784";
   const intervalPart = field("every", strings.routineEvery, every);
   intervalPart.classList.add("routine-interval");
-  const timezone = input("text", draft.timezone);
-  timezone.spellcheck = false;
+  const zone = buildTimezoneField(draft.timezone);
+  const timezone = slottedField(
+    "routine-timezone",
+    zone.input.value,
+    [zone.input, zone.list],
+    () => zone.input.value,
+  );
   when.append(
     legend,
     kinds,
     weeklyPart,
     intervalPart,
-    field("timezone", strings.routineTimezone, timezone),
+    field("timezone", strings.routineTimezone, zone.input, undefined, timezone.slot),
   );
   function syncKind(): void {
     weeklyPart.hidden = !weekly.checked;
     intervalPart.hidden = weekly.checked;
   }
   syncKind();
+  queueMicrotask(() => {
+    const root = form.getRootNode();
+    if (root instanceof ShadowRoot) {
+      time.useStep(root.host.getAttribute("data-routine-minute-step"));
+    }
+    at.bind();
+    timezone.bind();
+  });
 
   const grant = document.createElement("fieldset");
   grant.className = "skill-field routine-tools";
@@ -166,10 +205,10 @@ export function buildRoutineForm(
           ? {
               kind: "weekly",
               weekdays: dayBoxes.flatMap((box, day) => (box.checked ? [day] : [])),
-              at: at.value,
+              at: at.value(),
             }
           : { kind: "interval", every_hours: Number(every.value) },
-        timezone: timezone.value,
+        timezone: timezone.value(),
         enabled: draft.enabled,
         preapprovedTools: preapproved,
         confirmDestructive: tools

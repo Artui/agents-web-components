@@ -51,6 +51,8 @@ export type RoutinesStrings = Pick<
   | "routinesUnavailable"
   | "runNow"
   | "save"
+  | "routineHour"
+  | "routineMinute"
 >;
 
 /**
@@ -108,4 +110,6 @@ export const DEFAULT_ROUTINES_STRINGS: RoutinesStrings = {
   routinesUnavailable: "Routines could not be loaded.",
   runNow: "Run now",
   save: "Save",
+  routineHour: "Hour",
+  routineMinute: "Minute",
 };
