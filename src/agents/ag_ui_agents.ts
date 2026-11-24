@@ -1,3 +1,4 @@
+import type { AgentCapabilities } from "@ag-ui/core";
 import {
   AGENT_CHANGE_EVENT,
   AGENTS_CHANGE_EVENT,
@@ -30,6 +31,7 @@ const CHAT_ATTRIBUTES = [
   ["runs_url", "data-runs-url"],
   ["skills_url", "data-skills-url"],
   ["skill_editor_url", "data-skill-editor-url"],
+  ["routines_url", "data-routines-url"],
   ["attachments_url", "data-attachments-url"],
   ["transcribe_url", "data-transcribe-url"],
 ] as const satisfies readonly (readonly [keyof AgentEntry, string])[];
@@ -176,6 +178,16 @@ export class AgUiAgents extends HTMLElement {
     }
   }
 
+  /**
+   * What the entry the chat is on declares it can do, as AG-UI's
+   * `AbstractAgent.getCapabilities()` answers it; `undefined` before a listing
+   * and for an entry that declares nothing. Informative only: the chat draws
+   * whatever the stream sends, declared or not.
+   */
+  async getCapabilities(): Promise<AgentCapabilities | undefined> {
+    return this.#mounted?.capabilities;
+  }
+
   /** Answer the open-thread requests of the chat in use, and only while connected. */
   #listen(): void {
     const chat = this.isConnected ? this.chat : null;
@@ -231,7 +243,7 @@ export class AgUiAgents extends HTMLElement {
     chat.remove();
     for (const [key, attribute] of CHAT_ATTRIBUTES) {
       const value = entry[key];
-      if (value === null) {
+      if (value === null || value === undefined) {
         chat.removeAttribute(attribute);
       } else {
         chat.setAttribute(attribute, value);
