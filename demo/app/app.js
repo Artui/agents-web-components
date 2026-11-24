@@ -933,17 +933,26 @@ function mount(pathname, restart) {
     $("cfg-place-out").textContent = place === null ? "no chip" : place.label;
   };
   if (on("place", "requests", "drive")) {
-    chat.getPlace = () => PLACES[$("cfg-place").value] ?? null;
+    // A ?place= the router pushed wins over the select.
+    chat.getPlace = () =>
+      PLACES[new URLSearchParams(location.search).get("place") ?? $("cfg-place").value] ?? null;
     chat.getPageMap = () => ({ form: "article", fields: ["title", "slug", "status", "featured"] });
     // Set after the element connected, so the first read is asked for here.
     chat.refreshPlace();
   }
   syncPlaceReadout();
   $("cfg-place").addEventListener("change", () => {
+    if (location.search !== "") {
+      history.replaceState(null, "", location.pathname);
+    }
     chat.refreshPlace();
     syncPlaceReadout();
   }, { signal });
   $("cfg-place-ask").addEventListener("click", () => send("Where am I?"), { signal });
+  $("cfg-place-push").addEventListener("click", () => {
+    history.pushState(null, "", `${location.pathname}?place=billing`);
+    syncPlaceReadout();
+  }, { signal });
 
   // ── The page-map walker ──────────────────────────────────────────────────────
 

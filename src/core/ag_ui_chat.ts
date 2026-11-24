@@ -445,8 +445,9 @@ export class AgUiChat extends HTMLElement {
    * and every tool round sends it as one `place` context entry from the same
    * read, after whatever {@link getContext} returns, so a host that replaces
    * that keeps it. Read before every round, on connect, on expand, when the
-   * composer gains focus, on `popstate` and `hashchange`, when the conversation
-   * changes, and on {@link refreshPlace}.
+   * composer gains focus, on `popstate` and `hashchange`, on the Navigation API's
+   * `currententrychange` where it exists, when the conversation changes, and on
+   * {@link refreshPlace}.
    *
    * When unset, the {@link routeMap} route matching `location.pathname` stands
    * in: its title (else its id) as the label, its group as the detail, the
@@ -3676,6 +3677,10 @@ export class AgUiChat extends HTMLElement {
     this.#input.addEventListener("focus", () => this.refreshPlace(), { signal });
     window.addEventListener("popstate", () => this.refreshPlace(), { signal });
     window.addEventListener("hashchange", () => this.refreshPlace(), { signal });
+    // A pushState move fires neither event above; the Navigation API reports it.
+    window.navigation?.addEventListener("currententrychange", () => this.refreshPlace(), {
+      signal,
+    });
     this.refreshPlace();
 
     // Host content against the input, after everything of the turn being

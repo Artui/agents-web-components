@@ -3,6 +3,11 @@
 `<ag-ui-chat>` is a generic embedding kit; these typed seams let a host feed the agent richer
 context up front so it explores less. All are framework-free and admin-agnostic.
 
+A router that moves with `history.pushState` fires no `popstate`. Where the browser has the
+Navigation API, the chat follows such a move by itself; elsewhere, call **`refreshPlace()`** after
+each move so the place chip names the new page between runs. The chip's freshness rules are in
+[Where the user is](#where-the-user-is-the-place-chip).
+
 **`routeMap: RouteMap`** — a manifest of navigable routes (`{ id, path, title?, group?,
 description? }`). When set, the element exposes two built-in tools so the agent navigates by intent
 rather than by exploring:
@@ -349,10 +354,11 @@ chat.getPlace = () => ({
   route-mapped host out.
 - **When it is read.** Before every tool round, so an agent that navigates mid-run is told the new
   page on its next round; and on connect, on expand, when the composer gains focus, on `popstate`
-  and `hashchange`, and when the conversation on screen changes (`switchThread`, the drawer,
+  and `hashchange`, on the Navigation API's `currententrychange` where the browser has it (which a
+  `pushState` move fires), and when the conversation on screen changes (`switchThread`, the drawer,
   `newChat`): the chip always names the live page, never the page a thread started on. Between runs
-  it shows the last read. A single-page app calls **`refreshPlace()`** after its router moves,
-  since `pushState` fires no event.
+  it shows the last read. In a browser without the Navigation API a single-page app calls
+  **`refreshPlace()`** after its router moves, since `pushState` fires no other event.
 - **The entry rides after your `getContext`.** It is appended to whatever `getContext` returns, so a
   host that replaces `getContext` still sends it.
 - **The eye toggle withholds it.** Pressing it leaves the chip in place, dashed and struck through

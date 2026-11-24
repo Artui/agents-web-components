@@ -9,6 +9,7 @@ import {
 } from "../constants.js";
 import { randomRunId } from "../core/random_run_id.js";
 import { whenReady } from "../core/when_ready.js";
+import { confirmPhrase } from "../tools/confirm_phrase.js";
 import { DEFAULT_INBOX_STRINGS } from "./inbox_strings.js";
 import { INBOX_STYLES } from "./inbox_styles.js";
 import type {
@@ -569,8 +570,9 @@ export class AgUiInbox extends HTMLElement {
       destructive.textContent = ` · ${strings.destructive}`;
       summary.append(destructive);
     }
-    if (typeof first.message === "string" && first.message !== "") {
-      summary.append(`: ${first.message}`);
+    const wording = (kind === "approval" ? confirmPhrase(first) : undefined) ?? first.message;
+    if (typeof wording === "string" && wording !== "") {
+      summary.append(`: ${wording}`);
     }
     if (interrupts.length > 1) {
       summary.append(` ${strings.more.replace("{count}", String(interrupts.length - 1))}`);

@@ -874,6 +874,9 @@
             >
             <div class="ctl"><span>Chip</span><output id="cfg-place-out">-</output></div>
             <div class="ctl"><span>Ask</span><button type="button" id="cfg-place-ask">Where am I?</button></div>
+            <div class="ctl"
+              ><span>Router</span><button type="button" id="cfg-place-push">pushState to Billing</button></div
+            >
           </div>
         </div>
         <div class="notes">
@@ -882,6 +885,11 @@
             <li>
               <strong>The chip.</strong> It sits in the composer's tool row; the select stands in for
               the host's router and calls <code>refreshPlace()</code>.
+            </li>
+            <li>
+              <strong>A <code>pushState</code> move.</strong> <em>pushState to Billing</em> moves the URL
+              (<code>?place=billing</code>) and calls nothing else; where the browser has the Navigation
+              API the chip follows by itself.
             </li>
             <li>
               <strong>What was sent.</strong> <em>Where am I?</em> quotes the <code>place</code>

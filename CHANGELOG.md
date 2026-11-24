@@ -52,6 +52,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   roots only when that misses and the target is exactly such a handle, so every other selector
   resolves as before. Opt-in: a host that sets its own `getPageMap`, or none, sees no change.
 
+- **The place chip follows a `pushState` move by itself where the browser has the Navigation
+  API.** The chat listens for `navigation`'s `currententrychange` beside `popstate` and
+  `hashchange`, with or without `navigate` set, so a single-page app's chip names the new page
+  between runs without a focus, an expand or a run. Without the API nothing changes and
+  `refreshPlace()` still works; a host that already calls it reads twice per move, harmlessly.
+  The [SPA section](https://artui.github.io/agents-web-components/host-seams/) names
+  `refreshPlace()` and links the chip's freshness rules.
+
+### Fixed
+
+- **An inbox row words an approval by its `x-confirm` prompt.** The summary prefers the
+  interrupt's `metadata["x-confirm"]`, as the approval card already does, and falls back to its
+  message (django-ag-ui and pydantic-ai write "Approve name(args)?") when the prompt is absent,
+  blank or not a string. The approval card's wording is unchanged.
+
 ## [0.14.0] — 2026-11-24
 
 ### Changed
