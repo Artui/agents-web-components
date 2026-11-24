@@ -772,6 +772,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../threads-contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The threads contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../agents/" class="md-nav__link">
         
   
@@ -947,6 +975,17 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#reading-the-page-pagemapfrom" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading the page: pageMapFrom
+      
+    </span>
+  </a>
+  
+</li>
       
         <li class="md-nav__item">
   <a href="#where-the-user-is-the-place-chip" class="md-nav__link">
@@ -1288,6 +1327,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#reading-the-page-pagemapfrom" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading the page: pageMapFrom
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#where-the-user-is-the-place-chip" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1326,6 +1376,10 @@
 <h1 id="host-seams-the-spa-story">Host seams: the SPA story<a class="headerlink" href="#host-seams-the-spa-story" title="Permanent link">&para;</a></h1>
 <p><code>&lt;ag-ui-chat&gt;</code> is a generic embedding kit; these typed seams let a host feed the agent richer
 context up front so it explores less. All are framework-free and admin-agnostic.</p>
+<p>A router that moves with <code>history.pushState</code> fires no <code>popstate</code>. Where the browser has the
+Navigation API, the chat follows such a move by itself; elsewhere, call <strong><code>refreshPlace()</code></strong> after
+each move so the place chip names the new page between runs. The chip's freshness rules are in
+<a href="#where-the-user-is-the-place-chip">Where the user is</a>.</p>
 <p><strong><code>routeMap: RouteMap</code></strong> — a manifest of navigable routes (<code>{ id, path, title?, group?,
 description? }</code>). When set, the element exposes two built-in tools so the agent navigates by intent
 rather than by exploring:</p>
@@ -1346,8 +1400,12 @@ query string; a missing or empty required path param throws. The resolved shape 
 <p><strong><code>getPageMap(): PageMap</code></strong> — a per-run provider returning the current page's compact actionable
 surface (field names/types/labels, button labels+handles — <em>not</em> values). It is auto-injected into
 each run's <code>context</code> as a <code>page_map</code> entry (toggle with <code>autoInjectPageMap</code>):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">getPageMap</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">({</span><span class="w"> </span><span class="nx">fields</span><span class="o">:</span><span class="w"> </span><span class="nx">introspectForm</span><span class="p">(),</span><span class="w"> </span><span class="nx">buttons</span><span class="o">:</span><span class="w"> </span><span class="nx">visibleButtons</span><span class="p">()</span><span class="w"> </span><span class="p">});</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">pageMapFrom</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">"@artooi/agents-web-components"</span><span class="p">;</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">getPageMap</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">pageMapFrom</span><span class="p">();</span>
 </code></pre></div>
+<p><code>pageMapFrom</code> is the walker the package ships (<a href="#reading-the-page-pagemapfrom">below</a>); a host
+with its own model of the page returns that instead, in any shape.</p>
 <p>It is recomputed at the top of <strong>every tool round</strong>, not once per <code>send()</code> — so after the agent
 acts, the next round already sees the resulting page. Within a round the agent can pull a fresh
 view at any time with the built-in <code>read_page</code> tool, which is registered whenever this provider is
@@ -1551,6 +1609,121 @@ is the whole compatibility story:</p>
 across repos with independent release cadences.</p>
 <p><strong>Note:</strong> it reaches <strong>the page that started the run</strong>, during the run. There is one
 response stream per run and no channel to anybody else's browser.</p>
+<h2 id="reading-the-page-pagemapfrom">Reading the page: <code>pageMapFrom</code><a class="headerlink" href="#reading-the-page-pagemapfrom" title="Permanent link">&para;</a></h2>
+<p><strong><code>pageMapFrom(root?, options?): PageMap</code></strong> reads the live DOM under <code>root</code> (the document by
+default) and returns what a model needs to act on it, never what the user typed. It is opt-in:
+nothing changes for a host that leaves <code>getPageMap</code> unset, or sets its own.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">getPageMap</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">pageMapFrom</span><span class="p">();</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">getPageMap</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">pageMapFrom</span><span class="p">(</span><span class="nb">document</span><span class="p">.</span><span class="nx">querySelector</span><span class="p">(</span><span class="s2">"main"</span><span class="p">),</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">limits</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">links</span><span class="o">:</span><span class="w"> </span><span class="mf">10</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">});</span>
+</code></pre></div>
+<p>Each kind is a key holding a list, left out when empty:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Lists</th>
+<th>Each entry has</th>
+<th>Cap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>headings</code></td>
+<td><code>h1</code>-<code>h6</code>, <code>role="heading"</code></td>
+<td><code>level</code>, <code>text</code></td>
+<td>30</td>
+</tr>
+<tr>
+<td><code>landmarks</code></td>
+<td><code>main</code>, <code>nav</code>, <code>aside</code>, <code>search</code>, a top-level <code>header</code> / <code>footer</code>, a named <code>form</code> / <code>section</code>, landmark roles</td>
+<td><code>role</code>, <code>name</code></td>
+<td>20</td>
+</tr>
+<tr>
+<td><code>tabs</code></td>
+<td><code>role="tab"</code></td>
+<td><code>name</code>, <code>selected</code></td>
+<td>30</td>
+</tr>
+<tr>
+<td><code>fields</code></td>
+<td>inputs, <code>textarea</code>, <code>select</code>, field roles (<code>textbox</code>, <code>combobox</code>, <code>checkbox</code>, <code>slider</code>, ...), <code>contenteditable</code></td>
+<td><code>name</code> (the attribute), <code>type</code>, <code>label</code>, <code>required</code>, <code>disabled</code></td>
+<td>50</td>
+</tr>
+<tr>
+<td><code>buttons</code></td>
+<td><code>button</code>, button inputs, <code>role="button"</code></td>
+<td><code>name</code>, <code>disabled</code></td>
+<td>50</td>
+</tr>
+<tr>
+<td><code>links</code></td>
+<td><code>a[href]</code>, <code>role="link"</code></td>
+<td><code>name</code>, <code>href</code></td>
+<td>50</td>
+</tr>
+<tr>
+<td><code>tables</code></td>
+<td><code>table</code>, <code>role="table"</code> / <code>"grid"</code></td>
+<td><code>name</code>, <code>headers</code> (column headers, at most 20)</td>
+<td>10</td>
+</tr>
+<tr>
+<td><code>dialogs</code></td>
+<td>an open <code>dialog</code>, <code>role="dialog"</code> / <code>"alertdialog"</code></td>
+<td><code>name</code>, <code>modal</code></td>
+<td>5</td>
+</tr>
+</tbody>
+</table>
+<p>Past a cap, <code>truncated</code> counts what was left out per kind (<code>{ "links": 12 }</code>); <code>options.limits</code>
+replaces any cap, and <code>PAGE_MAP_LIMITS</code> holds the defaults. Names and texts are cut at 80
+characters. <code>required</code>, <code>disabled</code> appear only when true.</p>
+<p><strong>What it never reads.</strong> A value rides into the model's context, so the walker reads what the page
+<em>says about</em> a control, never what is <em>in</em> it:</p>
+<ul>
+<li>no field's value, and no password or hidden input at all;</li>
+<li>no <code>aria-valuenow</code> / <code>aria-valuetext</code> (a slider lists its label and role, not its position);</li>
+<li>no text of a <code>contenteditable</code> region: an editable element is listed as a field (type
+  <code>contenteditable</code>, or its field role), even a heading, tab or header cell, and nothing inside it
+  is listed or read;</li>
+<li>no text of a <code>textarea</code>, <code>select</code>, <code>input</code> or <code>output</code>, nor of anything not rendered
+  (<code>hidden</code>, <code>display: none</code>, <code>visibility: hidden</code>, <code>aria-hidden="true"</code>), marked
+  <code>data-agent-ignore</code>, or of this package's elements (<code>ag-ui-*</code>, their shadow roots included).
+  This holds wherever a name or text comes from: an element's own content, a <code>&lt;label&gt;</code> wrapping its
+  control, a table's header cells, or an <code>aria-labelledby</code> reference, so a reference that points at
+  an editable region, a textarea or a select names nothing (and a reference to a hidden element
+  names nothing either);</li>
+<li>no option text, so neither the selected option nor the choices are listed;</li>
+<li>no link's query string or fragment: <code>href</code> is the path, with the origin when it is another site,
+  cut at 80 characters, and for a scheme other than <code>http:</code> / <code>https:</code> (<code>mailto:</code>, <code>tel:</code>,
+  <code>javascript:</code>, <code>data:</code>) the scheme alone;</li>
+<li>nothing inside a field: a <code>listbox</code>, an editable region or any other field ends the walk;</li>
+<li>a <code>placeholder</code> only as the label of last resort, after <code>aria-labelledby</code>, <code>aria-label</code>, the
+  field's <code>&lt;label&gt;</code>s and <code>title</code>, since it is author text.</li>
+</ul>
+<p>Text the page itself writes is read as it is: a heading or label that prints user data ("Signed in
+as ...") reaches the model like any other text. Mark such a region <code>data-agent-ignore</code>.</p>
+<p><strong>What it skips.</strong> The subtree of every element of this package (<code>ag-ui-*</code>, so the chat never lists
+itself), of anything marked <code>data-agent-ignore</code>, and of anything hidden (<code>hidden</code>, <code>display: none</code>,
+<code>visibility: hidden</code>), <code>inert</code> or <code>aria-hidden="true"</code>. It walks open shadow roots of your
+components; a closed one is unreachable by design.</p>
+<p><strong>Handles.</strong> Each listed element is stamped <code>data-agent-handle="n"</code>, and its entry carries the
+selector for it, <code>[data-agent-handle="n"]</code>, which the default <code>resolvePageTarget</code> resolves, so
+<code>scroll_to</code> and <code>drag_and_drop</code> act on it with no host code. A handle is kept across reads while its
+element is listed, and a clone that carries the same stamp gets a new one. Numbers are not reserved
+for good: a new element may be given the number of one that was removed, or of one in a shadow root
+the read did not list, so treat a handle as valid for the read that returned it.</p>
+<p>The default resolver is <code>resolvePageMapHandle</code>: <code>document.querySelector</code> first, and only when that
+misses and the target is exactly a handle of this form, a search of the open shadow roots under the
+document (skipping this package's own elements), so a handle the walker stamped inside a component
+resolves too. Any other selector resolves in the light DOM alone, as before. A host that overrides
+<code>resolvePageTarget</code> and still wants handles to resolve falls back to it:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">resolvePageMapHandle</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">"@artooi/agents-web-components"</span><span class="p">;</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">resolvePageTarget</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">target</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">myPageMap</span><span class="p">.</span><span class="nx">elementFor</span><span class="p">(</span><span class="nx">target</span><span class="p">)</span><span class="w"> </span><span class="o">??</span><span class="w"> </span><span class="nx">resolvePageMapHandle</span><span class="p">(</span><span class="nx">target</span><span class="p">);</span>
+</code></pre></div>
 <h2 id="where-the-user-is-the-place-chip">Where the user is: the place chip<a class="headerlink" href="#where-the-user-is-the-place-chip" title="Permanent link">&para;</a></h2>
 <p>The composer can say where in your app the user is writing from: a chip in its tool row, between the
 attach and voice controls and Send, naming the page, tab or record on screen. The same read is sent
@@ -1559,11 +1732,11 @@ to the agent as one context entry, so the place the user sees is the place the a
 draws the label, the detail after a dot, and the icon (an image URL; a pin when absent). The agent
 gets a <code>place</code> context entry whose value is the JSON of the label, detail and href; the icon is
 never sent. The href identifies the place; without one, the label and detail do.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">getPlace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">({</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="sb">`Order #</span><span class="si">${</span><span class="nx">order</span><span class="p">.</span><span class="nx">number</span><span class="si">}</span><span class="sb">`</span><span class="p">,</span>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="nx">detail</span><span class="o">:</span><span class="w"> </span><span class="s2">"Orders"</span><span class="p">,</span>
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span><span class="nx">href</span><span class="o">:</span><span class="w"> </span><span class="nx">location</span><span class="p">.</span><span class="nx">pathname</span><span class="p">,</span>
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="p">});</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">getPlace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">({</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="sb">`Order #</span><span class="si">${</span><span class="nx">order</span><span class="p">.</span><span class="nx">number</span><span class="si">}</span><span class="sb">`</span><span class="p">,</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span><span class="nx">detail</span><span class="o">:</span><span class="w"> </span><span class="s2">"Orders"</span><span class="p">,</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">  </span><span class="nx">href</span><span class="o">:</span><span class="w"> </span><span class="nx">location</span><span class="p">.</span><span class="nx">pathname</span><span class="p">,</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="p">});</span>
 </code></pre></div>
 <ul>
 <li><strong>With no <code>getPlace</code>, a route map stands in.</strong> The <code>routeMap</code> route whose path matches
@@ -1573,10 +1746,11 @@ never sent. The href identifies the place; without one, the label and detail do.
   route-mapped host out.</li>
 <li><strong>When it is read.</strong> Before every tool round, so an agent that navigates mid-run is told the new
   page on its next round; and on connect, on expand, when the composer gains focus, on <code>popstate</code>
-  and <code>hashchange</code>, and when the conversation on screen changes (<code>switchThread</code>, the drawer,
+  and <code>hashchange</code>, on the Navigation API's <code>currententrychange</code> where the browser has it (which a
+  <code>pushState</code> move fires), and when the conversation on screen changes (<code>switchThread</code>, the drawer,
   <code>newChat</code>): the chip always names the live page, never the page a thread started on. Between runs
-  it shows the last read. A single-page app calls <strong><code>refreshPlace()</code></strong> after its router moves,
-  since <code>pushState</code> fires no event.</li>
+  it shows the last read. In a browser without the Navigation API a single-page app calls
+  <strong><code>refreshPlace()</code></strong> after its router moves, since <code>pushState</code> fires no other event.</li>
 <li><strong>The entry rides after your <code>getContext</code>.</strong> It is appended to whatever <code>getContext</code> returns, so a
   host that replaces <code>getContext</code> still sends it.</li>
 <li><strong>The eye toggle withholds it.</strong> Pressing it leaves the chip in place, dashed and struck through

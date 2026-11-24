@@ -993,6 +993,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../threads-contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The threads contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../agents/" class="md-nav__link">
         
   
@@ -2266,7 +2294,8 @@ outrun the page's own save and conclude that nothing happened. Report a busy fla
 <code>getPageMap</code> (<code>{ saving: true }</code> while a write is in flight) and the agent can wait for a page that
 says it is busy. It cannot wait for one that does not.</p>
 <p>Targets resolve through the overridable <code>resolvePageTarget</code> property — <code>(target) =&gt; HTMLElement |
-null</code>, defaulting to <code>document.querySelector</code>. A host with a page map overrides it to map its own
+null</code>, defaulting to <code>document.querySelector</code> (which reaches into open shadow roots only for a
+<a href="../host-seams/#reading-the-page-pagemapfrom"><code>pageMapFrom</code> handle</a>). A host with a page map overrides it to map its own
 element ids (the same way the DOM-driver primitives are wrapped with environment-aware lookups):</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">resolvePageTarget</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">id</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">myPageMap</span><span class="p">.</span><span class="nx">elementFor</span><span class="p">(</span><span class="nx">id</span><span class="p">);</span>
 </code></pre></div>

@@ -910,6 +910,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../threads-contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The threads contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../agents/" class="md-nav__link">
         
   
@@ -1720,6 +1748,12 @@ nothing replays on a thread restore — which is the right half of the
 an hour ago is not live now, and replaying its progress would be a lie about a
 run that is over. Reload mid-run and the tool card is still there; the nested
 detail is not. That is the intended behaviour.</p>
+<p><strong>A child's tool calls on the protocol's own events stay the child's.</strong> A server may also send
+them as <code>TOOL_CALL_*</code> events tagged with the delegation's <code>subagentRunId</code>, as django-ag-ui does
+from 0.90.0. The component draws no card of the parent's for a tagged call and never runs it,
+even when a frontend tool has the same name; the row above still follows the <code>CUSTOM</code> steps.
+<code>@ag-ui/client</code> keeps those calls in the message list under the same tag. A restored thread
+skips them, and a child's call left without a result is never answered for the parent.</p>
 <p>Like <code>ag_ui.invalidate</code>, this name is <strong>routed</strong> rather than forwarded: it draws
 itself and does not also arrive as an <code>ag-ui-custom</code> event. Every other name
 still reaches your page untouched.</p>
