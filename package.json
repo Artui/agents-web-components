@@ -51,6 +51,22 @@
     "./inbox/bundle": {
       "types": "./dist/inbox.d.ts",
       "import": "./dist/agents-web-components.inbox.bundle.js"
+    },
+    "./routines": {
+      "types": "./dist/routines.d.ts",
+      "import": "./dist/routines.js"
+    },
+    "./routines/bundle": {
+      "types": "./dist/routines.d.ts",
+      "import": "./dist/agents-web-components.routines.bundle.js"
+    },
+    "./skills": {
+      "types": "./dist/skills.d.ts",
+      "import": "./dist/skills.js"
+    },
+    "./skills/bundle": {
+      "types": "./dist/skills.d.ts",
+      "import": "./dist/agents-web-components.skills.bundle.js"
     }
   },
   "sideEffects": false,

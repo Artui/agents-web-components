@@ -30,10 +30,23 @@ export class PanelView {
   readonly #footer: HTMLDivElement;
   readonly #status: HTMLDivElement;
   readonly #backLabel: () => string;
+  readonly #atRoot: (() => boolean) | null;
 
-  /** `backLabel` is read on each {@link show}, so a later strings override reaches it. */
-  constructor(backLabel: () => string, onBack: () => void) {
+  /**
+   * `backLabel` is read on each {@link show}, so a later strings override reaches it.
+   *
+   * `atRoot` makes the view inline, for an element that stands on the page
+   * rather than in place of a conversation: its first screen has no back arrow
+   * (there is nothing to go back to), and a screen moves focus only when focus
+   * was already inside the view, so a list arriving never pulls the page's focus.
+   */
+  constructor(
+    backLabel: () => string,
+    onBack: () => void,
+    options: { readonly atRoot?: () => boolean } = {},
+  ) {
     this.#backLabel = backLabel;
+    this.#atRoot = options.atRoot ?? null;
     this.element = document.createElement("div");
     this.element.className = "panel-view";
     this.element.setAttribute("part", "panel-view");
@@ -50,6 +63,9 @@ export class PanelView {
     this.#title = document.createElement("h2");
     this.#title.className = "panel-view-title";
     this.#title.setAttribute("part", "panel-view-title");
+    if (this.#atRoot !== null) {
+      this.#title.tabIndex = -1;
+    }
     this.#sub = document.createElement("span");
     this.#sub.className = "panel-view-sub";
     heading.append(this.#title, this.#sub);
@@ -83,6 +99,10 @@ export class PanelView {
 
   /** Show `screen`, replacing whatever the view held, and put focus on its back arrow. */
   show(screen: PanelScreen): void {
+    const root = this.#atRoot?.() ?? false;
+    const active = (this.element.getRootNode() as Document | ShadowRoot).activeElement;
+    const within = active !== null && this.element.contains(active);
+    this.#back.hidden = root;
     const back = this.#backLabel();
     this.#back.title = back;
     this.#back.setAttribute("aria-label", back);
@@ -97,7 +117,16 @@ export class PanelView {
     this.element.setAttribute("aria-label", screen.title);
     this.#status.textContent = "";
     this.element.hidden = false;
-    this.#back.focus();
+    if (this.#atRoot === null) {
+      this.#back.focus();
+    } else if (within) {
+      (root ? this.#title : this.#back).focus();
+    }
+  }
+
+  /** Put focus on the view's heading, so a screen shown next moves it on as from inside. */
+  focusHeading(): void {
+    this.#title.focus();
   }
 
   /** Say `text` in the view's status line (read out, and shown until the next screen). */

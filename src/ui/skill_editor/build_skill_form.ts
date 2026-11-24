@@ -1,5 +1,5 @@
 import type { EditorSkillDraft } from "../../skills/editor_skill.js";
-import type { UiStrings } from "../ui_strings.js";
+import type { SkillEditorStrings } from "./skill_editor_strings.js";
 
 /** The editor's form, what it holds now, and where a refusal is shown. */
 export interface SkillForm {
@@ -19,7 +19,7 @@ type TextField = (typeof TEXT_FIELDS)[number];
 /** Build the editor's fields over `draft`; `onSubmit` runs on Enter in a one-line field. */
 export function buildSkillForm(
   draft: EditorSkillDraft,
-  strings: UiStrings,
+  strings: SkillEditorStrings,
   onSubmit: () => void,
 ): SkillForm {
   const form = document.createElement("form");

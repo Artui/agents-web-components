@@ -7,6 +7,8 @@
 //   - dist/agents-web-components.mcp-apps.bundle.js — the MCP Apps host alone, likewise
 //   - dist/agents-web-components.threads.bundle.js — the thread list alone, likewise
 //   - dist/agents-web-components.inbox.bundle.js — the inbox alone, likewise
+//   - dist/agents-web-components.routines.bundle.js — the routines editor alone, likewise
+//   - dist/agents-web-components.skills.bundle.js — the skill editor alone, likewise
 //   - dist/sandbox-proxy.html — the MCP Apps sandbox proxy page, its script inlined
 //
 // The vendored bundle is what django-admin-agent ships under its
@@ -113,6 +115,8 @@ export const LIBRARY = {
     "src/mcp_apps.ts",
     "src/threads.ts",
     "src/inbox.ts",
+    "src/routines.ts",
+    "src/skills.ts",
   ],
   outdir: "dist",
   splitting: true,
@@ -187,6 +191,33 @@ export const INBOX_BUNDLE = {
   ...SHARED,
   entryPoints: ["src/inbox.ts"],
   outfile: "dist/agents-web-components.inbox.bundle.js",
+  minify: true,
+};
+
+/**
+ * The routines editor as a sixth vendored file, loaded beside the main bundle
+ * by a host that places `<ag-ui-routines>` away from the chat. It reaches the
+ * chat and the provider only through their `request()` and the methods it is
+ * bound to, so it inlines neither (tests/entries.test.ts).
+ *
+ * @type {import("esbuild").BuildOptions}
+ */
+export const ROUTINES_BUNDLE = {
+  ...SHARED,
+  entryPoints: ["src/routines.ts"],
+  outfile: "dist/agents-web-components.routines.bundle.js",
+  minify: true,
+};
+
+/**
+ * The skill editor as a seventh vendored file, the same way as the routines.
+ *
+ * @type {import("esbuild").BuildOptions}
+ */
+export const SKILLS_BUNDLE = {
+  ...SHARED,
+  entryPoints: ["src/skills.ts"],
+  outfile: "dist/agents-web-components.skills.bundle.js",
   minify: true,
 };
 
@@ -272,6 +303,8 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
     build(MCP_APPS_BUNDLE),
     build(THREADS_BUNDLE),
     build(INBOX_BUNDLE),
+    build(ROUTINES_BUNDLE),
+    build(SKILLS_BUNDLE),
     buildSandboxProxyPage(SANDBOX_PROXY_PAGE),
   ]);
   const jsonSchema = zodJsonSchemaInputs(vendored.metafile);

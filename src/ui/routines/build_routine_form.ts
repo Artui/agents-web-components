@@ -1,6 +1,6 @@
 import { fillUiString } from "../fill_ui_string.js";
-import type { UiStrings } from "../ui_strings.js";
 import type { GrantableTool, RoutineDraft } from "./routines_client.js";
+import type { RoutinesStrings } from "./routines_strings.js";
 import { weekdayName } from "./utils.js";
 
 /** The routine form, what it holds now, and where a refusal is shown. */
@@ -22,7 +22,7 @@ export interface RoutineForm {
 export function buildRoutineForm(
   draft: RoutineDraft,
   tools: readonly GrantableTool[],
-  strings: UiStrings,
+  strings: RoutinesStrings,
   onSubmit: () => void,
 ): RoutineForm {
   const form = document.createElement("form");
@@ -190,7 +190,7 @@ function toolRow(
   tool: GrantableTool,
   granted: Set<string>,
   confirmed: Set<string>,
-  strings: UiStrings,
+  strings: RoutinesStrings,
 ): HTMLElement {
   const wrap = document.createElement("div");
   wrap.className = "routine-tool";
