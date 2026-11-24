@@ -483,6 +483,18 @@ describe("the routines view in <ag-ui-chat>", () => {
     });
   });
 
+  it("draws the minutes in the host's data-routine-minute-step when the view opens a routine", async () => {
+    server.routines = [{ ...STANDUP }];
+    const el = mount({ "data-routines-url": ROUTINES_URL, "data-routine-minute-step": "15" });
+    await flush();
+    el.openRoutines();
+    await flush();
+    q<HTMLButtonElement>(el, ".routine-row .skill-row-open").click();
+    await flush();
+    const minute = q<HTMLSelectElement>(el, "#routine-field-at-minute");
+    expect([...minute.options].map((option) => option.value)).toEqual(["00", "15", "30", "45"]);
+  });
+
   it("shows a refused save above the fields in the server's words, or the fallback", async () => {
     const el = mount();
     await flush();

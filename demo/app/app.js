@@ -958,8 +958,10 @@ function mount(pathname, restart) {
   // form reads the step when it opens, so reopen it after changing either.
   if (on("routines")) {
     const PLUGGED = {
-      "routine-time": ["07:00", "08:00", "12:30", "18:00"],
-      "routine-timezone": ["UTC", "Europe/Paris", "America/New_York", "Asia/Tokyo"],
+      "routine-time": ["07:00", "08:00", "09:00", "12:30", "18:00"],
+      "routine-timezone": [
+        ...new Set(["UTC", "Europe/Paris", "America/New_York", "Asia/Tokyo", Intl.DateTimeFormat().resolvedOptions().timeZone]),
+      ],
     };
     $("rt-plugged").addEventListener("change", (event) => {
       for (const [slot, values] of Object.entries(PLUGGED)) {

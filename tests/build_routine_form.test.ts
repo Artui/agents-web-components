@@ -18,7 +18,9 @@ function draft(at: string, timezone = "Europe/Paris"): RoutineDraft {
 }
 
 function select(form: RoutineForm, selector: string): HTMLSelectElement {
-  return form.form.querySelector(selector) as HTMLSelectElement;
+  const found = form.form.querySelector(selector);
+  expect(found, selector).toBeInstanceOf(HTMLSelectElement);
+  return found as HTMLSelectElement;
 }
 
 function minutes(form: RoutineForm): string[] {

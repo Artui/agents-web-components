@@ -259,9 +259,10 @@ describe("routines (real browser)", () => {
     await openForm(el, true);
     expect(all(el, ".routine-time select")).toHaveLength(2);
     const [hour, minute] = all(el, ".routine-time select") as HTMLSelectElement[];
-    (hour as HTMLSelectElement).focus();
-    await userEvent.keyboard("1");
+    all(el, "[part=routine-day] input").at(-1)?.focus();
+    await userEvent.keyboard("{Tab}");
     expect(el.shadowRoot?.activeElement).toBe(hour);
+    await userEvent.keyboard("1");
     await userEvent.keyboard("{Tab}");
     expect(el.shadowRoot?.activeElement).toBe(minute);
     await userEvent.keyboard("3");
