@@ -953,6 +953,38 @@ function mount(pathname, restart) {
   }
   // The editor's writes go through chat.request, so the header read here is
   // sent with each one; untick it to see the server refuse a write.
+  // The routine form's slots: a host control slotted as routine-time or
+  // routine-timezone replaces the built-in field and is read on save. The
+  // form reads the step when it opens, so reopen it after changing either.
+  if (on("routines")) {
+    const PLUGGED = {
+      "routine-time": ["07:00", "08:00", "12:30", "18:00"],
+      "routine-timezone": ["UTC", "Europe/Paris", "America/New_York", "Asia/Tokyo"],
+    };
+    $("rt-plugged").addEventListener("change", (event) => {
+      for (const [slot, values] of Object.entries(PLUGGED)) {
+        chat.querySelector(`[slot="${slot}"]`)?.remove();
+        if (event.target.checked) {
+          const options = values.map((value) => el("option", { value, textContent: value }));
+          chat.append(el("select", { slot, ariaLabel: slot === "routine-time" ? "Run at" : "Zone" }, ...options));
+        }
+      }
+    }, { signal });
+    $("rt-step").addEventListener("change", (event) => {
+      if (event.target.value === "") {
+        chat.removeAttribute("data-routine-minute-step");
+      } else {
+        chat.setAttribute("data-routine-minute-step", event.target.value);
+      }
+    }, { signal });
+    $("rt-dark").addEventListener("change", (event) => {
+      if (event.target.checked) {
+        chat.setAttribute("theme", "dark");
+      } else {
+        chat.removeAttribute("theme");
+      }
+    }, { signal });
+  }
   if (on("skill-editor")) {
     chat.getHeaders = () => ($("skills-csrf").checked ? { "X-CSRFToken": "demo-token" } : {});
     $("skills-open").addEventListener("click", () => chat.openSkillEditor(), { signal });

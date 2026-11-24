@@ -204,6 +204,7 @@ another origin, add `credentials="include"` too; see
 | `data-skills-url` | — | URL of a JSON skill catalog (fetched with the element's headers and cookie policy). |
 | `data-skill-editor-url` | — | URL of django-ag-ui's skill editor endpoint (`skills/editor/`). Opts into the [skill editor](#the-skill-editor): a "Manage skills" row at the foot of the `/` palette under `data-slash-commands`, a header button with `data-skill-editor-button`, or `openSkillEditor()`. |
 | `data-routines-url` | — | URL of django-ag-ui's routines editor (`routines/`, from 0.86.0). Opts into [routines](#routines): a Routines button in the header, a Make this a routine item in its More menu, `openRoutines()` and `makeRoutine()`. Read at connect time, like the other endpoint URLs. |
+| `data-routine-minute-step` | `5` | The minute step of the routine form's time field, a whole number from 1 to 30; anything else keeps 5. Read each time the form opens. A routine saved at a minute off the step still shows that minute. See [The time and timezone fields](#the-time-and-timezone-fields). |
 | `data-skill-editor-button` | absent | With `data-skill-editor-url`, also puts a Skills button in the header. Off by default. On a narrow panel it moves into the header's [More menu](#the-header-row-and-its-more-menu) like the other optional controls. |
 | `data-tools-url` | — | URL of a server tool-label catalog (`[{ name, summary, description? }]`), fetched with the element's headers and cookie policy; labels tool-call cards for server-side tools. |
 | `user-key` | `userKey` | Who the stored conversation belongs to — any string identifying the signed-in principal. Joins the storage namespace, and **changing it purges what the previous principal left behind**. Live (not connect-time): a logout is the host's to announce. See [Who the stored conversation belongs to](#who-the-stored-conversation-belongs-to-user-key). |
@@ -3589,6 +3590,41 @@ editor. With `data-threads-url` on the same mount, a thread a routine started ca
 the routine's name in the thread list. `openRoutines()` and `closeRoutines()` open and close the
 view; a principal change closes it.
 
+#### The time and timezone fields
+
+The form's time is two selects, the hour (00 to 23) and the minute in steps of five, drawn by the
+panel's tokens rather than the browser's time popup, and announced as one group named by the At
+caption. `data-routine-minute-step` changes the step; a routine whose minute is off the step keeps
+its exact minute as an option of its own, never rounded. The timezone is a text input suggesting
+the browser's IANA zones (`Intl.supportedValuesOf("timeZone")`), set to the viewer's zone on a
+new routine; an unknown zone is refused by the server, in its words.
+
+Either field can be replaced by a control of your own, slotted on the element:
+
+```html
+<ag-ui-chat endpoint="/agent/" data-routines-url="/agent/routines/">
+  <select slot="routine-time" aria-label="Run at">
+    <option>07:00</option><option>08:00</option><option>18:00</option>
+  </select>
+  <select slot="routine-timezone" aria-label="Timezone">
+    <option>UTC</option><option>Europe/Paris</option>
+  </select>
+</ag-ui-chat>
+```
+
+| Slot | Value |
+| --- | --- |
+| `routine-time` | `HH:MM`, 24-hour, as the wire carries it |
+| `routine-timezone` | An IANA zone name |
+
+The contract is the theme slot's: any element with a `value` property that fires `change`. When
+the form opens a routine it sets the control's `value` to the routine's (once per opening, so a
+re-render of your control does not overwrite a choice in progress), and on save it reads `value`.
+A `<select>` that has no option for the routine's value shows nothing chosen, so offer every value
+your routines can hold. The form's caption cannot name a slotted control across the shadow
+boundary: give yours its own `aria-label`. The slotted controls are yours to style; the
+built-in fields stay in the form as the slots' fallback content.
+
 ---
 
 ## MPA durability: surviving full page reloads
@@ -5028,7 +5064,7 @@ component sets, so a new one cannot ship undocumented.
 | Skills | `skill-chips`, `skill-chip`, `skill-palette`, `skill-item`, `skill-item-title`, `skill-item-desc`, `skill-item-token`, `skill-hint` (the composer hint: a skill’s missing placeholders, and a run continuation picked with nothing typed or while a run is in flight), `skill-manage` (the "Manage skills" row, also a `skill-item`) |
 | Full-panel view | `panel-view`, `panel-view-bar`, `panel-view-title`, `panel-view-body`, `panel-view-footer`, and in its bar `back-button` |
 | Skill editor | `skill-rows`, `skill-row`, `skill-empty`, `skill-form`, and in the view's bar `new-skill-button` |
-| Routines | `routine-rows`, `routine-row`, `routine-empty`, `routine-last`, `routine-toggle`, `routine-run`, `make-routine`, `routine-form`, `routine-day`, `routine-tools`, `routine-tool`, `routine-destructive`, and in the view's bar `new-routine-button` |
+| Routines | `routine-rows`, `routine-row`, `routine-empty`, `routine-last`, `routine-toggle`, `routine-run`, `make-routine`, `routine-form`, `routine-day`, `routine-time` (the hour and minute group), `routine-tools`, `routine-tool`, `routine-destructive`, and in the view's bar `new-routine-button` |
 | Thread drawer | `drawer`, `drawer-backdrop`, `drawer-panel`, `drawer-header`, `drawer-title`, `drawer-new`, `drawer-close`, `drawer-filter`, `drawer-list`, `drawer-empty`, `drawer-group-label`, `drawer-row` (plus `drawer-row-child` on a child session's row), `drawer-children`, `drawer-row-select`, `drawer-row-title`, `drawer-row-routine` (on a routine's run), `drawer-row-time`, `drawer-row-preview`, `drawer-row-actions`, `drawer-row-rename`, `drawer-row-delete`, `drawer-rename-input`, `drawer-confirm`, `drawer-confirm-label`, `drawer-confirm-yes`, `drawer-confirm-no` |
 | Charts | `chart-block`, `chart-title`, `chart-legend` |
 | Checkpoints panel | `checkpoints`, `checkpoints-header`, `checkpoints-title`, `checkpoints-list`, `checkpoints-empty`, `checkpoint-row`, `checkpoint-label`, `checkpoint-time`, `checkpoint-id`, `checkpoint-branch`, `checkpoint-actions` (the pair's wrapper), `checkpoint-action` (plus `checkpoint-resume`, `checkpoint-fork`) |

@@ -569,6 +569,12 @@ export interface UiStrings {
   // ── Header ──────────────────────────────────────────────────────────────────
   /** The header button, and its menu, holding the controls the row has no room for. */
   moreControls: string;
+
+  // ── Routine form fields ─────────────────────────────────────────────────────
+  /** The accessible name of the routine time's hour select. */
+  routineHour: string;
+  /** The accessible name of the routine time's minute select. */
+  routineMinute: string;
 }
 
 /** The built-in English strings — the fallback every override merges over. */
@@ -835,6 +841,9 @@ export const DEFAULT_UI_STRINGS: UiStrings = {
   weeksAgo: "{n}w ago",
 
   moreControls: "More",
+
+  routineHour: "Hour",
+  routineMinute: "Minute",
 };
 
 /**
