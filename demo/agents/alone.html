@@ -12,15 +12,35 @@
         background: #f7f7fb;
         color: #1a1a2e;
       }
-      ag-ui-chat {
+      header {
+        display: flex;
+        gap: 16px;
+        height: 52px;
+        margin: -16px -20px 16px;
+        padding: 0 20px;
+        align-items: center;
+      }
+      h1 {
+        margin: 0;
+        font-size: 1.1rem;
+      }
+      ag-ui-chat[placement="embedded"] {
         display: block;
         height: 70vh;
+      }
+      /* The page placement is fixed to the viewport: leave the 52px header. */
+      ag-ui-chat[placement="page"] {
+        --ag-ui-inset: 52px 0 0 0;
+        --ag-ui-width: 100vw;
+        --ag-ui-height: calc(100dvh - 52px);
       }
     </style>
   </head>
   <body>
-    <p><a href="/agents/">Back to the agents home</a></p>
-    <h1 id="title"></h1>
+    <header>
+      <a href="/agents/">Back to the agents home</a>
+      <h1 id="title"></h1>
+    </header>
     <main id="piece"></main>
     <script type="module" src="/agents/alone.js"></script>
     <script src="/viewport-readout.js"></script>
