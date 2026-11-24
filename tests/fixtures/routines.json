@@ -73,7 +73,7 @@
         "timezone": "Europe/Paris",
         "enabled": true,
         "pausedReason": "",
-        "nextFireAt": "2026-11-24T12:41:11.594104+00:00",
+        "nextFireAt": "2026-11-24T12:50:39.361882+00:00",
         "preapprovedTools": [
           {
             "name": "drop_table",
@@ -158,7 +158,7 @@
       "status": 202,
       "body": {
         "runId": "run-1",
-        "threadId": "0620c802abed4413bd204f55f74d4917"
+        "threadId": "b410a72b0f63455b988d1b30af25b8e0"
       }
     },
     "runsPending": {
@@ -167,7 +167,7 @@
         "runs": [
           {
             "runId": "run-1",
-            "threadId": "0620c802abed4413bd204f55f74d4917",
+            "threadId": "b410a72b0f63455b988d1b30af25b8e0",
             "state": "pending"
           }
         ]
@@ -185,7 +185,7 @@
         "runs": [
           {
             "runId": "run-1",
-            "threadId": "0620c802abed4413bd204f55f74d4917",
+            "threadId": "b410a72b0f63455b988d1b30af25b8e0",
             "state": "finished"
           }
         ]
@@ -222,7 +222,7 @@
               }
             ],
             "lastRunId": "run-1",
-            "lastThreadId": "0620c802abed4413bd204f55f74d4917"
+            "lastThreadId": "b410a72b0f63455b988d1b30af25b8e0"
           },
           {
             "id": "2",
@@ -236,7 +236,7 @@
             "timezone": "Europe/Paris",
             "enabled": true,
             "pausedReason": "",
-            "nextFireAt": "2026-11-24T12:41:11.594104+00:00",
+            "nextFireAt": "2026-11-24T12:50:39.361882+00:00",
             "preapprovedTools": [
               {
                 "name": "drop_table",
@@ -263,6 +263,37 @@
       "status": 400,
       "body": {
         "error": "A schedule is {'kind': 'weekly', 'weekdays', 'at'} or {'kind': 'interval', 'every_hours'}, and nothing else."
+      }
+    },
+    "threads": {
+      "status": 200,
+      "body": {
+        "threads": [
+          {
+            "thread_id": "fired",
+            "title": "standup",
+            "updated_at": null,
+            "preview": "",
+            "parent": null,
+            "routine": {
+              "id": "1",
+              "name": "standup"
+            }
+          },
+          {
+            "thread_id": "typed",
+            "title": "hello",
+            "updated_at": null,
+            "preview": "",
+            "parent": null,
+            "routine": null
+          }
+        ],
+        "agent": {
+          "id": "helper",
+          "name": null,
+          "description": null
+        }
       }
     }
   }

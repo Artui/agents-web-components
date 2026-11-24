@@ -447,7 +447,16 @@ export class ThreadDrawer {
     preview.className = "drawer-row-preview";
     preview.setAttribute("part", "drawer-row-preview");
     preview.textContent = meta.preview;
-    select.append(title, time, preview);
+    select.append(title);
+    if (meta.routine !== undefined) {
+      const badge = document.createElement("span");
+      badge.className = "drawer-row-routine";
+      badge.setAttribute("part", "drawer-row-routine");
+      badge.title = this.#strings.routineBadge.replace("{name}", meta.routine.name);
+      badge.textContent = meta.routine.name;
+      select.append(badge);
+    }
+    select.append(time, preview);
     select.addEventListener("click", () => {
       this.close();
       this.#callbacks.onSelect(meta.threadId);

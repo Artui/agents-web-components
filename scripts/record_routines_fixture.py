@@ -11,6 +11,7 @@ a real routine model. Run it from the repository root::
 from __future__ import annotations
 
 import json
+import tempfile
 from collections.abc import Iterable, Mapping
 from importlib.metadata import version
 from pathlib import Path
@@ -19,18 +20,23 @@ from typing import Any
 import django
 from django.conf import settings
 
+DB = str(Path(tempfile.mkdtemp()) / "record.sqlite3")
 settings.configure(
     INSTALLED_APPS=["django.contrib.auth", "django.contrib.contenttypes"],
-    DATABASES={"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}},
+    DATABASES={"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": DB}},
     SECRET_KEY="record",
     USE_TZ=True,
 )
 django.setup()
 
+from asgiref.sync import async_to_sync  # noqa: E402
 from django.contrib.auth.models import User  # noqa: E402
 from django.core.management import call_command  # noqa: E402
 from django.db import connection  # noqa: E402
 from django.test import RequestFactory  # noqa: E402
+from django_spec_agents.persistence.types.conversation_meta import (  # noqa: E402
+    ConversationMeta,
+)
 from django_spec_agents.headless.types.firing_state import FiringState  # noqa: E402
 from django_spec_agents.registry.decorator import tool  # noqa: E402
 from django_spec_agents.registry.tool_registry import ToolRegistry  # noqa: E402
@@ -94,6 +100,17 @@ class Policy(RoutinePolicy[Routine]):
         return Routine()
 
 
+class Store:
+    def __init__(self) -> None:
+        self.metas: list[ConversationMeta] = []
+
+    async def list(self, *, request: Any, limit: int | None = None) -> list[ConversationMeta]:
+        return self.metas
+
+
+STORE = Store()
+
+
 def registry() -> ToolRegistry:
     tools = ToolRegistry()
 
@@ -117,6 +134,7 @@ def main() -> None:
         registry(),
         model=FunctionModel(lambda messages, info: None),
         routine_model=Routine,
+        conversation_store=STORE,  # ty: ignore[invalid-argument-type]
         id="helper",
         csrf_exempt=True,
     )
@@ -134,6 +152,13 @@ def main() -> None:
             )
         request.user = user
         response = view(request, **defaults, **kwargs)
+        if hasattr(response, "__await__"):
+            pending = response
+
+            async def settled() -> Any:
+                return await pending
+
+            response = async_to_sync(settled)()
         return {"status": response.status_code, "body": json.loads(response.content)}
 
     draft = {
@@ -172,6 +197,11 @@ def main() -> None:
     answers["badSchedule"] = answer(
         "routines", "post", {**draft, "schedule": {"kind": "weekly", "weekdays": []}}
     )
+    STORE.metas = [
+        ConversationMeta(thread_id="fired", title="standup", routine_id=routine_id),
+        ConversationMeta(thread_id="typed", title="hello"),
+    ]
+    answers["threads"] = answer("threads")
     record = {
         "recordedBy": "record_routines_fixture.py",
         "djangoAgUi": version("django-ag-ui"),
