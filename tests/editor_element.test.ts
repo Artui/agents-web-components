@@ -65,6 +65,23 @@ describe("an editor element met before the element it binds to is defined", () =
     );
   });
 
+  it("binds nothing when for names a plain element, and leaves no rejection behind", async () => {
+    const rejected: unknown[] = [];
+    const onRejection = (reason: unknown): void => {
+      rejected.push(reason);
+    };
+    process.on("unhandledRejection", onRejection);
+    const plain = document.createElement("div");
+    plain.id = "chat";
+    const el = document.createElement(ROUTINES_TAG) as AgUiRoutines;
+    el.setAttribute("for", "chat");
+    document.body.append(plain, el);
+    await flush();
+    process.off("unhandledRejection", onRejection);
+    expect(el.chat).toBeNull();
+    expect(rejected).toEqual([]);
+  });
+
   it("binds a chat named by for once it is defined, and not before, waiting for it once", async () => {
     const waited = vi.spyOn(customElements, "whenDefined");
     const host = chat({ "data-routines-url": LIST });

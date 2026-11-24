@@ -270,12 +270,12 @@ export abstract class EditorElement<S extends EditorStrings> extends HTMLElement
     this.#through = null;
   }
 
-  /** `found` once its class is defined; before that, nothing, and a bind when it is. */
+  /** `found` once defined; before that, nothing, and a bind when it is (never, for a plain tag). */
   #upgraded<T extends HTMLElement>(found: T | null): T | null {
     if (found === null || typeof (found as Partial<EditorChat>).request === "function") {
       return found;
     }
-    if (!this.#awaited.has(found)) {
+    if (found.localName.includes("-") && !this.#awaited.has(found)) {
       this.#awaited.add(found);
       void customElements.whenDefined(found.localName).then(() => this.#bind());
     }

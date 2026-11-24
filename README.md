@@ -3676,7 +3676,9 @@ Both elements share these rules:
   over `for` until it is set back to `null`. With neither, the element binds to the chat of an
   `<ag-ui-agents>` provider: the one its `agents` attribute names by id, else the nearest one
   around it, and loads again when the agent it moves to lists a different URL. A chat or
-  provider whose element is not defined yet is waited for, then bound. **`provider`**
+  provider whose element is not defined yet is waited for, then bound. Until it binds, an
+  element with its own URL loads it alone, through `fetch`, and loads it again through the chat
+  or provider once bound. **`provider`**
   *(read-only)* is that provider. Bound to nothing, the element works alone.
 - **URL.** Its own URL attribute wins; else the bound chat's same attribute; else, under a
   provider, the URL the agent on screen lists in the directory. With none, the element draws

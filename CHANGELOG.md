@@ -23,7 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the `chat` property, or to an `<ag-ui-agents>` provider's chat, it takes the URL from there and
   sends through that one's `request()`. Its own `data-csrf-token` or `data-csrf-cookie` (sent as
   `data-csrf-header`, `X-CSRFToken` by default) is sent bound or alone, and wins per header over
-  the chat's or provider's; `credentials` serves it alone only. Bound, Make this a routine reads the chat's conversation, a last result fires
+  the chat's or provider's; `credentials` serves it alone only. Bound, Make this a routine reads
+  the chat's conversation, a last result fires
   the cancelable `ag-ui-routines-open-thread` and then opens the thread in the chat or through the
   provider, Draft one with the agent asks the chat, and a skill write refreshes the chat's
   palette. Alone, the first and third are absent. Opt-in: a page that loads neither entry sees no
