@@ -15,6 +15,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   threw and nothing was sent. The id is now built on `crypto.getRandomValues`, as the A2UI
   actions' run ids already were, which keeps the protocol packages out of the inbox bundle.
   No opt-in: a host that already answers in place gets the fix.
+- **`<ag-ui-inbox>`'s badge names its popup, the popover is a labelled dialog, and focus
+  leaving it closes it.** The badge carries `aria-haspopup="dialog"`, and the popover panel is
+  `role="dialog"` named by its heading (as a list, a `role="group"` with the same name). Tab
+  past the last row, or Shift+Tab past the badge, used to leave the popover open behind the
+  focus. It now closes, and focus stays where the key sent it. Escape still closes and hands
+  focus back to the badge, and a press outside still closes it. No opt-in.
+- **`<ag-ui-inbox variant="list">` keeps keyboard focus in the list when the focused row
+  leaves.** A row answered in place, answered elsewhere, or no longer waiting on the next
+  refresh used to drop focus to the page. Focus now moves to the row that took its place,
+  else the previous row, else the list itself (its panel, focusable by script only and named
+  like the list). The badge variant is unchanged: focus goes back to the badge. No opt-in.
 
 ## [0.11.0] — 2026-11-23
 
