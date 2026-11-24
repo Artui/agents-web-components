@@ -565,6 +565,35 @@ describe("the routines view in <ag-ui-chat>", () => {
     expect(q<HTMLTextAreaElement>(el, "#routine-field-prompt").value).toMatch(/^Summarise/);
   });
 
+  it("seeds only the user turns that hold text, from a restored conversation", async () => {
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("endpoint", "/agent/");
+    el.setAttribute("data-routines-url", ROUTINES_URL);
+    const restored = [
+      { id: "u1", role: "user", content: [{ type: "text", text: "Picture ask" }] },
+      { id: "u2", role: "user", content: "   " },
+      { id: "u3", role: "user", content: "Real ask" },
+      { id: "a1", role: "assistant", content: "Seen." },
+    ];
+    el.conversationStore = {
+      threadId: () => "t",
+      setActiveThread: () => {},
+      loadMessages: () => Promise.resolve(restored as never),
+      saveMessages: () => {},
+      loadCheckpoint: () => null,
+      saveCheckpoint: () => {},
+      clear: () => {},
+      listThreads: () => Promise.resolve([]),
+      renameThread: () => {},
+    };
+    document.body.appendChild(el);
+    await flush();
+    expect(shadow(el).textContent).toContain("Real ask");
+    el.makeRoutine();
+    await flush();
+    expect(q<HTMLTextAreaElement>(el, "#routine-field-prompt").value).toBe("Real ask");
+  });
+
   it("steps back from the form to the list and from the list to the composer", async () => {
     const el = mount();
     await flush();

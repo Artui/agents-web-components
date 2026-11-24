@@ -2361,7 +2361,7 @@ export class AgUiChat extends HTMLElement {
 
   /** What the conversation on screen would ask as a routine, or `null` before anything is said. */
   #routineSeed(): { readonly prompt: string; readonly name: string } | null {
-    const messages = this.#client?.messages ?? [];
+    const messages = this.#client?.messages ?? this.#history.restored;
     const asked = messages.flatMap((message) =>
       message.role === "user" && typeof message.content === "string" && message.content.trim()
         ? [message.content.trim()]
