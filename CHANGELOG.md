@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Make this a routine is an item in the header's More menu.** With `data-routines-url` set and
+  a prompt on screen (also a restored one), More lists it after the other controls, and the row
+  keeps at most four beside More as before; choosing it opens the routines
+  view on the pre-filled New routine form, as the list's button does. It leaves with New chat,
+  and `makeRoutine()` and the list-foot button are unchanged. It reuses the `makeRoutine`
+  string, so a host that localised it needs no new key.
+
 ### Fixed
 
 - **`<ag-ui-inbox variant="list">` shows a focus ring when focus falls back to the list.** Answering the last row hands focus to the panel (the list is hidden at zero rows), which drew only the browser's default ring, outside its edge; it now draws the rows' ring, inset so a sidebar does not clip it.

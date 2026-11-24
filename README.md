@@ -203,7 +203,7 @@ another origin, add `credentials="include"` too; see
 | `data-skills` | — | Inline JSON skill catalog. A value that will not parse is ignored and reported on the console, rather than reading as an empty catalog. |
 | `data-skills-url` | — | URL of a JSON skill catalog (fetched with the element's headers and cookie policy). |
 | `data-skill-editor-url` | — | URL of django-ag-ui's skill editor endpoint (`skills/editor/`). Opts into the [skill editor](#the-skill-editor): a "Manage skills" row at the foot of the `/` palette under `data-slash-commands`, a header button with `data-skill-editor-button`, or `openSkillEditor()`. |
-| `data-routines-url` | — | URL of django-ag-ui's routines editor (`routines/`, from 0.86.0). Opts into [routines](#routines): a Routines button in the header, `openRoutines()` and `makeRoutine()`. Read at connect time, like the other endpoint URLs. |
+| `data-routines-url` | — | URL of django-ag-ui's routines editor (`routines/`, from 0.86.0). Opts into [routines](#routines): a Routines button in the header, a Make this a routine item in its More menu, `openRoutines()` and `makeRoutine()`. Read at connect time, like the other endpoint URLs. |
 | `data-skill-editor-button` | absent | With `data-skill-editor-url`, also puts a Skills button in the header. Off by default. On a narrow panel it moves into the header's [More menu](#the-header-row-and-its-more-menu) like the other optional controls. |
 | `data-tools-url` | — | URL of a server tool-label catalog (`[{ name, summary, description? }]`), fetched with the element's headers and cookie policy; labels tool-call cards for server-side tools. |
 | `user-key` | `userKey` | Who the stored conversation belongs to — any string identifying the signed-in principal. Joins the storage namespace, and **changing it purges what the previous principal left behind**. Live (not connect-time): a logout is the host's to announce. See [Who the stored conversation belongs to](#who-the-stored-conversation-belongs-to-user-key). |
@@ -1447,7 +1447,9 @@ would hold more than five, the optional controls move into a More menu (the thre
 a time in this order: the theme toggle, Skills, checkpoints, then History. New chat, Maximize
 and Collapse always stay in the row. Once anything has moved, the row holds at most four
 controls beside More, so a header with every opt-in on still fits a 240px panel with its title
-readable.
+readable. With `data-routines-url` set, More also holds Make this a routine (the last item, in
+the menu only) while the conversation on screen has a prompt, and it counts toward that cap, so
+the first prompt may move a control into the menu.
 
 Nothing to opt into, and nothing a host drives changes: a control in the menu is the same
 `<button>`, with the same class (`header-btn--history`), `part` and `icon-*` slot, so
@@ -3579,8 +3581,8 @@ Pause or Resume and Run now act on the row. The view's bar adds a routine, and a
 form: name, prompt, a weekly or every-few-hours schedule, the timezone, and the tools each run
 may use without asking, offered from the server's `grantable` list. A destructive tool is marked,
 and granting it asks first, naming it destructive; the grant is then sent in `confirmDestructive`
-on every save, as the server requires. Make this a routine, at the foot of the list and as
-`makeRoutine()`, opens the form with the conversation's own prompts as the routine's.
+on every save, as the server requires. Make this a routine, at the foot of the list, in the
+header's More menu once a prompt is on screen, and as `makeRoutine()`, opens the form with the conversation's own prompts as the routine's.
 
 Writes are JSON and carry `getHeaders()`, so a CSRF header reaches them as it reaches the skill
 editor. With `data-threads-url` on the same mount, a thread a routine started carries a badge with
@@ -5004,7 +5006,7 @@ component sets, so a new one cannot ship undocumented.
 | Feature | Parts |
 | --- | --- |
 | Shell | `panel`, `header`, `title`, `icon`, `header-controls`, `messages`, `empty`, `greeting`, `pending`, `stopped`, `usage-line`, `jump-latest`, and one per resize grip: `resize-handle` plus `resize-handle-top`, `resize-handle-bottom`, `resize-handle-left`, `resize-handle-right`, `resize-handle-top-left`, `resize-handle-top-right`, `resize-handle-bottom-left`, `resize-handle-bottom-right` |
-| Header buttons | `header-button` on each, plus `skills-button` (with `data-skill-editor-button`), `routines-button` (with `data-routines-url`), `history-button`, `checkpoints-button`, `new-button`, `maximize-button`, `collapse-button`, `theme-toggle`, `more-button` (only while the row has moved a control into its menu); `header-menu` on the [More menu](#the-header-row-and-its-more-menu) |
+| Header buttons | `header-button` on each, plus `skills-button` (with `data-skill-editor-button`), `routines-button` (with `data-routines-url`), `history-button`, `checkpoints-button`, `new-button`, `maximize-button`, `collapse-button`, `theme-toggle`, `more-button` (only while the row has moved a control into its menu, or the menu holds Make this a routine), `make-routine-button` (in the menu, with `data-routines-url` and a prompt on screen); `header-menu` on the [More menu](#the-header-row-and-its-more-menu) |
 | Collapsed widget | `launcher`, `launcher-icon`, `launcher-badge`, `rail-label`, `bar` (the [bottom bar](#collapsing-to-a-bottom-bar)'s wrapper, around the launcher), `bar-place` (the place beside the bar's title; its text carries `place-label` and `place-detail`), `bar-history` |
 | Answers | `answer` (the per-turn group), `message` (plus `message-user`, `message-assistant`), `code-copy`, `enqueued-messages` and `enqueued-messages-note` (user messages a run took in mid-turn) |
 | Reasoning | `thoughts`, `thoughts-toggle`, `thoughts-body`, `thoughts-label` |

@@ -45,6 +45,8 @@ export interface TranscriptHost {
   readonly toolDisplay: () => ToolDisplayMode;
   /** The element's `toolGroupDisplay`, read per row: it decides what a lone step offers. */
   readonly toolGroupDisplay: () => ToolGroupDisplayMode;
+  /** Told after every change to what the list holds, which is when the empty state is re-read. */
+  readonly changed: () => void;
 }
 
 /**
@@ -322,6 +324,7 @@ export class Transcript {
   updateEmptyState(): void {
     this.#host.emptyWrap.hidden = this.#host.messages.childElementCount > 1;
     this.#host.element.toggleAttribute("data-empty", !this.#host.emptyWrap.hidden);
+    this.#host.changed();
   }
 
   /** A muted "⏹ Stopped" line in the transcript (distinct from the ⚠️ error bubble). */

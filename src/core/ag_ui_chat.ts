@@ -1081,6 +1081,7 @@ export class AgUiChat extends HTMLElement {
       element: this,
       messages: this.#messages,
       emptyWrap: this.#emptyWrap,
+      changed: () => this.#syncMakeRoutine(),
       strings: () => this.#strings,
       allowImages: () => this.allowImages,
       resolveTool: (name) => this.#tools.resolve(name),
@@ -2359,6 +2360,13 @@ export class AgUiChat extends HTMLElement {
     return url === null || url === "" ? null : url;
   }
 
+  /** Show the More menu's Make this a routine only while the conversation has a prompt (the item exists only with a routines URL). */
+  #syncMakeRoutine(): void {
+    if (this.#routinesUrl() !== null) {
+      this.#headerOverflow?.offer(this.#routineSeed() !== null);
+    }
+  }
+
   /** What the conversation on screen would ask as a routine, or `null` before anything is said. */
   #routineSeed(): { readonly prompt: string; readonly name: string } | null {
     const messages = this.#client?.messages ?? this.#history.restored;
@@ -3506,6 +3514,7 @@ export class AgUiChat extends HTMLElement {
           ? null
           : () => this.openSkillEditor(),
       onRoutines: this.#routinesUrl() === null ? null : () => this.openRoutines(),
+      onMakeRoutine: this.#routinesUrl() === null ? null : () => this.makeRoutine(),
       onHistory: () => this.openThreads(),
       onCheckpoints: () => this.toggleCheckpoints(),
       onNewChat: () => this.newChat(),
@@ -3525,6 +3534,7 @@ export class AgUiChat extends HTMLElement {
     // A panel is a window and a header is its title bar.
     this.#placement.enablePanelDrag(header);
     this.#headerOverflow = overflow;
+    this.#syncMakeRoutine();
     this.#maximizeControl = { button: maximize, before: collapse };
     this.#collapseControl = collapse;
     this.#paintCollapseControl();
@@ -4221,6 +4231,7 @@ export class AgUiChat extends HTMLElement {
   #setRunning(running: boolean): void {
     const settled = this.#running && !running;
     this.#running = running;
+    this.#syncMakeRoutine();
     // The send that asked for this run is covered from here until it settles,
     // so its hold ends now, and a host's follow-up from run-finished is heard.
     if (running) {
