@@ -168,7 +168,7 @@ describe("pageMapFrom", () => {
     expect(el.resolvePageTarget(user.handle)).toBe(root.querySelector("#user"));
   });
 
-  it("keeps a handle stable across reads and never reuses one", () => {
+  it("keeps a handle across reads while its element is listed", () => {
     const root = stage(`<button id="a">A</button>`);
     const first = entries(pageMapFrom(), "buttons")[0] as Entry;
     root.insertAdjacentHTML("afterbegin", `<button id="b">B</button>`);
@@ -380,5 +380,112 @@ describe("pageMapFrom", () => {
     stage(`<button>Outside</button>`);
     const inner = stage(`<button>Inside</button>`);
     expect(entries(pageMapFrom(inner), "buttons").map((b) => b["name"])).toEqual(["Inside"]);
+  });
+});
+
+describe("pageMapFrom privacy probes", () => {
+  const leaks = (map: Record<string, unknown>): string[] =>
+    JSON.stringify(map).match(/[a-z-]*leak[a-z-]*/g) ?? [];
+  const shadowed = (tag: string, html: string): void => {
+    if (!customElements.get(tag)) {
+      customElements.define(
+        tag,
+        class extends HTMLElement {
+          connectedCallback(): void {
+            if (this.shadowRoot === null) {
+              this.attachShadow({ mode: "open" }).innerHTML = html;
+            }
+          }
+        },
+      );
+    }
+  };
+
+  it("never reads an editable heading, header cell or tab", () => {
+    const root = stage(`
+      <h1 contenteditable="true"></h1>
+      <table><thead><tr><th contenteditable="true"></th><th>Total</th></tr></thead></table>
+      <div role="tab" contenteditable="true"></div>
+    `);
+    for (const el of root.querySelectorAll("[contenteditable]")) {
+      el.textContent = `${el.localName === "h1" ? "typed-heading" : el.localName === "th" ? "th" : "tab"}-leak`;
+    }
+    const map = pageMapFrom();
+    expect(leaks(map)).toEqual([]);
+    expect(entries(map, "tables")[0]?.["headers"]).toEqual(["Total"]);
+    expect(map["headings"]).toBeUndefined();
+    expect(map["tabs"]).toBeUndefined();
+    expect(entries(map, "fields").map((f) => f["type"])).toEqual([
+      "contenteditable",
+      "contenteditable",
+      "contenteditable",
+    ]);
+  });
+
+  it("never names a control by an editable region, a textarea or a select it points at", () => {
+    stage(`
+      <span id="ce" contenteditable="true">ce-root-leak</span>
+      <button aria-labelledby="ce" aria-label="Fallback">x</button>
+      <textarea id="ta">prefilled-leak</textarea>
+      <section aria-labelledby="ta"><p>a</p></section>
+      <select id="sel"><option>opt-a</option><option selected>opt-selected-leak</option></select>
+      <nav aria-labelledby="sel"></nav>
+      <span id="out-ref"><output>output-ref-leak</output></span>
+      <aside aria-labelledby="out-ref"></aside>
+    `);
+    const map = pageMapFrom();
+    expect(leaks(map)).toEqual([]);
+    expect(JSON.stringify(map)).not.toContain("opt-a");
+    expect(entries(map, "buttons").map((b) => b["name"])).toContain("Fallback");
+  });
+
+  it("never reads text from this package's elements or their shadow roots", () => {
+    shadowed("ag-ui-probe-x", "<b>pkg-shadow-leak</b>");
+    shadowed("ag-ui-probe-y", "<b>pkg-shadow-leak</b>");
+    stage(`<h2>Inbox <ag-ui-probe-x></ag-ui-probe-x></h2>
+      <button>Go <ag-ui-probe-y>light-pkg-leak</ag-ui-probe-y></button>`);
+    const map = pageMapFrom();
+    expect(leaks(map)).toEqual([]);
+    expect(entries(map, "headings")[0]?.["text"]).toBe("Inbox");
+    expect(entries(map, "buttons")[0]?.["name"]).toBe("Go");
+  });
+
+  it("never reads text hidden by CSS, an opt-out or an output", () => {
+    stage(`
+      <button>Pay <span style="display:none">css-hidden-leak</span><span style="visibility:hidden">invisible-leak</span></button>
+      <button>Go <span data-agent-ignore>ignored-leak</span></button>
+      <button>Total <output>output-leak</output></button>
+    `);
+    const map = pageMapFrom();
+    expect(leaks(map)).toEqual([]);
+    expect(entries(map, "buttons").map((b) => b["name"])).toEqual(["Pay", "Go", "Total"]);
+  });
+
+  it("gives a link to another scheme as its scheme alone, and clips an href", () => {
+    stage(`
+      <a href="mailto:jane-leak@example.com">Mail</a>
+      <a href="tel:+15551234">Call</a>
+      <a href="javascript:void(0)">Nothing</a>
+      <a href="data:text/csv,a-leak,b">Export</a>
+      <a href="https://example.org/${"p".repeat(120)}">Long</a>
+    `);
+    const map = pageMapFrom();
+    expect(leaks(map)).toEqual([]);
+    const hrefs = entries(map, "links").map((l) => l["href"] as string);
+    expect(hrefs.slice(0, 4)).toEqual(["mailto:", "tel:", "javascript:", "data:"]);
+    expect(hrefs[4]?.length).toBe(80);
+    expect(JSON.stringify(map)).not.toContain("5551234");
+  });
+
+  it("lists nothing inside an editable region or a listbox", () => {
+    stage(`
+      <div contenteditable="true" aria-label="Editor"><h3>editor-heading-leak</h3><button>editor-button-leak</button></div>
+      <div role="listbox" aria-label="Pick"><button>listbox-button-leak</button></div>
+    `);
+    const map = pageMapFrom();
+    expect(leaks(map)).toEqual([]);
+    expect(entries(map, "fields").map((f) => f["label"])).toEqual(["Editor", "Pick"]);
+    expect(map["headings"]).toBeUndefined();
+    expect(map["buttons"]).toBeUndefined();
   });
 });

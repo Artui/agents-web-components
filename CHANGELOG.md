@@ -43,10 +43,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   lists headings, landmarks, tabs, form fields, buttons, links, table column headers and open
   dialogs, each capped per kind (`PAGE_MAP_LIMITS`, with a `truncated` count). It never reads
   what a user put in a control: no field value, no password or hidden input, no
-  `aria-valuenow` / `aria-valuetext`, no `contenteditable` text, no option text, no link query
-  string, and a label never echoes the control it wraps. It skips this package's own elements,
-  anything marked `data-agent-ignore` and anything hidden, `inert` or `aria-hidden`. Each entry
-  carries a handle, `[data-agent-handle="n"]`, stamped on the element, which the default
+  `aria-valuenow` / `aria-valuetext`, no option text, and no text of a `contenteditable` region
+  (an editable heading, tab or cell is listed as a field, and nothing inside a field is listed). No
+  name or text, whether from content, a wrapping label, a header cell or an `aria-labelledby`
+  reference, reads a textarea, select, input or output, an editable region, this package's
+  elements, anything opted out, or anything not rendered. A link's `href` is its path (with the
+  origin for another site), cut at 80 characters, and its scheme alone for anything but http(s).
+  It skips this package's own elements, anything marked `data-agent-ignore` and anything hidden,
+  `inert` or `aria-hidden`. Each entry carries a handle, `[data-agent-handle="n"]`, kept across
+  reads while its element is listed and stamped on the element, which the default
   `resolvePageTarget` resolves, inside an open shadow root too: the default is now
   `resolvePageMapHandle`, which calls `document.querySelector` first and searches open shadow
   roots only when that misses and the target is exactly such a handle, so every other selector
