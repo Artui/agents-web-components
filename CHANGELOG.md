@@ -62,6 +62,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A sub-agent's tagged tool calls are the child's, never the parent's.** A `TOOL_CALL_*`
+  event carrying `subagentRunId` (django-ag-ui 0.90.0 sends a delegation's tool calls this
+  way, beside its `ag_ui.subagent` steps) drew a tool card of the parent's mid-turn. After the
+  run the call was dispatched, so a child tool named like a frontend tool ran in the browser.
+  A tagged call now draws no parent card and is never dispatched, and a restored thread skips
+  the tagged messages `@ag-ui/client` keeps. The delegation row is unchanged. See
+  [Delegated sub-agents](https://artui.github.io/agents-web-components/tool-calls/#delegated-sub-agents).
 - **An inbox row words an approval by its `x-confirm` prompt.** For a server whose stored
   interrupt carries the prompt in `metadata["x-confirm"]` and the raw call in `message`, the
   summary now prefers the prompt, as the approval card already does, and falls back to the

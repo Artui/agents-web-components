@@ -1029,6 +1029,11 @@ export class ConversationHistory {
    * the full transcript — tool calls and their results — not just the prose.
    */
   replay(message: Message): void {
+    // A sub-agent's own round, kept by the client under its delegation's tag: the parent's
+    // transcript never drew it live, so a reload does not draw it either.
+    if (message.subagentRunId !== undefined) {
+      return;
+    }
     const text = typeof message.content === "string" ? message.content : "";
     if (message.role === MESSAGE_ROLE.USER) {
       const attachments = messageAttachments(message);

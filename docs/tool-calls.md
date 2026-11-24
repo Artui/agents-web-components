@@ -233,6 +233,13 @@ an hour ago is not live now, and replaying its progress would be a lie about a
 run that is over. Reload mid-run and the tool card is still there; the nested
 detail is not. That is the intended behaviour.
 
+**A child's tool calls on the protocol's own events stay the child's.** A server may also send
+them as `TOOL_CALL_*` events tagged with the delegation's `subagentRunId`, as django-ag-ui does
+from 0.90.0. The component draws no card of the parent's for a tagged call and never runs it,
+even when a frontend tool has the same name; the row above still follows the `CUSTOM` steps.
+`@ag-ui/client` keeps those calls in the message list under the same tag, and a restored
+thread skips them too.
+
 Like `ag_ui.invalidate`, this name is **routed** rather than forwarded: it draws
 itself and does not also arrive as an `ag-ui-custom` event. Every other name
 still reaches your page untouched.

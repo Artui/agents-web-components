@@ -1138,6 +1138,11 @@ export class AgUiClient {
         });
       },
       onToolCallEndEvent({ event, toolCallName, toolCallArgs }) {
+        // A sub-agent's call, tagged by the delegation it ran in: the panel follows it from
+        // the CUSTOM step, and the parent never draws or dispatches it.
+        if (event.subagentRunId !== undefined) {
+          return;
+        }
         const call: AgUiToolCall = {
           id: event.toolCallId,
           name: toolCallName,
