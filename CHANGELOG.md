@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **`<ag-ui-inbox variant="list">` shows a focus ring when focus falls back to the list.** Answering the last row hands focus to the panel (the list is hidden at zero rows), which had no focus style; it now draws the rows' ring, inset so a sidebar does not clip it.
+- **`<ag-ui-inbox variant="list">` shows a focus ring when focus falls back to the list.** Answering the last row hands focus to the panel (the list is hidden at zero rows), which drew only the browser's default ring, outside its edge; it now draws the rows' ring, inset so a sidebar does not clip it.
 
 ## [0.12.0] — 2026-11-24
 
