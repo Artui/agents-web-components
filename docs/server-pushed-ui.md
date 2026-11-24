@@ -41,6 +41,11 @@ deliberately not in that history, which is the reason to push it. A chart the
 agent asked for survives either way, because its spec travels as the tool call's
 arguments and the component redraws from those without re-running anything.
 
+A server that wants the pushed chart back opts in: django-ag-ui's
+`AGUIServer(thread_activity_source=...)` (a `ThreadActivitySource`) materialises each activity
+as an `activity` message in `GET <id>/`, and the component redraws it. The
+[threads contract](threads-contract.md#restoring-a-pushed-chart) states the shape.
+
 Either way the payload is the same shape:
 
 ```json
