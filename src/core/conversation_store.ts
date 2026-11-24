@@ -51,6 +51,17 @@ export interface ThreadMeta {
    * knows it. Absent for a top-level thread and for a store that cannot tell.
    */
   readonly parent?: ThreadParent;
+  /**
+   * The routine whose firing started this thread, as a server store knows it.
+   * Absent for any other thread and for a store that cannot tell.
+   */
+  readonly routine?: ThreadRoutine;
+}
+
+/** The routine that started a thread, as {@link ThreadMeta.routine} names it. */
+export interface ThreadRoutine {
+  readonly id: string;
+  readonly name: string;
 }
 
 /**

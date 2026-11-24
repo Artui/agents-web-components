@@ -37,6 +37,7 @@ import { RUN_NOTICE_STYLES } from "./progress/run_notice_styles.js";
 import { THOUGHTS_STYLES } from "./progress/thoughts_styles.js";
 import { TOOL_GROUP_STYLES } from "./progress/tool_group_styles.js";
 import { TOOL_STEP_STYLES } from "./progress/tool_step_styles.js";
+import { ROUTINES_STYLES } from "./routines/routines_styles.js";
 import { FRAME_STYLES } from "./shell/frame_styles.js";
 import { HEADER_MENU_STYLES } from "./shell/header_menu_styles.js";
 import { PANEL_VIEW_STYLES } from "./shell/panel_view_styles.js";
@@ -102,6 +103,7 @@ export const STYLES: string = [
   // New modules with no rule restated elsewhere; ahead of the themes like the rest.
   PANEL_VIEW_STYLES,
   SKILL_EDITOR_STYLES,
+  ROUTINES_STYLES,
   // The step group restates, inside a group, card rules the modules above set
   // at rest; it outweighs them rather than relying on order, and sits ahead
   // of the themes so a theme restating a group rule at equal weight wins.

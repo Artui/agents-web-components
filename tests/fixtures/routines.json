@@ -1,0 +1,300 @@
+{
+  "recordedBy": "record_routines_fixture.py",
+  "djangoAgUi": "0.88.1",
+  "answers": {
+    "listEmpty": {
+      "status": 200,
+      "body": {
+        "routines": [],
+        "grantable": [
+          {
+            "name": "look",
+            "destructive": false
+          },
+          {
+            "name": "drop_table",
+            "destructive": true
+          }
+        ]
+      }
+    },
+    "created": {
+      "status": 201,
+      "body": {
+        "id": "1",
+        "name": "standup",
+        "agentId": "helper",
+        "prompt": "Run standup.",
+        "schedule": {
+          "kind": "weekly",
+          "weekdays": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "at": "08:00"
+        },
+        "timezone": "Europe/Paris",
+        "enabled": true,
+        "pausedReason": "",
+        "nextFireAt": "2026-11-24T07:00:00+00:00",
+        "preapprovedTools": [
+          {
+            "name": "look",
+            "destructive": false
+          }
+        ],
+        "lastRunId": null,
+        "lastThreadId": null
+      }
+    },
+    "destructiveUnconfirmed": {
+      "status": 409,
+      "body": {
+        "error": "Granting drop_table lets each firing run a destructive tool unasked: name it in confirmDestructive to grant it.",
+        "destructive": [
+          "drop_table"
+        ]
+      }
+    },
+    "destructiveConfirmed": {
+      "status": 201,
+      "body": {
+        "id": "2",
+        "name": "cleanup",
+        "agentId": "helper",
+        "prompt": "Run standup.",
+        "schedule": {
+          "kind": "interval",
+          "every_hours": 6
+        },
+        "timezone": "Europe/Paris",
+        "enabled": true,
+        "pausedReason": "",
+        "nextFireAt": "2026-11-24T12:50:39.361882+00:00",
+        "preapprovedTools": [
+          {
+            "name": "drop_table",
+            "destructive": true
+          }
+        ],
+        "lastRunId": null,
+        "lastThreadId": null
+      }
+    },
+    "paused": {
+      "status": 200,
+      "body": {
+        "id": "1",
+        "name": "standup",
+        "agentId": "helper",
+        "prompt": "Run standup.",
+        "schedule": {
+          "kind": "weekly",
+          "weekdays": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "at": "08:00"
+        },
+        "timezone": "Europe/Paris",
+        "enabled": false,
+        "pausedReason": "",
+        "nextFireAt": null,
+        "preapprovedTools": [
+          {
+            "name": "look",
+            "destructive": false
+          }
+        ],
+        "lastRunId": null,
+        "lastThreadId": null
+      }
+    },
+    "resumed": {
+      "status": 200,
+      "body": {
+        "id": "1",
+        "name": "standup",
+        "agentId": "helper",
+        "prompt": "Run standup.",
+        "schedule": {
+          "kind": "weekly",
+          "weekdays": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "at": "08:00"
+        },
+        "timezone": "Europe/Paris",
+        "enabled": true,
+        "pausedReason": "",
+        "nextFireAt": "2026-11-24T07:00:00+00:00",
+        "preapprovedTools": [
+          {
+            "name": "look",
+            "destructive": false
+          }
+        ],
+        "lastRunId": null,
+        "lastThreadId": null
+      }
+    },
+    "runsNever": {
+      "status": 200,
+      "body": {
+        "runs": []
+      }
+    },
+    "ranNow": {
+      "status": 202,
+      "body": {
+        "runId": "run-1",
+        "threadId": "b410a72b0f63455b988d1b30af25b8e0"
+      }
+    },
+    "runsPending": {
+      "status": 200,
+      "body": {
+        "runs": [
+          {
+            "runId": "run-1",
+            "threadId": "b410a72b0f63455b988d1b30af25b8e0",
+            "state": "pending"
+          }
+        ]
+      }
+    },
+    "busy": {
+      "status": 409,
+      "body": {
+        "error": "Its last firing has not finished yet."
+      }
+    },
+    "runsFinished": {
+      "status": 200,
+      "body": {
+        "runs": [
+          {
+            "runId": "run-1",
+            "threadId": "b410a72b0f63455b988d1b30af25b8e0",
+            "state": "finished"
+          }
+        ]
+      }
+    },
+    "list": {
+      "status": 200,
+      "body": {
+        "routines": [
+          {
+            "id": "1",
+            "name": "standup",
+            "agentId": "helper",
+            "prompt": "Run standup.",
+            "schedule": {
+              "kind": "weekly",
+              "weekdays": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ],
+              "at": "08:00"
+            },
+            "timezone": "Europe/Paris",
+            "enabled": true,
+            "pausedReason": "",
+            "nextFireAt": "2026-11-24T07:00:00+00:00",
+            "preapprovedTools": [
+              {
+                "name": "look",
+                "destructive": false
+              }
+            ],
+            "lastRunId": "run-1",
+            "lastThreadId": "b410a72b0f63455b988d1b30af25b8e0"
+          },
+          {
+            "id": "2",
+            "name": "cleanup",
+            "agentId": "helper",
+            "prompt": "Run standup.",
+            "schedule": {
+              "kind": "interval",
+              "every_hours": 6
+            },
+            "timezone": "Europe/Paris",
+            "enabled": true,
+            "pausedReason": "",
+            "nextFireAt": "2026-11-24T12:50:39.361882+00:00",
+            "preapprovedTools": [
+              {
+                "name": "drop_table",
+                "destructive": true
+              }
+            ],
+            "lastRunId": null,
+            "lastThreadId": null
+          }
+        ],
+        "grantable": [
+          {
+            "name": "look",
+            "destructive": false
+          },
+          {
+            "name": "drop_table",
+            "destructive": true
+          }
+        ]
+      }
+    },
+    "badSchedule": {
+      "status": 400,
+      "body": {
+        "error": "A schedule is {'kind': 'weekly', 'weekdays', 'at'} or {'kind': 'interval', 'every_hours'}, and nothing else."
+      }
+    },
+    "threads": {
+      "status": 200,
+      "body": {
+        "threads": [
+          {
+            "thread_id": "fired",
+            "title": "standup",
+            "updated_at": null,
+            "preview": "",
+            "parent": null,
+            "routine": {
+              "id": "1",
+              "name": "standup"
+            }
+          },
+          {
+            "thread_id": "typed",
+            "title": "hello",
+            "updated_at": null,
+            "preview": "",
+            "parent": null,
+            "routine": null
+          }
+        ],
+        "agent": {
+          "id": "helper",
+          "name": null,
+          "description": null
+        }
+      }
+    }
+  }
+}
