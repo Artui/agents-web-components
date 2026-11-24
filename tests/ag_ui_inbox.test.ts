@@ -242,6 +242,16 @@ describe("<ag-ui-inbox> rows", () => {
         ],
       }),
       row("m", "board", { status: "waiting", interrupts: [ARCHIVE] }),
+      row("q", "board", {
+        status: "waiting",
+        interrupts: [
+          {
+            ...call,
+            message: "Which shelf?",
+            metadata: { destructive: false, kind: "question", "x-confirm": "Not a question" },
+          },
+        ],
+      }),
     ]);
     const home = provider();
     const list = inbox({ variant: "list" });
@@ -255,6 +265,7 @@ describe("<ag-ui-inbox> rows", () => {
       "Approval: Approve discard_book({'id': 8})?",
       "Approval: Approve discard_book({'id': 9})?",
       "Approval: Archive the board?",
+      "Question: Which shelf?",
     ]);
   });
 

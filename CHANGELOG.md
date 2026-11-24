@@ -62,10 +62,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **An inbox row words an approval by its `x-confirm` prompt.** The summary prefers the
-  interrupt's `metadata["x-confirm"]`, as the approval card already does, and falls back to its
-  message (django-ag-ui and pydantic-ai write "Approve name(args)?") when the prompt is absent,
-  blank or not a string. The approval card's wording is unchanged.
+- **An inbox row words an approval by its `x-confirm` prompt.** For a server whose stored
+  interrupt carries the prompt in `metadata["x-confirm"]` and the raw call in `message`, the
+  summary now prefers the prompt, as the approval card already does, and falls back to the
+  message when the prompt is absent, blank or not a string. django-ag-ui's rows are unchanged:
+  their `message` is already the prompt. The approval card's wording is unchanged.
 
 ## [0.14.0] — 2026-11-24
 

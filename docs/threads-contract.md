@@ -4,8 +4,7 @@
 contract that server answers: what `RemoteConversationStore` (the store the attribute builds)
 asks for, and what it reads from the answers. It is written from the reference producer,
 django-ag-ui's `ThreadsView` (0.89.0), and split into what the component **requires** and what
-django-ag-ui **adds**. Any server that keeps to the first part works; the reporter's Go server
-was written from it.
+django-ag-ui **adds**. Any server that keeps to the first part works.
 
 Every example below is quoted from `tests/fixtures/thread_status.json`, recorded by
 `scripts/record_thread_status_fixture.py` against django-ag-ui 0.89.0 installed from PyPI, with
@@ -40,7 +39,7 @@ cap, so a client cannot ask for more than the server allows.
 | `thread_id` | string | The id the detail and mutation routes take. |
 | `title` | string | Shown in the list. |
 | `updated_at` | ISO 8601 string or `null` | Sorts and dates the row. |
-| `preview` | string | A line of the last assistant text. |
+| `preview` | string | A line of the latest message with text, from any role. |
 
 ### Thread status keys
 
@@ -109,7 +108,9 @@ A failed row, and an idle one that has been read:
 ```
 
 An interrupt has `id` (`int-<toolCallId>`), `reason` (`tool_call`), `message`, `toolCallId` and
-`metadata` of `{"destructive": bool, "kind": "approval" | "question" | "external"}`.
+`metadata` of `{"destructive": bool, "kind": "approval" | "question" | "external"}`. django-ag-ui
+writes the approval prompt (or the tool name) as `message`. A server that keeps the raw call in
+`message` may add the prompt as `metadata["x-confirm"]`: the inbox words an approval row by it.
 
 A listing whose rows carry no `status` means the server has no run store. The component then
 sends no `read/` POST and never asks for interrupts.
@@ -121,7 +122,7 @@ Optional. The component works without each, and each is read by one feature:
 | Key | Where | Read by |
 | --- | --- | --- |
 | `run_id` | a `waiting` row, only when the mount can resume runs (a step store) | the inbox's in-place answer, which resumes that run |
-| `agent_id` | every row of a mount with an id | the [agents provider](agents.md#several-agents-under-one-provider)'s inbox, to say which agent owns a row |
+| `agent_id` | every row of a mount with an id, beside a run store | the [agents provider](agents.md#several-agents-under-one-provider)'s inbox, to say which agent owns a row |
 | `parent` | `{"thread_id", "scope"}` for a child session, else `null` (always sent) | child sessions listed under their parent thread |
 | `routine` | `{"id", "name"}` for a thread a routine fired, else `null` (always sent) | the routine's name on the row |
 | top-level `agent` | `{"id", "name", "description"}`, beside `threads` | nothing: it names the mount that answered, and the component takes agents from its own directory route |
@@ -278,7 +279,7 @@ answering it. The recorded messages of the thread parked on `call-1`:
 and the component redraws each one it knows (a `chart` with
 [`enableCharts`](server-pushed-ui.md#charts)). django-ag-ui does not store pushed activities in
 the model history on purpose; it materialises them at their anchor when the server is given a
-[`thread_activity_source`](https://artui.github.io/django-ag-ui/) (`AGUIServer(thread_activity_source=...)`,
+[`thread_activity_source`](https://artui.github.io/django-ag-ui/charts/#putting-a-pushed-chart-back-on-reload) (`AGUIServer(thread_activity_source=...)`,
 the `ThreadActivitySource` protocol in django-ag-ui's persistence types). A chart anchored after the user message, as recorded:
 
 ```json
