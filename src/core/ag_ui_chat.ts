@@ -1267,6 +1267,7 @@ export class AgUiChat extends HTMLElement {
     });
     this.#routines = new RoutinesView({
       view: this.#panelView,
+      element: this,
       strings: () => this.#strings,
       fromConversation: () => this.#routineSeed(),
       onOpenThread: (threadId) => {

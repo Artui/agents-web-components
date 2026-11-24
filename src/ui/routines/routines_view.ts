@@ -17,6 +17,8 @@ import { scheduleInWords } from "./schedule_in_words.js";
 export interface RoutinesViewHost {
   /** The full-panel view the routines draw into. */
   readonly view: PanelView;
+  /** The element whose light-DOM children may fill the form's named slots. */
+  readonly element: HTMLElement;
   readonly strings: () => UiStrings;
   /** The prompt and a name the conversation on screen suggests, or `null` when it has none. */
   readonly fromConversation: () => { readonly prompt: string; readonly name: string } | null;
