@@ -64,7 +64,7 @@ function mount(
       initialMessages: options.initialMessages ?? [],
       // Invoked as the real factory's fetch wrapper does, per request — a
       // rotated CSRF/JWT must reach the resume endpoint too.
-      headers: options.getHeaders?.() ?? {},
+      headers: (options.getHeaders?.() ?? {}) as Record<string, string>,
     });
     return makeFakeAgent({ script: script ?? ((emit: Emit) => emit.runEnd()) }).agent;
   };

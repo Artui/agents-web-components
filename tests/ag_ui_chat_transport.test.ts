@@ -443,3 +443,88 @@ describe("AgUiChat — routes out of the header", () => {
     expect(shadow(el).querySelector<HTMLElement>(".checkpoints")?.hidden).toBe(false);
   });
 });
+
+describe("AgUiChat transport — an async getHeaders", () => {
+  const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+
+  it("reaches every request the element makes once it resolves", async () => {
+    const calls = installFetch();
+    const { el, agentOptions } = build((e) => {
+      e.headers = { "X-Client": "admin" };
+      e.getHeaders = async () => ({ Authorization: "Bearer t" });
+    });
+    const media = installFakeMedia();
+    try {
+      seedUsedThread();
+      document.body.appendChild(el);
+      await settle();
+      el.openThreads();
+      el.openCheckpoints();
+      await settle();
+      const mic = shadow(el).querySelector<HTMLButtonElement>(".voice-btn");
+      mic?.click();
+      await settle();
+      mic?.click();
+      await settle();
+      el.attachFile(new File(["hello"], "notes.txt", { type: "text/plain" }));
+      await settle();
+      xhr.last().succeed(201, JSON.stringify({ id: "a1", name: "n", mime: "text/plain", size: 5 }));
+      await settle();
+      await el.request("/agent/mcp-apps/resource/");
+      await el.sendMessage("hi");
+    } finally {
+      media.restore();
+    }
+
+    const seen = new Set(
+      calls.map((call) => call.url.replace(/\/agent\/threads\/[^/]+\/$/, "/agent/threads/:id/")),
+    );
+    expect(seen).toEqual(
+      new Set([
+        "/agent/tools/",
+        "/agent/skills/",
+        "/agent/threads/",
+        "/agent/threads/:id/",
+        "/agent/runs/",
+        "/agent/transcribe/",
+        "/agent/mcp-apps/resource/",
+      ]),
+    );
+    for (const call of calls) {
+      expect(headersOf(call.init)).toMatchObject({
+        "x-client": "admin",
+        authorization: "Bearer t",
+      });
+    }
+    expect(xhr.last().headers["Authorization"]).toBe("Bearer t");
+    // The agent is built with the static headers alone, never a Promise, and
+    // overlays the live source on each request.
+    expect(agentOptions.at(-1)?.headers).toEqual({ "X-Client": "admin" });
+    expect(await agentOptions.at(-1)?.getHeaders?.()).toEqual({
+      "X-Client": "admin",
+      Authorization: "Bearer t",
+    });
+  });
+
+  it("fails each request with the source's own error, sending nothing", async () => {
+    const calls = installFetch();
+    const failure = new Error("refresh failed");
+    const { el, agentOptions } = build((e) => {
+      e.getHeaders = () => Promise.reject(failure);
+    });
+    document.body.appendChild(el);
+    await settle();
+
+    await expect(el.request("/agent/mcp-apps/resource/")).rejects.toBe(failure);
+    el.openThreads();
+    await settle();
+    el.attachFile(new File(["hello"], "notes.txt", { type: "text/plain" }));
+    await settle();
+    await el.sendMessage("hi");
+    await expect(agentOptions.at(-1)?.getHeaders?.()).rejects.toBe(failure);
+
+    expect(calls).toEqual([]);
+    expect(xhr.instances).toHaveLength(0);
+    expect(shadow(el).querySelector(".attachment-chip--error")).not.toBeNull();
+  });
+});

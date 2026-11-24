@@ -26,6 +26,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the detail, rename, delete and chart-restore answers added. The `data-threads-url` row and the chart docs
   link it, and the chart docs name django-ag-ui's `thread_activity_source`.
 
+- **`getHeaders` may return a Promise**, so a host can await a token refresh before a request
+  goes. Widened on `AgUiChat.getHeaders`, `AgUiAgents.getHeaders`, the inbox provider's
+  `getHeaders`, `HttpAgentOptions.getHeaders` and the `RemoteConversationStore` constructor's
+  header provider. Every request awaits it: the run, the thread list, detail, rename, delete and
+  read, the thread and inbox watches (poll and stream), the run index, the catalogs, uploads,
+  transcription, `request()` on the chat and the provider, and the inbox's answers. A rejected
+  Promise fails that request with the same error and sends nothing; there is no retry. A
+  synchronous source behaves as before, with no added microtask. Nothing to opt in to: assigning
+  an async function is the opt-in. Host code that calls `chat.getHeaders()` itself and uses the
+  result as a record now has to handle a Promise at the type level. An upload whose signal fired
+  before it began is now rejected as cancelled rather than sent.
+
 ## [0.14.0] — 2026-11-24
 
 ### Changed

@@ -79,7 +79,7 @@ The full walkthrough, with headers, attributes and sending from your own UI, is 
 
 ## Topics
 
-- [Authenticating requests](https://artui.github.io/agents-web-components/authentication/): headers, cookies, trusted origins.
+- [Authenticating requests](https://artui.github.io/agents-web-components/authentication/): headers (a sync or async `getHeaders`), cookies, trusted origins.
 - [Core concepts](https://artui.github.io/agents-web-components/concepts/): the run loop, stopping, tools, confirmation, DOM drivers.
 - [Header, collapse and resizing](https://artui.github.io/agents-web-components/header-and-panel/): the header, launcher, bottom bar, resizing.
 - [Messages](https://artui.github.io/agents-web-components/messages/): markdown, follow-ups, timestamps, message actions, quoting.

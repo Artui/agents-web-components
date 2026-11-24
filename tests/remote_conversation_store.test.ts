@@ -418,3 +418,51 @@ describe("RemoteConversationStore", () => {
     });
   });
 });
+
+describe("RemoteConversationStore with an async header source", () => {
+  const auth = async (): Promise<Record<string, string>> => ({ Authorization: "Bearer t" });
+  const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+  const sent = (): (string | null)[] =>
+    fetchMock.mock.calls.map(([, init]) => new Headers(init?.headers).get("Authorization"));
+
+  beforeEach(() => {
+    sessionStorage.clear();
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValue(
+      ok({
+        threads: [{ thread_id: "t1", title: "T", updated_at: null, status: "idle" }],
+        messages: [],
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("sends the resolved header on the list, the detail, a rename, a delete and a read", async () => {
+    const store = new RemoteConversationStore("https://x/threads/", auth);
+    await store.listThreads();
+    await store.loadMessages("t1");
+    store.renameThread("t1", "Trip");
+    store.clear("t1");
+    store.markRead("t1");
+    await settle();
+    expect(fetchMock.mock.calls.map(([url, init]) => [url, init?.method ?? "GET"])).toEqual([
+      ["https://x/threads/", "GET"],
+      ["https://x/threads/t1/", "GET"],
+      ["https://x/threads/t1/", "PATCH"],
+      ["https://x/threads/t1/", "DELETE"],
+      ["https://x/threads/t1/read/", "POST"],
+    ]);
+    expect(sent()).toEqual(Array(5).fill("Bearer t"));
+  });
+
+  it("sends nothing when the source rejects, reading the list as unavailable", async () => {
+    const store = new RemoteConversationStore("https://x/threads/", () =>
+      Promise.reject(new Error("refresh failed")),
+    );
+    expect(await store.listThreads()).toEqual([]);
+    store.renameThread("t1", "Trip");
+    await settle();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});

@@ -1,7 +1,8 @@
 import { withCredentials } from "./utils.js";
+import { type MaybeAsync, whenReady } from "./when_ready.js";
 
 /** Headers for a request to `url`, read per request so rotated tokens and CSRF go with it. */
-type HeadersFor = (url: string) => Record<string, string>;
+type HeadersFor = (url: string) => MaybeAsync<Record<string, string>>;
 
 /** Live cookie policy, read per request; see `RemoteConversationStore`'s note. */
 type CredentialsProvider = () => RequestCredentials | undefined;
@@ -48,11 +49,13 @@ export class DetachedRuns {
   async running(threadId: string): Promise<boolean> {
     const url = `${this.eventsUrl(threadId)}?after=0&limit=1`;
     try {
-      const response = await fetch(
-        url,
-        withCredentials(
-          { method: "GET", headers: { ...this.#headers(url), Accept: "application/json" } },
-          this.#credentials(),
+      const response = await whenReady(this.#headers(url), (headers) =>
+        fetch(
+          url,
+          withCredentials(
+            { method: "GET", headers: { ...headers, Accept: "application/json" } },
+            this.#credentials(),
+          ),
         ),
       );
       if (!response.ok) {
@@ -73,9 +76,8 @@ export class DetachedRuns {
   async cancel(threadId: string): Promise<void> {
     const url = `${this.#url}${encodeURIComponent(threadId)}/cancel/`;
     try {
-      await fetch(
-        url,
-        withCredentials({ method: "POST", headers: this.#headers(url) }, this.#credentials()),
+      await whenReady(this.#headers(url), (headers) =>
+        fetch(url, withCredentials({ method: "POST", headers }, this.#credentials())),
       );
     } catch {
       // Best-effort; see above.

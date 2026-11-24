@@ -12,7 +12,7 @@ export type InboxProvider = HTMLElement & {
   readonly inbox: readonly InboxRow[];
   readonly agents: readonly AgentEntry[];
   readonly headers?: Record<string, string>;
-  readonly getHeaders?: (() => Record<string, string>) | null;
+  readonly getHeaders?: (() => Record<string, string> | Promise<Record<string, string>>) | null;
   readonly credentials?: RequestCredentials | null;
   openThread(agentId: string, threadId: string): Promise<void>;
 };
