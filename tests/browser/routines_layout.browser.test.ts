@@ -252,6 +252,22 @@ describe("routines (real browser)", () => {
     },
   );
 
+  it("keeps the hour and minute selects and the timezone input inside the form at 240px", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => answer(String(url))),
+    );
+    const el = mount("240px");
+    await openForm(el, true);
+    const form = part(el, ".routine-form").getBoundingClientRect();
+    const controls = [...all(el, ".routine-time select"), part(el, "#routine-field-timezone")];
+    expect(controls).toHaveLength(3);
+    for (const control of controls) {
+      expect(control.getBoundingClientRect().width).toBeGreaterThan(0);
+      expect(inside(control.getBoundingClientRect(), form)).toBe(true);
+    }
+  });
+
   it("changes the time and the zone from the keyboard alone and saves 'HH:MM'", async () => {
     const fetch = vi.fn(async (url: string, _init?: RequestInit) => answer(String(url)));
     vi.stubGlobal("fetch", fetch);

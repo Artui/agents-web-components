@@ -2391,7 +2391,9 @@ agent at a time.
   `scope`.
 - **Requests** carry **`headers`**, **`getHeaders()`** (winning per key) and the
   **`credentials`** attribute, as on the chat. They are the provider's own; the chat keeps its
-  own for its requests.
+  own for its requests. **`request(url, init?)`** is the public `fetch` that sends them, the one
+  an `<ag-ui-routines>` or `<ag-ui-skills>` under the provider calls; `init.headers` win per key
+  and `init.credentials` wins over the attribute.
 
 The provider is exported from the root entry (and so from `/bundle`) with `defineAgents`, which
 throws naming the tag when another class holds it. A lone `<ag-ui-chat>` needs none of this and
@@ -3631,9 +3633,10 @@ Either field can be replaced by a control of your own, slotted on the element:
 | `routine-time` | `HH:MM`, 24-hour, as the wire carries it |
 | `routine-timezone` | An IANA zone name |
 
-The contract is a value, not a type: any element with a `value` property that fires `change`. When
-the form opens a routine it sets the control's `value` to the routine's (once per opening, so a
-re-render of your control does not overwrite a choice in progress), and on save it reads `value`.
+The contract is a value, not a type: any element with a string `value` property. When the form
+opens a routine it sets the control's `value` to the routine's (once per opening, so a re-render
+of your control does not overwrite a choice in progress), and on save it reads `value`. Nothing
+listens for `change`.
 A `<select>` that has no option for the routine's value shows nothing chosen, so offer every value
 your routines can hold. The form's caption cannot name a slotted control across the shadow
 boundary: give yours its own `aria-label`. The slotted controls are yours to style; the
@@ -3672,7 +3675,8 @@ Both elements share these rules:
   later is picked up when it first reports its thread. Or set the `chat` property, which wins
   over `for` until it is set back to `null`. With neither, the element binds to the chat of an
   `<ag-ui-agents>` provider: the one its `agents` attribute names by id, else the nearest one
-  around it, and loads again each time the provider moves to another agent. **`provider`**
+  around it, and loads again when the agent it moves to lists a different URL. A chat or
+  provider whose element is not defined yet is waited for, then bound. **`provider`**
   *(read-only)* is that provider. Bound to nothing, the element works alone.
 - **URL.** Its own URL attribute wins; else the bound chat's same attribute; else, under a
   provider, the URL the agent on screen lists in the directory. With none, the element draws

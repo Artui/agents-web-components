@@ -3,11 +3,14 @@ import type { AgUiAgents } from "../src/agents/ag_ui_agents.js";
 import { defineAgents } from "../src/agents/define_agents.js";
 import type { AgentEntry } from "../src/agents/types.js";
 import {
+  AGENT_CHANGE_EVENT,
   AGENTS_TAG,
   ELEMENT_TAG,
   OPEN_EDITOR_EVENT,
   ROUTINES_OPEN_THREAD_EVENT,
   ROUTINES_TAG,
+  RUN_FINISHED_EVENT,
+  THREAD_EVENT,
 } from "../src/constants.js";
 import type { AgUiChat } from "../src/core/ag_ui_chat.js";
 import { defineChat } from "../src/core/define_chat.js";
@@ -28,6 +31,7 @@ interface Seen {
 }
 
 let seen: Seen[];
+let releaseSlow: () => void;
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -84,6 +88,11 @@ function install(): void {
       }
       if (url === URL_A || url === URL_B) {
         return json(200, { routines: [STANDUP], grantable: [] });
+      }
+      if (url === "/slow/") {
+        return new Promise<Response>((resolve) => {
+          releaseSlow = () => resolve(json(200, { routines: [], grantable: [] }));
+        });
       }
       if (url === "/broken/") {
         return json(500, {});
@@ -410,6 +419,62 @@ describe("<ag-ui-routines>", () => {
       expect((el.chat as HTMLElement | null)?.id).toBe("chat");
     });
 
+    it("sends a list it loaded before its chat appeared through that chat, so the chat's headers go with it", async () => {
+      const el = routines({ for: "chat", "data-routines-url": URL_A });
+      document.body.append(el);
+      await flush();
+      const host = chat();
+      host.headers = { Authorization: "Bearer x" };
+      document.body.append(host);
+      await flush();
+      expect(el.chat).toBe(host);
+      expect(
+        seen
+          .filter((s) => s.url === URL_A)
+          .at(-1)
+          ?.headers.get("Authorization"),
+      ).toBe("Bearer x");
+      expect(title(el)).toBe("Routines");
+    });
+
+    it("sends nothing while detached, and its first list once bound goes through the chat", async () => {
+      const el = routines({ "data-routines-url": URL_A });
+      el.strings = { routines: "Mine" };
+      await flush();
+      expect(seen).toEqual([]);
+      const host = chat();
+      host.headers = { Authorization: "Bearer x" };
+      el.setAttribute("for", "chat");
+      document.body.append(host, el);
+      await flush();
+      const lists = seen.filter((s) => s.url === URL_A);
+      expect(lists.map((s) => s.headers.get("Authorization"))).toEqual(["Bearer x"]);
+      expect(title(el)).toBe("Mine");
+    });
+
+    it("asks again for nothing when an attribute changes and leaves its URL and its route as they were", async () => {
+      const el = routines({ "data-routines-url": URL_A });
+      document.body.append(el);
+      await flush();
+      el.setAttribute("agents", "nowhere");
+      el.setAttribute("data-routines-url", URL_A);
+      await flush();
+      expect(listed(URL_A)).toEqual([URL_A]);
+    });
+
+    it("binds a new chat with the id of the one it followed, once that one has left", async () => {
+      const first = chat({ "data-routines-url": URL_A });
+      const el = routines({ for: "chat" });
+      document.body.append(first, el);
+      await flush();
+      first.remove();
+      const second = chat({ "data-routines-url": URL_B });
+      document.body.append(second);
+      await flush();
+      expect(el.chat).toBe(second);
+      expect(listed(URL_B)).toEqual([URL_B]);
+    });
+
     it("stops listening when it leaves the page", async () => {
       const host = chat({ "data-routines-url": URL_A, "data-editors": "external" });
       const el = routines({ for: "chat" });
@@ -457,22 +522,82 @@ describe("<ag-ui-routines>", () => {
       expect(q(host, ".panel-view").hidden).toBe(true);
     });
 
-    it("leaves an event another listener took, or one for another editor", async () => {
+    it("leaves an ask another listener already took, and fills no form from it", async () => {
+      const host = chat({ "data-routines-url": URL_A, "data-editors": "external" });
+      host.addEventListener(OPEN_EDITOR_EVENT, (event) => event.preventDefault(), {
+        capture: true,
+      });
+      const el = routines({ for: "chat" });
+      document.body.append(host, el);
+      await flush();
+      await host.sendMessage("Plan the week");
+      await flush();
+      host.dispatchEvent(
+        new CustomEvent<OpenEditorDetail>(OPEN_EDITOR_EVENT, {
+          detail: { editor: "routines", fromConversation: true },
+          cancelable: true,
+        }),
+      );
+      await flush();
+      expect(title(el)).toBe("Routines");
+      expect(listed(URL_A)).toEqual([URL_A]);
+    });
+
+    it("leaves an ask for another editor unanswered, and unprevented for that editor to answer", async () => {
       const host = chat({ "data-routines-url": URL_A, "data-editors": "external" });
       const el = routines({ for: "chat" });
       document.body.append(host, el);
       await flush();
-      host.addEventListener(OPEN_EDITOR_EVENT, (event) => event.preventDefault(), {
-        capture: true,
+      await host.sendMessage("Plan the week");
+      await flush();
+      const event = new CustomEvent<OpenEditorDetail>(OPEN_EDITOR_EVENT, {
+        detail: { editor: "skills", fromConversation: true },
+        cancelable: true,
       });
-      for (const editor of ["routines", "skills"]) {
-        const event = new CustomEvent<OpenEditorDetail>(OPEN_EDITOR_EVENT, {
-          detail: { editor, fromConversation: true },
-          cancelable: true,
-        });
-        host.dispatchEvent(event);
-      }
+      host.dispatchEvent(event);
+      await flush();
+      expect(event.defaultPrevented).toBe(false);
       expect(title(el)).toBe("Routines");
+      expect(listed(URL_A)).toEqual([URL_A]);
+    });
+  });
+
+  describe("redrawing as the bound chat's conversation moves", () => {
+    const moves = [THREAD_EVENT, RUN_FINISHED_EVENT];
+
+    it.each(moves)("leaves an open routine form alone on %s", async (type) => {
+      const host = chat({ "data-routines-url": URL_A });
+      const el = routines({ for: "chat" });
+      document.body.append(host, el);
+      await flush();
+      q<HTMLButtonElement>(el, ".header-btn--new-routine").click();
+      expect(title(el)).toBe("New routine");
+      host.dispatchEvent(new CustomEvent(type));
+      expect(title(el)).toBe("New routine");
+      expect(q(el, ".header-btn--back").hidden).toBe(false);
+    });
+
+    it.each(moves)("paints no empty list over one still loading on %s", async (type) => {
+      const host = chat({ "data-routines-url": "/slow/" });
+      const el = routines({ for: "chat" });
+      document.body.append(host, el);
+      await flush();
+      host.dispatchEvent(new CustomEvent(type));
+      expect(q(el, ".panel-view").hidden).toBe(true);
+      expect((el.shadowRoot as ShadowRoot).querySelector("[part='routine-empty']")).toBeNull();
+      releaseSlow();
+      await flush();
+      expect((el.shadowRoot as ShadowRoot).querySelector("[part='routine-empty']")).not.toBeNull();
+    });
+
+    it.each(moves)("paints no empty list over a failure on %s", async (type) => {
+      const host = chat({ "data-routines-url": "/broken/" });
+      const el = routines({ for: "chat" });
+      document.body.append(host, el);
+      await flush();
+      host.dispatchEvent(new CustomEvent(type));
+      expect(q(el, "[role='alert']").textContent).toBe("Routines could not be loaded.");
+      expect((el.shadowRoot as ShadowRoot).querySelector("[part='routine-empty']")).toBeNull();
     });
   });
 
@@ -525,6 +650,60 @@ describe("<ag-ui-routines>", () => {
       await flush();
       expect(el.provider).toBe(home);
       expect(title(el)).toBe("Routines");
+    });
+
+    it("takes a chat set by property over the provider's, with that chat's URL and request", async () => {
+      const home = provider();
+      const other = chat({ "data-routines-url": URL_B });
+      other.headers = { "X-Other": "1" };
+      const el = routines();
+      home.append(el);
+      document.body.append(home, other);
+      await flush();
+      expect(el.provider).toBe(home);
+      el.chat = other;
+      await flush();
+      expect(el.chat).toBe(other);
+      expect(el.provider).toBeNull();
+      expect(el.url).toBe(URL_B);
+      const sent = seen.filter((s) => s.url === URL_B).at(-1);
+      expect(sent?.headers.get("X-Other")).toBe("1");
+      expect(sent?.headers.has("X-Home")).toBe(false);
+    });
+
+    it("fires the open-thread event for a provider with no agent on screen, and opens nothing", async () => {
+      const home = document.createElement(AGENTS_TAG) as AgUiAgents;
+      const el = routines({ "data-routines-url": URL_A });
+      home.append(el);
+      document.body.append(home);
+      await flush();
+      expect(home.agent).toBeNull();
+      const opened = vi.spyOn(home, "openThread").mockResolvedValue(undefined);
+      const asked: string[] = [];
+      el.addEventListener(ROUTINES_OPEN_THREAD_EVENT, (event) =>
+        asked.push((event as CustomEvent<{ threadId: string }>).detail.threadId),
+      );
+      q<HTMLButtonElement>(el, "[part='routine-last']").click();
+      expect(asked).toEqual(["t-standup"]);
+      expect(opened).not.toHaveBeenCalled();
+    });
+
+    it("lets go of the provider and the page's thread events when it leaves, and asks for nothing more", async () => {
+      const home = provider();
+      const el = routines();
+      home.append(el);
+      document.body.append(home);
+      await flush();
+      const unlistenedHome = vi.spyOn(home, "removeEventListener");
+      const unlistenedPage = vi.spyOn(document, "removeEventListener");
+      el.remove();
+      expect(unlistenedHome).toHaveBeenCalledWith(AGENT_CHANGE_EVENT, expect.any(Function));
+      expect(unlistenedPage).toHaveBeenCalledWith(THREAD_EVENT, expect.any(Function));
+      seen = [];
+      home.agent = "b";
+      home.chat?.dispatchEvent(new CustomEvent(THREAD_EVENT, { bubbles: true, composed: true }));
+      await flush();
+      expect(listed(URL_B)).toEqual([]);
     });
 
     it("opens nothing before the provider has listed its agents", async () => {

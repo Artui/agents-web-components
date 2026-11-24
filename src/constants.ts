@@ -812,8 +812,9 @@ export const SKILLS_TAG = "ag-ui-skills";
  * it ran in. `detail` is {@link EditorOpenThreadDetail}.
  *
  * Cancelable, as an inbox row is: unless a host calls `preventDefault()` the
- * element opens the thread in the chat it is bound to (`for`), or through the
- * `<ag-ui-agents>` provider it is bound to; bound to neither, the event is all.
+ * element opens the thread in the chat it is bound to (`for` or the `chat`
+ * property), or through the `<ag-ui-agents>` provider it is bound to; bound to
+ * neither, the event is all.
  */
 export const ROUTINES_OPEN_THREAD_EVENT = "ag-ui-routines-open-thread";
 
