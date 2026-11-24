@@ -2,7 +2,6 @@ import { ICON_PLUS } from "../../constants.js";
 import { fillUiString } from "../fill_ui_string.js";
 import { headerButton } from "../shell/header_button.js";
 import type { PanelView } from "../shell/panel_view.js";
-import type { UiStrings } from "../ui_strings.js";
 import { buildRoutineForm } from "./build_routine_form.js";
 import type {
   GrantableTool,
@@ -11,13 +10,16 @@ import type {
   RoutineRun,
   RoutinesClient,
 } from "./routines_client.js";
+import type { RoutinesStrings } from "./routines_strings.js";
 import { scheduleInWords } from "./schedule_in_words.js";
 
 /** What the routines view needs from the element that owns it. */
 export interface RoutinesViewHost {
   /** The full-panel view the routines draw into. */
   readonly view: PanelView;
-  readonly strings: () => UiStrings;
+  /** The element whose light-DOM children may fill the form's named slots. */
+  readonly element: HTMLElement;
+  readonly strings: () => RoutinesStrings;
   /** The prompt and a name the conversation on screen suggests, or `null` when it has none. */
   readonly fromConversation: () => { readonly prompt: string; readonly name: string } | null;
   /** Leave the view for a thread a routine ran in. */
@@ -43,6 +45,8 @@ export class RoutinesView {
   #screen: "closed" | "list" | "edit" = "closed";
   #generation = 0;
   #client: RoutinesClient | null = null;
+  /** Whether the list arrived, so a redraw never paints an empty list over one in flight or a failure. */
+  #loaded = false;
 
   constructor(host: RoutinesViewHost) {
     this.#host = host;
@@ -51,6 +55,18 @@ export class RoutinesView {
   /** Whether the view is showing. */
   get isOpen(): boolean {
     return this.#screen !== "closed";
+  }
+
+  /** Whether the view shows its first screen (the list), with nothing to step back to inside it. */
+  get atRoot(): boolean {
+    return this.#screen !== "edit";
+  }
+
+  /** The conversation the host reads may have changed: redraw the list if it shows, so its offer follows. */
+  refresh(): void {
+    if (this.#screen === "list" && this.#loaded) {
+      this.#drawList();
+    }
   }
 
   /** Open on the list, loaded fresh through `client`. */
@@ -82,6 +98,7 @@ export class RoutinesView {
     this.#grantable = [];
     this.#last = new Map();
     this.#client = null;
+    this.#loaded = false;
     this.#screen = "closed";
   }
 
@@ -109,6 +126,7 @@ export class RoutinesView {
     }
     this.#routines = result.value.routines;
     this.#grantable = result.value.grantable;
+    this.#loaded = true;
     const seed = fromConversation ? this.#host.fromConversation() : null;
     if (seed === null) {
       this.#drawList();
@@ -257,7 +275,7 @@ export class RoutinesView {
               .map((tool) => tool.name),
           };
     const save = document.createElement("button");
-    const form = buildRoutineForm(draft, tools, strings, () => save.click());
+    const form = buildRoutineForm(draft, tools, strings, () => save.click(), this.#host.element);
     const cancel = document.createElement("button");
     cancel.type = "button";
     cancel.className = "skill-editor-btn skill-editor-btn--ghost";
@@ -361,7 +379,7 @@ export class RoutinesView {
   }
 }
 
-function nextInWords(routine: Routine, strings: UiStrings): string {
+function nextInWords(routine: Routine, strings: RoutinesStrings): string {
   if (!routine.enabled || routine.nextFireAt === null) {
     return routine.pausedReason === ""
       ? strings.routinePaused
@@ -380,7 +398,7 @@ function nextInWords(routine: Routine, strings: UiStrings): string {
 function lastInWords(
   routine: Routine,
   last: RoutineRun | null | undefined,
-  strings: UiStrings,
+  strings: RoutinesStrings,
 ): string {
   const state = last?.state ?? null;
   if (state === "pending") {

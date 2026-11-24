@@ -14,6 +14,10 @@ The package ships two builds (see [`package.json` exports](https://github.com/Ar
 | `@artooi/agents-web-components/threads/bundle` | The same entry as a vendored file, minified, inlining none of the element | Beside `/bundle` with no build step; the main bundle does not carry the list. |
 | `@artooi/agents-web-components/inbox` | `<ag-ui-inbox>`, what waits on the user across agents, as a navbar badge or a list: `AgUiInbox` and `defineInbox` | Beside `./chat` and an `<ag-ui-agents>` provider. |
 | `@artooi/agents-web-components/inbox/bundle` | The same entry as a vendored file, minified, inlining none of the element or the provider | Beside `/bundle` with no build step; the main bundle does not carry the inbox. |
+| `@artooi/agents-web-components/routines` | `<ag-ui-routines>`, the routines editor as an element of its own: `AgUiRoutines` and `defineRoutines` | When the routines live on a page or in a rail of their own, away from the chat. |
+| `@artooi/agents-web-components/routines/bundle` | The same entry as a vendored file, minified, inlining none of the chat or the provider | Beside `/bundle`, or alone, with no build step. |
+| `@artooi/agents-web-components/skills` | `<ag-ui-skills>`, the stored-skill editor as an element of its own: `AgUiSkills` and `defineSkills` | When the skills live on a page of their own, away from the chat. |
+| `@artooi/agents-web-components/skills/bundle` | The same entry as a vendored file, minified, inlining none of the chat or the provider | Beside `/bundle`, or alone, with no build step. |
 | `@artooi/agents-web-components/bundle` | ESM bundle with `@ag-ui/*` **inlined**, minified | Drop in via a single `<script type="module">` with no build step. |
 
 ## The vendored-bundle story

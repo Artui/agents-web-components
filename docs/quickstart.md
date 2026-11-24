@@ -87,7 +87,9 @@ another origin, add `credentials="include"` too; see
 | `data-skills-url` | — | URL of a JSON skill catalog (fetched with the element's headers and cookie policy). |
 | `data-skill-editor-url` | — | URL of django-ag-ui's skill editor endpoint (`skills/editor/`). Opts into the [skill editor](skills.md#the-skill-editor): a "Manage skills" row at the foot of the `/` palette under `data-slash-commands`, a header button with `data-skill-editor-button`, or `openSkillEditor()`. |
 | `data-routines-url` | — | URL of django-ag-ui's routines editor (`routines/`, from 0.86.0). Opts into [routines](skills.md#routines): a Routines button in the header, a Make this a routine item in its More menu, `openRoutines()` and `makeRoutine()`. Read at connect time, like the other endpoint URLs. |
+| `data-routine-minute-step` | `5` | The minute step of the routine form's time field, a whole number from 1 to 30; anything else keeps 5. Read each time the form opens. A routine saved at a minute off the step still shows that minute. See [The time and timezone fields](skills.md#the-time-and-timezone-fields). |
 | `data-skill-editor-button` | absent | With `data-skill-editor-url`, also puts a Skills button in the header. Off by default. On a narrow panel it moves into the header's [More menu](header-and-panel.md#the-header-row-and-its-more-menu) like the other optional controls. |
+| `data-editors` | absent | `external` hands the skill editor and routines to the page: the Skills and Routines buttons, Make this a routine and the palette's Manage skills fire `ag-ui-open-editor` instead of opening the view in the panel, for an [editor element](editors.md#the-editors-on-a-page-of-their-own) to answer. Read at each click. The methods still open the panel. |
 | `data-tools-url` | — | URL of a server tool-label catalog (`[{ name, summary, description? }]`), fetched with the element's headers and cookie policy; labels tool-call cards for server-side tools. |
 | `user-key` | `userKey` | Who the stored conversation belongs to — any string identifying the signed-in principal. Joins the storage namespace, and **changing it purges what the previous principal left behind**. Live (not connect-time): a logout is the host's to announce. See [Who the stored conversation belongs to](durability.md#who-the-stored-conversation-belongs-to-user-key). |
 | `user-name` | `userName` | The signed-in user's display name, for the [greeting](theming.md#the-greeting-on-an-empty-page) an empty conversation shows under `placement="page"`. Presentation only: unlike `user-key` it scopes nothing and is never sent. Absent or blank gives the nameless greeting. Live. |
@@ -231,7 +233,7 @@ keyboard focus and styleable via the `code-copy` part. Override its labels with
 the `copyCode` / `copied` / `copyFailed` strings.
 
 **Methods**: `registerTool`, `registerPageState`, `registerActivityRenderer`, `registerContext`,
-`setSkills`, `openSkillEditor`, `closeSkillEditor`, `openRoutines`, `makeRoutine`, `closeRoutines`, `sendMessage`, `run`, `attachFile`, `appendMessage`, `retryLastTurn`, `quote`, `offerQuoteInPage`,
+`setSkills`, `refreshSkills`, `openSkillEditor`, `closeSkillEditor`, `openRoutines`, `makeRoutine`, `routineSeed`, `closeRoutines`, `sendMessage`, `run`, `attachFile`, `appendMessage`, `retryLastTurn`, `quote`, `offerQuoteInPage`,
 `enableCharts`, `newChat`, `setCollapsed`, `toggleCollapsed`, `setMaximized`, `toggleMaximized`,
 `describeSurface`, `moveTo`, `resetSize`, `toggleTheme`, `openThreads`, `closeThreads`, `switchThread`, `deleteThread`, `openTab`, `closeTab`,
 `openCheckpoints`, `closeCheckpoints`, `toggleCheckpoints`, `refreshPlace`, `request`, `tokenValues` and `reload`.
@@ -240,6 +242,11 @@ the `copyCode` / `copied` / `copyFailed` strings.
 `init.headers` (which win per key), and `credentials` unless `init` names its own. A destination
 outside `trustedOrigins` is reported as the element's own requests are. It is the seam a separate
 entry such as `./mcp-apps` reaches the host's routes through.
+
+`refreshSkills()` fetches `data-skills-url` again, so the `/` palette lists a skill written
+elsewhere. `routineSeed()` is what Make this a routine would fill a form with: `{ prompt, name }`
+from the conversation's user messages, or `null` before anything is said. An
+[editor element](editors.md#the-editors-on-a-page-of-their-own) bound to the chat calls both.
 
 `colorScheme` is the scheme the panel is drawn in now (`"light"` or `"dark"`); a change of the
 `theme` attribute fires `ag-ui-theme` with `{ scheme }`. `locale` is the nearest `lang` attribute,

@@ -72,7 +72,9 @@ agent at a time.
   `scope`.
 - **Requests** carry **`headers`**, **`getHeaders()`** (winning per key) and the
   **`credentials`** attribute, as on the chat. They are the provider's own; the chat keeps its
-  own for its requests.
+  own for its requests. **`request(url, init?)`** is the public `fetch` that sends them, the one
+  an `<ag-ui-routines>` or `<ag-ui-skills>` under the provider calls; `init.headers` win per key
+  and `init.credentials` wins over the attribute.
 
 The provider is exported from the root entry (and so from `/bundle`) with `defineAgents`, which
 throws naming the tag when another class holds it. A lone `<ag-ui-chat>` needs none of this and

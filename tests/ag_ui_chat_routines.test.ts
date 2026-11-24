@@ -472,7 +472,8 @@ describe("the routines view in <ag-ui-chat>", () => {
     expect(shadow(el).querySelectorAll("[part=routine-day]")).toHaveLength(7);
     (days[0] as HTMLInputElement).checked = false;
     (days[6] as HTMLInputElement).checked = true;
-    q<HTMLInputElement>(el, "#routine-field-at").value = "07:15";
+    q<HTMLSelectElement>(el, "#routine-field-at-hour").value = "07";
+    q<HTMLSelectElement>(el, "#routine-field-at-minute").value = "15";
     button(el, "Save").click();
     await flush();
     expect(writes()[0]?.body?.["schedule"]).toEqual({
@@ -480,6 +481,18 @@ describe("the routines view in <ag-ui-chat>", () => {
       weekdays: [1, 2, 3, 4, 6],
       at: "07:15",
     });
+  });
+
+  it("draws the minutes in the host's data-routine-minute-step when the view opens a routine", async () => {
+    server.routines = [{ ...STANDUP }];
+    const el = mount({ "data-routines-url": ROUTINES_URL, "data-routine-minute-step": "15" });
+    await flush();
+    el.openRoutines();
+    await flush();
+    q<HTMLButtonElement>(el, ".routine-row .skill-row-open").click();
+    await flush();
+    const minute = q<HTMLSelectElement>(el, "#routine-field-at-minute");
+    expect([...minute.options].map((option) => option.value)).toEqual(["00", "15", "30", "45"]);
   });
 
   it("shows a refused save above the fields in the server's words, or the fallback", async () => {

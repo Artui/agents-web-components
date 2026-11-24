@@ -12,6 +12,7 @@ import {
   ICON_SUN,
   MAXIMIZE_EVENT,
   MESSAGE_ROLE,
+  OPEN_EDITOR_EVENT,
   PAGE_MAP_CONTEXT,
   STATE_EVENT,
   STORAGE_ROOT,
@@ -120,6 +121,7 @@ import { DetachedRuns } from "./detached_runs.js";
 import type { BarHeightDetail } from "./events/bar_height_detail.js";
 import type { DockWidthDetail } from "./events/dock_width_detail.js";
 import type { MaximizeDetail } from "./events/maximize_detail.js";
+import type { OpenEditorDetail } from "./events/open_editor_detail.js";
 import type { StateDetail } from "./events/state_detail.js";
 import type { SubmitDetail } from "./events/submit_detail.js";
 import type { TabsDetail } from "./events/tabs_detail.js";
@@ -1267,8 +1269,9 @@ export class AgUiChat extends HTMLElement {
     });
     this.#routines = new RoutinesView({
       view: this.#panelView,
+      element: this,
       strings: () => this.#strings,
-      fromConversation: () => this.#routineSeed(),
+      fromConversation: () => this.routineSeed(),
       onOpenThread: (threadId) => {
         this.closeRoutines();
         void this.switchThread(threadId).catch(() => {});
@@ -2000,7 +2003,7 @@ export class AgUiChat extends HTMLElement {
     this.#skills.init();
     this.#skillsMenu.setManage(
       this.#skillEditorUrl() === null ? null : this.#strings.manageSkills,
-      () => this.openSkillEditor(),
+      () => this.#openEditor("skills", false, () => this.openSkillEditor()),
     );
     // A `user-key` changed while detached gets the handover a live change gets,
     // here, the first moment it can: nothing goes out for a detached node, a key
@@ -2290,6 +2293,36 @@ export class AgUiChat extends HTMLElement {
     this.#skillEditor.open(new SkillEditorClient(url, (to, init) => this.request(to, init)));
   }
 
+  /**
+   * Fetch the backend skill catalog (`data-skills-url`) again, so the `/`
+   * palette lists a skill written elsewhere: an `<ag-ui-skills>` bound to this
+   * chat calls it after each write it makes.
+   */
+  refreshSkills(): Promise<void> {
+    return this.#skills.fetch();
+  }
+
+  /**
+   * One of the element's own entry points (header button, More menu item,
+   * palette row) asking for an editor: opened in the panel, or, with
+   * `data-editors="external"`, handed to the page as {@link OPEN_EDITOR_EVENT}.
+   */
+  #openEditor(editor: "routines" | "skills", fromConversation: boolean, open: () => void): void {
+    if (this.getAttribute("data-editors") !== "external") {
+      open();
+      return;
+    }
+    this.#skillsMenu.close();
+    this.dispatchEvent(
+      new CustomEvent<OpenEditorDetail>(OPEN_EDITOR_EVENT, {
+        detail: { editor, fromConversation },
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      }),
+    );
+  }
+
   /** Close the skill editor and return to the conversation, with focus in the composer. */
   closeSkillEditor(): void {
     if (!this.#skillEditor.isOpen) {
@@ -2363,12 +2396,17 @@ export class AgUiChat extends HTMLElement {
   /** Show the More menu's Make this a routine only while the conversation has a prompt (the item exists only with a routines URL). */
   #syncMakeRoutine(): void {
     if (this.#routinesUrl() !== null) {
-      this.#headerOverflow?.offer(this.#routineSeed() !== null);
+      this.#headerOverflow?.offer(this.routineSeed() !== null);
     }
   }
 
-  /** What the conversation on screen would ask as a routine, or `null` before anything is said. */
-  #routineSeed(): { readonly prompt: string; readonly name: string } | null {
+  /**
+   * What the conversation on screen would ask as a routine: its user messages
+   * in order as the prompt, a name from the first; `null` before anything is
+   * said. What Make this a routine fills a new routine's form with, here and
+   * in an `<ag-ui-routines>` bound to this chat.
+   */
+  routineSeed(): { readonly prompt: string; readonly name: string } | null {
     const messages = this.#client?.messages ?? this.#history.restored;
     const asked = messages.flatMap((message) =>
       message.role === "user" && typeof message.content === "string" && message.content.trim()
@@ -3512,9 +3550,15 @@ export class AgUiChat extends HTMLElement {
       onSkills:
         this.#skillEditorUrl() === null || !this.hasAttribute("data-skill-editor-button")
           ? null
-          : () => this.openSkillEditor(),
-      onRoutines: this.#routinesUrl() === null ? null : () => this.openRoutines(),
-      onMakeRoutine: this.#routinesUrl() === null ? null : () => this.makeRoutine(),
+          : () => this.#openEditor("skills", false, () => this.openSkillEditor()),
+      onRoutines:
+        this.#routinesUrl() === null
+          ? null
+          : () => this.#openEditor("routines", false, () => this.openRoutines()),
+      onMakeRoutine:
+        this.#routinesUrl() === null
+          ? null
+          : () => this.#openEditor("routines", true, () => this.makeRoutine()),
       onHistory: () => this.openThreads(),
       onCheckpoints: () => this.toggleCheckpoints(),
       onNewChat: () => this.newChat(),

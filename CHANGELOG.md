@@ -7,15 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- **Make this a routine is an item in the header's More menu.** With `data-routines-url` set and
-  a prompt on screen (also a restored one), More lists it after the other controls, and the row
-  keeps at most four beside More as before; choosing it opens the routines
-  view on the pre-filled New routine form, as the list's button does. It leaves with New chat,
-  and `makeRoutine()` and the list-foot button are unchanged. It reuses the `makeRoutine`
-  string, so a host that localised it needs no new key.
-
 ### Changed
 
 - **The README is a short landing page; the documentation is a site.** Every section of the
@@ -26,9 +17,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   what the package is, install, a minimal quick start, the element list and a link per topic.
   The npm and License badges name the package URL-encoded (`%40artooi%2F...`).
 
+## [0.13.0] — 2026-11-24
+
+### Added
+
+- **Make this a routine is an item in the header's More menu.** With `data-routines-url` set and
+  a prompt on screen (also a restored one), More lists it after the other controls, and the row
+  keeps at most four beside More as before; choosing it opens the routines
+  view on the pre-filled New routine form, as the list's button does. It leaves with New chat,
+  and `makeRoutine()` and the list-foot button are unchanged. It reuses the `makeRoutine`
+  string, so a host that localised it needs no new key.
+- **`<ag-ui-routines>` and `<ag-ui-skills>`: the routines and skill editors as elements of
+  their own.** Each draws the view the chat opens in its panel, as an inline block that fills
+  its container, from its own entry (`./routines`, `./skills`) and vendored bundle
+  (`/routines/bundle`, `/skills/bundle`), neither in the main bundle. Each works alone with only
+  its URL attribute (`data-routines-url`, `data-skill-editor-url`); bound to a chat by `for` or
+  the `chat` property, or to an `<ag-ui-agents>` provider's chat, it takes the URL from there and
+  sends through that one's `request()`. Its own `data-csrf-token` or `data-csrf-cookie` (sent as
+  `data-csrf-header`, `X-CSRFToken` by default) is sent bound or alone, and wins per header over
+  the chat's or provider's; `credentials` serves it alone only. Bound, Make this a routine reads
+  the chat's conversation, a last result fires
+  the cancelable `ag-ui-routines-open-thread` and then opens the thread in the chat or through the
+  provider, Draft one with the agent asks the chat, and a skill write refreshes the chat's
+  palette. Alone, the first and third are absent. Opt-in: a page that loads neither entry sees no
+  change.
+- **`<ag-ui-chat data-editors="external">` hands its editors to the page.** With it, the Skills
+  and Routines buttons, Make this a routine and the palette's Manage skills fire the cancelable
+  `ag-ui-open-editor` (`OPEN_EDITOR_EVENT`, `{ editor, fromConversation }`) instead of opening
+  the panel view, for a bound editor element to answer. `openSkillEditor()`, `openRoutines()` and
+  `makeRoutine()` still open the panel. Opt-in: without the attribute the chat behaves as in
+  0.12.0. New methods for an editor element to call: `refreshSkills()` and `routineSeed()` on
+  the chat, and `request(url, init?)` on `<ag-ui-agents>`, which sends the provider's `headers`,
+  `getHeaders()` and `credentials`.
+- **The routine form's time and timezone fields can be replaced through two named slots.** A
+  control slotted as `routine-time` (value `HH:MM`, 24-hour) or `routine-timezone` (an IANA zone
+  name) on the element takes the built-in field's place: the form writes the routine's value into
+  its `value` when it opens and reads `value` on save. Opt-in: a host slots a control; without one
+  the built-in fields are used.
+- **`data-routine-minute-step`** sets the minute step of the routine form's time field (1 to 30,
+  default 5), read when the form opens. Opt-in.
+- **The routine form's timezone field suggests the browser's IANA zones** from a datalist, the
+  routine's and the viewer's zone among them. No opt-in.
+
+### Changed
+
+- **The routine form's time is two themed selects, hour and minute, instead of a native time
+  input**, so its drop-down follows the panel's theme rather than the browser's (a dark popup
+  over a light panel before). The pair is one group named by its caption, and the wire still
+  carries `HH:MM`. A minute off the five-minute step is kept as its own option. New strings
+  `routineHour` and `routineMinute` name the two selects; a host that localises the form adds
+  them. The pair is the new `routine-time` part. No opt-in.
+
 ### Fixed
 
 - **`<ag-ui-inbox variant="list">` shows a focus ring when focus falls back to the list.** Answering the last row hands focus to the panel (the list is hidden at zero rows), which drew only the browser's default ring, outside its edge; it now draws the rows' ring, inset so a sidebar does not clip it.
+- **`<ag-ui-threads>` and `<ag-ui-inbox>` follow an element that replaces the one they were bound to.** When the chat named by `for`, or the provider named by `agents`, left the page and another took its id, they stayed on the one that left; they now bind the new one when it reports in.
 
 ## [0.12.0] — 2026-11-24
 
@@ -752,7 +795,8 @@ move page walks a host over. Each entry below says whether a host opts in.
   kept offering the moon under `theme="dark"`. Only the toggle's own click redrew it before. A host
   opts in to nothing.
 
-[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/Artui/agents-web-components/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/Artui/agents-web-components/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/Artui/agents-web-components/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/Artui/agents-web-components/compare/v0.9.0...v0.10.0

@@ -136,3 +136,42 @@ Writes are JSON and carry `getHeaders()`, so a CSRF header reaches them as it re
 editor. With `data-threads-url` on the same mount, a thread a routine started carries a badge with
 the routine's name in the thread list. `openRoutines()` and `closeRoutines()` open and close the
 view; a principal change closes it.
+
+The skill editor and routines can also stand on the page as elements of their own; see
+[The editors on a page of their own](editors.md#the-editors-on-a-page-of-their-own).
+
+#### The time and timezone fields
+
+The form's time is two selects, the hour (00 to 23) and the minute in steps of five, drawn by the
+panel's tokens rather than the browser's time popup, and announced as one group named by the At
+caption. `data-routine-minute-step` changes the step; a routine whose minute is off the step keeps
+its exact minute as an option of its own, never rounded. The timezone is a text input suggesting
+the browser's IANA zones (`Intl.supportedValuesOf("timeZone")`), set to the viewer's zone on a
+new routine; an unknown zone is refused by the server, in its words.
+
+Either field can be replaced by a control of your own, slotted on the element:
+
+```html
+<ag-ui-chat endpoint="/agent/" data-routines-url="/agent/routines/">
+  <select slot="routine-time" aria-label="Run at">
+    <option>07:00</option><option>08:00</option><option>18:00</option>
+  </select>
+  <select slot="routine-timezone" aria-label="Timezone">
+    <option>UTC</option><option>Europe/Paris</option>
+  </select>
+</ag-ui-chat>
+```
+
+| Slot | Value |
+| --- | --- |
+| `routine-time` | `HH:MM`, 24-hour, as the wire carries it |
+| `routine-timezone` | An IANA zone name |
+
+The contract is a value, not a type: any element with a string `value` property. When the form
+opens a routine it sets the control's `value` to the routine's (once per opening, so a re-render
+of your control does not overwrite a choice in progress), and on save it reads `value`. Nothing
+listens for `change`.
+A `<select>` that has no option for the routine's value shows nothing chosen, so offer every value
+your routines can hold. The form's caption cannot name a slotted control across the shadow
+boundary: give yours its own `aria-label`. The slotted controls are yours to style; the
+built-in fields stay in the form as the slots' fallback content.

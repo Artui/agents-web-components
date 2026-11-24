@@ -32,6 +32,7 @@ export {
   MAXIMIZE_EVENT,
   MESSAGE_ACTIONS,
   MESSAGE_ROLE,
+  OPEN_EDITOR_EVENT,
   OPEN_THREAD_EVENT,
   RUN_FINISHED_EVENT,
   STATE_EVENT,
@@ -95,6 +96,7 @@ export type { DockWidthDetail } from "./core/events/dock_width_detail.js";
 export type { FeedbackDetail } from "./core/events/feedback_detail.js";
 export type { InvalidateDetail } from "./core/events/invalidate_detail.js";
 export type { MaximizeDetail } from "./core/events/maximize_detail.js";
+export type { OpenEditorDetail } from "./core/events/open_editor_detail.js";
 export type { OpenThreadDetail } from "./core/events/open_thread_detail.js";
 export type { RunFinishedDetail } from "./core/events/run_finished_detail.js";
 export type { StateDetail } from "./core/events/state_detail.js";

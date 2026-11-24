@@ -83,6 +83,7 @@ nav:
   - Other elements:
       - The conversation list: threads.md
       - Agents and the inbox: agents.md
+      - The editors on a page of their own: editors.md
   - Hosting:
       - Host seams (SPA): host-seams.md
       - Durability and resuming: durability.md

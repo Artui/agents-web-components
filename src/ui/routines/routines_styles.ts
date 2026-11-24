@@ -95,13 +95,14 @@ button.routine-last {
   gap: 8px;
 }
 
+.routine-time[hidden],
 .routine-weekly[hidden],
 .routine-interval[hidden],
 .routine-confirm[hidden] {
   display: none;
 }
 
-.routine-form input[type="time"],
+.routine-form select,
 .routine-form input[type="number"] {
   box-sizing: border-box;
   width: 100%;
@@ -112,6 +113,18 @@ button.routine-last {
   background: var(--_input-bg);
   color: inherit;
   font: inherit;
+}
+
+/* The time is two selects drawn by the panel's tokens, not the browser's
+   time popup; they size to their two digits. */
+.routine-time {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.routine-time select {
+  width: auto;
 }
 
 .routine-tool .skill-switch span {

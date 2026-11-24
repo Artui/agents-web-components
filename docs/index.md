@@ -39,6 +39,8 @@ This package is the successor of `@artooi/ag-ui-web-component`. Coming from it? 
 | `<ag-ui-threads>` | `@artooi/agents-web-components/threads` | A chat's conversation list, as rows or pills in your own chrome. See [the conversation list](threads.md). |
 | `<ag-ui-agents>` | `@artooi/agents-web-components` | A headless provider that puts one chat in front of several agents. See [agents and the inbox](agents.md#several-agents-under-one-provider). |
 | `<ag-ui-inbox>` | `@artooi/agents-web-components/inbox` | What waits on the user across agents, as a navbar badge or a list. See [agents and the inbox](agents.md#what-needs-the-user-across-agents). |
+| `<ag-ui-routines>` | `@artooi/agents-web-components/routines` | The routines editor as an element of its own, for a settings page, a rail or a dialog. See [the editors](editors.md#the-routines-element). |
+| `<ag-ui-skills>` | `@artooi/agents-web-components/skills` | The stored-skill editor as an element of its own. See [the editors](editors.md#the-skills-element). |
 
 Each entry also ships as a vendored `/bundle` file for hosts with no build step; see
 [install](install.md).

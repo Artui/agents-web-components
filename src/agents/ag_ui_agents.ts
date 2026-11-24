@@ -179,6 +179,21 @@ export class AgUiAgents extends HTMLElement {
   }
 
   /**
+   * `fetch(url, init)` as this provider authenticates: {@link headers} and
+   * {@link getHeaders} under `init.headers` (which win per key), and
+   * {@link credentials} unless `init` names its own. What an `<ag-ui-routines>`
+   * or `<ag-ui-skills>` bound to the provider sends its requests through.
+   */
+  request(url: string, init: RequestInit = {}): Promise<Response> {
+    const headers = new Headers(this.#headers());
+    new Headers(init.headers).forEach((value, name) => {
+      headers.set(name, value);
+    });
+    const credentials = init.credentials ?? this.credentials ?? undefined;
+    return fetch(url, { ...init, headers, ...(credentials === undefined ? {} : { credentials }) });
+  }
+
+  /**
    * What the entry the chat is on declares it can do, as AG-UI's
    * `AbstractAgent.getCapabilities()` answers it; `undefined` before a listing
    * and for an entry that declares nothing. Informative only: the chat draws

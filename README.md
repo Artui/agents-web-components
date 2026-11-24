@@ -71,6 +71,11 @@ The full walkthrough, with headers, attributes and sending from your own UI, is 
   several agents. [Agents](https://artui.github.io/agents-web-components/agents/#several-agents-under-one-provider).
 - **`<ag-ui-inbox>`** (`./inbox`): what waits on the user across agents, as a navbar
   badge or a list. [The inbox](https://artui.github.io/agents-web-components/agents/#what-needs-the-user-across-agents).
+- **`<ag-ui-routines>`** (`./routines`): the routines editor on a page, rail or dialog of its
+  own, with pluggable time and timezone fields. [The editors](https://artui.github.io/agents-web-components/editors/#the-routines-element).
+- **`<ag-ui-skills>`** (`./skills`): the stored-skill editor as an element of its own.
+  [The editors](https://artui.github.io/agents-web-components/editors/#the-skills-element). `data-editors="external"` on the chat
+  hands its editor buttons to these two elements.
 
 ## Topics
 
@@ -80,7 +85,8 @@ The full walkthrough, with headers, attributes and sending from your own UI, is 
 - [Messages](https://artui.github.io/agents-web-components/messages/): markdown, follow-ups, timestamps, message actions, quoting.
 - [Tool calls and sub-agents](https://artui.github.io/agents-web-components/tool-calls/): display modes, delegation, editing a gated call.
 - [What the server draws](https://artui.github.io/agents-web-components/server-pushed-ui/): charts, custom renderers, A2UI, MCP Apps.
-- [Skills and run notices](https://artui.github.io/agents-web-components/skills/): prompt chips, the slash palette, the skill editor, routines.
+- [Skills and run notices](https://artui.github.io/agents-web-components/skills/): prompt chips, the slash palette, the skill editor, routines and their time fields.
+- [The editors on a page of their own](https://artui.github.io/agents-web-components/editors/): `<ag-ui-routines>`, `<ag-ui-skills>`, binding, requests, `ag-ui-open-editor`.
 - [File uploads](https://artui.github.io/agents-web-components/uploads/): attachments and pasting.
 - [Host seams](https://artui.github.io/agents-web-components/host-seams/): the SPA route map, page state, the place chip.
 - [Durability and resuming](https://artui.github.io/agents-web-components/durability/): surviving full page reloads, resuming a run.

@@ -98,11 +98,12 @@ slugs (`pymdownx.slugs`), so links keep working across a move between pages.
    (`./fill_field.ts`), never from an entry file. A new entry is a line in `LIBRARY` in
    `esbuild.config.mjs`, an `exports` key in `package.json`, a re-export in `src/bundle.ts`,
    and a row in `tests/entries.test.ts`. The exceptions are `src/a2ui/`, `src/mcp_apps/`,
-   `src/threads/` and `src/inbox/`: each its own entry (`./a2ui` and `./a2ui/bundle`,
-   `./mcp-apps` and `./mcp-apps/bundle`, `./threads` and `./threads/bundle`, `./inbox` and
-   `./inbox/bundle`), deliberately absent from
+   `src/threads/`, `src/inbox/`, and the editor elements (`src/routines.ts`, `src/skills.ts`):
+   each its own entry (`./a2ui` and `./a2ui/bundle`, `./mcp-apps` and `./mcp-apps/bundle`,
+   `./threads` and `./threads/bundle`, `./inbox` and `./inbox/bundle`, `./routines` and
+   `./routines/bundle`, `./skills` and `./skills/bundle`), deliberately absent from
    `src/bundle.ts` so the main bundle carries none of them, reaching the element only through
-   the `chat` it is handed or bound to; `tests/entries.test.ts` enforces all four.
+   the `chat` it is handed or bound to; `tests/entries.test.ts` enforces all six.
 7. **Use `.js` extensions in import specifiers** (`import { x } from "./x.js"`) even though the
    source file is `x.ts` — NodeNext convention. tsc, esbuild, and Vitest all resolve `.js` →
    `.ts`/`.d.ts` correctly, and the emitted `.d.ts` keeps `./x.js`, so consumers resolve
@@ -120,7 +121,13 @@ slugs (`pymdownx.slugs`), so links keep working across a move between pages.
    `<ag-ui-agents>` provider, which is in the root `.` entry rather than an entry of its own;
    `<ag-ui-threads>` binds to it structurally (by tag and a `chat` property) and never imports
    it, so the threads bundle stays free of it. `src/inbox/` is a tenth, its own entry the same
-   way (`./inbox`, `./inbox/bundle`), also reading the provider structurally.
+   way (`./inbox`, `./inbox/bundle`), also reading the provider structurally. `src/routines/`
+   is an eleventh, `<ag-ui-routines>`; `<ag-ui-skills>` is `ag_ui_skills.ts`,
+   `define_skills.ts` and `skills_element_*.ts` in `skills/`, beside modules the chat imports,
+   so the entry tests name those files. Both extend `EditorElement` in `ui/standalone/`, the
+   base a further editor element reuses, and draw the views the chat draws (`ui/routines/`,
+   `ui/skill_editor/`), which take narrowed strings so the editor bundles stay free of
+   `ui_strings.ts`.
 
    Every rule above this one governs a *file*, so a package can obey all eight and still
    put everything it owns in one flat directory — which is what `src/ui/` was at 37

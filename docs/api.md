@@ -22,6 +22,7 @@ paths.
 | `ThreadTitleDetail` | type | `detail` shape of the `ag-ui-thread-title` event (`{ threadId, title }`). |
 | `UnreadDetail` | type | `detail` shape of the `ag-ui-unread` event (`{ unread, threadIds }`). |
 | `ThreadsChangeDetail` | type | `detail` shape of the `ag-ui-threads-change` event (`{ threads }`). |
+| `OpenEditorDetail` | type | `detail` shape of the `ag-ui-open-editor` event (`{ editor, fromConversation }`). |
 | `AgUiAgents` | class | The headless `<ag-ui-agents>` provider: the agents directory, the inbox, and the chat it mounts on an entry. See [Several agents under one provider](agents.md#several-agents-under-one-provider). |
 | `defineAgents()` | function | Register `<ag-ui-agents>`; a no-op if it is already registered, and throws if another class holds the tag. |
 | `AgentEntry` | type | One directory entry: `id`, `name`, `description`, `endpoint` and one URL per route, `null` where the mount serves none (`routines_url` may be absent from an older server), and `capabilities`, optional: what the mount declares of AG-UI's `AgentCapabilities`. |
@@ -192,6 +193,7 @@ paths.
 | `ELEMENT_TAG` | The registered tag name (`ag-ui-chat`). |
 | `SUBMIT_EVENT` | The submit CustomEvent name. |
 | `THREAD_EVENT` | The conversation-changed CustomEvent name (`ag-ui-thread`). |
+| `OPEN_EDITOR_EVENT` | The open-an-editor CustomEvent name (`ag-ui-open-editor`), fired cancelable under `data-editors="external"`; see [The editors on a page of their own](editors.md#the-editors-on-a-page-of-their-own). |
 | `OPEN_THREAD_EVENT` | The open-another-thread CustomEvent name (`ag-ui-open-thread`), fired cancelable by a child-session link or a parent breadcrumb; see [Child sessions](tool-calls.md#child-sessions). |
 | `THREAD_TITLE_EVENT` | The thread-title CustomEvent name (`ag-ui-thread-title`). |
 | `TABS_EVENT` | The tabs CustomEvent name (`ag-ui-tabs`); see [Open threads (tabs)](header-and-panel.md#open-threads-tabs). |

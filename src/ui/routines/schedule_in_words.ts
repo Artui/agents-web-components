@@ -1,6 +1,6 @@
 import { fillUiString } from "../fill_ui_string.js";
-import type { UiStrings } from "../ui_strings.js";
 import type { RoutineSchedule } from "./routines_client.js";
+import type { RoutinesStrings } from "./routines_strings.js";
 import { MONDAY, weekdayName } from "./utils.js";
 
 /**
@@ -11,7 +11,7 @@ import { MONDAY, weekdayName } from "./utils.js";
 export function scheduleInWords(
   schedule: RoutineSchedule,
   timezone: string,
-  strings: UiStrings,
+  strings: RoutinesStrings,
   viewerZone: string = Intl.DateTimeFormat().resolvedOptions().timeZone,
   locale?: string,
 ): string {
