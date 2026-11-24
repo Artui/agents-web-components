@@ -1140,6 +1140,247 @@ async function streamContinuation(res, verb, runId) {
   res.end();
 }
 
+// The routines editor and the thread store its firings write to, shaped like
+// django-ag-ui 0.88.1's RoutineEditorView and ThreadsView, under /routines/.
+// Run now starts a thread badged with its routine; its firing finishes after a
+// few seconds. The real editor also checks CSRF; this one leaves that to the
+// skill editor's scenario, since the routines page sets no header.
+const ROUTINES = /^\/routines\/routines\/(?:([^/]+)\/(run\/|runs\/)?)?$/;
+const ROUTINE_THREADS = /^\/routines\/threads\/(?:([^/]+)\/)?$/;
+const GRANTABLE = [
+  { name: "look", destructive: false },
+  { name: "drop_table", destructive: true },
+];
+const ROUTINE_RUN_MS = 4000;
+const routineRows = [];
+const routineThreads = new Map();
+const routineFirings = new Map();
+
+function nextFire(routine) {
+  if (!routine.enabled) {
+    return null;
+  }
+  if (routine.schedule.kind === "interval") {
+    return new Date(Date.now() + routine.schedule.every_hours * 3600000).toISOString();
+  }
+  const [hours, minutes] = routine.schedule.at.split(":").map(Number);
+  for (let ahead = 0; ahead < 8; ahead += 1) {
+    const day = new Date();
+    day.setUTCDate(day.getUTCDate() + ahead);
+    day.setUTCHours(hours, minutes, 0, 0);
+    const weekday = (day.getUTCDay() + 6) % 7;
+    if (routine.schedule.weekdays.includes(weekday) && day.getTime() > Date.now()) {
+      return day.toISOString();
+    }
+  }
+  return null;
+}
+
+function routineBody(routine) {
+  return {
+    ...routine,
+    nextFireAt: nextFire(routine),
+    preapprovedTools: GRANTABLE.filter((tool) => routine.preapprovedTools.includes(tool.name)),
+  };
+}
+
+function routineRefusal(draft) {
+  const { schedule } = draft;
+  const weekly =
+    schedule?.kind === "weekly" &&
+    Array.isArray(schedule.weekdays) &&
+    schedule.weekdays.length > 0 &&
+    /^\d{1,2}:\d{2}$/.test(schedule.at ?? "");
+  const interval = schedule?.kind === "interval" && schedule.every_hours >= 1;
+  if (typeof draft.name !== "string" || draft.name.trim() === "") {
+    return [400, { error: "A routine needs a name." }];
+  }
+  if (!weekly && !interval) {
+    return [400, { error: "A schedule is weekly with days and a time, or every so many hours." }];
+  }
+  const confirmed = draft.confirmDestructive ?? [];
+  const unconfirmed = (draft.preapprovedTools ?? []).filter(
+    (name) => GRANTABLE.find((tool) => tool.name === name)?.destructive && !confirmed.includes(name),
+  );
+  if (unconfirmed.length > 0) {
+    return [
+      409,
+      {
+        error: `Granting ${unconfirmed.join(", ")} lets each firing run a destructive tool unasked: name it in confirmDestructive to grant it.`,
+        destructive: unconfirmed,
+      },
+    ];
+  }
+  return null;
+}
+
+function seedRoutines() {
+  if (routineRows.length > 0) {
+    return;
+  }
+  routineRows.push(
+    {
+      id: "1",
+      name: "Morning standup",
+      agentId: null,
+      prompt: "Summarise yesterday's merged pull requests and today's meetings.",
+      schedule: { kind: "weekly", weekdays: [0, 1, 2, 3, 4], at: "08:00" },
+      timezone: "Europe/Paris",
+      enabled: true,
+      pausedReason: "",
+      preapprovedTools: ["look"],
+      lastRunId: null,
+      lastThreadId: null,
+    },
+    {
+      id: "2",
+      name: "Scratch cleanup",
+      agentId: null,
+      prompt: "Drop the scratch tables older than a week.",
+      schedule: { kind: "interval", every_hours: 6 },
+      timezone: "UTC",
+      enabled: false,
+      pausedReason: "",
+      preapprovedTools: ["drop_table"],
+      lastRunId: null,
+      lastThreadId: null,
+    },
+  );
+}
+
+function fire(routine) {
+  const threadId = `routine-thread-${routineThreads.size + 1}`;
+  const runId = `routine-run-${routineFirings.size + 1}`;
+  routineThreads.set(threadId, {
+    thread_id: threadId,
+    title: routine.name,
+    updated_at: new Date().toISOString(),
+    preview: routine.prompt,
+    parent: null,
+    routine: { id: routine.id, name: routine.name },
+  });
+  routineFirings.set(runId, { routineId: routine.id, threadId, at: Date.now() });
+  routine.lastRunId = runId;
+  routine.lastThreadId = threadId;
+  return threadId;
+}
+
+function firingState(runId) {
+  const firing = routineFirings.get(runId);
+  return Date.now() - firing.at < ROUTINE_RUN_MS ? "pending" : "finished";
+}
+
+function routineWrite(req, res, json, routine) {
+  if (!(req.headers["content-type"] ?? "").startsWith("application/json")) {
+    json(415, { error: "Send the routine as application/json." });
+    return;
+  }
+  let raw = "";
+  req.on("data", (chunk) => {
+    raw += chunk;
+  });
+  req.on("end", () => {
+    const draft = JSON.parse(raw || "{}");
+    if (req.method === "PATCH") {
+      routine.enabled = draft.enabled === true;
+      json(200, routineBody(routine));
+      return;
+    }
+    const refusal = routineRefusal(draft);
+    if (refusal !== null) {
+      json(...refusal);
+      return;
+    }
+    const fields = {
+      name: draft.name.trim(),
+      prompt: draft.prompt ?? "",
+      schedule: draft.schedule,
+      timezone: draft.timezone || "UTC",
+      enabled: draft.enabled !== false,
+      preapprovedTools: draft.preapprovedTools ?? [],
+    };
+    if (routine === undefined) {
+      const created = {
+        id: String(routineRows.length + 1),
+        agentId: null,
+        pausedReason: "",
+        lastRunId: null,
+        lastThreadId: null,
+        ...fields,
+      };
+      routineRows.push(created);
+      json(201, routineBody(created));
+      return;
+    }
+    Object.assign(routine, fields);
+    json(200, routineBody(routine));
+  });
+}
+
+function routinesRoute(req, res, path) {
+  const json = (status, body) => {
+    res.writeHead(status, { "Content-Type": "application/json" });
+    res.end(JSON.stringify(body));
+  };
+  const threads = ROUTINE_THREADS.exec(path);
+  if (threads !== null) {
+    const [, threadId] = threads;
+    if (threadId === undefined) {
+      const rows = [...routineThreads.values()].reverse();
+      json(200, { threads: rows });
+      return true;
+    }
+    const row = routineThreads.get(decodeURIComponent(threadId));
+    if (row === undefined) {
+      json(404, { error: "not found" });
+      return true;
+    }
+    json(200, {
+      messages: [
+        { id: `u-${row.thread_id}`, role: "user", content: row.preview },
+        { id: `a-${row.thread_id}`, role: "assistant", content: `Done: ${row.title}, run by its routine.` },
+      ],
+    });
+    return true;
+  }
+  const match = ROUTINES.exec(path);
+  if (match === null) {
+    return false;
+  }
+  seedRoutines();
+  const [, routineId, action] = match;
+  if (routineId === undefined) {
+    if (req.method === "GET") {
+      json(200, { routines: routineRows.map(routineBody), grantable: GRANTABLE });
+    } else {
+      routineWrite(req, res, json, undefined);
+    }
+    return true;
+  }
+  const routine = routineRows.find((row) => row.id === decodeURIComponent(routineId));
+  if (routine === undefined) {
+    json(404, { error: "not found" });
+  } else if (action === "runs/") {
+    const runs = [...routineFirings.entries()]
+      .filter(([, firing]) => firing.routineId === routine.id)
+      .reverse()
+      .map(([runId, firing]) => ({ runId, threadId: firing.threadId, state: firingState(runId) }));
+    json(200, { runs });
+  } else if (action === "run/") {
+    if (routine.lastRunId !== null && firingState(routine.lastRunId) === "pending") {
+      json(409, { error: "Its last firing has not finished yet." });
+    } else if (!(req.headers["content-type"] ?? "").startsWith("application/json")) {
+      json(415, { error: "Send the request as application/json." });
+    } else {
+      req.resume();
+      json(202, { threadId: fire(routine) });
+    }
+  } else {
+    routineWrite(req, res, json, routine);
+  }
+  return true;
+}
+
 const server = createServer((req, res) => {
   // The pages are matched on their path alone, so `/page/?readout` is the same
   // page as `/page/`. The API routes below still match the whole URL.
@@ -1148,7 +1389,8 @@ const server = createServer((req, res) => {
     detachedRoute(req, res, path) ||
     statusRoute(req, res, path) ||
     childSessionsRoute(req, res, path) ||
-    agentsHomeRoute(req, res, path)
+    agentsHomeRoute(req, res, path) ||
+    routinesRoute(req, res, path)
   ) {
     return;
   }
