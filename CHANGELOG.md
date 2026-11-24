@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`<ag-ui-agents>` answers `getCapabilities()` from the mounted entry.** django-ag-ui 0.88.1
+  lists each directory entry with `capabilities`, AG-UI's `AgentCapabilities` in its camelCase
+  keys (`humanInTheLoop`, `multimodal`, `reasoning`, `execution.maxExecutionTime`, ...). The
+  provider's `getCapabilities()` resolves the entry the chat is on, or `undefined` before a
+  listing and for an entry from an older server. An undeclared key is absent, never `false`, so
+  a host hides a control only on a declaration it can read (no `humanInTheLoop`, or
+  `reasoning.supported === false`), and keeps every control for an entry that declares nothing.
+  Declarations are informative: the chat still draws every event the stream sends. Opt-in: a
+  host that does not call `getCapabilities()` sees no change. The provider also forwards an
+  entry's `routines_url` to its chat as `data-routines-url`, removed where the entry has `null`
+  or no key; no opt-in.
+
 ### Fixed
 
 - **`<ag-ui-inbox>` answers a row in place on a page served over plain HTTP.** Approve and

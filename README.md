@@ -2329,19 +2329,27 @@ agent at a time.
 ```
 
 - **The directory.** `data-agents-url` answers `{ agents: [...] }`, each entry an `id`, `name`,
-  `description`, `endpoint` and one URL per route its mount serves (`null` for one it does not).
-  It is read on connect and by `refresh()`, with the last ETag, and listed in **`agents`**
+  `description`, `endpoint` and one URL per route its mount serves (`null` for one it does not),
+  and from django-ag-ui 0.88.1 its `capabilities`. It is read on connect and by `refresh()`, with the last ETag, and listed in **`agents`**
   *(read-only)* and **`ag-ui-agents-change`** (`AGENTS_CHANGE_EVENT`, detail `{ agents }`).
 - **Its chat** is the first `<ag-ui-chat>` inside it, or the element set as **`chat`**.
 - **Switching agents is a remount.** The chat is mounted on the entry **`agent`** names (the
   first entry without it): taken out of the document, given the entry's `endpoint`,
   `data-tools-url`, `data-threads-url`, `data-runs-url`, `data-skills-url`,
-  `data-skill-editor-url`, `data-attachments-url` and `data-transcribe-url` (removed where the
-  entry has `null`), and put back where it was. That is how a chat applies its
+  `data-skill-editor-url`, `data-routines-url`, `data-attachments-url` and
+  `data-transcribe-url` (removed where the entry has `null` or no such key), and put back where it was. That is how a chat applies its
   [connect-time attributes](#when-each-attribute-is-read), so no warning is raised, and like any
   remount it cancels a run in flight. Setting `agent` (attribute or property) switches;
   **`ag-ui-agent-change`** (`AGENT_CHANGE_EVENT`, detail `{ agent }`) fires each time. The
   getter answers the id of the entry the chat is on.
+- **What the agent declares.** **`getCapabilities()`** resolves the mounted entry's
+  `capabilities`, AG-UI's `AgentCapabilities` as `AbstractAgent.getCapabilities()` answers it,
+  or `undefined` before a listing and for an entry from a server that predates them. A host can
+  hide a control the agent lacks, reading it on `ag-ui-agent-change` and again on
+  `ag-ui-agents-change` (a re-listing can change it without a switch). An undeclared key is
+  absent, never `false`: hide on a declaration (`humanInTheLoop` missing from a declared set,
+  `reasoning.supported === false`), never on `undefined`. Declarations are informative; the
+  chat draws whatever the stream sends.
 - **Each agent keeps its own conversations.** The chat's built-in store is replaced by one under
   the entry's id (`agent:<id>`, plus `#<user-key>` when one is set), so each agent has its own
   thread pointer, history and messages, and coming back to an agent restores where it was. A
