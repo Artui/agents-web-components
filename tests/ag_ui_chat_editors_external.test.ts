@@ -106,6 +106,16 @@ describe('<ag-ui-chat data-editors="external">', () => {
     expect(q(el, ".panel-view-title").textContent).toBe("Routines");
   });
 
+  it("hands over only for the value external: any other value opens the panel", async () => {
+    const el = mount();
+    el.setAttribute("data-editors", "inline");
+    await flush();
+    q<HTMLButtonElement>(el, ".header-btn--routines").click();
+    await flush();
+    expect(heard).toEqual([]);
+    expect(q(el, ".panel-view-title").textContent).toBe("Routines");
+  });
+
   it("refetches the palette's catalog on refreshSkills", async () => {
     const el = mount();
     await flush();

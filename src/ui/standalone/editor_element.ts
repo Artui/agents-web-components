@@ -66,6 +66,10 @@ export abstract class EditorElement<S extends EditorStrings> extends HTMLElement
   #root: Node | null = null;
   /** The URL the view was last opened on, so a rebind that changes nothing reloads nothing. */
   #opened: string | null = null;
+  /** The chat or provider the view was opened through, so a request is never left on a route since replaced. */
+  #through: EditorChat | EditorProvider | null = null;
+  /** Elements found before their class was defined, each waited on once. */
+  readonly #awaited = new WeakSet<Element>();
 
   /** The attribute holding the editor's URL, on this element and on the chat alike. */
   protected abstract readonly urlAttribute: string;
@@ -192,7 +196,7 @@ export abstract class EditorElement<S extends EditorStrings> extends HTMLElement
       headers.set(name, value);
     }
     const sent = { ...init, headers };
-    const through = this.#direct ? this.#chat : this.#provider;
+    const through = this.#route;
     if (through !== null) {
       return through.request(url, sent);
     }
@@ -228,22 +232,32 @@ export abstract class EditorElement<S extends EditorStrings> extends HTMLElement
     return this.#explicit !== null || this.hasAttribute("for");
   }
 
+  /** What its requests go through now: the bound chat, or the provider, else nothing (alone). */
+  get #route(): EditorChat | EditorProvider | null {
+    return this.#direct ? this.#chat : this.#provider;
+  }
+
   #bind(): void {
     if (this.#root === null) {
       return;
     }
     this.#follow(this.#direct ? null : this.#findProvider());
-    this.#listen(this.#explicit ?? this.#lookup());
+    this.#listen(this.#explicit === null ? this.#lookup() : this.#upgraded(this.#explicit));
     this.#load();
   }
 
   #load(): void {
+    if (this.#root === null) {
+      return;
+    }
     const url = this.url;
-    if (url === this.#opened) {
+    const route = this.#route;
+    if (url === this.#opened && route === this.#through) {
       return;
     }
     this.#close();
     this.#opened = url;
+    this.#through = route;
     if (url !== null) {
       this.open(url);
     }
@@ -253,23 +267,40 @@ export abstract class EditorElement<S extends EditorStrings> extends HTMLElement
     this.reset();
     this.view.close();
     this.#opened = null;
+    this.#through = null;
+  }
+
+  /** `found` once its class is defined; before that, nothing, and a bind when it is. */
+  #upgraded<T extends HTMLElement>(found: T | null): T | null {
+    if (found === null || typeof (found as Partial<EditorChat>).request === "function") {
+      return found;
+    }
+    if (!this.#awaited.has(found)) {
+      this.#awaited.add(found);
+      void customElements.whenDefined(found.localName).then(() => this.#bind());
+    }
+    return null;
   }
 
   #lookup(): EditorChat | null {
     const id = this.getAttribute("for");
     if (id === null) {
-      return (this.#provider?.chat ?? null) as EditorChat | null;
+      return this.#upgraded((this.#provider?.chat ?? null) as EditorChat | null);
     }
-    return (this.#root as Document | ShadowRoot).getElementById(id) as EditorChat | null;
+    return this.#upgraded(
+      (this.#root as Document | ShadowRoot).getElementById(id) as EditorChat | null,
+    );
   }
 
   /** The provider named by `agents`, else the nearest `<ag-ui-agents>` around the element. */
   #findProvider(): EditorProvider | null {
     const id = this.getAttribute("agents");
     if (id === null) {
-      return this.closest<EditorProvider>(AGENTS_TAG);
+      return this.#upgraded(this.closest<EditorProvider>(AGENTS_TAG));
     }
-    return (this.#root as Document | ShadowRoot).getElementById(id) as EditorProvider | null;
+    return this.#upgraded(
+      (this.#root as Document | ShadowRoot).getElementById(id) as EditorProvider | null,
+    );
   }
 
   #follow(provider: EditorProvider | null): void {
@@ -311,7 +342,7 @@ export abstract class EditorElement<S extends EditorStrings> extends HTMLElement
 
   /** A chat that was not there when the element connected, reporting in. */
   readonly #onRootThread = (): void => {
-    if (this.#chat === null) {
+    if (this.#chat === null || !this.#chat.isConnected) {
       this.#bind();
     }
   };

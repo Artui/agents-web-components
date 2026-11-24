@@ -167,7 +167,8 @@ describe("buildRoutineForm's time and timezone fields", () => {
       schedule: { kind: "weekly", at: "18:00" },
       timezone: "Asia/Tokyo",
     });
-    const late = plugged("routine-time", ["08:07", "21:00"]);
+    const late = plugged("routine-time", ["06:00", "08:07", "21:00"]);
+    expect(late.value).toBe("06:00");
     time.remove();
     host.append(late);
     const slot = form.form.querySelector("slot[name='routine-time']") as HTMLSlotElement;

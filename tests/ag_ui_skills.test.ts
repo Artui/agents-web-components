@@ -219,6 +219,19 @@ describe("<ag-ui-skills>", () => {
     expect(editorGets()).toBe(before + 1);
   });
 
+  it("sends a list it loaded before its chat appeared through that chat, so the chat's headers go with it", async () => {
+    const el = editor({ for: "chat", "data-skill-editor-url": EDITOR });
+    document.body.append(el);
+    await flush();
+    const host = chat();
+    host.headers = { Authorization: "Bearer x" };
+    document.body.append(host);
+    await flush();
+    expect(el.chat).toBe(host);
+    const lists = seen.filter((s) => s.url === EDITOR && s.method === "GET");
+    expect(lists.at(-1)?.headers.get("Authorization")).toBe("Bearer x");
+  });
+
   it("with the chat's editors external, answers the palette's Manage skills and the header button", async () => {
     const host = chat({
       "data-skill-editor-url": EDITOR,
