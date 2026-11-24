@@ -3617,7 +3617,7 @@ Either field can be replaced by a control of your own, slotted on the element:
 | `routine-time` | `HH:MM`, 24-hour, as the wire carries it |
 | `routine-timezone` | An IANA zone name |
 
-The contract is the theme slot's: any element with a `value` property that fires `change`. When
+The contract is a value, not a type: any element with a `value` property that fires `change`. When
 the form opens a routine it sets the control's `value` to the routine's (once per opening, so a
 re-render of your control does not overwrite a choice in progress), and on save it reads `value`.
 A `<select>` that has no option for the routine's value shows nothing chosen, so offer every value
