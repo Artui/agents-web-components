@@ -11,6 +11,7 @@ import type { OpenThreadDetail } from "../core/events/open_thread_detail.js";
 import { RemoteConversationStore } from "../core/remote_conversation_store.js";
 import { ThreadsWatch } from "../core/threads_watch.js";
 import { withCredentials } from "../core/utils.js";
+import { type MaybeAsync, whenReady } from "../core/when_ready.js";
 import { AgentStore } from "./agent_store.js";
 import type {
   AgentChangeDetail,
@@ -64,8 +65,12 @@ export class AgUiAgents extends HTMLElement {
 
   /** Static request headers for the directory and inbox requests. */
   headers: Record<string, string> = {};
-  /** Live request headers, read per request and winning per key over {@link headers}. */
-  getHeaders: (() => Record<string, string>) | null = null;
+  /**
+   * Live request headers, read per request and winning per key over
+   * {@link headers}. A Promise is awaited before each request, and its
+   * rejection fails that request with the same error, sending nothing.
+   */
+  getHeaders: (() => Record<string, string> | Promise<Record<string, string>>) | null = null;
 
   #agents: readonly AgentEntry[] = [];
   #inbox: readonly InboxRow[] = [];
@@ -185,12 +190,18 @@ export class AgUiAgents extends HTMLElement {
    * or `<ag-ui-skills>` bound to the provider sends its requests through.
    */
   request(url: string, init: RequestInit = {}): Promise<Response> {
-    const headers = new Headers(this.#headers());
-    new Headers(init.headers).forEach((value, name) => {
-      headers.set(name, value);
+    return whenReady(this.#headers(), (own) => {
+      const headers = new Headers(own);
+      new Headers(init.headers).forEach((value, name) => {
+        headers.set(name, value);
+      });
+      const credentials = init.credentials ?? this.credentials ?? undefined;
+      return fetch(url, {
+        ...init,
+        headers,
+        ...(credentials === undefined ? {} : { credentials }),
+      });
     });
-    const credentials = init.credentials ?? this.credentials ?? undefined;
-    return fetch(url, { ...init, headers, ...(credentials === undefined ? {} : { credentials }) });
   }
 
   /**
@@ -320,16 +331,19 @@ export class AgUiAgents extends HTMLElement {
 
   /** GET with the live headers and the ETag last seen, or `null` on a network error. */
   async #get(url: string, etag: string | null): Promise<Response | null> {
-    const headers = { ...this.#headers(), ...(etag === null ? {} : { "If-None-Match": etag }) };
+    const source = this.#headers();
     try {
-      return await fetch(url, withCredentials({ headers }, this.credentials ?? undefined));
+      return await whenReady(source, (live) => {
+        const headers = { ...live, ...(etag === null ? {} : { "If-None-Match": etag }) };
+        return fetch(url, withCredentials({ headers }, this.credentials ?? undefined));
+      });
     } catch {
       return null;
     }
   }
 
-  #headers(): Record<string, string> {
-    return { ...this.headers, ...this.getHeaders?.() };
+  #headers(): MaybeAsync<Record<string, string>> {
+    return whenReady(this.getHeaders?.(), (live) => ({ ...this.headers, ...live }));
   }
 
   #emit<T>(type: string, detail: T): void {

@@ -88,3 +88,34 @@ describe("DetachedRuns", () => {
     expect(fetch).toHaveBeenCalledTimes(3);
   });
 });
+
+describe("DetachedRuns with an async header source", () => {
+  it("sends the resolved header on the probe and the cancel", async () => {
+    const spy = vi.fn(async () => json(200, { status: "idle" }));
+    vi.stubGlobal("fetch", spy);
+    const routes = new DetachedRuns(
+      "/agent/threads",
+      async () => ({ Authorization: "Bearer t" }),
+      () => undefined,
+    );
+    await routes.running("t1");
+    await routes.cancel("t1");
+    const sent = spy.mock.calls.map((call) =>
+      new Headers((call as unknown as [string, RequestInit])[1].headers).get("Authorization"),
+    );
+    expect(sent).toEqual(["Bearer t", "Bearer t"]);
+  });
+
+  it("reads a rejected source as no run, and cancels nothing", async () => {
+    const spy = vi.fn();
+    vi.stubGlobal("fetch", spy);
+    const routes = new DetachedRuns(
+      "/agent/threads",
+      () => Promise.reject(new Error("refresh failed")),
+      () => undefined,
+    );
+    expect(await routes.running("t1")).toBe(false);
+    await routes.cancel("t1");
+    expect(spy).not.toHaveBeenCalled();
+  });
+});

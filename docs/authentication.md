@@ -44,6 +44,32 @@ chat.getHeaders = () => ({ Authorization: `Bearer ${auth.accessToken()}` });
 // every request: X-Client: admin + a freshly-read Authorization
 ```
 
+### An async `getHeaders`
+
+`getHeaders` may return a Promise, so a host whose token has to be refreshed first can await that
+refresh before the request goes:
+
+```js
+chat.getHeaders = async () => ({ Authorization: `Bearer ${await auth.freshAccessToken()}` });
+```
+
+Each request waits for the Promise, then goes out with what it resolved to, merged over `headers`
+as above. That holds for every request the element makes: the agent run, the thread list and each
+thread's detail, rename, delete and read, the thread watch (poll and stream), the run index, the
+tool and skill catalogs, uploads, transcription and `request()`. It holds for `<ag-ui-agents>` too
+(the directory, the inbox watch and its `request()`), for the answers `<ag-ui-inbox>` sends through
+it, and for a `RemoteConversationStore` built with an async header provider.
+
+**A rejected Promise fails that request, and nothing is sent without its headers.** The request
+reports the failure as its own: `request()` rejects with the same error, the agent run fails as it
+does when its request cannot be sent, an upload's chip shows its error, an inbox answer reads as not
+sent, and the background reads (catalogs, the thread list, the watch, the run index) behave as they
+do when the server is unreachable. The element does not retry; a request after the rejection asks
+`getHeaders` again.
+
+A synchronous `getHeaders` is read in the same tick as before, so it changes nothing about when a
+request goes out.
+
 ## Cross-origin cookies (`credentials`)
 
 If your API is on a different origin from the page — `app.example.com` calling `api.example.com`

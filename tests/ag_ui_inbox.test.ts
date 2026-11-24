@@ -884,3 +884,52 @@ describe("<ag-ui-inbox> surviving mutants", () => {
     expect("runId" in (home.inbox[1] as object)).toBe(false);
   });
 });
+
+describe("<ag-ui-inbox> answering with an async header source", () => {
+  async function mountWith(
+    getHeaders: () => Promise<Record<string, string>>,
+    answers: (Response | Error)[],
+  ) {
+    const sent = serveAnswers(answers);
+    const home = provider();
+    home.headers = { "X-CSRFToken": "static" };
+    let listing = true;
+    home.getHeaders = () => (listing ? Promise.resolve({}) : getHeaders());
+    const list = inbox({ variant: "list" });
+    home.append(list);
+    document.body.append(home);
+    await vi.advanceTimersByTimeAsync(0);
+    listing = false;
+    const answered: InboxAnswerDetail[] = [];
+    document.addEventListener(INBOX_ANSWER_EVENT, (event) =>
+      answered.push((event as CustomEvent<InboxAnswerDetail>).detail),
+    );
+    return { list, answered, ...sent };
+  }
+
+  it("sends the resolved header on the answer, not a spread Promise", async () => {
+    const { list, posts } = await mountWith(async () => ({ Authorization: "Bearer t" }), [sse()]);
+    action(list, "a", "approve").click();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect((posts[0] as [string, RequestInit])[1].headers).toEqual({
+      "X-CSRFToken": "static",
+      Authorization: "Bearer t",
+      "Content-Type": "application/json",
+      Accept: "text/event-stream",
+    });
+  });
+
+  it("reads a rejected source as a failed answer, sending nothing", async () => {
+    const { list, posts, answered } = await mountWith(
+      () => Promise.reject(new Error("refresh failed")),
+      [],
+    );
+    action(list, "a", "approve").click();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(posts).toEqual([]);
+    expect(answered.map((detail) => [detail.outcome, detail.status])).toEqual([["failed", 0]]);
+    expect(action(list, "a", "approve").disabled).toBe(false);
+  });
+});
