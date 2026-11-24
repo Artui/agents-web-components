@@ -1,4 +1,4 @@
-.PHONY: help init test lint lint-fix format format-check type-check deps-bump build demo demo-check release-bump release-publish release-publish-prepare release-publish-finalize
+.PHONY: help init test lint lint-fix format format-check type-check deps-bump build docs docs-serve demo demo-check release-bump release-publish release-publish-prepare release-publish-finalize
 
 help:
 	@echo "Available targets:"
@@ -11,6 +11,8 @@ help:
 	@echo "  type-check       Run tsc --noEmit"
 	@echo "  deps-bump        Upgrade pinned dependencies (pnpm update --latest)"
 	@echo "  build            Bundle to dist/ (esbuild + tsc declarations)"
+	@echo "  docs             Build the mkdocs site into site/ (strict)"
+	@echo "  docs-serve       Serve the docs site locally with reload"
 	@echo "  release-bump     Bump version files + CHANGELOG. Usage: make release-bump VERSION=X.Y.Z"
 	@echo "  release-publish  prepare → npm publish → finalize (workstation release)"
 	@echo "  release-publish-prepare   Run by release.yml on push to main (no-op unless bumped)"
@@ -44,6 +46,15 @@ deps-bump:
 
 build:
 	pnpm build
+
+# The docs site is mkdocs-material, as in the Python family; uv supplies the pinned tools.
+DOCS_RUN := uv run --no-project --with-requirements docs/requirements.txt
+
+docs:
+	$(DOCS_RUN) mkdocs build --strict
+
+docs-serve:
+	$(DOCS_RUN) mkdocs serve
 
 # One command from a clean checkout: install (no hooks), build the bundles the
 # demo imports, then serve it.

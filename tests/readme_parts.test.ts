@@ -145,7 +145,15 @@ function sources(dir: string): string[] {
 }
 
 const SOURCE = sources("src").join("\n");
-const README = readFileSync("README.md", "utf8");
+/** The README and each page of the docs site, read as one. */
+const README = [
+  "README.md",
+  ...readdirSync("docs")
+    .filter((name) => name.endsWith(".md"))
+    .map((name) => join("docs", name)),
+]
+  .map((path) => readFileSync(path, "utf8"))
+  .join("\n\n");
 
 /** Every part name stated outright, one per token (a value may hold two). */
 function literalParts(): string[] {

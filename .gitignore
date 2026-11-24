@@ -67,3 +67,4 @@ tests/browser/__screenshots__/
 
 # Vitest browser mode writes failure screenshots and attachments here
 .vitest/
+site/

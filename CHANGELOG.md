@@ -16,6 +16,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and `makeRoutine()` and the list-foot button are unchanged. It reuses the `makeRoutine`
   string, so a host that localised it needs no new key.
 
+### Changed
+
+- **The README is a short landing page; the documentation is a site.** Every section of the
+  old single-page README moved, unchanged, into an mkdocs-material site at
+  <https://artui.github.io/agents-web-components/>, grouped into pages by topic and deployed
+  to gh-pages with each release (`make docs` builds it, strict). Anchors keep GitHub's slugs,
+  so a link to an old README heading finds the same heading on its page. The README keeps
+  what the package is, install, a minimal quick start, the element list and a link per topic.
+  The npm and License badges name the package URL-encoded (`%40artooi%2F...`).
+
 ### Fixed
 
 - **`<ag-ui-inbox variant="list">` shows a focus ring when focus falls back to the list.** Answering the last row hands focus to the panel (the list is hidden at zero rows), which drew only the browser's default ring, outside its edge; it now draws the rows' ring, inset so a sidebar does not clip it.

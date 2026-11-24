@@ -79,3 +79,16 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: make release-publish-finalize
+
+      # The docs site deploys with a release, as in the Python family: a docs-only merge
+      # changes nothing on the site until the next version ships.
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        if: steps.prepare.outputs.released == 'true'
+
+      - name: Deploy docs to gh-pages
+        if: steps.prepare.outputs.released == 'true'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          uv run --no-project --with-requirements docs/requirements.txt \
+            mkdocs gh-deploy --force --clean --strict --config-file mkdocs.yml
