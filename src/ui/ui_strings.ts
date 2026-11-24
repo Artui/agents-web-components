@@ -424,6 +424,100 @@ export interface UiStrings {
   /** Shown for a refused write whose answer carried no message. */
   skillSaveFailed: string;
 
+  // ── Routines ────────────────────────────────────────────────────────────────
+  /** The routines view's title and its header control. */
+  routines: string;
+  /** The list's add control. */
+  newRoutine: string;
+  /** The form's title for a new routine. */
+  newRoutineTitle: string;
+  /** The form's title for an existing routine. */
+  editRoutineTitle: string;
+  /** Empty-state heading. */
+  noRoutines: string;
+  /** Empty-state text. */
+  noRoutinesBody: string;
+  /** Shown when the list will not load. */
+  routinesUnavailable: string;
+  /** Shown for a refused write whose answer carried no message. */
+  routineSaveFailed: string;
+  /** Opens the form with the prompt taken from the conversation on screen. */
+  makeRoutine: string;
+  /** Name field label. */
+  routineName: string;
+  /** Prompt field label. */
+  routinePrompt: string;
+  /** Prompt field hint. */
+  routinePromptHint: string;
+  /** Schedule fieldset legend. */
+  routineSchedule: string;
+  /** The weekly schedule choice. */
+  routineWeekly: string;
+  /** The interval schedule choice. */
+  routineInterval: string;
+  /** Wall-time field label. */
+  routineAt: string;
+  /** Interval field label. */
+  routineEvery: string;
+  /** Timezone field label. */
+  routineTimezone: string;
+  /** Pre-approved tools fieldset legend. */
+  routineTools: string;
+  /** Pre-approved tools hint. */
+  routineToolsHint: string;
+  /** Shown when the mount offers no tool to grant. */
+  routineNoTools: string;
+  /** Tag on a destructive tool. */
+  routineDestructive: string;
+  /** Confirmation before granting a destructive tool. Token: `{name}`. */
+  routineGrantDestructive: string;
+  /** Confirms granting a destructive tool. */
+  routineGrant: string;
+  /** A schedule on all seven days. Token: `{time}`. */
+  routineDaily: string;
+  /** A schedule Monday to Friday. Token: `{time}`. */
+  routineWeekdays: string;
+  /** A schedule on some days. Tokens: `{days}`, `{time}`. */
+  routineOnDays: string;
+  /** An interval of one hour. */
+  routineHourly: string;
+  /** An interval of several hours. Token: `{n}`. */
+  routineEveryHours: string;
+  /** A schedule in a timezone not the viewer's. Tokens: `{schedule}`, `{zone}`. */
+  routineInZone: string;
+  /** The next firing. Token: `{time}`. */
+  routineNext: string;
+  /** In place of the next firing while paused. */
+  routinePaused: string;
+  /** Paused by the server, with its reason. Token: `{reason}`. */
+  routinePausedBecause: string;
+  /** Last result: never fired. */
+  routineLastNever: string;
+  /** Last result: the firing is still running or waiting. */
+  routineLastPending: string;
+  /** Last result: the firing lapsed before it ran. */
+  routineLastLapsed: string;
+  /** Last result: the firing finished. */
+  routineLastFinished: string;
+  /** Last result: it fired, and the queue no longer says how it went. */
+  routineLastUnknown: string;
+  /** Pauses a routine. */
+  pause: string;
+  /** Resumes a paused routine. */
+  resume: string;
+  /** Fires a routine now. */
+  runNow: string;
+  /** Status line after a save. Token: `{name}`. */
+  routineSaved: string;
+  /** Status line after pausing. Token: `{name}`. */
+  routinePausedStatus: string;
+  /** Status line after resuming. Token: `{name}`. */
+  routineResumedStatus: string;
+  /** Status line after Run now. Token: `{name}`. */
+  routineStarted: string;
+  /** Title of a thread row's routine badge. Token: `{name}`. */
+  routineBadge: string;
+
   // ── Attachments ─────────────────────────────────────────────────────────────
   /** Oversize rejection. Token: `{size}`. */
   tooLarge: string;
@@ -676,6 +770,55 @@ export const DEFAULT_UI_STRINGS: UiStrings = {
   skillTurnedOff: "/{name} is off",
   skillsUnavailable: "Skills could not be loaded.",
   skillSaveFailed: "The skill could not be saved.",
+
+  routines: "Routines",
+  newRoutine: "New routine",
+  newRoutineTitle: "New routine",
+  editRoutineTitle: "Edit routine",
+  noRoutines: "No routines yet",
+  noRoutinesBody:
+    "A routine asks the agent the same thing on a schedule. Each run is a conversation of its own.",
+  routinesUnavailable: "Routines could not be loaded.",
+  routineSaveFailed: "The routine could not be saved.",
+  makeRoutine: "Make this a routine",
+  routineName: "Name",
+  routinePrompt: "Prompt",
+  routinePromptHint: "What the agent is asked each time the routine runs.",
+  routineSchedule: "When it runs",
+  routineWeekly: "On days of the week",
+  routineInterval: "Every few hours",
+  routineAt: "At",
+  routineEvery: "Every (hours)",
+  routineTimezone: "Timezone",
+  routineTools: "Pre-approved tools",
+  routineToolsHint: "A run uses these without asking. Every other tool still waits for you.",
+  routineNoTools: "This agent has no tools to pre-approve.",
+  routineDestructive: "Destructive",
+  routineGrantDestructive:
+    "{name} is destructive: every run may use it without asking you. Grant it anyway?",
+  routineGrant: "Grant",
+  routineDaily: "Every day at {time}",
+  routineWeekdays: "Weekdays at {time}",
+  routineOnDays: "{days} at {time}",
+  routineHourly: "Every hour",
+  routineEveryHours: "Every {n} hours",
+  routineInZone: "{schedule} ({zone})",
+  routineNext: "Next {time}",
+  routinePaused: "Paused",
+  routinePausedBecause: "Paused: {reason}",
+  routineLastNever: "Not run yet",
+  routineLastPending: "Running",
+  routineLastLapsed: "Lapsed",
+  routineLastFinished: "Finished",
+  routineLastUnknown: "Ran",
+  pause: "Pause",
+  resume: "Resume",
+  runNow: "Run now",
+  routineSaved: "Saved {name}",
+  routinePausedStatus: "{name} is paused",
+  routineResumedStatus: "{name} is on again",
+  routineStarted: "{name} is running",
+  routineBadge: "Run by the routine {name}",
 
   tooLarge: "Too large (max {size})",
   fileTypeNotAllowed: "File type not allowed",
