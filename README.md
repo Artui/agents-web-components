@@ -3601,6 +3601,9 @@ editor. With `data-threads-url` on the same mount, a thread a routine started ca
 the routine's name in the thread list. `openRoutines()` and `closeRoutines()` open and close the
 view; a principal change closes it.
 
+The skill editor and routines can also stand on the page as elements of their own; see
+[The editors on a page of their own](#the-editors-on-a-page-of-their-own).
+
 #### The time and timezone fields
 
 The form's time is two selects, the hour (00 to 23) and the minute in steps of five, drawn by the
@@ -3635,9 +3638,6 @@ A `<select>` that has no option for the routine's value shows nothing chosen, so
 your routines can hold. The form's caption cannot name a slotted control across the shadow
 boundary: give yours its own `aria-label`. The slotted controls are yours to style; the
 built-in fields stay in the form as the slots' fallback content.
-
-The skill editor and routines can also stand on the page as elements of their own; see
-[The editors on a page of their own](#the-editors-on-a-page-of-their-own).
 
 ---
 

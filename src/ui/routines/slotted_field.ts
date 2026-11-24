@@ -28,7 +28,7 @@ export function slottedField(
     const controls =
       host === undefined
         ? slot.assignedElements()
-        : [...host.children].filter((child) => child.getAttribute("slot") === name);
+        : [...host.children].filter((child) => child.slot === name);
     for (const control of controls) {
       if (!written.has(control)) {
         written.add(control);
