@@ -1,6 +1,6 @@
 {
   "generator": "scripts/record_thread_status_fixture.py",
-  "djangoAgUi": "0.84.0",
+  "djangoAgUi": "0.89.0",
   "agUiProtocol": "1.0.0",
   "canonicalized": [
     "uuid ids",
@@ -16,6 +16,8 @@
     "title": "Hi",
     "updated_at": "2026-01-01T00:00:03.000000+00:00",
     "preview": "partial answer and the rest",
+    "parent": null,
+    "routine": null,
     "agent_id": "helper",
     "status": "idle",
     "last_read_at": null
@@ -26,6 +28,8 @@
     "title": "Hello",
     "updated_at": "2026-01-01T00:00:00.000000+00:00",
     "preview": "partial answer and the rest",
+    "parent": null,
+    "routine": null,
     "agent_id": "helper",
     "status": "idle",
     "last_read_at": null
@@ -38,6 +42,8 @@
     "title": "Hello",
     "updated_at": "2026-01-01T00:00:00.000000+00:00",
     "preview": "partial answer and the rest",
+    "parent": null,
+    "routine": null,
     "agent_id": "helper",
     "status": "idle",
     "last_read_at": "2026-01-01T00:00:01.000000+00:00"
@@ -47,6 +53,8 @@
     "title": "Hello",
     "updated_at": "2026-01-01T00:00:00.000000+00:00",
     "preview": "partial answer and the rest",
+    "parent": null,
+    "routine": null,
     "agent_id": "helper",
     "status": "running",
     "last_read_at": "2026-01-01T00:00:01.000000+00:00"
@@ -56,6 +64,8 @@
     "title": "Hello",
     "updated_at": "2026-01-01T00:00:02.000000+00:00",
     "preview": "partial answer and the rest",
+    "parent": null,
+    "routine": null,
     "agent_id": "helper",
     "status": "idle",
     "last_read_at": "2026-01-01T00:00:01.000000+00:00"
@@ -78,6 +88,8 @@
           "title": "Please fail",
           "updated_at": "2026-01-01T00:00:06.000000+00:00",
           "preview": "Please fail",
+          "parent": null,
+          "routine": null,
           "agent_id": "helper",
           "status": "failed",
           "last_read_at": null,
@@ -88,6 +100,8 @@
           "title": "Please ask me",
           "updated_at": "2026-01-01T00:00:05.000000+00:00",
           "preview": "Please ask me",
+          "parent": null,
+          "routine": null,
           "agent_id": "helper",
           "status": "waiting",
           "last_read_at": null,
@@ -102,13 +116,16 @@
                 "kind": "question"
               }
             }
-          ]
+          ],
+          "run_id": "r4"
         },
         {
           "thread_id": "t-approve",
           "title": "Please delete invoice 7",
           "updated_at": "2026-01-01T00:00:04.000000+00:00",
           "preview": "Please delete invoice 7",
+          "parent": null,
+          "routine": null,
           "agent_id": "helper",
           "status": "waiting",
           "last_read_at": null,
@@ -123,13 +140,16 @@
                 "kind": "approval"
               }
             }
-          ]
+          ],
+          "run_id": "r3"
         },
         {
           "thread_id": "t-first",
           "title": "Hi",
           "updated_at": "2026-01-01T00:00:03.000000+00:00",
           "preview": "partial answer and the rest",
+          "parent": null,
+          "routine": null,
           "agent_id": "helper",
           "status": "idle",
           "last_read_at": null
@@ -139,6 +159,8 @@
           "title": "Hello",
           "updated_at": "2026-01-01T00:00:02.000000+00:00",
           "preview": "partial answer and the rest",
+          "parent": null,
+          "routine": null,
           "agent_id": "helper",
           "status": "idle",
           "last_read_at": "2026-01-01T00:00:01.000000+00:00"
@@ -200,6 +222,8 @@
           "title": "Please delete invoice 7",
           "updated_at": "2026-01-01T00:00:07.000000+00:00",
           "preview": "Deleted.",
+          "parent": null,
+          "routine": null,
           "agent_id": "helper",
           "status": "idle",
           "last_read_at": null
@@ -209,6 +233,8 @@
           "title": "Please fail",
           "updated_at": "2026-01-01T00:00:06.000000+00:00",
           "preview": "Please fail",
+          "parent": null,
+          "routine": null,
           "agent_id": "helper",
           "status": "failed",
           "last_read_at": null,
@@ -219,6 +245,8 @@
           "title": "Please ask me",
           "updated_at": "2026-01-01T00:00:05.000000+00:00",
           "preview": "Please ask me",
+          "parent": null,
+          "routine": null,
           "agent_id": "helper",
           "status": "waiting",
           "last_read_at": null,
@@ -233,13 +261,16 @@
                 "kind": "question"
               }
             }
-          ]
+          ],
+          "run_id": "r4"
         },
         {
           "thread_id": "t-first",
           "title": "Hi",
           "updated_at": "2026-01-01T00:00:03.000000+00:00",
           "preview": "partial answer and the rest",
+          "parent": null,
+          "routine": null,
           "agent_id": "helper",
           "status": "idle",
           "last_read_at": null
@@ -249,6 +280,8 @@
           "title": "Hello",
           "updated_at": "2026-01-01T00:00:02.000000+00:00",
           "preview": "partial answer and the rest",
+          "parent": null,
+          "routine": null,
           "agent_id": "helper",
           "status": "idle",
           "last_read_at": "2026-01-01T00:00:01.000000+00:00"
@@ -261,8 +294,116 @@
       }
     }
   },
+  "detail": {
+    "status": 200,
+    "etag": null,
+    "body": {
+      "thread_id": "t-approve",
+      "messages": [
+        {
+          "id": "u-r3",
+          "role": "user",
+          "content": "Please delete invoice 7"
+        },
+        {
+          "id": "id-2",
+          "role": "assistant",
+          "toolCalls": [
+            {
+              "id": "call-1",
+              "type": "function",
+              "function": {
+                "name": "delete_invoice",
+                "arguments": "{\"target\":\"invoice-7\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "id-3",
+          "role": "tool",
+          "content": "deleted invoice-7",
+          "toolCallId": "call-1"
+        },
+        {
+          "id": "id-4",
+          "role": "assistant",
+          "content": "Deleted."
+        }
+      ]
+    }
+  },
+  "detailUnknown": {
+    "status": 404,
+    "etag": null,
+    "body": {
+      "error": "not found"
+    }
+  },
+  "detailWithChart": {
+    "status": 200,
+    "etag": null,
+    "body": {
+      "thread_id": "t-chart",
+      "messages": [
+        {
+          "id": "u-r7",
+          "role": "user",
+          "content": "Chart it"
+        },
+        {
+          "id": "chart-1",
+          "role": "activity",
+          "activityType": "chart",
+          "content": {
+            "kind": "bar",
+            "series": [
+              {
+                "name": "Sales",
+                "points": [
+                  1,
+                  2,
+                  3
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "id-5",
+          "role": "assistant",
+          "content": "partial answer and the rest"
+        }
+      ]
+    }
+  },
+  "rename": {
+    "status": 200,
+    "etag": null,
+    "body": {
+      "thread_id": "t-chart",
+      "title": "Sales"
+    }
+  },
+  "renameEmpty": {
+    "status": 400,
+    "etag": null,
+    "body": {
+      "error": "a non-empty 'title' is required"
+    }
+  },
+  "renameUnknown": {
+    "status": 404,
+    "etag": null,
+    "body": {
+      "error": "not found"
+    }
+  },
+  "delete": {
+    "status": 204
+  },
   "streamContentType": "text/event-stream",
-  "streamFrame": "id: \"etag-2\"\ndata: {\"threads\":[{\"thread_id\":\"t-approve\",\"title\":\"Please delete invoice 7\",\"updated_at\":\"2026-01-01T00:00:07.000000+00:00\",\"preview\":\"Deleted.\",\"agent_id\":\"helper\",\"status\":\"idle\",\"last_read_at\":null},{\"thread_id\":\"t-failed\",\"title\":\"Please fail\",\"updated_at\":\"2026-01-01T00:00:06.000000+00:00\",\"preview\":\"Please fail\",\"agent_id\":\"helper\",\"status\":\"failed\",\"last_read_at\":null,\"reason\":\"error\"},{\"thread_id\":\"t-question\",\"title\":\"Please ask me\",\"updated_at\":\"2026-01-01T00:00:05.000000+00:00\",\"preview\":\"Please ask me\",\"agent_id\":\"helper\",\"status\":\"waiting\",\"last_read_at\":null,\"interrupts\":[{\"id\":\"int-call-2\",\"reason\":\"tool_call\",\"message\":\"ask\",\"toolCallId\":\"call-2\",\"metadata\":{\"destructive\":false,\"kind\":\"question\"}}]},{\"thread_id\":\"t-first\",\"title\":\"Hi\",\"updated_at\":\"2026-01-01T00:00:03.000000+00:00\",\"preview\":\"partial answer and the rest\",\"agent_id\":\"helper\",\"status\":\"idle\",\"last_read_at\":null},{\"thread_id\":\"t-read\",\"title\":\"Hello\",\"updated_at\":\"2026-01-01T00:00:02.000000+00:00\",\"preview\":\"partial answer and the rest\",\"agent_id\":\"helper\",\"status\":\"idle\",\"last_read_at\":\"2026-01-01T00:00:01.000000+00:00\"}],\"agent\":{\"id\":\"helper\",\"name\":\"Helper\",\"description\":\"Answers questions.\"}}\n\n",
+  "streamFrame": "id: \"etag-2\"\ndata: {\"threads\":[{\"thread_id\":\"t-approve\",\"title\":\"Please delete invoice 7\",\"updated_at\":\"2026-01-01T00:00:07.000000+00:00\",\"preview\":\"Deleted.\",\"parent\":null,\"routine\":null,\"agent_id\":\"helper\",\"status\":\"idle\",\"last_read_at\":null},{\"thread_id\":\"t-failed\",\"title\":\"Please fail\",\"updated_at\":\"2026-01-01T00:00:06.000000+00:00\",\"preview\":\"Please fail\",\"parent\":null,\"routine\":null,\"agent_id\":\"helper\",\"status\":\"failed\",\"last_read_at\":null,\"reason\":\"error\"},{\"thread_id\":\"t-question\",\"title\":\"Please ask me\",\"updated_at\":\"2026-01-01T00:00:05.000000+00:00\",\"preview\":\"Please ask me\",\"parent\":null,\"routine\":null,\"agent_id\":\"helper\",\"status\":\"waiting\",\"last_read_at\":null,\"interrupts\":[{\"id\":\"int-call-2\",\"reason\":\"tool_call\",\"message\":\"ask\",\"toolCallId\":\"call-2\",\"metadata\":{\"destructive\":false,\"kind\":\"question\"}}],\"run_id\":\"r4\"},{\"thread_id\":\"t-first\",\"title\":\"Hi\",\"updated_at\":\"2026-01-01T00:00:03.000000+00:00\",\"preview\":\"partial answer and the rest\",\"parent\":null,\"routine\":null,\"agent_id\":\"helper\",\"status\":\"idle\",\"last_read_at\":null},{\"thread_id\":\"t-read\",\"title\":\"Hello\",\"updated_at\":\"2026-01-01T00:00:02.000000+00:00\",\"preview\":\"partial answer and the rest\",\"parent\":null,\"routine\":null,\"agent_id\":\"helper\",\"status\":\"idle\",\"last_read_at\":\"2026-01-01T00:00:01.000000+00:00\"}],\"agent\":{\"id\":\"helper\",\"name\":\"Helper\",\"description\":\"Answers questions.\"}}\n\n",
   "streamSkipped": null,
   "wsgiStreamRequest": {
     "status": 200,
@@ -274,6 +415,8 @@
           "title": "Please delete invoice 7",
           "updated_at": "2026-01-01T00:00:07.000000+00:00",
           "preview": "Deleted.",
+          "parent": null,
+          "routine": null,
           "agent_id": "helper",
           "status": "idle",
           "last_read_at": null
@@ -283,6 +426,8 @@
           "title": "Please fail",
           "updated_at": "2026-01-01T00:00:06.000000+00:00",
           "preview": "Please fail",
+          "parent": null,
+          "routine": null,
           "agent_id": "helper",
           "status": "failed",
           "last_read_at": null,
@@ -293,6 +438,8 @@
           "title": "Please ask me",
           "updated_at": "2026-01-01T00:00:05.000000+00:00",
           "preview": "Please ask me",
+          "parent": null,
+          "routine": null,
           "agent_id": "helper",
           "status": "waiting",
           "last_read_at": null,
@@ -307,13 +454,16 @@
                 "kind": "question"
               }
             }
-          ]
+          ],
+          "run_id": "r4"
         },
         {
           "thread_id": "t-first",
           "title": "Hi",
           "updated_at": "2026-01-01T00:00:03.000000+00:00",
           "preview": "partial answer and the rest",
+          "parent": null,
+          "routine": null,
           "agent_id": "helper",
           "status": "idle",
           "last_read_at": null
@@ -323,6 +473,8 @@
           "title": "Hello",
           "updated_at": "2026-01-01T00:00:02.000000+00:00",
           "preview": "partial answer and the rest",
+          "parent": null,
+          "routine": null,
           "agent_id": "helper",
           "status": "idle",
           "last_read_at": "2026-01-01T00:00:01.000000+00:00"

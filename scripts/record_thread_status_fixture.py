@@ -14,7 +14,7 @@ from typing import Any
 import django
 from django.conf import settings
 
-RUN = "uv run --no-project --with 'django-ag-ui==0.84.0' --with 'django-spec-agents==0.23.0' python scripts/record_thread_status_fixture.py"  # noqa: E501
+RUN = "uv run --no-project --with 'django-ag-ui[harness]==0.89.0' --with 'django-spec-agents==0.26.1' python scripts/record_thread_status_fixture.py"  # noqa: E501
 
 DB = Path(tempfile.mkdtemp()) / "status.sqlite3"
 settings.configure(
@@ -39,6 +39,7 @@ from django_spec_agents.contrib.store.default_conversation_store import (  # noq
     DefaultConversationStore,
 )
 from django_spec_agents.contrib.store.default_run_store import DefaultRunStore  # noqa: E402
+from django_spec_agents.contrib.store.default_step_store import DefaultStepStore  # noqa: E402
 from django_spec_agents.persistence.types.thread_run_status import (  # noqa: E402
     ThreadRunStatus,
 )
@@ -48,7 +49,8 @@ from django_spec_agents.policy.guard.types.tool_guard_config import (  # noqa: E
 from pydantic_ai.exceptions import CallDeferred  # noqa: E402
 from pydantic_ai.models.function import AgentInfo, DeltaToolCall, FunctionModel  # noqa: E402
 
-from django_ag_ui import ToolRegistry, tool  # noqa: E402
+from ag_ui.core import ActivitySnapshotEvent  # noqa: E402
+from django_ag_ui import ThreadActivity, ToolRegistry, tool  # noqa: E402
 from django_ag_ui.agent.agui_server import AGUIServer  # noqa: E402
 from django_ag_ui.config.build_ag_ui_config import build_ag_ui_config  # noqa: E402
 from django_ag_ui.persistence import threads_view as threads_view_module  # noqa: E402
@@ -125,6 +127,20 @@ class _Gate:
         return FunctionModel(stream_function=stream_fn)
 
 
+class _Chart:
+    """Pushes one chart after the first stored message of the thread named chart."""
+
+    async def activities_for(self, thread_id: str, *, messages: Any, request: Any) -> list:
+        if thread_id != "t-chart":
+            return []
+        event = ActivitySnapshotEvent(
+            message_id="chart-1",
+            activity_type="chart",
+            content={"kind": "bar", "series": [{"name": "Sales", "points": [1, 2, 3]}]},
+        )
+        return [ThreadActivity(event=event, after_message_id=messages[0].id)]
+
+
 def _server(gate: _Gate, **kwargs: Any) -> AGUIServer:
     registry = ToolRegistry()
 
@@ -144,6 +160,8 @@ def _server(gate: _Gate, **kwargs: Any) -> AGUIServer:
         csrf_exempt=True,
         conversation_store=DefaultConversationStore(),
         run_store=DefaultRunStore(),
+        step_store=DefaultStepStore,
+        thread_activity_source=_Chart(),
         config=build_ag_ui_config(
             heartbeat_seconds=0,
             run_timeout_seconds=300,
@@ -323,6 +341,38 @@ async def _parked(server: AGUIServer) -> dict[str, Any]:
     }
 
 
+async def _crud(server: AGUIServer) -> dict[str, Any]:
+    """The detail, an unknown and a renamed thread, an empty rename, a chart restore, a delete."""
+    route = _route(server, "thread")
+    factory = _Factory()
+    detail = await route(factory.get("/agent/threads/t-approve/"), thread_id="t-approve")
+    missing = await route(factory.get("/agent/threads/t-never/"), thread_id="t-never")
+    await _drain(await _start(server, _body("t-chart", "r7", [_user("r7", "Chart it")])))
+    await _settled("t-chart")
+    chart = await route(factory.get("/agent/threads/t-chart/"), thread_id="t-chart")
+
+    def patch(thread_id: str, payload: dict[str, Any]) -> Any:
+        return factory.patch(
+            f"/agent/threads/{thread_id}/",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+    renamed = await route(patch("t-chart", {"title": "Sales"}), thread_id="t-chart")
+    blank = await route(patch("t-chart", {"title": "  "}), thread_id="t-chart")
+    absent = await route(patch("t-never", {"title": "x"}), thread_id="t-never")
+    removed = await route(factory.delete("/agent/threads/t-chart/"), thread_id="t-chart")
+    return {
+        "detail": _answer(detail),
+        "detailUnknown": _answer(missing),
+        "detailWithChart": _answer(chart),
+        "rename": _answer(renamed),
+        "renameEmpty": _answer(blank),
+        "renameUnknown": _answer(absent),
+        "delete": {"status": removed.status_code},
+    }
+
+
 async def _streams(server: AGUIServer) -> dict[str, Any]:
     """One SSE frame of the list, the same frame skipped by its ETag, and WSGI's poll answer."""
     threads_view_module._STREAM_POLL_SECONDS = 0.05
@@ -389,6 +439,7 @@ async def record() -> dict[str, Any]:
         "canonicalized": ["uuid ids", "timestamps, order kept", "etags"],
         **(await _reads(server, gate)),
         **(await _parked(server)),
+        **(await _crud(server)),
         **(await _streams(server)),
     }
 

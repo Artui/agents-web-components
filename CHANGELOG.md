@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **The threads contract is a docs page.** `docs/threads-contract.md` states every route, status
+  code and row key of the server `data-threads-url` talks to (what the component requires and
+  what django-ag-ui adds), the ETag and 304 rules, the stream framing, the 404 semantics, what
+  restores a waiting approval, and that `GET <id>/` may carry `activity` messages the component
+  redraws. Its examples are quoted from `tests/fixtures/thread_status.json`, re-recorded against
+  django-ag-ui 0.89.0 (rows now carry `parent` and `routine`, and a waiting row `run_id`), with
+  the detail, rename, delete and chart-restore answers added. The README row and the chart docs
+  link it, and the chart docs name django-ag-ui's `thread_activity_source`.
+
 ## [0.14.0] — 2026-11-24
 
 ### Changed
