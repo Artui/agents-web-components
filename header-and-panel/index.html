@@ -1,0 +1,2345 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Framework-free Web Components over the AG-UI protocol - chat, threads, inbox and an agents provider.">
+      
+      
+      
+        <link rel="canonical" href="https://artui.github.io/agents-web-components/header-and-panel/">
+      
+      
+        <link rel="prev" href="../concepts/">
+      
+      
+        <link rel="next" href="../messages/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
+    
+    
+      
+        <title>Header, collapse and resizing - agents-web-components</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#header-collapse-and-resizing" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="agents-web-components" class="md-header__button md-logo" aria-label="agents-web-components" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            agents-web-components
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Header, collapse and resizing
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Artui/agents-web-components" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Artui/agents-web-components
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="agents-web-components" class="md-nav__button md-logo" aria-label="agents-web-components" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    agents-web-components
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Artui/agents-web-components" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Artui/agents-web-components
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../authentication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authenticating requests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The chat
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    The chat
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Header, collapse and resizing
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Header, collapse and resizing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#new-chat-and-collapse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New chat and collapse
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="New chat and collapse">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-header-row-and-its-more-menu" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The header row and its More menu
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#maximizing-the-panel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Maximizing the panel
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#driving-the-conversation-from-your-own-chrome" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Driving the conversation from your own chrome
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Driving the conversation from your own chrome">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#open-threads-tabs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Open threads (tabs)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-composers-own-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The composer's own keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#collapsing-to-the-launcher" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Collapsing to the launcher
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Collapsing to the launcher">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-unread-badge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The unread badge
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#moving-the-launcher" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Moving the launcher
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#moving-the-panel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Moving the panel
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#collapsing-to-a-bottom-bar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Collapsing to a bottom bar
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resizing-the-panel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resizing the panel
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Resizing the panel">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dragging-the-edge-your-layout-was-holding-still" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dragging the edge your layout was holding still
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sizes-keyboard-and-parts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sizes, keyboard, and parts
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../messages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Messages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tool-calls/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tool calls and sub-agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../server-pushed-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    What the server draws
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../skills/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Skills and run notices
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../uploads/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File uploads
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Other elements
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Other elements
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../threads/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The conversation list
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents and the inbox
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../editors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The editors on a page of their own
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hosting
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Hosting
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../host-seams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Host seams (SPA)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../durability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Durability and resuming
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Look and language
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Look and language
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theming/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Theming, density and placement
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../i18n/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Internationalization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Public API surface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../building/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Building and compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Moving from ag-ui-web-component
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#new-chat-and-collapse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New chat and collapse
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="New chat and collapse">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-header-row-and-its-more-menu" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The header row and its More menu
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#maximizing-the-panel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Maximizing the panel
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#driving-the-conversation-from-your-own-chrome" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Driving the conversation from your own chrome
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Driving the conversation from your own chrome">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#open-threads-tabs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Open threads (tabs)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-composers-own-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The composer's own keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#collapsing-to-the-launcher" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Collapsing to the launcher
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Collapsing to the launcher">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-unread-badge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The unread badge
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#moving-the-launcher" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Moving the launcher
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#moving-the-panel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Moving the panel
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#collapsing-to-a-bottom-bar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Collapsing to a bottom bar
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resizing-the-panel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resizing the panel
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Resizing the panel">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dragging-the-edge-your-layout-was-holding-still" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dragging the edge your layout was holding still
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sizes-keyboard-and-parts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sizes, keyboard, and parts
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/Artui/agents-web-components/edit/main/docs/header-and-panel.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="header-collapse-and-resizing">Header, collapse and resizing<a class="headerlink" href="#header-collapse-and-resizing" title="Permanent link">&para;</a></h1>
+<h2 id="new-chat-and-collapse">New chat and collapse<a class="headerlink" href="#new-chat-and-collapse" title="Permanent link">&para;</a></h2>
+<p>The header carries built-in buttons for a new chat (a pencil on a square), maximize (two arrows pointing out) and
+collapse (a chevron down, or on a sidebar a panel closing into its edge; <code>data-collapse-icon</code>
+chooses it). The
+matching JS API:</p>
+<ul>
+<li><code>newChat()</code> — clears the transcript, drops the in-memory run state, and mints a new thread id.
+  The conversation it leaves is <strong>kept</strong>: it stays in the history drawer to return to, and on a
+  server-backed store it stays on the server. Deleting one is the drawer row's own action. A chat
+  nothing was ever sent in is the exception — it was never listed, so it is dropped rather than
+  left behind. Focus moves to the composer, whichever control started the new chat, unless the
+  widget is collapsed, and the page is not scrolled to it. A restore still loading or replaying
+  the conversation being left stops there, so nothing of it is drawn into the new chat, and a
+  run it was about to resume after a reload is not resumed: coming back to that conversation
+  later answers the interrupted call as not finished. Called before the element connects (or while
+  it is out of the document), it waits: <code>threadId</code> stays <code>null</code> and nothing fires until the
+  element connects, which then starts the new chat, so the one <code>ag-ui-thread</code> event is a <code>new</code>.</li>
+<li><code>describeSurface()</code> — where the panel is and what can be done to it: placement, collapsed,
+  <code>maximized</code> (read-only), what it collapses to (<code>collapseTo</code>), whether it can be moved, whether it fills the screen, its box and the viewport. <code>movable</code> folds
+  the two reasons a move can fail into the one answer a caller needs.</li>
+<li><code>moveTo(corner)</code> — send the panel to <code>top-left</code> / <code>top-right</code> / <code>bottom-left</code> / <code>bottom-right</code>,
+  returning whether it went. It takes the axes the same way a user drag does, so the launcher
+  travels with it and switching placement hands them back. Returns <code>false</code> rather than pretending
+  when the placement owns its position or the panel fills the screen. Under <code>collapse-to="bar"</code>
+  or <code>"none"</code> it moves the panel within the room above the bar or the anchor.</li>
+<li><code>resetSize()</code> — drop the size the user dragged in the current placement, and its stored copy,
+  so the placement's own size and your <code>--ag-ui-width</code> / <code>--ag-ui-height</code> apply again; sizes
+  dragged in other placements are kept. For a host that enters a sized state of its own (an
+  expanded mode) instead of the built-in <a href="#maximizing-the-panel">maximize</a>: a user's drag
+  outranks host tokens, so call this first.
+  Under <code>collapse-to="bar"</code> or <code>"none"</code> it also returns a panel the user dragged off its dock to
+  the dock and forgets the stored spot; a corner panel under <code>auto</code> keeps its dragged position.</li>
+<li><code>setCollapsed(collapsed)</code> / <code>toggleCollapsed()</code> — collapse or expand the widget. The state is
+  reflected as the boolean <code>collapsed</code> attribute/property and persisted per-tab in
+  <code>sessionStorage</code>, so it survives a reload.</li>
+</ul>
+<p>Each change emits an <code>ag-ui-toggle</code> event (the <code>TOGGLE_EVENT</code> constant) with
+<code>detail: { collapsed: boolean }</code> (typed <code>ToggleDetail</code>), so a host can mirror the state in its own
+chrome — or hide the built-in toggle and drive the <code>collapsed</code> attribute itself.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">newChat</span><span class="p">();</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">toggleCollapsed</span><span class="p">();</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">addEventListener</span><span class="p">(</span><span class="s2">"ag-ui-toggle"</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="nx">e</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">detail</span><span class="p">.</span><span class="nx">collapsed</span><span class="p">));</span>
+</code></pre></div>
+<h3 id="the-header-row-and-its-more-menu">The header row and its More menu<a class="headerlink" href="#the-header-row-and-its-more-menu" title="Permanent link">&para;</a></h3>
+<p>The header shows every control it has while they fit. When they stop fitting, or when the row
+would hold more than five, the optional controls move into a More menu (the three dots), one at
+a time in this order: the theme toggle, Skills, checkpoints, then History. New chat, Maximize
+and Collapse always stay in the row. Once anything has moved, the row holds at most four
+controls beside More, so a header with every opt-in on still fits a 240px panel with its title
+readable. With <code>data-routines-url</code> set, More also holds Make this a routine (the last item, in
+the menu only) while the conversation on screen has a prompt, and it counts toward that cap, so
+the first prompt may move a control into the menu.</p>
+<p>Nothing to opt into, and nothing a host drives changes: a control in the menu is the same
+<code>&lt;button&gt;</code>, with the same class (<code>header-btn--history</code>), <code>part</code> and <code>icon-*</code> slot, so
+<code>::part(history-button)</code> still styles it and <code>shadowRoot.querySelector(".header-btn--history").click()</code>
+still opens the drawer. In the menu it is a <code>menuitem</code> row showing its glyph and its name.
+The menu takes <code>::part(header-menu)</code> and the button <code>::part(more-button)</code>; its name is the
+<code>moreControls</code> string. From the keyboard, Enter, Space or the down arrow on More opens the menu
+on its first row (the up arrow on its last); the arrows, Home and End move between rows, Escape
+closes it and returns focus to More, and Tab or a click elsewhere closes it.</p>
+<h3 id="maximizing-the-panel">Maximizing the panel<a class="headerlink" href="#maximizing-the-panel" title="Permanent link">&para;</a></h3>
+<p>The maximize control (two arrows pointing out, <code>maximize-button</code> part, <code>icon-maximize</code> slot) grows the open panel,
+and pressed again it restores it (the arrows point in). It is labelled "Maximize" and "Restore" (the <code>maximize</code>
+and <code>restore</code> strings), apart from the launcher's and the rail's "Expand", which opens the panel.</p>
+<ul>
+<li><strong>Where it is offered.</strong> A corner panel (<code>floating</code>, <code>bottom-left</code>, the default) and a docked
+  one (<code>collapse-to="bar"</code> or <code>"none"</code>) grow on both axes; <code>sidebar</code> and <code>side</code> grow in width
+  only. <code>page</code>, <code>full</code> and <code>embedded</code> have no control, and neither does any viewport of 600px or
+  less, <code>data-small-viewport="off"</code> included. The control is absent from the header there, not
+  hidden, and the state is refused: a panel maximized when its placement switches to one of
+  these, or when the window narrows to 600px, leaves it.</li>
+<li><strong>What it grows to.</strong> <code>--ag-ui-maximized-width</code> and <code>--ag-ui-maximized-height</code>, which default
+  to the panel's cap (<code>--ag-ui-max-width</code> / <code>--ag-ui-max-height</code>, the room the host left less
+  one gutter). A side column reads the width only.</li>
+<li><strong>The drag.</strong> Entering it takes the dragged size off without forgetting it, and the resize
+  grips are hidden while it lasts. Restoring, and collapsing (which leaves the state), put the
+  placement's own size back, or the size the user dragged in it.</li>
+<li><strong>The API.</strong> <code>chat.maximized</code> (reflected as the <code>maximized</code> attribute), <code>setMaximized(bool)</code>
+  and <code>toggleMaximized()</code>. Each change emits <code>ag-ui-maximize</code> (the <code>MAXIMIZE_EVENT</code> constant)
+  with <code>detail: { maximized }</code> (typed <code>MaximizeDetail</code>). It fires only while connected: a
+  markup <code>maximized</code> is announced once at connect, and only if it holds (a panel that mounts
+  collapsed announces nothing), and a change made while detached is announced once on reconnect,
+  only if it differs from what listeners last heard. It is not stored: a reload opens at the
+  placement's own size. <code>describeSurface()</code> reports it, and no agent tool changes it.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">addEventListener</span><span class="p">(</span><span class="s2">"ag-ui-maximize"</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="nx">e</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">detail</span><span class="p">.</span><span class="nx">maximized</span><span class="p">));</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">ag-ui-chat</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">--ag-ui-maximized-width</span><span class="p">:</span><span class="w"> </span><span class="mi">960</span><span class="kt">px</span><span class="p">;</span><span class="w"> </span><span class="nv">--ag-ui-maximized-height</span><span class="p">:</span><span class="w"> </span><span class="mi">85</span><span class="kt">vh</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<p><code>--ag-ui-min-page-width</code> keeps that much of the page beside a <code>sidebar</code> or <code>side</code> column: it caps
+the column's width at the viewport less it, whether the width was dragged, set by
+<code>--ag-ui-width</code>, or maximized. It is unset by default, which caps nothing.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">ag-ui-chat</span><span class="o">[</span><span class="nt">placement</span><span class="o">=</span><span class="s2">"sidebar"</span><span class="o">]</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">--ag-ui-min-page-width</span><span class="p">:</span><span class="w"> </span><span class="mi">480</span><span class="kt">px</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<p>A host that wants its own sized state can still build it: hide the control
+(<code>ag-ui-chat::part(maximize-button) { display: none }</code>), slot a button into <code>header-actions</code>, set
+its own <code>--ag-ui-width</code> / <code>--ag-ui-height</code> in a class, and call <code>resetSize()</code> as it enters, so a
+dragged size does not outrank its tokens.</p>
+<h3 id="driving-the-conversation-from-your-own-chrome">Driving the conversation from your own chrome<a class="headerlink" href="#driving-the-conversation-from-your-own-chrome" title="Permanent link">&para;</a></h3>
+<p>A host that lists conversations in its own bar, rather than in the built-in drawer, drives the
+one on screen with the drawer's own paths:</p>
+<ul>
+<li><code>switchThread(threadId)</code> — put a stored thread on screen and replay it, as picking its row in
+  the drawer does. Returns a <code>Promise&lt;void&gt;</code> that resolves once the thread is drawn. <strong>A run in
+  flight is cancelled</strong>, as the drawer and <code>newChat()</code> cancel it; read <code>running</code> first if you
+  would rather wait. Switching to the thread already on screen does nothing, and so does a call
+  before the element connects; a second call for the thread that is still loading settles with
+  that load, after the replay. If the store rejects the load, the element stays on the thread it
+  was on, redraws it, fires no <code>ag-ui-thread</code>, and the promise rejects with the store's error.</li>
+<li><code>deleteThread(threadId)</code> — delete a stored thread, as the drawer row's delete does. Deleting
+  the thread on screen cancels its run and puts a fresh thread in its place; deleting another
+  leaves the screen alone. Prefer it to <code>conversationStore.clear()</code>, which deletes the record and
+  nothing else: the run, the transcript and the drawer are left pointing at it.</li>
+<li><code>threadId</code> <em>(read-only)</em> — the thread on screen, <code>null</code> before the element first connects.
+  It only reads. <code>conversationStore.threadId()</code> mints and stores a thread when the store points
+  at none, so asking it which conversation is showing can start one.</li>
+<li><code>threadTitle</code> <em>(read-only)</em> — the title of the thread on screen, <code>""</code> while nothing has been
+  sent in it. A title renamed here, or one the conversation list shows that the messages do not
+  derive (a server's own), wins; otherwise it is the first user message, and a first message that
+  is exactly a skill's <code>/token</code> reads as that skill's catalog <code>title</code>, else as the token in words
+  (<code>/summarize_draw</code> reads "Summarize draw"). It is set on the first send, before the server lists
+  the thread. Every change fires one <strong><code>ag-ui-thread-title</code></strong> event (<code>THREAD_TITLE_EVENT</code>, detail
+  <code>{ threadId, title }</code>, typed <code>ThreadTitleDetail</code>), after the <code>ag-ui-thread</code> event of the change
+  that caused it. <code>title-text="auto"</code> draws it without a listener.</li>
+<li><code>running</code> <em>(read-only)</em> — whether an interaction is in flight: the composer's own state, the
+  one it shows Stop for, across every tool round, a Retry and a checkpoint continuation as well
+  as a send. Reflected on the element as the <code>data-running</code> attribute, written by the element
+  rather than by you, as <code>data-empty</code> is, so the chrome around the chat can style on it.</li>
+</ul>
+<p>Every change of conversation fires one <strong><code>ag-ui-thread</code></strong> event (the <code>THREAD_EVENT</code> constant),
+after the transcript has been replaced, so a listener reads the conversation it is told about.
+<code>detail</code> is <code>{ threadId, previousThreadId, reason }</code> (typed <code>ThreadDetail</code>). <code>previousThreadId</code>
+is the thread the previous event reported, <code>null</code> before the first, and <code>reason</code> is one of:</p>
+<table>
+<thead>
+<tr>
+<th><code>reason</code></th>
+<th>When</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>new</code></td>
+<td><code>newChat()</code> or the built-in New chat button.</td>
+</tr>
+<tr>
+<td><code>switch</code></td>
+<td><code>switchThread()</code> or a row picked in the drawer. Two switches made before the first had replayed report only the second.</td>
+</tr>
+<tr>
+<td><code>delete</code></td>
+<td>The thread on screen was deleted, and a fresh one took its place.</td>
+</tr>
+<tr>
+<td><code>restore</code></td>
+<td>The stored thread was replayed: when the element connects (<code>previousThreadId</code> is <code>null</code> the first time), or by <code>reload()</code>.</td>
+</tr>
+<tr>
+<td><code>rescope</code></td>
+<td>A <code>user-key</code> change handed the element to another principal, live or while it was out of the document.</td>
+</tr>
+</tbody>
+</table>
+<p>A page reload keeps restoring the thread, as <a href="../durability/#mpa-durability-surviving-full-page-reloads">MPA durability</a> describes, and
+reports it as <code>restore</code>. Ignore a <code>reason</code> you do not know: more may be added.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">addEventListener</span><span class="p">(</span><span class="s2">"ag-ui-thread"</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="nx">e</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">myBar</span><span class="p">.</span><span class="nx">markActive</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">detail</span><span class="p">.</span><span class="nx">threadId</span><span class="p">));</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nx">myBar</span><span class="p">.</span><span class="nx">onPick</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">threadId</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">chat</span><span class="p">.</span><span class="nx">switchThread</span><span class="p">(</span><span class="nx">threadId</span><span class="p">);</span>
+</code></pre></div>
+<h4 id="open-threads-tabs">Open threads (tabs)<a class="headerlink" href="#open-threads-tabs" title="Permanent link">&para;</a></h4>
+<p>A host that draws conversations as tabs keeps the open set on the element rather than beside
+it. The element draws nothing for it: the tabs are the host's chrome. <strong>Tracking starts at the
+host's first <code>openTab</code></strong>, which opens the thread on screen with it, or at connect when this tab
+already stored a set. Until then nothing is kept, written or announced, so a host that never
+calls <code>openTab</code> sees no change.</p>
+<ul>
+<li><code>tabs</code> <em>(read-only)</em> — the open threads in the order they were opened, each
+  <code>{ threadId, title }</code> (typed <code>ThreadTab</code>), frozen. <code>title</code> is <code>""</code> until one is known. Empty
+  until tracking starts.</li>
+<li><code>openTab(threadId, title?)</code> — open a thread as the last tab without showing it; <code>switchThread</code>
+  shows it. Without a <code>title</code>, the store's list names it. A thread already open stays where it is.</li>
+<li><code>closeTab(threadId)</code> — close a tab. <strong>The thread stays in history</strong>, which is what sets a close
+  apart from <code>deleteThread</code>. Closing the thread on screen shows the next tab, else the one before
+  it, else a new chat, cancelling a run in flight as <code>switchThread</code> does.</li>
+</ul>
+<p>Once tracking has started, showing a thread opens it: <code>switchThread</code>, <code>newChat</code>, the drawer, a
+<a href="../tool-calls/#child-sessions">child-session</a> link and the parent breadcrumb each open the thread they show
+(a link or breadcrumb a host prevents shows nothing and adds no tab), so the thread on screen
+always has a tab, except when a closed tab's neighbour cannot be
+loaded. A new chat leaving a thread nothing was sent in takes over that thread's tab, since the
+store drops the empty thread. <code>deleteThread</code> closes the tab as it deletes the thread.</p>
+<p>The set is kept per browser tab in <code>sessionStorage</code>, under the conversation's namespace (the
+element's <code>id</code> and <code>user-key</code>, or, under <code>&lt;ag-ui-agents&gt;</code>, the agent's: <code>agent:&lt;id&gt;</code>, so each
+agent keeps its own tabs), so a reload reads the same tabs back, titles included. A
+<code>user-key</code> handover drops the previous user's tabs; a first <code>user-key</code> naming the user already
+there keeps them.</p>
+<p>Every change fires one <strong><code>ag-ui-tabs</code></strong> event (<code>TABS_EVENT</code>, detail <code>{ tabs, reason }</code>,
+typed <code>TabsDetail</code>), with <code>reason</code> one of <code>open</code>, <code>close</code>, <code>delete</code>, <code>title</code>, <code>restore</code>
+(connect or <code>reload()</code>) and <code>rescope</code> (a <code>user-key</code> handover). Ignore a <code>reason</code> you do not know.
+A thread shown is in <code>tabs</code> by the time its <code>ag-ui-thread</code> fires, and its <code>ag-ui-tabs</code> follows.
+Switching between two open tabs changes no tab, so mark the active one from <code>ag-ui-thread</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">addEventListener</span><span class="p">(</span><span class="s2">"ag-ui-tabs"</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="nx">e</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">myTabs</span><span class="p">.</span><span class="nx">draw</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">detail</span><span class="p">.</span><span class="nx">tabs</span><span class="p">));</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">addEventListener</span><span class="p">(</span><span class="s2">"ag-ui-thread"</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="nx">e</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">myTabs</span><span class="p">.</span><span class="nx">markActive</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">detail</span><span class="p">.</span><span class="nx">threadId</span><span class="p">));</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">openTab</span><span class="p">(</span><span class="nx">chat</span><span class="p">.</span><span class="nx">threadId</span><span class="p">);</span><span class="w"> </span><span class="c1">// start tracking</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="nx">myTabs</span><span class="p">.</span><span class="nx">onPick</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">threadId</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">chat</span><span class="p">.</span><span class="nx">switchThread</span><span class="p">(</span><span class="nx">threadId</span><span class="p">);</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="nx">myTabs</span><span class="p">.</span><span class="nx">onClose</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">threadId</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">chat</span><span class="p">.</span><span class="nx">closeTab</span><span class="p">(</span><span class="nx">threadId</span><span class="p">);</span>
+</code></pre></div>
+<h3 id="the-composers-own-keys">The composer's own keys<a class="headerlink" href="#the-composers-own-keys" title="Permanent link">&para;</a></h3>
+<p><strong>Enter during a run queues.</strong> A second run cannot start while one is in flight —
+it would orphan the first — so that key used to do nothing at all, silently. A
+checkpoint continuation picked from the panel counts as in flight from the pick
+rather than from its first event, which is a request later, so a turn typed in
+that gap is parked too rather than racing it. What
+is waiting shows above the composer as chips, each of which takes its message
+back when pressed, and the next one is sent when the run settles. Stopping the
+run discards them: sending into a conversation someone has just stopped is the
+opposite of what stopping meant. Nothing is lost, though — a queued message
+entered the recall history below when it left the composer, so <strong>Up</strong> gets it
+back after a Stop, and after its chip is taken back.</p>
+<p>The composer also walks back through what you have already sent, on <strong>Up</strong> and
+<strong>Down</strong> — the shape every shell and every coding agent uses. It holds every turn
+that left the composer: one sent at once, one queued behind a run (from the
+moment it is queued), and one sent to resume or fork a run from the checkpoint
+panel. A message sent with <code>sendMessage</code> is not in it, because it was never
+typed there. Only from an empty composer and only with the skills palette closed:
+an arrow inside text is how you move the caret, and taking it unconditionally
+would break editing to add a shortcut. Arrowing forward past the newest turn
+empties the box again, so the way out is the key that got you in. A walk lasts
+only while the composer holds the turn it put there: anything else that writes
+the box — typing, a quotation, a skill, dictation, or the host page itself — ends
+it, so the next arrow moves the caret in what was written rather than replacing
+it. The history is this conversation's: starting a new chat, switching threads
+or changing <code>user-key</code> clears it with the transcript.</p>
+<h3 id="collapsing-to-the-launcher">Collapsing to the launcher<a class="headerlink" href="#collapsing-to-the-launcher" title="Permanent link">&para;</a></h3>
+<p>A collapsed widget shrinks to a <strong>floating launcher</strong> in the corner it already occupies: the
+panel scales down into it and fades, the launcher grows out of the same point, and clicking the
+launcher reverses it. Only <code>transform</code> and <code>opacity</code> animate, so the motion is compositor-only and
+never reflows your page. Two placements collapse to something else instead — <code>sidebar</code> slides out
+to its <a href="../theming/#sidebar-placement">edge rail</a>, and <code>embedded</code> / <code>page</code> keep the header bar, since one is
+laid out by your page and the other is a full-screen route.</p>
+<p>The launcher's mark comes from the same seam as the header icon, most specific first: a slotted
+<code>slot="launcher"</code> child, then <code>data-launcher-icon-url</code>, then <code>data-icon-url</code>, then the built-in
+speech bubble.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span> <span class="na">data-launcher-icon-url</span><span class="o">=</span><span class="s">"/mark.svg"</span><span class="p">&gt;&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="cm">&lt;!-- or any markup at all --&gt;</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span><span class="p">&gt;</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>  <span class="p">&lt;</span><span class="nt">svg</span> <span class="na">slot</span><span class="o">=</span><span class="s">"launcher"</span> <span class="na">width</span><span class="o">=</span><span class="s">"26"</span> <span class="na">height</span><span class="o">=</span><span class="s">"26"</span><span class="p">&gt;</span><span class="cm">&lt;!-- ... --&gt;</span><span class="p">&lt;/</span><span class="nt">svg</span><span class="p">&gt;</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="p">&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">ag-ui-chat</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nv">--ag-ui-launcher-size</span><span class="p">:</span><span class="w"> </span><span class="mi">48</span><span class="kt">px</span><span class="p">;</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="nv">--ag-ui-launcher-radius</span><span class="p">:</span><span class="w"> </span><span class="mi">14</span><span class="kt">px</span><span class="p">;</span><span class="w">  </span><span class="c">/* 50% for a circle */</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="nv">--ag-ui-launcher-bg</span><span class="p">:</span><span class="w"> </span><span class="mh">#14532d</span><span class="p">;</span><span class="w">   </span><span class="c">/* defaults to the panel background */</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span><span class="nv">--ag-ui-launcher-fg</span><span class="p">:</span><span class="w"> </span><span class="mh">#ffffff</span><span class="p">;</span><span class="w">   </span><span class="c">/* defaults to the text colour */</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span><span class="nv">--ag-ui-launcher-icon-size</span><span class="p">:</span><span class="w"> </span><span class="mi">22</span><span class="kt">px</span><span class="p">;</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">  </span><span class="nv">--ag-ui-launcher-inset</span><span class="p">:</span><span class="w"> </span><span class="kc">auto</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="kc">auto</span><span class="p">;</span><span class="w">  </span><span class="c">/* which corner of the widget's box */</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="p">}</span>
+</code></pre></div>
+<p>The sizes and defaults above are Quiet's. The other themes bring their own launcher: <code>classic</code>
+the 56px circle in the header's colours, <code>soft</code> a 56px accent tile, and <code>ledger</code> a 44px tile in
+the text colour.</p>
+<blockquote>
+<p><strong>The collapsed host keeps its box.</strong> Animating the element's own width and height would animate
+layout; instead the box stays put with <code>pointer-events: none</code>, and the launcher takes the clicks.
+A host measuring <code>getBoundingClientRect()</code> on a collapsed widget still sees the panel's
+footprint — nothing there paints or takes input.</p>
+</blockquote>
+<h4 id="the-unread-badge">The unread badge<a class="headerlink" href="#the-unread-badge" title="Permanent link">&para;</a></h4>
+<p>A collapsed widget is the one state where an answer can arrive with nothing on screen to say so,
+so the launcher carries a count of the answers that finished while it was closed (capped at <code>9+</code>).
+It is the only affordance here that is <strong>on by default</strong>; <code>data-unread-badge="false"</code> turns the
+badge off.</p>
+<p><strong>Unseen answers are kept per thread.</strong> Each answer counts against the thread it ran on, and a
+thread is read only when it is on screen <strong>and</strong> the panel is expanded. On screen in a collapsed
+panel is not read. So an answer that finished on thread A while collapsed stays unread across a
+collapsed switch to B, a <code>newChat()</code>, or an expand on B, and is read once A is on screen in the
+open panel. <code>unread</code> is the total across threads, which is what the badge shows; it shows on the
+collapsed launcher only, so an open panel whose other threads hold unseen answers shows no
+badge. A principal change (a new <code>user-key</code>) drops the previous principal's marks, and deleting a
+thread drops its own.</p>
+<p>A store can carry read state across pages and devices, through two optional members. The element
+fetches the thread list when the drawer opens or a thread switches, not at page load, so a
+store's <code>unread</code> rows are counted from that fetch on: a page that never opens the drawer shows
+no badge for answers that finished elsewhere.</p>
+<ul>
+<li><strong><code>ThreadMeta.unread</code></strong> (boolean): a thread <code>listThreads()</code> reports as unread, and the page has
+  not counted, counts once, when the list is fetched.</li>
+<li><strong><code>markRead(threadId)</code></strong>: called when the element reads a thread with unseen answers, and when
+  the run of an answer that finished on the thread in view settles (after the answer, so a server
+  has saved it first). A server store maps it to its read endpoint, and
+  should list the thread with <code>unread: false</code> afterwards.</li>
+</ul>
+<p>A store without either still has its threads counted and cleared in the page. Neither is
+implemented by the default <code>SessionStorageStore</code>.</p>
+<p>The count is also the launcher's accessible name (<code>Expand — 2 unread</code>, from the <code>expandUnread</code>
+string), because a coloured dot says nothing to a screen reader.</p>
+<h4 id="moving-the-launcher">Moving the launcher<a class="headerlink" href="#moving-the-launcher" title="Permanent link">&para;</a></h4>
+<p>The collapsed launcher can be dragged anywhere on screen, and it stays there — per tab, in
+<code>sessionStorage</code>, namespaced per element exactly like the collapsed, theme and size preferences.
+Arrow keys move it from the keyboard (<code>Shift</code> for a larger step). <code>data-launcher-drag="false"</code>
+turns it off; so does any placement that already places the launcher itself — <code>sidebar</code> collapses
+it to a full-height rail, <code>embedded</code> and <code>page</code> hide it and keep their header bar, and a
+full-bleed panel has no clear space to open into.</p>
+<p><strong>The panel then opens into whichever side of the launcher has more room.</strong> For each axis the
+element compares the space a panel would have on either side of the launcher and pins the side
+with more of it, so a launcher dragged to the top-left opens down and to the right. What it
+compares is the room the <em>panel</em> would get, not which half of the screen the launcher is in —
+those give different answers either side of centre, and only the first one is about whether the
+panel fits.</p>
+<p>A launcher parked where the panel fits neither way — the middle of a short viewport — keeps its
+position anyway: the panel is clamped into the viewport and the launcher carries the difference,
+which is why it can end up sitting outside its own host box. Nothing clips it there.</p>
+<p>A drag writes <code>--ag-ui-inset</code> and <code>--ag-ui-launcher-inset</code> on the host, and an inline custom
+property outranks your stylesheet's rule for the same one — the same trade a dragged size makes
+against a placement. Switching to a placement that places itself hands both back.</p>
+<blockquote>
+<p><strong>An undragged launcher is untouched.</strong> With nothing stored, the element writes neither
+property and your CSS decides, exactly as before. The geometry is built so that feeding it the
+resting position reproduces the default <code>auto 24px 24px auto</code> unchanged.</p>
+</blockquote>
+<h4 id="moving-the-panel">Moving the panel<a class="headerlink" href="#moving-the-panel" title="Permanent link">&para;</a></h4>
+<p>An open panel moves by its <strong>header</strong>, the way a window moves by its title bar.</p>
+<p><strong>The launcher travels the same distance.</strong> Drag the panel 100px left and the bubble it collapses
+into is 100px left of where it was — it is one widget being moved, not two things being placed.
+The distance is the panel's own, so a panel held against the viewport's margin stops and the
+bubble stops with it, and the bubble is then held on screen in its own right.</p>
+<p><strong>A position you state is kept, not re-derived.</strong> That is the difference between the two drags: a
+launcher drag says where the bubble goes and lets the panel open into whatever room the viewport
+has, which is re-decided on every expand and every window resize; a header drag states the
+panel's own position, so it survives collapsing, reopening and reloading. Dragging the bubble
+again hands the decision back. Both are stored per tab, and <code>data-launcher-drag="false"</code> turns
+off both.</p>
+<p>Which corner the panel is <em>pinned</em> by is re-picked when the drag ends, from where the bubble has
+ended up, so the next expand still opens into clear space. Re-picking it moves nothing: the
+corner only says which edges the two insets are written from, and both are written from positions
+that are already decided.</p>
+<p>The controls in the header keep their own presses — a drag started on a button, a link or a field
+never begins, including one you slot in.</p>
+<p>There is no keyboard shortcut on the header, deliberately. A header is not a control, and making
+it focusable would put a tab stop with no role ahead of the controls a keyboard user came for —
+while arrow keys on the collapsed launcher already move the widget, panel included.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">unread</span><span class="p">;</span><span class="w"> </span><span class="c1">// 2</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="c1">// Every change, whether or not the badge renders it — so a host that hides the</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1">// badge can put the count in its own chrome. `threadIds` names the threads the</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="c1">// change marked or cleared, and is empty for a collapse toggle that touched none.</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">addEventListener</span><span class="p">(</span><span class="s2">"ag-ui-unread"</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="nx">e</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">setDockBadge</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">detail</span><span class="p">.</span><span class="nx">unread</span><span class="p">,</span><span class="w"> </span><span class="nx">e</span><span class="p">.</span><span class="nx">detail</span><span class="p">.</span><span class="nx">threadIds</span><span class="p">));</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">ag-ui-chat</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nv">--ag-ui-badge-bg</span><span class="p">:</span><span class="w"> </span><span class="mh">#b91c1c</span><span class="p">;</span><span class="w">   </span><span class="c">/* defaults to --ag-ui-danger */</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="nv">--ag-ui-badge-fg</span><span class="p">:</span><span class="w"> </span><span class="mh">#ffffff</span><span class="p">;</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span><span class="nv">--ag-ui-badge-size</span><span class="p">:</span><span class="w"> </span><span class="mi">18</span><span class="kt">px</span><span class="p">;</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">  </span><span class="nv">--ag-ui-badge-font-size</span><span class="p">:</span><span class="w"> </span><span class="mi">11</span><span class="kt">px</span><span class="p">;</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="collapsing-to-a-bottom-bar">Collapsing to a bottom bar<a class="headerlink" href="#collapsing-to-a-bottom-bar" title="Permanent link">&para;</a></h3>
+<p><code>collapse-to</code> chooses what a collapsed panel becomes, for a host whose layout has a bottom
+toolbar. It is opt-in: absent, <code>auto</code>, or any other value leaves every placement as the
+sections above describe. It is live, like <code>placement</code>.</p>
+<ul>
+<li><strong><code>bar</code>: the component's own bar.</strong> A strip along the whole bottom edge of the viewport, in
+  place of the round launcher: the title, the <a href="#the-unread-badge">unread badge</a>, and a running
+  indicator while an interaction is in flight. Pressing the strip toggles the panel, which rises
+  from the bar's right end with the bar still beneath it as the minimise target. The bar's
+  history button opens the conversation list as a popover above the bar, without expanding the
+  panel, its outer edge in line with the panel's on a wide viewport, and a second press closes
+  it; <code>openThreads()</code> while collapsed opens it too. Expanding the panel closes the popover, so the
+  panel opens on the conversation. It replaces the launcher only, so it applies to the corner
+  placements, <code>side</code> and <code>full</code>: <code>sidebar</code> keeps its rail, <code>embedded</code> its header bar, and <code>page</code>
+  has no collapsed state at all.</li>
+<li><strong><code>none</code>: your own bar.</strong> Collapsed is hidden: nothing of the widget is left to see or hit,
+  under every collapsible placement. Your bar's button drives the <a href="#driving-the-conversation-from-your-own-chrome">public
+  API</a> (<code>collapsed</code>, <code>toggleCollapsed()</code>), and
+  <code>anchor</code> names the element the panel rises from, right-aligned to it. An anchor that resolves
+  to nothing opens the panel from the placement's own corner, with one console warning.
+  While collapsed, <code>openThreads()</code> opens the conversation list as a popover beside the anchor,
+  or beside the element you pass as <code>openThreads({ anchor })</code>, which wins over the attribute and
+  property for that call. It opens below a button in the top half of the viewport and above one
+  in the bottom half, right-aligned to it and held inside the window (full width less 8px on a
+  phone). Picking a conversation switches to it and closes the list, and leaves the panel
+  collapsed: you get <code>ag-ui-thread</code> and decide whether to expand. Escape, a press outside,
+  <code>closeThreads()</code> and expanding the panel close it; a press on the button itself does not, so
+  your button can toggle the list. With no anchor at all, <code>openThreads()</code> warns once per call
+  and draws nothing. <code>embedded</code> hides the whole element while collapsed under <code>none</code>, so it has
+  no popover.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="p">&lt;</span><span class="nt">nav</span> <span class="na">class</span><span class="o">=</span><span class="s">"toolbar"</span><span class="p">&gt;</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>  <span class="cm">&lt;!-- ... --&gt;</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>  <span class="p">&lt;</span><span class="nt">button</span> <span class="na">id</span><span class="o">=</span><span class="s">"agent-button"</span> <span class="na">type</span><span class="o">=</span><span class="s">"button"</span><span class="p">&gt;</span>Agent<span class="p">&lt;/</span><span class="nt">button</span><span class="p">&gt;</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="p">&lt;/</span><span class="nt">nav</span><span class="p">&gt;</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span> <span class="na">collapse-to</span><span class="o">=</span><span class="s">"none"</span> <span class="na">anchor</span><span class="o">=</span><span class="s">"#agent-button"</span><span class="p">&gt;&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="p">&lt;</span><span class="nt">script</span> <span class="na">type</span><span class="o">=</span><span class="s">"module"</span><span class="p">&gt;</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">chat</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">document</span><span class="p">.</span><span class="nx">querySelector</span><span class="p">(</span><span class="s2">"ag-ui-chat"</span><span class="p">);</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">button</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="s2">"agent-button"</span><span class="p">);</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">  </span><span class="nx">button</span><span class="p">.</span><span class="nx">addEventListener</span><span class="p">(</span><span class="s2">"click"</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">chat</span><span class="p">.</span><span class="nx">toggleCollapsed</span><span class="p">());</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="w">  </span><span class="c1">// Under none the element announces the state it mounted in, once, so the</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="w">  </span><span class="c1">// button can be labelled before anyone presses it.</span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="w">  </span><span class="nx">chat</span><span class="p">.</span><span class="nx">addEventListener</span><span class="p">(</span><span class="s2">"ag-ui-toggle"</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="nx">e</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="w">    </span><span class="nx">button</span><span class="p">.</span><span class="nx">setAttribute</span><span class="p">(</span><span class="s2">"aria-pressed"</span><span class="p">,</span><span class="w"> </span><span class="nb">String</span><span class="p">(</span><span class="o">!</span><span class="nx">e</span><span class="p">.</span><span class="nx">detail</span><span class="p">.</span><span class="nx">collapsed</span><span class="p">));</span>
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="w">  </span><span class="p">});</span>
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a><span class="p">&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+</code></pre></div>
+<p><strong>Clearing your toolbar.</strong> Under <code>none</code> the panel stands <code>--ag-ui-anchor-gap</code> (default <code>8px</code>)
+above the anchor's top edge. The anchor is the button, not the toolbar around it, so a button
+sitting inside a taller toolbar puts the panel's foot across the toolbar's top border. Set the gap
+to the button's distance from the toolbar's top plus the clearance you want:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c">/* The button stands 7px below the toolbar's top edge; clear it by 8px. */</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nt">ag-ui-chat</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="nv">--ag-ui-anchor-gap</span><span class="p">:</span><span class="w"> </span><span class="mi">15</span><span class="kt">px</span><span class="p">;</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="p">}</span>
+</code></pre></div>
+<p>A gap wider than the gutter is taken off the panel's max height as well, so a tall panel still
+stops at the top of the window.</p>
+<p><strong>A button in a header.</strong> The panel opens on the side of the anchor with more room, so a button
+in a top header opens it below the button and one in a bottom bar opens it above, with no inset
+of your own. <code>anchor-side="above"</code> or <code>"below"</code> fixes the side; <code>auto</code>, the default, decides again
+when the window is resized (never during a drag), so an anchor near the middle of the window can
+change sides. Below the anchor the gap is measured from the button's bottom edge, and the max
+height is the room under it less one gutter. On either side the panel lines up with the anchor's
+right edge unless that would put either edge inside the 24px gutter of the window, where it stops
+instead; its width cap is the window less two gutters, maximized included.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span> <span class="na">collapse-to</span><span class="o">=</span><span class="s">"none"</span> <span class="na">anchor</span><span class="o">=</span><span class="s">"#agent-button"</span> <span class="na">anchor-side</span><span class="o">=</span><span class="s">"below"</span><span class="p">&gt;&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
+</code></pre></div>
+<p>Under <code>none</code> the element dispatches <code>ag-ui-toggle</code> once as it connects, with whichever state it
+mounted in, collapsed or open. Under <code>auto</code> and <code>bar</code> it does not, as before. That event touches
+neither the stored state nor the unread count.</p>
+<p><strong>The page's space is yours.</strong> The bar is fixed over the page, so a host pads its own page by
+the bar's height. The component never writes your CSS, and a custom property cannot carry the
+height up to your page (it inherits down, never up), so it hands you a number:
+<code>barHeight</code> (CSS px, read-only) and an <code>ag-ui-bar-height</code> event (the <code>BAR_HEIGHT_EVENT</code>
+constant, detail <code>{ height }</code>) on every change, including a font-size change. Both read <code>0</code>
+where no bar is drawn: under <code>auto</code> and <code>none</code>, on a phone while the panel is open, and while your
+size fills the window with the panel open. If you write the height into
+<code>--ag-ui-viewport-inset-bottom</code>, a panel that fills the box that leaves stays judged against that
+box once the bar goes and the box grows by the bar's height: it settles with the bar gone and room
+at its foot. Writing some other share of the height does not settle; publish it to your page as below.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kd">const</span><span class="w"> </span><span class="nx">chat</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">document</span><span class="p">.</span><span class="nx">querySelector</span><span class="p">(</span><span class="s2">"ag-ui-chat"</span><span class="p">);</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="kd">const</span><span class="w"> </span><span class="nx">pad</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span><span class="nb">document</span><span class="p">.</span><span class="nx">documentElement</span><span class="p">.</span><span class="nx">style</span><span class="p">.</span><span class="nx">setProperty</span><span class="p">(</span><span class="s2">"--chat-bar-height"</span><span class="p">,</span><span class="w"> </span><span class="sb">`</span><span class="si">${</span><span class="nx">chat</span><span class="p">.</span><span class="nx">barHeight</span><span class="si">}</span><span class="sb">px`</span><span class="p">);</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="p">};</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">addEventListener</span><span class="p">(</span><span class="s2">"ag-ui-bar-height"</span><span class="p">,</span><span class="w"> </span><span class="nx">pad</span><span class="p">);</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="nx">pad</span><span class="p">();</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nt">body</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="k">padding-bottom</span><span class="p">:</span><span class="w"> </span><span class="nf">var</span><span class="p">(</span><span class="nv">--chat-bar-height</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="kt">px</span><span class="p">);</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>A fixed sidebar pushes your page the same way.</strong> A docked <code>placement="sidebar"</code> (or <code>"side"</code>)
+is fixed over the page, so <code>dockWidth</code> (CSS px, read-only) and an <code>ag-ui-dock-width</code> event (the
+<code>DOCK_WIDTH_EVENT</code> constant, detail <code>{ width, side }</code>, <code>side</code> being <code>"left"</code> or <code>"right"</code>, as
+<code>data-side</code> says) hand you the width it covers at rest: the panel's width while open, the rail's
+(<code>--ag-ui-rail-width</code>, 52 by default) while collapsed to it, and <code>0</code> under <code>collapse-to="none"</code> or
+a launcher, under every other placement, on a phone while the panel is open, and under
+<code>--ag-ui-position: static</code>, where your own layout already makes room. The event fires once per
+change of the resting value, never per frame of the width transition, and once at the end of a
+resize drag.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kd">const</span><span class="w"> </span><span class="nx">chat</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">document</span><span class="p">.</span><span class="nx">querySelector</span><span class="p">(</span><span class="s2">"ag-ui-chat"</span><span class="p">);</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="kd">const</span><span class="w"> </span><span class="nx">push</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">dockWidth</span><span class="o">:</span><span class="w"> </span><span class="nx">width</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">chat</span><span class="p">;</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">side</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">document</span><span class="p">.</span><span class="nx">querySelector</span><span class="p">(</span><span class="s2">"ag-ui-chat"</span><span class="p">).</span><span class="nx">getAttribute</span><span class="p">(</span><span class="s2">"data-side"</span><span class="p">)</span><span class="w"> </span><span class="o">??</span><span class="w"> </span><span class="s2">"right"</span><span class="p">;</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">  </span><span class="nb">document</span><span class="p">.</span><span class="nx">documentElement</span><span class="p">.</span><span class="nx">style</span><span class="p">.</span><span class="nx">setProperty</span><span class="p">(</span><span class="s2">"--chat-dock-left"</span><span class="p">,</span><span class="w"> </span><span class="nx">side</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s2">"left"</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="sb">`</span><span class="si">${</span><span class="nx">width</span><span class="si">}</span><span class="sb">px`</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s2">"0px"</span><span class="p">);</span>
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">  </span><span class="nb">document</span><span class="p">.</span><span class="nx">documentElement</span><span class="p">.</span><span class="nx">style</span><span class="p">.</span><span class="nx">setProperty</span><span class="p">(</span><span class="s2">"--chat-dock-right"</span><span class="p">,</span><span class="w"> </span><span class="nx">side</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s2">"left"</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="s2">"0px"</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="sb">`</span><span class="si">${</span><span class="nx">width</span><span class="si">}</span><span class="sb">px`</span><span class="p">);</span>
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="p">};</span>
+<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">addEventListener</span><span class="p">(</span><span class="s2">"ag-ui-dock-width"</span><span class="p">,</span><span class="w"> </span><span class="nx">push</span><span class="p">);</span>
+<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a><span class="nx">push</span><span class="p">();</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nt">body</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="k">padding-left</span><span class="p">:</span><span class="w"> </span><span class="nf">var</span><span class="p">(</span><span class="nv">--chat-dock-left</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="kt">px</span><span class="p">);</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span><span class="k">padding-right</span><span class="p">:</span><span class="w"> </span><span class="nf">var</span><span class="p">(</span><span class="nv">--chat-dock-right</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="kt">px</span><span class="p">);</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>No inset needed.</strong> Under <code>bar</code> and <code>none</code> you do not set <code>--ag-ui-inset</code> to keep the panel off
+your toolbar: its max height is the viewport less the bar's height (or, under <code>none</code>, the
+distance to the anchor's top, or below it from the anchor's bottom) and one gutter, and its
+bottom sits on the bar or the anchor (its top, when it opens below).</p>
+<p><strong>Docked, and still movable.</strong> On a wide viewport a docked corner panel (the corner placements
+under <code>bar</code>, or under <code>none</code> with or without an anchor) moves by its header, and <code>moveTo</code> moves
+it, as it would the corner panel it is; <code>describeSurface()</code> reports <code>movable: true</code>. There is no
+launcher to drag: the bar and your own control stay where they are.</p>
+<ul>
+<li><strong>Above the dock.</strong> A dragged panel stays inside the viewport and above the bar's top edge, so it
+  never covers the bar it minimises to. Under <code>none</code> with an anchor it stays above the anchor's
+  top edge the same way (below its bottom edge, when the panel opens below it), because the
+  anchor is your own way back and has to stay in view;
+  <code>--ag-ui-anchor-gap</code> no longer applies once the panel is dragged, and the screen-edge margin
+  (8px) does. Under <code>none</code> with no anchor only the viewport holds it, as for a corner panel.</li>
+<li><strong>Remembered like a corner panel.</strong> Minimising and reopening brings it back where it was
+  dragged, and so does a reload. The spot is kept apart from the one a corner panel stores under
+  <code>auto</code>, so switching <code>collapse-to</code> never puts one surface's spot on the other. A spot that no
+  longer fits, because the window shrank or the bar grew, is held inside the room that is left
+  and comes back whole when there is room again.</li>
+<li><strong>Resizing.</strong> A panel standing on its dock keeps the edges on the bar or the anchor still and the
+  free ones follow the grip. Once dragged off, every edge follows its grip, as on a corner panel.</li>
+<li><strong>Back to the dock.</strong> <code>resetSize()</code> drops the placement's dragged size and returns the panel to its dock,
+  forgetting the stored spot, so a reload opens it there too.</li>
+<li><strong>Keeping it fixed.</strong> <code>data-launcher-drag="false"</code> turns the header drag and <code>moveTo</code> off here as
+  everywhere else, and the panel stays on its dock.</li>
+<li><strong>A host's size that fills the window.</strong> Set <code>--ag-ui-width</code> and <code>--ag-ui-height</code> to the whole
+  window, with <code>--ag-ui-max-width</code> and <code>--ag-ui-max-height</code> out of the way (the defaults stop short
+  of it), and the panel stands at the start of the room you left free, whether it was moved or not.
+  The bar and the grips go while it does, as on a phone, with <code>barHeight</code> at 0 and the header's
+  minimise control as the way back. The bar comes back when the panel is collapsed, and both when
+  your size stops filling. The stored spot stays, and the panel goes back to it, or to its dock,
+  once your size stops filling. An inline <code>--ag-ui-inset</code> of your own stays where you wrote it.</li>
+</ul>
+<p>Placements that own their position (<code>side</code> and <code>full</code> under <code>bar</code>, <code>sidebar</code> and <code>embedded</code>
+under <code>none</code>) do not move, as without <code>collapse-to</code>.</p>
+<p><strong>Phones.</strong> At 600px or less the open panel stays full-bleed, over the bar, and the header's
+minimise control is the way back; the bar shows only while collapsed, so no second strip sits
+at the bottom edge while the keyboard is up. The panel does not move there, and a spot dragged on
+a wide viewport does not apply: it comes back when the window is wide again.</p>
+<p>The bar is styled through the parts <code>bar</code> (the strip's wrapper, holding the launcher, the place and
+the history button) and <code>bar-history</code>, and the launcher's own parts (<code>launcher</code>, <code>rail-label</code>,
+<code>launcher-badge</code>) inside it.</p>
+<p><strong>The place in the bar.</strong> When <a href="../host-seams/#where-the-user-is-the-place-chip"><code>getPlace</code></a> (or the route map
+standing in for it) names a place, the strip shows it beside the title as quiet secondary text: the
+<code>bar-place</code> part holding <code>place-label</code> and <code>place-detail</code>, the parts the chip uses. It comes from
+the chip's one read, so <code>refreshPlace()</code>, <code>popstate</code> and a withheld place update it as they update
+the chip. A long place truncates with an ellipsis before the history button leaves the strip, and
+no place draws nothing. A place the user withheld stays in the strip dashed and struck through
+(<code>data-excluded</code> on <code>bar-place</code>), because the bar must not claim the page is sent. The phone strip,
+shown while collapsed, carries it too.</p>
+<h2 id="resizing-the-panel">Resizing the panel<a class="headerlink" href="#resizing-the-panel" title="Permanent link">&para;</a></h2>
+<p>The panel carries a grip on <strong>every edge and every corner</strong>, so it can be
+dragged from whichever side you are already near.</p>
+<ul>
+<li><code>placement="page"</code> gets <strong>no grips</strong> — a full-bleed layout
+  is <code>100vw</code>/<code>100vh</code> by definition, so there is nothing to drag.</li>
+<li><code>placement="sidebar"</code> keeps only the two vertical edges;
+  the placement owns the height, so a horizontal edge or a corner would
+  advertise a drag that does nothing.</li>
+<li>Everything else gets all eight.</li>
+</ul>
+<p><strong>The edge a grip does not drag is the one that stays put.</strong> That is the whole
+model: the left grip moves the left edge and holds the right, the right grip
+does the reverse, a corner does both axes. A grip names its own edge, so no
+layout can invert it.</p>
+<h3 id="dragging-the-edge-your-layout-was-holding-still">Dragging the edge your layout was holding still<a class="headerlink" href="#dragging-the-edge-your-layout-was-holding-still" title="Permanent link">&para;</a></h3>
+<p>A floating panel pinned bottom-right cannot grow rightward on its own — its
+right edge is what the placement fixed. So <strong>a drag on a pinned edge moves the
+panel as well as resizing it</strong>, and the component takes the position over by
+writing <code>--ag-ui-inset</code>, the same ownership a dragged launcher takes.</p>
+<p>A grip on a free edge writes nothing but the size, exactly as before, so a host
+positioning the panel with its own rule keeps that rule until someone drags the
+edge it was holding.</p>
+<p>Which edges those are belongs to <em>your</em> CSS rather than to <code>placement</code> — a
+floating panel a host right-aligns is anchored bottom-left — so the element
+probes its own geometry and reflects the result as <code>data-resize-anchor</code> (e.g.
+<code>bottom-right</code> means those two edges are fixed). Nothing in the stylesheet reads
+it any more; the element uses it to decide what a drag on a pinned edge costs,
+and which grip carries the keyboard.</p>
+<blockquote>
+<p><strong>The probe shrinks rather than grows.</strong> Growing by a pixel cannot answer the
+question at a size already resting against <code>max-width</code> or <code>max-height</code>: the
+box does not change, no edge moves, and every clamped axis reads as pinned on
+the side that is actually free. That was reachable with no user action at all
+— the default panel is 380px wide against a max-width of <code>100vw - 48px</code>, so
+any viewport under 428px was born clamped, with the grip on the wrong corner
+and the drag inverted.</p>
+</blockquote>
+<h3 id="sizes-keyboard-and-parts">Sizes, keyboard, and parts<a class="headerlink" href="#sizes-keyboard-and-parts" title="Permanent link">&para;</a></h3>
+<p>A drag writes the private <code>--_drag-width</code> / <code>--_drag-height</code> on the host, not
+your <code>--ag-ui-width</code> / <code>--ag-ui-height</code> tokens, which stay yours. The precedence
+is:</p>
+<ul>
+<li><strong>Above 600px</strong>, the dragged size beats a host's <code>--ag-ui-width</code> /
+  <code>--ag-ui-height</code>, <code>!important</code> included, so a user who resized the panel keeps
+  their size. A host that enters a sized state of its own (an "expanded" class)
+  calls <code>resetSize()</code> when it does, which drops the current placement's dragged
+  size and its stored copy and hands control back to the host tokens. A host
+  with no such state needs nothing.</li>
+<li><strong>Per placement.</strong> A dragged size belongs to the <code>placement</code> it was dragged in
+  and is stored under it: absent and <code>floating</code> share one, and <code>bottom-left</code>,
+  <code>sidebar</code>, <code>side</code> and <code>embedded</code> each keep their own (<code>data-side</code> is not a
+  placement, so a left and a right sidebar share one). Switching <code>placement</code>
+  swaps in the new placement's size, or its default when it has none, so a
+  placement switch needs no <code>resetSize()</code>. A <code>collapse-to</code> change keeps the size.
+  A size stored by a release before this one is read as floating's.</li>
+<li><strong>At 600px or less</strong>, the small-viewport shape ignores the dragged size
+  entirely, for the placements that block covers (<code>floating</code>, <code>bottom-left</code>,
+  <code>sidebar</code>, <code>side</code> and the default): the panel is full-bleed whatever was
+  dragged or stored, and a window narrowed after a wide-window drag goes
+  full-bleed too. <code>page</code> is already that shape, and <code>embedded</code> is left to the
+  host's own box, so neither is touched by the block. <code>data-small-viewport="off"</code>
+  keeps a dragged size at every width on the covered placements.</li>
+</ul>
+<p>A dragged size is a private property, so a host should not read it back from
+the element's inline style; use <code>getBoundingClientRect()</code>, or <code>resetSize()</code> to
+clear it.</p>
+<p><strong>A custom property alone does not leave placement in charge</strong> — an inline custom
+property still outranks a <code>:host([placement=…])</code> rule setting the same property. So the
+component enforces the split directly: <strong>a placement owns the axes it fixes</strong>,
+and a dragged or persisted size is only ever applied to the ones it leaves free.
+Switching placement hands the owned axes back. Without that, a height dragged
+while floating capped a docked sidebar that had asked for <code>100vh</code>.</p>
+<p><strong>A host rule that sizes the element wins over both.</strong> <code>ag-ui-chat { flex: 1 }</code>
+stretches the panel to its container and the dragged width has no visible
+effect — which reads as a broken control rather than as your stylesheet winning.
+Give the element <code>flex: 0 1 auto</code> (plus <code>max-width: 100%</code>) if it lives in a flex
+container.</p>
+<p>The size persists per tab (<code>sessionStorage</code>, namespaced per element like the
+collapsed and theme preferences) and is restored before the first paint.</p>
+<p><strong>Exactly one grip is in the tab order</strong> — the corner diagonally opposite the
+pinned one, so an arrow key changes the size and never the position. Eight
+separators between the transcript and the composer would be a keyboard
+obstacle rather than keyboard parity, and one grip already reaches both axes.
+Arrow keys resize from it (<code>Shift</code> for a larger step).</p>
+<p>Each grip draws a short pill centred on its edge — a dot in a corner — on hover
+and focus as well as during a drag. <strong>The hit area and the mark are separate on
+purpose</strong>: the area is the whole strip, so the grip is easy to catch, while the
+mark stays small enough that it cannot be read as a border and never meets the
+panel's corner radius.</p>
+<p>Every grip has its own part (<code>resize-handle-left</code>, <code>resize-handle-bottom-right</code>,
+and so on, plus <code>resize-handle</code> on all of them). Hit areas and marks are sized
+separately, so a coarser pointer can get a bigger target without a heavier mark.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="nt">ag-ui-chat</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span><span class="nv">--ag-ui-grip-corner</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="kt">px</span><span class="p">;</span><span class="w">          </span><span class="c">/* the corner squares */</span>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">  </span><span class="nv">--ag-ui-grip-edge</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="kt">px</span><span class="p">;</span><span class="w">            </span><span class="c">/* the edge strips */</span>
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">  </span><span class="nv">--ag-ui-grip-mark-length</span><span class="p">:</span><span class="w"> </span><span class="mi">28</span><span class="kt">px</span><span class="p">;</span><span class="w">     </span><span class="c">/* the pill drawn inside them */</span>
+<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">  </span><span class="nv">--ag-ui-grip-mark-thickness</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="kt">px</span><span class="p">;</span>
+<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="p">}</span>
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "search.highlight", "search.share", "search.suggest", "content.code.copy", "content.action.edit", "toc.follow"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.a5f9d56c.min.js"></script>
+      
+    
+  </body>
+</html>

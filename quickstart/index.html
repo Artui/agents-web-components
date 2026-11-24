@@ -1,0 +1,2080 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Framework-free Web Components over the AG-UI protocol - chat, threads, inbox and an agents provider.">
+      
+      
+      
+        <link rel="canonical" href="https://artui.github.io/agents-web-components/quickstart/">
+      
+      
+        <link rel="prev" href="../install/">
+      
+      
+        <link rel="next" href="../authentication/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
+    
+    
+      
+        <title>Quickstart - agents-web-components</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#quickstart" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="agents-web-components" class="md-header__button md-logo" aria-label="agents-web-components" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            agents-web-components
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Quickstart
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Artui/agents-web-components" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Artui/agents-web-components
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="agents-web-components" class="md-nav__button md-logo" aria-label="agents-web-components" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    agents-web-components
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Artui/agents-web-components" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Artui/agents-web-components
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#attributes-and-properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Attributes and properties
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Attributes and properties">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#when-each-attribute-is-read" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When each attribute is read
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sending-from-your-own-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sending from your own UI
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#starting-a-run-with-forwarded-props" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Starting a run with forwarded props
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-to-every-runs-context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding to every run's context
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../authentication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authenticating requests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The chat
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    The chat
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../header-and-panel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Header, collapse and resizing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../messages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Messages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tool-calls/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tool calls and sub-agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../server-pushed-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    What the server draws
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../skills/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Skills and run notices
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../uploads/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File uploads
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Other elements
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Other elements
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../threads/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The conversation list
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents and the inbox
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../editors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The editors on a page of their own
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hosting
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Hosting
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../host-seams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Host seams (SPA)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../durability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Durability and resuming
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Look and language
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Look and language
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theming/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Theming, density and placement
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../i18n/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Internationalization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Public API surface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../building/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Building and compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Moving from ag-ui-web-component
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#attributes-and-properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Attributes and properties
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Attributes and properties">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#when-each-attribute-is-read" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When each attribute is read
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sending-from-your-own-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sending from your own UI
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#starting-a-run-with-forwarded-props" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Starting a run with forwarded props
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-to-every-runs-context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding to every run's context
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/Artui/agents-web-components/edit/main/docs/quickstart.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="quickstart">Quickstart<a class="headerlink" href="#quickstart" title="Permanent link">&para;</a></h1>
+<p>Drop the element into your page and register the tools the agent may call:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">&lt;</span><span class="nt">script</span> <span class="na">type</span><span class="o">=</span><span class="s">"module"</span><span class="p">&gt;</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">fillField</span><span class="p">,</span><span class="w"> </span><span class="nx">clickElement</span><span class="p">,</span><span class="w"> </span><span class="nx">X_DESTRUCTIVE_KEY</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">"@artooi/agents-web-components"</span><span class="p">;</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">defineChat</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">"@artooi/agents-web-components/chat"</span><span class="p">;</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="c1">// Register the &lt;ag-ui-chat&gt; Custom Element. An explicit call, not an import</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="c1">// side effect, so importing the package defines nothing. Idempotent; it throws</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span><span class="c1">// if another class already holds the tag (a second copy of the element).</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span><span class="nx">defineChat</span><span class="p">();</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">chat</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">document</span><span class="p">.</span><span class="nx">querySelector</span><span class="p">(</span><span class="s2">"ag-ui-chat"</span><span class="p">);</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">  </span><span class="c1">// Extra request headers (e.g. CSRF), sent with every request the element makes.</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">  </span><span class="c1">// For a credential that rotates, set chat.getHeaders instead - it is consulted</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">  </span><span class="c1">// per request. See "Authenticating requests".</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">  </span><span class="nx">chat</span><span class="p">.</span><span class="nx">headers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s2">"X-CSRFToken"</span><span class="o">:</span><span class="w"> </span><span class="nx">getCsrfToken</span><span class="p">()</span><span class="w"> </span><span class="p">};</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">  </span><span class="c1">// A non-destructive tool: fills a text field with a typing animation.</span>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">  </span><span class="nx">chat</span><span class="p">.</span><span class="nx">registerTool</span><span class="p">({</span>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">    </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s2">"fill_field"</span><span class="p">,</span>
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="w">    </span><span class="nx">description</span><span class="o">:</span><span class="w"> </span><span class="s2">"Fill a text input by id with a value."</span><span class="p">,</span>
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="w">    </span><span class="nx">parameters</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="w">      </span><span class="nx">type</span><span class="o">:</span><span class="w"> </span><span class="s2">"object"</span><span class="p">,</span>
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="w">      </span><span class="nx">properties</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">field</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">type</span><span class="o">:</span><span class="w"> </span><span class="s2">"string"</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="nx">value</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">type</span><span class="o">:</span><span class="w"> </span><span class="s2">"string"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">},</span>
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="w">      </span><span class="nx">required</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"field"</span><span class="p">,</span><span class="w"> </span><span class="s2">"value"</span><span class="p">],</span>
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="w">    </span><span class="p">},</span>
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a><span class="w">    </span><span class="nx">handler</span><span class="o">:</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">({</span><span class="w"> </span><span class="nx">field</span><span class="p">,</span><span class="w"> </span><span class="nx">value</span><span class="w"> </span><span class="p">})</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a><span class="w">      </span><span class="k">await</span><span class="w"> </span><span class="nx">fillField</span><span class="p">(</span><span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="nx">field</span><span class="p">),</span><span class="w"> </span><span class="nb">String</span><span class="p">(</span><span class="nx">value</span><span class="p">));</span>
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a><span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="s2">"ok"</span><span class="p">;</span>
+<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a><span class="w">    </span><span class="p">},</span>
+<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a><span class="w">  </span><span class="p">});</span>
+<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>
+<a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a><span class="w">  </span><span class="c1">// A destructive tool: x-destructive at the JSON-Schema root gates it behind</span>
+<a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a><span class="w">  </span><span class="c1">// the inline confirmation card before the handler runs.</span>
+<a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a><span class="w">  </span><span class="nx">chat</span><span class="p">.</span><span class="nx">registerTool</span><span class="p">({</span>
+<a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a><span class="w">    </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s2">"save_article"</span><span class="p">,</span>
+<a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a><span class="w">    </span><span class="nx">description</span><span class="o">:</span><span class="w"> </span><span class="s2">"Save the article. Destructive — asks for confirmation."</span><span class="p">,</span>
+<a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a><span class="w">    </span><span class="nx">parameters</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">type</span><span class="o">:</span><span class="w"> </span><span class="s2">"object"</span><span class="p">,</span><span class="w"> </span><span class="nx">properties</span><span class="o">:</span><span class="w"> </span><span class="p">{},</span><span class="w"> </span><span class="p">[</span><span class="nx">X_DESTRUCTIVE_KEY</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">},</span>
+<a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a><span class="w">    </span><span class="nx">handler</span><span class="o">:</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a><span class="w">      </span><span class="k">await</span><span class="w"> </span><span class="nx">clickElement</span><span class="p">(</span><span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="s2">"save"</span><span class="p">));</span>
+<a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a><span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="s2">"saved"</span><span class="p">;</span>
+<a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a><span class="w">    </span><span class="p">},</span>
+<a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a><span class="w">  </span><span class="p">});</span>
+<a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a><span class="p">&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+<a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a>
+<a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span> <span class="na">title-text</span><span class="o">=</span><span class="s">"Assistant"</span><span class="p">&gt;&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
+</code></pre></div>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p><strong>If nothing appears, check that <code>defineChat()</code> ran.</strong> Forgetting it looks
+like nothing at all. <code>&lt;ag-ui-chat&gt;</code> is then an <em>unknown element</em>, which every
+browser renders as an inline 0x0 box, in flow, with no console warning and no
+error — so the page looks finished and the chat is simply absent. There is
+nothing to search for.</p>
+<p>A bare <code>import "@artooi/agents-web-components"</code> registers nothing, deliberately:
+registration is an explicit call so the package stays tree-shakeable.</p>
+<p><code>customElements.get("ag-ui-chat")</code> in a console answers it in one line.
+<code>undefined</code> means the call did not run.</p>
+</div>
+<p>That's the whole integration: an <code>endpoint</code> attribute pointing at your AG-UI server, optional
+<code>headers</code>, and the tools you want the agent to be able to invoke in the browser. If your API is on
+another origin, add <code>credentials="include"</code> too; see
+<a href="../authentication/#authenticating-requests">Authenticating requests</a>.</p>
+<h2 id="attributes-and-properties">Attributes and properties<a class="headerlink" href="#attributes-and-properties" title="Permanent link">&para;</a></h2>
+<p><strong>Attributes</strong> (set in HTML; the CSS-only ones are styling presets with no JS API):</p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Property</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>endpoint</code></td>
+<td><code>endpoint</code></td>
+<td>The AG-UI endpoint URL. Required to send: without it a send is refused with a <code>console.error</code> naming the missing attribute and a <code>not-connected</code> run notice in the transcript. Reflecting getter + setter.</td>
+</tr>
+<tr>
+<td><code>credentials</code></td>
+<td><code>credentials</code></td>
+<td>Cookie policy for every request the element makes: <code>omit</code> / <code>same-origin</code> / <code>include</code>. Unset means the browser default (<code>same-origin</code>), which sends no cookies cross-origin. See <a href="../authentication/#authenticating-requests">Authenticating requests</a>.</td>
+</tr>
+<tr>
+<td><code>title-text</code></td>
+<td>—</td>
+<td>Header label; defaults to <code>"Assistant"</code>. <code>"auto"</code> makes the header, the rail and the bar label follow the thread on screen (<code>threadTitle</code>), falling back to the strings table's <code>title</code> while it has none. Live: writing it after the element connects re-labels the header. See <a href="#when-each-attribute-is-read">When each attribute is read</a>.</td>
+</tr>
+<tr>
+<td><code>data-tool-display</code></td>
+<td><code>toolDisplay</code></td>
+<td>How tool calls are drawn: <code>grouped</code> (the default: a run's consecutive calls fold into one row) / <code>inline</code> / <code>minimal</code> / <code>compact</code> / <code>full</code> (per-call cards; <code>full</code> was the default before <code>grouped</code>). An unknown value reads as <code>grouped</code>. See <a href="../tool-calls/#tool-call-display-modes">Tool-call display modes</a>.</td>
+</tr>
+<tr>
+<td><code>data-tool-group-display</code></td>
+<td><code>toolGroupDisplay</code></td>
+<td>How an opened step group draws its calls under <code>grouped</code>: <code>full</code> (the default) / <code>compact</code> / <code>minimal</code> / <code>inline</code>. Ignored under the four card modes. An absent or unknown value reads as <code>full</code>. See <a href="../tool-calls/#choosing-how-a-group-draws-its-calls">Choosing how a group draws its calls</a>.</td>
+</tr>
+<tr>
+<td><code>data-text-animation</code></td>
+<td>—</td>
+<td>Incoming-text reveal: <code>none</code> (default) / <code>fade</code> / <code>word</code>.</td>
+</tr>
+<tr>
+<td><code>data-prompt-chips</code></td>
+<td>—</td>
+<td>Present (bare, or any value but <code>"false"</code>) to surface skills as chips.</td>
+</tr>
+<tr>
+<td><code>data-slash-commands</code></td>
+<td>—</td>
+<td>Present (bare, or any value but <code>"false"</code>) to enable the <code>/</code>-command palette.</td>
+</tr>
+<tr>
+<td><code>data-skills</code></td>
+<td>—</td>
+<td>Inline JSON skill catalog. A value that will not parse is ignored and reported on the console, rather than reading as an empty catalog.</td>
+</tr>
+<tr>
+<td><code>data-skills-url</code></td>
+<td>—</td>
+<td>URL of a JSON skill catalog (fetched with the element's headers and cookie policy).</td>
+</tr>
+<tr>
+<td><code>data-skill-editor-url</code></td>
+<td>—</td>
+<td>URL of django-ag-ui's skill editor endpoint (<code>skills/editor/</code>). Opts into the <a href="../skills/#the-skill-editor">skill editor</a>: a "Manage skills" row at the foot of the <code>/</code> palette under <code>data-slash-commands</code>, a header button with <code>data-skill-editor-button</code>, or <code>openSkillEditor()</code>.</td>
+</tr>
+<tr>
+<td><code>data-routines-url</code></td>
+<td>—</td>
+<td>URL of django-ag-ui's routines editor (<code>routines/</code>, from 0.86.0). Opts into <a href="../skills/#routines">routines</a>: a Routines button in the header, a Make this a routine item in its More menu, <code>openRoutines()</code> and <code>makeRoutine()</code>. Read at connect time, like the other endpoint URLs.</td>
+</tr>
+<tr>
+<td><code>data-routine-minute-step</code></td>
+<td><code>5</code></td>
+<td>The minute step of the routine form's time field, a whole number from 1 to 30; anything else keeps 5. Read each time the form opens. A routine saved at a minute off the step still shows that minute. See <a href="../skills/#the-time-and-timezone-fields">The time and timezone fields</a>.</td>
+</tr>
+<tr>
+<td><code>data-skill-editor-button</code></td>
+<td>absent</td>
+<td>With <code>data-skill-editor-url</code>, also puts a Skills button in the header. Off by default. On a narrow panel it moves into the header's <a href="../header-and-panel/#the-header-row-and-its-more-menu">More menu</a> like the other optional controls.</td>
+</tr>
+<tr>
+<td><code>data-editors</code></td>
+<td>absent</td>
+<td><code>external</code> hands the skill editor and routines to the page: the Skills and Routines buttons, Make this a routine and the palette's Manage skills fire <code>ag-ui-open-editor</code> instead of opening the view in the panel, for an <a href="../editors/#the-editors-on-a-page-of-their-own">editor element</a> to answer. Read at each click. The methods still open the panel.</td>
+</tr>
+<tr>
+<td><code>data-tools-url</code></td>
+<td>—</td>
+<td>URL of a server tool-label catalog (<code>[{ name, summary, description? }]</code>), fetched with the element's headers and cookie policy; labels tool-call cards for server-side tools.</td>
+</tr>
+<tr>
+<td><code>user-key</code></td>
+<td><code>userKey</code></td>
+<td>Who the stored conversation belongs to — any string identifying the signed-in principal. Joins the storage namespace, and <strong>changing it purges what the previous principal left behind</strong>. Live (not connect-time): a logout is the host's to announce. See <a href="../durability/#who-the-stored-conversation-belongs-to-user-key">Who the stored conversation belongs to</a>.</td>
+</tr>
+<tr>
+<td><code>user-name</code></td>
+<td><code>userName</code></td>
+<td>The signed-in user's display name, for the <a href="../theming/#the-greeting-on-an-empty-page">greeting</a> an empty conversation shows under <code>placement="page"</code>. Presentation only: unlike <code>user-key</code> it scopes nothing and is never sent. Absent or blank gives the nameless greeting. Live.</td>
+</tr>
+<tr>
+<td><code>data-threads-url</code></td>
+<td>—</td>
+<td>URL of a server thread index (django-ag-ui's <code>ThreadsView</code>); enables durable, cross-device chat history.</td>
+</tr>
+<tr>
+<td><code>data-detach-runs</code></td>
+<td>—</td>
+<td>Opt-in, read at each request. With <code>data-threads-url</code>, a run outlives its connection: a thread switch, New chat or the element leaving the page lets go of it instead of stopping it, opening a thread whose run is still going joins it, and Stop posts the thread's <code>cancel/</code>. Needs a django-ag-ui 0.82.0+ mount; see <a href="../concepts/#runs-that-outlive-their-connection">Runs that outlive their connection</a>. Without <code>data-threads-url</code> it does nothing.</td>
+</tr>
+<tr>
+<td><code>data-threads-cache</code></td>
+<td>—</td>
+<td><strong>On by default.</strong> <code>="false"</code> stops mirroring message bodies into <code>sessionStorage</code> when <code>data-threads-url</code> is set, for a deployment that put history on the server so transcripts stay off the client. Only meaningful alongside <code>data-threads-url</code>.</td>
+</tr>
+<tr>
+<td><code>data-runs-url</code></td>
+<td>—</td>
+<td>URL of a server run index (django-ag-ui's <code>RunsView</code>); reveals the header's <em>Continue a run</em> panel. See <a href="../durability/#resuming-a-run">Resuming a run</a>.</td>
+</tr>
+<tr>
+<td><code>data-attachments-url</code></td>
+<td>—</td>
+<td>URL of the file-upload endpoint (django-ag-ui's <code>AttachmentsView</code>); reveals the composer's paperclip picker, drag-and-drop, and paste.</td>
+</tr>
+<tr>
+<td><code>data-attachment-accept</code></td>
+<td>—</td>
+<td><code>&lt;input accept&gt;</code> list for client-side type filtering (e.g. <code>image/*,.pdf</code>). The server stays authoritative.</td>
+</tr>
+<tr>
+<td><code>data-attachment-max-bytes</code></td>
+<td>—</td>
+<td>Client-side upload size cap in bytes (default 10 MiB; <code>0</code> disables). The server stays authoritative.</td>
+</tr>
+<tr>
+<td><code>data-transcribe-url</code></td>
+<td>—</td>
+<td>URL of the voice-transcription endpoint (django-ag-ui's <code>TranscribeView</code>); reveals the composer's mic button. See <a href="../api/#voice-input">Voice input</a>.</td>
+</tr>
+<tr>
+<td><code>data-theme-toggle</code></td>
+<td>—</td>
+<td>Boolean: show a built-in header light⇄dark toggle (persists per tab). Off by default. See <a href="../theming/#theme-toggle">Theme toggle</a>.</td>
+</tr>
+<tr>
+<td><code>data-strings</code></td>
+<td><code>strings</code></td>
+<td>Partial JSON override of the UI string table (localization). The property wins key-by-key over the attribute; a value that will not parse is ignored and reported on the console. See <a href="../i18n/#internationalization-i18n">Internationalization</a>.</td>
+</tr>
+<tr>
+<td><code>data-icon-url</code></td>
+<td>—</td>
+<td>Header (and launcher) icon image URL. A slotted <code>slot="icon"</code> wins; see <a href="../theming/#header-and-launcher-icon">Header &amp; launcher icon</a>.</td>
+</tr>
+<tr>
+<td><code>data-launcher-icon-url</code></td>
+<td>—</td>
+<td>Icon image URL for the collapsed launcher only, when it should differ from the header's. Falls back to <code>data-icon-url</code>; a slotted <code>slot="launcher"</code> wins over both.</td>
+</tr>
+<tr>
+<td><code>data-unread-badge</code></td>
+<td>—</td>
+<td><strong>On by default.</strong> <code>="false"</code> hides the launcher's unread badge; the count and the <code>ag-ui-unread</code> event keep running. See <a href="../header-and-panel/#collapsing-to-the-launcher">Collapsing to the launcher</a>.</td>
+</tr>
+<tr>
+<td><code>data-launcher-drag</code></td>
+<td>—</td>
+<td><strong>On by default.</strong> <code>="false"</code> leaves the widget wherever your CSS puts it. Otherwise the collapsed launcher can be dragged anywhere on screen (the panel opens into the clearest space) and the open panel can be dragged by its header. See <a href="../header-and-panel/#moving-the-launcher">Moving the launcher</a> and <a href="../header-and-panel/#moving-the-panel">Moving the panel</a>.</td>
+</tr>
+<tr>
+<td><code>data-quote-selection</code></td>
+<td>—</td>
+<td><strong>On by default.</strong> <code>="false"</code> stops the transcript offering to quote a selection. <code>quote()</code> keeps working either way. See <a href="../messages/#quoting-a-selection">Quoting a selection</a>.</td>
+</tr>
+<tr>
+<td><code>data-message-actions</code></td>
+<td>—</td>
+<td><strong>Copy and retry by default; feedback is opt-in.</strong> A comma list of the actions a finished answer keeps: <code>copy</code> / <code>retry</code> / <code>feedback</code> (e.g. <code>"copy,retry,feedback"</code> to add the rating pair, which needs an <code>ag-ui-feedback</code> listener). <code>="false"</code> removes the row entirely. See <a href="../messages/#message-actions-copy-retry-feedback">Message actions</a>.</td>
+</tr>
+<tr>
+<td><code>data-max-tool-rounds</code></td>
+<td>—</td>
+<td>Upper bound on frontend tool-call → re-run rounds within one send (default 10; a value below 1 is ignored). Raise it for a page-driving agent whose turn takes many small steps. See <a href="../concepts/#the-run-loop-and-the-ag-ui-client">The run loop</a>.</td>
+</tr>
+<tr>
+<td><code>data-page-actions</code></td>
+<td>—</td>
+<td>Opt-in built-in page-action tools: a comma list of <code>scroll</code> / <code>drag</code> / <code>chat</code> (e.g. <code>"scroll,drag"</code>). See <a href="../concepts/#page-action-tools">Page-action tools</a>.</td>
+</tr>
+<tr>
+<td><code>data-side</code></td>
+<td>—</td>
+<td>For <code>placement="sidebar"</code>: which edge it docks to, <code>right</code> (default) / <code>left</code>. Styling, and read by script for the side <code>dockWidth</code> and <code>ag-ui-dock-width</code> report. Live.</td>
+</tr>
+<tr>
+<td><code>data-collapse-icon</code></td>
+<td>—</td>
+<td>The header collapse control's mark: <code>panel-close</code> (a window with its docked pane and an arrow into the edge, mirrored on <code>data-side="left"</code>) / <code>chevron-up</code> / <code>chevron-down</code> / <code>chevron-left</code> / <code>chevron-right</code>. Absent, or any other value, follows the placement: <code>panel-close</code> on <code>sidebar</code> (and <code>side</code>), <code>chevron-down</code> everywhere else. A host icon in <code>slot="icon-collapse"</code> wins over it. Live.</td>
+</tr>
+<tr>
+<td><code>data-answer-well</code></td>
+<td>—</td>
+<td>CSS-only boolean: box each assistant turn (its text, tool cards, and thinking) in one bordered "well". Off by default. See <a href="../theming/#the-answer-well">The answer well</a>.</td>
+</tr>
+<tr>
+<td><code>collapsed</code></td>
+<td><code>collapsed</code></td>
+<td>Reflected boolean; collapses the widget to its <a href="../header-and-panel/#collapsing-to-the-launcher">launcher</a> (a rail under <code>placement="sidebar"</code>, the header bar under <code>embedded</code>). Persisted per tab. <code>placement="page"</code> has no collapsed state and ignores it.</td>
+</tr>
+<tr>
+<td><code>collapse-to</code></td>
+<td>—</td>
+<td>What the panel collapses to: <code>auto</code> (the default; absent or any other value reads the same) leaves every placement as it is, <code>bar</code> draws a strip along the bottom edge in place of the round launcher, <code>none</code> hides the collapsed widget so the host's own control brings it back. Under either, a corner panel still moves by its header and <code>moveTo</code> on a wide viewport, and remembers where it was dragged. Live. See <a href="../header-and-panel/#collapsing-to-a-bottom-bar">Collapsing to a bottom bar</a>.</td>
+</tr>
+<tr>
+<td><code>anchor</code></td>
+<td><code>anchor</code></td>
+<td>Under <code>collapse-to="none"</code>, a selector for the host's element the panel rises from, right-aligned to it. The <code>anchor</code> property takes an element instead and wins over the attribute. Live.</td>
+</tr>
+<tr>
+<td><code>maximized</code></td>
+<td><code>maximized</code></td>
+<td>Reflected boolean; grows the open panel to its <a href="../header-and-panel/#maximizing-the-panel">maximized size</a>. Refused on <code>page</code>, <code>full</code> and <code>embedded</code>, at 600px or less, and while collapsed; a collapse leaves it. Not persisted. Live.</td>
+</tr>
+<tr>
+<td><code>anchor-side</code></td>
+<td>—</td>
+<td>Under <code>collapse-to="none"</code> with an anchor, which side of it the panel opens on: <code>above</code>, <code>below</code>, or <code>auto</code> (the default, and any other value), which takes the side with more room and re-decides on a window resize, never during a drag. Live.</td>
+</tr>
+<tr>
+<td><code>data-dragging</code></td>
+<td>—</td>
+<td><strong>Written by the element, not by you.</strong> Stamped on whichever handle a gesture is currently using, so the styles can react and so the element knows not to re-place the widget under a drag in progress. Cleared on <code>pointerup</code> and on <code>pointercancel</code>.</td>
+</tr>
+<tr>
+<td><code>data-expand-corner</code></td>
+<td>—</td>
+<td><strong>Written by the element, not by you.</strong> It stamps the corner a dragged or agent-moved panel opens from, so the collapse animation starts where the panel actually is. Listed because the element reads its own stamp back; setting it yourself is overwritten on the next move.</td>
+</tr>
+<tr>
+<td><code>data-greeting</code></td>
+<td>—</td>
+<td>CSS-only: <code>off</code> turns the <a href="../theming/#the-greeting-on-an-empty-page">greeting layout</a> off under <code>placement="page"</code>, where it is on by default. Any other value turns it on under <code>placement="embedded"</code>. No other placement has it.</td>
+</tr>
+<tr>
+<td><code>data-empty</code></td>
+<td>—</td>
+<td><strong>Written by the element, not by you.</strong> Present while the conversation has nothing in it, which is when the greeting shows. Public as a styling hook, so the chrome around a full-page chat can react to the same state, e.g. <code>ag-ui-chat[data-empty] ~ .page-footer { display: none }</code>.</td>
+</tr>
+<tr>
+<td><code>data-running</code></td>
+<td>—</td>
+<td><strong>Written by the element, not by you.</strong> Present while an interaction is in flight, the same state that shows the Stop button (see the <code>running</code> property). Public as a styling hook, as <code>data-empty</code> is, so the chrome around the chat can react to it, e.g. <code>ag-ui-chat[data-running] ~ .toolbar button { pointer-events: none }</code>.</td>
+</tr>
+<tr>
+<td><code>data-threads-search</code></td>
+<td>—</td>
+<td>When the conversation list shows its search box: <code>auto</code> (absent, or any other value) from eight conversations, <code>always</code> over any list, <code>never</code> not at all. Live. See <a href="../theming/#the-conversation-list">The conversation list</a>.</td>
+</tr>
+<tr>
+<td><code>data-thread-status</code></td>
+<td>—</td>
+<td>Watch the conversation list for run status and unread: <code>poll</code> asks again every five seconds with the last ETag, <code>stream</code> follows the server's event stream (and polls when the server answers with JSON). Each list is handed on in <code>ag-ui-threads-change</code>. Needs a store with <code>watchThreads</code>, as <code>data-threads-url</code> gives. Live. See <a href="../threads/#thread-status">Thread status</a>.</td>
+</tr>
+<tr>
+<td><code>data-small-viewport</code></td>
+<td>—</td>
+<td><code>off</code> keeps the desktop layout at every width, opting out of the <a href="../theming/#small-viewports">small-viewport override</a>. Styling, and read by script for the width <code>dockWidth</code> reports on a phone. Live. Everything that override sets is a token you can re-state; its trigger is a media query, which is the one thing you cannot.</td>
+</tr>
+<tr>
+<td><code>data-paste-attach</code></td>
+<td>—</td>
+<td>When to turn a long text paste into an attachment instead of composer text: absent for the 5000-character default, <code>off</code> to never, or a positive number of characters. Only acts where <code>data-attachments-url</code> (or a custom <code>uploadHandler</code>) gives it somewhere to go.</td>
+</tr>
+<tr>
+<td><code>data-starters</code></td>
+<td>—</td>
+<td>JSON array of prompts offered on an empty transcript, e.g. <code>'["Summarise this page"]'</code>. Fallback content for <code>slot="empty"</code>, so slotting your own replaces them. Shares the four-prompt and 120-character limits with the suggestion chips a run pushes. Read once at connect.</td>
+</tr>
+<tr>
+<td><code>data-start-open</code></td>
+<td>—</td>
+<td>Mount the panel open on a first visit. The corner placements otherwise rest at their launcher, the way every corner chat does; a stored choice wins over both. The placements that place themselves are unaffected.</td>
+</tr>
+<tr>
+<td><code>show-usage</code></td>
+<td>—</td>
+<td>Present (bare, or any value but <code>"false"</code>) to draw a muted token-usage line under each finished turn, from the usage <code>RUN_FINISHED</code> carries (django-ag-ui's <code>include_usage</code>). Read when the turn settles. See <a href="../concepts/#when-a-run-fails-and-what-it-cost">When a run fails, and what it cost</a>.</td>
+</tr>
+<tr>
+<td><code>theme</code></td>
+<td>—</td>
+<td>Styling: an optional theme name (<code>quiet</code> (default) / <code>soft</code> / <code>ledger</code> / <code>classic</code>, or a word of your own) and an optional scheme (<code>light</code> (default) / <code>dark</code> / <code>auto</code>), in any order, e.g. <code>soft dark</code>. Live: the <a href="../theming/#theme-toggle">header theme toggle</a>'s glyph follows a scheme written after connect. See <a href="../theming/#themes">Themes</a>.</td>
+</tr>
+<tr>
+<td><code>density</code></td>
+<td>—</td>
+<td>CSS-only: <code>comfortable</code> (default) / <code>compact</code>.</td>
+</tr>
+<tr>
+<td><code>placement</code></td>
+<td>—</td>
+<td>CSS-only: <code>floating</code> (default) / <code>sidebar</code> / <code>page</code> / <code>embedded</code> / <code>full</code>. <code>full</code> fills the viewport at every width, inside the safe-area insets; the <code>--ag-ui-inset</code>, size and <code>--ag-ui-panel-radius</code> tokens still apply.</td>
+</tr>
+</tbody>
+</table>
+<p>Each header control also takes its own icon slot — <code>icon-history</code>, <code>icon-checkpoints</code>,
+<code>icon-new</code>, <code>icon-maximize</code>, <code>icon-collapse</code> — with the built-in drawn glyph as the fallback, so a host can project a
+brand <code>&lt;img&gt;</code> or <code>&lt;svg&gt;</code> in its place. The built-in header marks are drawn at
+<code>--ag-ui-glyph-size</code>. The composer's glyphs work the
+same way: <code>icon-send</code>, <code>icon-stop</code>, <code>icon-attach</code>, <code>icon-voice</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span><span class="p">&gt;</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  <span class="p">&lt;</span><span class="nt">svg</span> <span class="na">slot</span><span class="o">=</span><span class="s">"icon-new"</span> <span class="na">width</span><span class="o">=</span><span class="s">"16"</span> <span class="na">height</span><span class="o">=</span><span class="s">"16"</span><span class="p">&gt;</span><span class="cm">&lt;!-- ... --&gt;</span><span class="p">&lt;/</span><span class="nt">svg</span><span class="p">&gt;</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="p">&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
+</code></pre></div>
+<p>The collapse control's built-in mark follows the placement, because a sidebar hides sideways
+into its edge rather than down: <code>panel-close</code> (a window with its docked pane and an arrow into
+the edge) on <code>sidebar</code> and <code>side</code>, mirrored for either on <code>data-side="left"</code>, and
+<code>chevron-down</code> on <code>floating</code>, <code>full</code>, <code>embedded</code> and every other placement. <code>data-collapse-icon</code>
+picks one of the built-in marks outright, at any placement and live: <code>panel-close</code>,
+<code>chevron-up</code>, <code>chevron-down</code>, <code>chevron-left</code> or <code>chevron-right</code>; any other value reads as
+absent. <code>panel-close</code> always points into the edge the panel docks to, so it mirrors on a left
+docked panel whether chosen or defaulted; the chevrons do not turn. For a mark of your own, slot it
+into <code>icon-collapse</code>, which wins over the attribute and every placement:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span> <span class="na">placement</span><span class="o">=</span><span class="s">"floating"</span> <span class="na">data-collapse-icon</span><span class="o">=</span><span class="s">"chevron-right"</span><span class="p">&gt;&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span> <span class="na">placement</span><span class="o">=</span><span class="s">"sidebar"</span><span class="p">&gt;</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>  <span class="p">&lt;</span><span class="nt">svg</span> <span class="na">slot</span><span class="o">=</span><span class="s">"icon-collapse"</span> <span class="na">width</span><span class="o">=</span><span class="s">"16"</span> <span class="na">height</span><span class="o">=</span><span class="s">"16"</span><span class="p">&gt;</span><span class="cm">&lt;!-- ... --&gt;</span><span class="p">&lt;/</span><span class="nt">svg</span><span class="p">&gt;</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="p">&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
+</code></pre></div>
+<h3 id="when-each-attribute-is-read">When each attribute is read<a class="headerlink" href="#when-each-attribute-is-read" title="Permanent link">&para;</a></h3>
+<p>The element observes two groups of attributes, and they behave differently once it is in the DOM.
+Nothing outside those groups is observed: a CSS-only attribute (<code>theme</code>, <code>density</code>,
+<code>data-answer-well</code>, <code>data-tool-group-display</code>) is read by the stylesheet rather than by script, and <code>endpoint</code>,
+<code>data-tool-display</code>, <code>data-text-animation</code>, <code>data-runs-url</code>, <code>data-page-actions</code>,
+<code>data-message-actions</code>, <code>data-max-tool-rounds</code>, <code>data-unread-badge</code>, <code>data-launcher-drag</code> and
+<code>data-quote-selection</code> are re-read at each use, so a late write to any of those simply takes effect. The one attribute in
+neither camp is <code>data-launcher-icon-url</code>: it is read while the element connects, like the group
+below, but is not observed, so a late write is inert and says nothing.</p>
+<p><strong>Live attributes.</strong> Written at any time, before or after the element connects, and acted on
+either way: <code>title-text</code>, <code>placement</code>, <code>collapse-to</code>, <code>anchor</code>, <code>anchor-side</code>, <code>maximized</code>, <code>data-side</code>, <code>data-small-viewport</code>, <code>data-threads-search</code>, <code>data-thread-status</code>, <code>credentials</code>, <code>user-key</code>,
+<code>user-name</code>, <code>data-tool-group-display</code>, <code>data-collapse-icon</code>, <code>theme</code>.</p>
+<p><strong>Connect-time attributes.</strong> Read once, while the element connects, to decide what chrome exists at
+all — the tray, the mic, the skills menu, the header mark. Writing one afterwards has <strong>no effect</strong>;
+the element logs a console warning naming the attribute rather than failing silently, because the
+symptom is an affordance that never appears and that reads as a broken component. Set them before
+the element enters the DOM, or remove and re-insert it. See
+<a href="../authentication/#framework-hosts-configure-before-you-insert">Framework hosts</a>, where the boundary bites hardest.
+The list: <code>data-attachments-url</code>, <code>data-attachment-accept</code>, <code>data-attachment-max-bytes</code>,
+<code>data-transcribe-url</code>, <code>data-threads-url</code>, <code>data-threads-cache</code>, <code>data-tools-url</code>,
+<code>data-skills-url</code>, <code>data-skill-editor-url</code>, <code>data-skill-editor-button</code>, <code>data-routines-url</code>, <code>data-skills</code>, <code>data-prompt-chips</code>,
+<code>data-slash-commands</code>, <code>data-theme-toggle</code>, <code>data-strings</code>, <code>data-icon-url</code>.</p>
+<p>What re-inserting costs: the chrome is built again from the attributes as they stand, a run in
+progress is cancelled, and the conversation is redrawn from its stored history — the same rebuild
+<code>reload()</code> performs, and the reason that method exists for a host that can only configure the
+element after the fact.</p>
+<p><strong>Properties</strong> (JS only, not attributes): <code>headers</code>, <code>getHeaders</code>, <code>trustedOrigins</code>, <code>allowImages</code>,
+<code>autoConfirm</code>, <code>confirmPredicate</code>, <code>askUser</code>, <code>askUserRenderer</code>, <code>approvalRenderer</code>,
+<code>approveWithEdits</code>, <code>agentFactory</code>, <code>getTools</code>, <code>getContext</code>, <code>routeMap</code>, <code>navigate</code>, <code>getPageMap</code>,
+<code>autoInjectPageMap</code>, <code>getPlace</code>, <code>conversationStore</code>, <code>uploadHandler</code>, <code>transcribeHandler</code>, <code>navigationResult</code>,
+<code>skillContext</code>, <code>toolSummaries</code>, <code>formatToolPayload</code>, <code>formatRelativeTime</code>, <code>strings</code>,
+<code>resolvePageTarget</code>, <code>sharedState</code>, <code>anchor</code> (an element, which wins over the attribute's selector), <code>extraStyles</code> (<a href="../theming/#d-extrastyles-the-last-mile">unstable</a>), plus the read-only <code>unread</code>, <code>unhandledActivityTypes</code>, <code>threadId</code>, <code>threadTitle</code>, <code>tabs</code>, <code>running</code>, <code>barHeight</code>, <code>dockWidth</code>, <code>uiStrings</code>, <code>colorScheme</code> and <code>locale</code>, and
+the attribute mirrors <code>endpoint</code> / <code>userKey</code> / <code>userName</code> / <code>toolDisplay</code> / <code>toolGroupDisplay</code> / <code>collapsed</code> /
+<code>maximized</code> / <code>credentials</code> / <code>detachRuns</code>.</p>
+<p><code>headers</code> and <code>getHeaders</code> authenticate <strong>every</strong> request the element makes, not only the agent
+run; <code>getHeaders</code> is the one to use for a credential that rotates. See
+<a href="../authentication/#authenticating-requests">Authenticating requests</a>.</p>
+<p><code>allowImages</code> (default <code>false</code>) re-enables <code>&lt;img&gt;</code> in rendered assistant markdown.
+It is off by default because a model-controlled image URL is fetched by the browser
+with no user interaction — a zero-click exfiltration channel for prompt-injected
+page data. Enable only when the content source is trusted.</p>
+<p><code>toolSummaries</code> is a <code>Record&lt;string, string&gt;</code> mapping tool name → a friendly card
+label, used when a tool has no <code>x-summary</code> in its own schema. Built-in and client tools
+should carry <code>x-summary</code> directly; this map is the seam for <strong>server-side tools</strong> (drf-mcp,
+the django-ag-ui <code>@tool</code> registry), whose schema never reaches the browser — e.g.
+<code>chat.toolSummaries = { list_projects: "Search projects" }</code>. Or point
+<code>data-tools-url</code> at a server catalog endpoint (django-ag-ui's <code>tools/</code>) and the
+labels are fetched automatically — per card, <code>x-summary</code> → an explicit
+<code>toolSummaries</code> entry → the fetched catalog → the raw name.</p>
+<p><code>sharedState</code> is AG-UI shared state, documented under
+<a href="../concepts/#the-run-loop-and-the-ag-ui-client">the run loop</a>; <code>unread</code> and <code>unhandledActivityTypes</code> are
+read-only counters, covered under <a href="../header-and-panel/#the-unread-badge">the unread badge</a> and
+<a href="../server-pushed-ui/#finding-out-what-arrived">finding out what arrived</a>; <code>threadId</code> and <code>running</code> are covered under
+<a href="../header-and-panel/#driving-the-conversation-from-your-own-chrome">driving the conversation from your own chrome</a>.</p>
+<p>Code blocks in an agent's answer carry a <strong>copy button</strong>, revealed on hover or
+keyboard focus and styleable via the <code>code-copy</code> part. Override its labels with
+the <code>copyCode</code> / <code>copied</code> / <code>copyFailed</code> strings.</p>
+<p><strong>Methods</strong>: <code>registerTool</code>, <code>registerPageState</code>, <code>registerActivityRenderer</code>, <code>registerContext</code>,
+<code>setSkills</code>, <code>refreshSkills</code>, <code>openSkillEditor</code>, <code>closeSkillEditor</code>, <code>openRoutines</code>, <code>makeRoutine</code>, <code>routineSeed</code>, <code>closeRoutines</code>, <code>sendMessage</code>, <code>run</code>, <code>attachFile</code>, <code>appendMessage</code>, <code>retryLastTurn</code>, <code>quote</code>, <code>offerQuoteInPage</code>,
+<code>enableCharts</code>, <code>newChat</code>, <code>setCollapsed</code>, <code>toggleCollapsed</code>, <code>setMaximized</code>, <code>toggleMaximized</code>,
+<code>describeSurface</code>, <code>moveTo</code>, <code>resetSize</code>, <code>toggleTheme</code>, <code>openThreads</code>, <code>closeThreads</code>, <code>switchThread</code>, <code>deleteThread</code>, <code>openTab</code>, <code>closeTab</code>,
+<code>openCheckpoints</code>, <code>closeCheckpoints</code>, <code>toggleCheckpoints</code>, <code>refreshPlace</code>, <code>request</code>, <code>tokenValues</code> and <code>reload</code>.</p>
+<p><code>request(url, init?)</code> is <code>fetch</code> as the element authenticates: <code>headers</code> and <code>getHeaders()</code> under
+<code>init.headers</code> (which win per key), and <code>credentials</code> unless <code>init</code> names its own. A destination
+outside <code>trustedOrigins</code> is reported as the element's own requests are. It is the seam a separate
+entry such as <code>./mcp-apps</code> reaches the host's routes through.</p>
+<p><code>refreshSkills()</code> fetches <code>data-skills-url</code> again, so the <code>/</code> palette lists a skill written
+elsewhere. <code>routineSeed()</code> is what Make this a routine would fill a form with: <code>{ prompt, name }</code>
+from the conversation's user messages, or <code>null</code> before anything is said. An
+<a href="../editors/#the-editors-on-a-page-of-their-own">editor element</a> bound to the chat calls both.</p>
+<p><code>colorScheme</code> is the scheme the panel is drawn in now (<code>"light"</code> or <code>"dark"</code>); a change of the
+<code>theme</code> attribute fires <code>ag-ui-theme</code> with <code>{ scheme }</code>. <code>locale</code> is the nearest <code>lang</code> attribute,
+looked for past any shadow root the element is in, else the browser's language.
+<code>tokenValues(names)</code> returns the values the panel computes for the custom properties <code>names</code> (a
+colour resolved in the current scheme), leaving out any it does not declare. <code>./mcp-apps</code> hands a view the theme through these three.</p>
+<h2 id="sending-from-your-own-ui">Sending from your own UI<a class="headerlink" href="#sending-from-your-own-ui" title="Permanent link">&para;</a></h2>
+<p><code>sendMessage(content, attachments?)</code> sends as if the user had typed it — user bubble,
+<code>ag-ui-submit</code> event, run started. <code>ag-ui-submit</code> means a turn was sent, not that a run started:
+a Retry and a run continued from the checkpoint panel start runs without one. To know whether
+anything is running, read <a href="../header-and-panel/#driving-the-conversation-from-your-own-chrome"><code>running</code></a> or style on
+<code>data-running</code>. Use it for an "Ask about this order" button, a command
+palette, a prompt fired when your page mounts the chat, or a composer of your own replacing the
+built-in one.</p>
+<p>It returns a <code>Promise&lt;boolean&gt;</code>. It resolves <code>true</code> once the turn has been handed to the agent
+and its run has settled, frontend-tool rounds included, and <code>false</code> when nothing was sent:</p>
+<ul>
+<li>for an entirely empty message;</li>
+<li>while a run, or a checkpoint continuation picked from the panel, is in flight. A continuation
+  counts from the pick, and a send from the call rather than from when its run starts, so a
+  <code>sendMessage</code> from an <code>ag-ui-submit</code> listener, or a second call in the same task, is refused
+  rather than starting a second run;</li>
+<li>with no <code>endpoint</code> set, which the transcript also says;</li>
+<li>while a reload resumes a run a navigating tool interrupted. The resume counts from the moment
+  the element asks its conversation store for the conversation, and it ends by starting that
+  run, so a send then is refused, and the built-in Send queues behind the resumed answer;</li>
+<li>when your own code that runs on the way to the request — an <code>ag-ui-submit</code> listener, the
+  conversation store's save — stops it by starting a new chat or changing <code>user-key</code>. A
+  <code>getContext</code> or <code>getTools</code> that does the same stops it too, but after the turn was handed
+  over, so the call resolves <code>true</code>.</li>
+</ul>
+<p><strong>While the element restores a stored conversation, a send waits for it.</strong> Every restore —
+when the element connects, on <code>reload()</code>, when a thread is picked from the drawer, and when
+<code>user-key</code> changes from one principal to another — first asks the conversation store for the conversation, and with
+<code>data-threads-url</code> that is a request to your server. A <code>sendMessage</code> made in that time waits
+until the conversation is drawn, then sends with it: the bubble, the <code>ag-ui-submit</code> event and the
+request all come after the replay, later than the call by the length of the load. So a prompt
+fired on mount needs no timing of its own. If New chat, a thread switch, a change from one
+<code>user-key</code> to another or a <code>reload()</code> comes while it waits, the conversation it was addressed
+to is gone, so it is dropped and resolves <code>false</code> at once. The element leaving the page drops it
+too, but it resolves <code>false</code> only once the load answers or the element is inserted again. A
+first <code>user-key</code> on an anonymous conversation adopts that conversation rather than replacing
+it, so a send waiting then still goes out. A second <code>sendMessage</code> while one waits is refused. The built-in Send queues what is typed during the load ("Waiting to send"),
+and sends it after the conversation is drawn, behind a <code>sendMessage</code> that was waiting.</p>
+<p>Unlike the built-in Send it does <strong>not</strong> queue, so your composer keeps what it tried to send, and
+it does <strong>not</strong> consult the attachment tray: what you pass is what is sent, so your composer stays
+in charge of its own state.</p>
+<p><code>retryLastTurn()</code> keeps the same rules, because it starts a run on the same conversation. It
+returns <code>false</code> while a run, a send, another Retry or a continuation is in flight, and while
+any restore of the stored conversation is still loading. It does not wait for the load as a send
+does: until the conversation is drawn there is nothing on screen to retry, and afterwards it
+would ask the previous visit's last question again. It counts from the call as a send does: until its run starts, a <code>sendMessage</code> or a
+second Retry is refused, the built-in Send queues, and a checkpoint pick is refused. It also
+returns <code>false</code> when your own code stops it before its run starts: a conversation store, or an
+activity or tool renderer it redraws through, that starts a new chat or changes <code>user-key</code>. A
+<code>getContext</code> or <code>getTools</code> that does the same stops it too, before anything is sent, but it runs
+after the Retry has handed its turn to the client, so the call resolves <code>true</code>. A store that
+throws from the Retry's save leaves the conversation as it was, and <code>retryLastTurn()</code> rejects
+with its error.</p>
+<p><code>attachFile(file)</code> queues a file into the tray exactly as the picker and drag-and-drop do, with
+the same validation and progress chip. It returns <code>false</code> when uploads are not configured
+(no <code>data-attachments-url</code> and no <code>uploadHandler</code>) — the only way to tell, since with no tray
+there is nothing to report through.</p>
+<p>Uploading is asynchronous, so watch <code>ag-ui-attachments</code> for the result. Its <code>detail</code> carries
+<code>{ attachments, pending }</code>: the durable refs of everything that has finished, and how many are
+still in flight. Send once <code>pending</code> is <code>0</code>, or you will leave files behind.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">addEventListener</span><span class="p">(</span><span class="s2">"ag-ui-attachments"</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="nx">e</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">attachments</span><span class="p">,</span><span class="w"> </span><span class="nx">pending</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">e</span><span class="p">.</span><span class="nx">detail</span><span class="p">;</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nx">sendButton</span><span class="p">.</span><span class="nx">disabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">pending</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mf">0</span><span class="p">;</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nx">sendButton</span><span class="p">.</span><span class="nx">onclick</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">chat</span><span class="p">.</span><span class="nx">sendMessage</span><span class="p">(</span><span class="nx">input</span><span class="p">.</span><span class="nx">value</span><span class="p">,</span><span class="w"> </span><span class="nx">attachments</span><span class="p">);</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="p">});</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">attachFile</span><span class="p">(</span><span class="nx">fileInput</span><span class="p">.</span><span class="nx">files</span><span class="p">[</span><span class="mf">0</span><span class="p">]);</span>
+</code></pre></div>
+<h2 id="starting-a-run-with-forwarded-props">Starting a run with forwarded props<a class="headerlink" href="#starting-a-run-with-forwarded-props" title="Permanent link">&para;</a></h2>
+<p><code>run({ forwardedProps, runId?, message? })</code> starts a run for an action the server reads from
+<code>RunAgentInput.forwardedProps</code> rather than from a typed turn, such as what the user picked on a
+surface an activity drew.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">await</span><span class="w"> </span><span class="nx">chat</span><span class="p">.</span><span class="nx">run</span><span class="p">({</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nx">forwardedProps</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">action</span><span class="o">:</span><span class="w"> </span><span class="s2">"approve"</span><span class="p">,</span><span class="w"> </span><span class="nx">surface</span><span class="o">:</span><span class="w"> </span><span class="s2">"s1"</span><span class="w"> </span><span class="p">},</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nx">runId</span><span class="o">:</span><span class="w"> </span><span class="nx">actionRunId</span><span class="p">,</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nx">message</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="sb">`</span><span class="si">${</span><span class="nx">actionRunId</span><span class="si">}</span><span class="sb">-turn`</span><span class="p">,</span><span class="w"> </span><span class="nx">content</span><span class="o">:</span><span class="w"> </span><span class="s2">"Approve the refund"</span><span class="w"> </span><span class="p">},</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="p">});</span>
+</code></pre></div>
+<ul>
+<li><strong>Only the first request carries <code>forwardedProps</code> and <code>runId</code>.</strong> <code>runId</code> reaches the wire
+  unchanged, so you can derive ids from it. The rounds a frontend tool or an approval starts
+  afterwards send <code>{}</code> and a run id of their own, because a server that acts on the props would
+  otherwise act again for every round. Under <a href="../concepts/#runs-that-outlive-their-connection"><code>data-detach-runs</code></a>
+  every round's <code>forwardedProps</code> also carries <code>detach: true</code>, and the later rounds send that alone.</li>
+<li><strong><code>message</code> is the turn the server stores, under your <code>id</code>.</strong> It is drawn as the user's bubble
+  and announced by <code>ag-ui-submit</code>, as a <code>sendMessage</code> turn is, but it is not in the first
+  request's <code>messages</code>, which would put it in the conversation twice. When that request's
+  <code>RUN_STARTED</code> arrives, the turn joins the element's copy of the conversation, after the history
+  that request posted and before the reply. From then on every request posts it, the follow-up
+  rounds of the same run included, and the store saves it, so a reload draws it again. A run
+  refused before <code>RUN_STARTED</code> keeps nothing. Without <code>message</code>, nothing is drawn or announced.
+  A <code>message</code> with empty content is refused.</li>
+<li><strong>It refuses and waits as <code>sendMessage</code> does.</strong> It resolves <code>false</code> while a run, a send or a
+  picked checkpoint's continuation is in flight, and with no <code>endpoint</code>. Behind a restore it waits,
+  then runs. It resolves <code>true</code> once the run is handed to the client.</li>
+<li><strong>Retry asks for a refused action again, unchanged.</strong> When the first request is refused before
+  <code>RUN_STARTED</code>, the failed bubble's Retry (and <code>retryLastTurn()</code>) sends the same <code>forwardedProps</code>,
+  the same <code>runId</code> and no <code>message</code> in <code>messages</code>, and redraws the turn once rather than adding a
+  second bubble. Once <code>RUN_STARTED</code> arrives the server holds the action, so Retry is withdrawn,
+  from the earlier answer too, and <code>retryLastTurn()</code> resolves <code>false</code> without touching the
+  conversation; so it does after a Stop. The next <code>sendMessage</code> or checkpoint continuation brings
+  Retry back, and New chat, a thread switch or a reload forgets the action: a restored
+  conversation's Retry re-asks its last user turn, the action's included, as a sent one.</li>
+</ul>
+<h2 id="adding-to-every-runs-context">Adding to every run's context<a class="headerlink" href="#adding-to-every-runs-context" title="Permanent link">&para;</a></h2>
+<p><code>registerContext(provider)</code> adds entries to every run's context beside <code>getContext</code> rather than
+in place of it, and returns the function that removes them again:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kd">const</span><span class="w"> </span><span class="nx">unregister</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">chat</span><span class="p">.</span><span class="nx">registerContext</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="nx">description</span><span class="o">:</span><span class="w"> </span><span class="s2">"open_surface"</span><span class="p">,</span><span class="w"> </span><span class="nx">value</span><span class="o">:</span><span class="w"> </span><span class="nb">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">surface</span><span class="p">.</span><span class="nx">state</span><span class="p">)</span><span class="w"> </span><span class="p">},</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="p">]);</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1">// later</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="nx">unregister</span><span class="p">();</span>
+</code></pre></div>
+<p>Each round's context is what <code>getContext</code> returns, then each registered provider's entries in
+registration order, then the place. Providers are read fresh for every round, a checkpoint
+continuation's included, and are filtered like <code>getContext</code>'s while the place is withheld. Use it
+when a piece of your page has something to say for as long as it is on screen, without taking
+<code>getContext</code> over from whatever else set it.</p>
+<p>A self-contained demo lives in <a href="https://github.com/Artui/agents-web-components/tree/main/demo/"><code>demo/</code></a>. Run <code>make demo</code> from a clean checkout: it
+installs, builds and serves the demo against a scripted AG-UI server on port 5173. Every feature
+has its own scenario page, grouped in the left nav; each page has the controls for that feature
+and <strong>Try</strong> buttons that send the prompts the scripted agent answers. The start page lists every
+prompt, and <code>/page/</code> is the chat as a host's own full-page route.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "search.highlight", "search.share", "search.suggest", "content.code.copy", "content.action.edit", "toc.follow"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.a5f9d56c.min.js"></script>
+      
+    
+  </body>
+</html>

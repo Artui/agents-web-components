@@ -1,0 +1,2065 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Framework-free Web Components over the AG-UI protocol - chat, threads, inbox and an agents provider.">
+      
+      
+      
+        <link rel="canonical" href="https://artui.github.io/agents-web-components/server-pushed-ui/">
+      
+      
+        <link rel="prev" href="../tool-calls/">
+      
+      
+        <link rel="next" href="../skills/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
+    
+    
+      
+        <title>What the server draws - agents-web-components</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#what-the-server-draws" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="agents-web-components" class="md-header__button md-logo" aria-label="agents-web-components" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            agents-web-components
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              What the server draws
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Artui/agents-web-components" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Artui/agents-web-components
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="agents-web-components" class="md-nav__button md-logo" aria-label="agents-web-components" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    agents-web-components
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Artui/agents-web-components" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Artui/agents-web-components
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../authentication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authenticating requests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The chat
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    The chat
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../header-and-panel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Header, collapse and resizing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../messages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Messages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tool-calls/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tool calls and sub-agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    What the server draws
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    What the server draws
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#charts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Charts
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Charts">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#drawing-something-other-than-a-chart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Drawing something other than a chart
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#drawing-other-things-the-server-pushes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Drawing other things the server pushes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Drawing other things the server pushes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#built-in-what-pydantic-ais-ag-ui-adapter-sends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Built in: what pydantic-ai's AG-UI adapter sends
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#updating-a-surface-in-place-and-drawing-it-inert-on-replay" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Updating a surface in place, and drawing it inert on replay
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#which-carrier-should-the-server-use" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Which carrier should the server use?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#finding-out-what-arrived" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Finding out what arrived
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a2ui-surfaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2UI surfaces
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A2UI surfaces">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#vendoring-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Vendoring it
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#styling-a-surface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Styling a surface
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mcp-apps-views" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MCP Apps views
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../skills/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Skills and run notices
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../uploads/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File uploads
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Other elements
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Other elements
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../threads/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The conversation list
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents and the inbox
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../editors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The editors on a page of their own
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hosting
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Hosting
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../host-seams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Host seams (SPA)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../durability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Durability and resuming
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Look and language
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Look and language
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theming/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Theming, density and placement
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../i18n/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Internationalization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Public API surface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../building/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Building and compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Moving from ag-ui-web-component
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#charts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Charts
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Charts">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#drawing-something-other-than-a-chart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Drawing something other than a chart
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#drawing-other-things-the-server-pushes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Drawing other things the server pushes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Drawing other things the server pushes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#built-in-what-pydantic-ais-ag-ui-adapter-sends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Built in: what pydantic-ai's AG-UI adapter sends
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#updating-a-surface-in-place-and-drawing-it-inert-on-replay" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Updating a surface in place, and drawing it inert on replay
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#which-carrier-should-the-server-use" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Which carrier should the server use?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#finding-out-what-arrived" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Finding out what arrived
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a2ui-surfaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2UI surfaces
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A2UI surfaces">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#vendoring-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Vendoring it
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#styling-a-surface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Styling a surface
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mcp-apps-views" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MCP Apps views
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/Artui/agents-web-components/edit/main/docs/server-pushed-ui.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="what-the-server-draws">What the server draws<a class="headerlink" href="#what-the-server-draws" title="Permanent link">&para;</a></h1>
+<h2 id="charts">Charts<a class="headerlink" href="#charts" title="Permanent link">&para;</a></h2>
+<p>Markdown here goes through a narrow sanitiser and images are off by default — a
+model-controlled image URL is fetched with no user interaction, which turns
+prompt-injected page data into a zero-click exfiltration channel. So a chart
+does not arrive as markup. It arrives as <strong>data</strong>, and the component builds the
+SVG itself: the model chooses the numbers, the component chooses the DOM.</p>
+<p>Off unless you ask for it, by either route or both:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kd">const</span><span class="w"> </span><span class="nx">chat</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">document</span><span class="p">.</span><span class="nx">querySelector</span><span class="p">(</span><span class="s2">"ag-ui-chat"</span><span class="p">);</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">enableCharts</span><span class="p">([</span><span class="s2">"tool"</span><span class="p">,</span><span class="w"> </span><span class="s2">"activity"</span><span class="p">]);</span>
+</code></pre></div>
+<p>Order does not matter. Calling it after the element is on the page redraws any
+charts already in the restored history, so you do not have to reach the element
+before it connects — which you generally cannot.</p>
+<p>Specs are bounded, and anything outside is dropped rather than half-drawn: at
+most <strong>20,000 points</strong> and <strong>2,000 labels</strong>, and every point a finite number no
+larger than <strong>1e15</strong>. The first two keep a stored transcript from blocking the
+main thread on every reload; the last one keeps the value range finite, since
+scaling divides by it.</p>
+<p><strong><code>"tool"</code></strong> registers a <code>render_chart</code> tool the agent may call. The numbers are
+in its context, so it can talk about them; it costs one model round.</p>
+<p><strong><code>"activity"</code></strong> draws a chart the server pushes as an <code>ACTIVITY_SNAPSHOT</code> with
+<code>activityType: "chart"</code> (exported as <code>CHART_ACTIVITY_TYPE</code>). The data never
+reaches the model, there is no extra round, and this is the only route that can
+<strong>update a chart in place</strong> — the server repeats the same <code>messageId</code> to redraw
+it, or sends an <code>ACTIVITY_DELTA</code> to move one series as a computation advances.</p>
+<p><strong>Whether a pushed chart survives a reload depends on where the conversation is
+stored.</strong> A client-side store keeps activities, so it comes back. A server that
+stores the thread as the model's message history does not — a pushed chart is
+deliberately not in that history, which is the reason to push it. A chart the
+agent asked for survives either way, because its spec travels as the tool call's
+arguments and the component redraws from those without re-running anything.</p>
+<p>Either way the payload is the same shape:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"bar"</span><span class="p">,</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">"title"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Signups this week"</span><span class="p">,</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nt">"labels"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"Mon"</span><span class="p">,</span><span class="w"> </span><span class="s2">"Tue"</span><span class="p">,</span><span class="w"> </span><span class="s2">"Wed"</span><span class="p">],</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="nt">"series"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="w"> </span><span class="nt">"label"</span><span class="p">:</span><span class="w"> </span><span class="s2">"new"</span><span class="p">,</span><span class="w"> </span><span class="nt">"points"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">12</span><span class="p">,</span><span class="w"> </span><span class="mi">19</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="p">]</span><span class="w"> </span><span class="p">}]</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="p">}</span>
+</code></pre></div>
+<p><code>kind</code> is one of <code>bar</code>, <code>line</code>, <code>pie</code>, <code>scatter</code>, <code>stacked</code>; anything else is
+drawn as a bar rather than refused. Every series needs exactly one point per
+label — a shorter one misaligns every value after the gap, and a chart that is
+subtly wrong still reads as authoritative, so the whole spec is dropped instead.
+A pie's slices are its labels, so it draws the first series only.</p>
+<p>Theme the series with <code>--ag-ui-chart-1</code> … <code>--ag-ui-chart-6</code>, size it with
+<code>--ag-ui-chart-max-width</code>, and style the block through the <code>chart-block</code>,
+<code>chart-title</code> and <code>chart-legend</code> parts.</p>
+<p><strong>A chart stops at its own width, and is sized in pixels rather than scaled to
+them.</strong> Two separate things, and a widened panel needs both.</p>
+<p>It is drawn for the width the block actually has -- one SVG unit per CSS pixel
+-- and redrawn when that width changes, so a 10px axis label is 10px in a 380px
+panel and in a 1200px one. Where the labels no longer fit, the axis draws every
+second or third rather than a smear of overlapping words. Below 220px it goes
+back to scaling, since at that size nothing fits either way.</p>
+<p>And it takes the width it needs rather than the width it is offered, capping at
+<code>--ag-ui-chart-max-width</code> (<strong>480px</strong>): widening the panel should no more resize
+a chart than it resizes a message. Raise the token for a bigger chart and the
+labels stay 10px -- the cap is about how much room the drawing gets, never
+about how big its type is. Height follows width inside a 160-320px band.</p>
+<h3 id="drawing-something-other-than-a-chart">Drawing something other than a chart<a class="headerlink" href="#drawing-something-other-than-a-chart" title="Permanent link">&para;</a></h3>
+<p><code>render_chart</code> is built on a seam any tool can use. A <code>ClientTool</code> may declare a
+pure <code>render</code> beside its <code>handler</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">registerTool</span><span class="p">({</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s2">"show_route"</span><span class="p">,</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nx">description</span><span class="o">:</span><span class="w"> </span><span class="s2">"Draw the route on a map."</span><span class="p">,</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nx">parameters</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">type</span><span class="o">:</span><span class="w"> </span><span class="s2">"object"</span><span class="p">,</span><span class="w"> </span><span class="nx">properties</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">stops</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">type</span><span class="o">:</span><span class="w"> </span><span class="s2">"array"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">},</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="nx">handler</span><span class="o">:</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s2">"route shown"</span><span class="p">,</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="nx">render</span><span class="o">:</span><span class="w"> </span><span class="p">(</span><span class="nx">args</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">buildMapElement</span><span class="p">(</span><span class="nx">args</span><span class="p">.</span><span class="nx">stops</span><span class="p">),</span><span class="w">   </span><span class="c1">// pure; no side effects</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="p">});</span>
+</code></pre></div>
+<p><strong><code>render</code> is the only half a restored transcript replays.</strong> Replaying a tool's
+<em>effect</em> is out of the question — re-running a form-filling tool on every reload
+is a bug. The replay path is handed the <code>render</code> function alone, never the tool
+that owns it, so the code that runs on restore cannot reach <code>handler</code> even by
+mistake: adding a "no render? fall back to the handler" convenience there means
+changing a type signature first, which is the moment the question gets asked.</p>
+<p>That is why <code>render</code> has to be a pure, deterministic function of its arguments —
+it runs again every time the conversation is restored.</p>
+<h2 id="drawing-other-things-the-server-pushes">Drawing other things the server pushes<a class="headerlink" href="#drawing-other-things-the-server-pushes" title="Permanent link">&para;</a></h2>
+<p><code>activityType</code> is an open string the protocol does not enumerate — <code>"chart"</code> is
+just the one the component ships a renderer for. Register your own and the
+server can push anything it likes into the transcript:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">registerActivityRenderer</span><span class="p">({</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nx">type</span><span class="o">:</span><span class="w"> </span><span class="s2">"build_status"</span><span class="p">,</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nx">render</span><span class="o">:</span><span class="w"> </span><span class="p">(</span><span class="nx">content</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">el</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">document</span><span class="p">.</span><span class="nx">createElement</span><span class="p">(</span><span class="s2">"div"</span><span class="p">);</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="nx">el</span><span class="p">.</span><span class="nx">className</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"build"</span><span class="p">;</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="nx">el</span><span class="p">.</span><span class="nx">textContent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="sb">`Build </span><span class="si">${</span><span class="nx">content</span><span class="p">.</span><span class="nx">status</span><span class="si">}</span><span class="sb">`</span><span class="p">;</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">el</span><span class="p">;</span><span class="w">   </span><span class="c1">// null: could not be drawn; an empty fragment: nothing to draw</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">  </span><span class="p">},</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="p">});</span>
+</code></pre></div>
+<p><strong><code>render</code> runs again on every thread load</strong>, so it carries the same contract as
+a client tool's <code>render</code>: a pure function of <code>content</code> and the context it is
+drawn in (below), deterministic, and free of effects outside the node it returns. Activities are materialised into
+<code>role: "activity"</code> messages and persisted with the transcript, so a renderer that
+writes to the page instead of returning DOM fires again on every restore.</p>
+<p>The component places what you return, keyed by the activity's <code>messageId</code>, so a
+server repeating an id <strong>replaces</strong> your node rather than adding a second one —
+the same in-place update charts get, unless <code>render</code> hands back the node it was
+given (below). Returning <code>null</code> removes whatever was there, with a console
+warning: live and reload should agree, and the stored content is the version
+that could not be drawn.</p>
+<p>Content that is fine and has nothing to show — a record meant for the model, a
+list with nothing in it for the user — returns an <strong>empty <code>DocumentFragment</code></strong>
+instead: nothing is drawn, nothing is logged, the type is not reported as
+unhandled, and anything drawn under that <code>messageId</code> before is taken away. A
+renderer that always returns one is how a type is known and deliberately drawn
+as nothing.</p>
+<p><code>chart</code>, <code>compaction</code>, <code>suggestions</code> and the types below are registrations
+exactly like yours, not privileged branches, so registering any of those names
+<strong>replaces the built-in</strong>, before or after the element connects.</p>
+<h3 id="built-in-what-pydantic-ais-ag-ui-adapter-sends">Built in: what pydantic-ai's AG-UI adapter sends<a class="headerlink" href="#built-in-what-pydantic-ais-ag-ui-adapter-sends" title="Permanent link">&para;</a></h3>
+<p>pydantic-ai's own AG-UI adapter sends activities of its own, and each has a
+built-in renderer, so none of them shows in <code>unhandledActivityTypes</code>.</p>
+<table>
+<thead>
+<tr>
+<th><code>activityType</code></th>
+<th>Drawn as</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pydantic_ai_enqueued_messages</code></td>
+<td>Each user message's text as a user bubble (<code>message-user</code>), as text and never as HTML, in an <code>enqueued-messages</code> column with an <code>enqueued-messages-note</code> caption (string <code>enqueuedMessages</code>). Messages the run took in while it was working, through <code>RunContext.enqueue</code>. Other roles draw nothing.</td>
+</tr>
+<tr>
+<td><code>mcp-apps</code></td>
+<td>A run notice (<code>run-notice-mcp-app</code>) that the app view cannot be shown here, naming its <code>resourceUri</code> (string <code>mcpAppUnsupported</code>, token <code>{uri}</code>).</td>
+</tr>
+<tr>
+<td><code>pydantic_ai_compaction</code>, <code>pydantic_ai_tool_availability_delta</code>, <code>pydantic_ai_model_settings_delta</code>, <code>pydantic_ai_capability_load_delta</code></td>
+<td>Nothing: records the adapter keeps for the model.</td>
+</tr>
+</tbody>
+</table>
+<p><code>compaction</code>, django-ag-ui's own notice, is separate and stays drawn. The
+adapter's enqueued messages are drawn only: <code>@ag-ui/client</code> does not send
+activities back to the server, so a later run does not see them as turns.</p>
+<h3 id="updating-a-surface-in-place-and-drawing-it-inert-on-replay">Updating a surface in place, and drawing it inert on replay<a class="headerlink" href="#updating-a-surface-in-place-and-drawing-it-inert-on-replay" title="Permanent link">&para;</a></h3>
+<p><code>render</code> takes a second argument, an <code>ActivityRenderContext</code>:
+<code>{ messageId, previous, live }</code>. A one-argument renderer ignores it and keeps
+working as before.</p>
+<ul>
+<li><strong><code>previous</code></strong> is the node your renderer returned for this <code>messageId</code> last
+  (<code>null</code> on the first draw). Update it and <strong>return it</strong>, and the component
+  leaves it where it is instead of replacing it, so a field the user is typing
+  into keeps its value and its focus when the server redraws the activity.
+  Returning a new node replaces the old one, as before.</li>
+<li><strong><code>live</code></strong> is <code>true</code> when the draw comes from the run in flight and <code>false</code>
+  when a stored conversation is put back (a reload, a thread picked from the
+  drawer, a Retry redrawing what came before it). <strong>A surface drawn with
+  <code>live: false</code> must be inert</strong>: no button that acts, every input disabled. A
+  restored surface is redrawn on every thread load, and acting on it would
+  send an action from a turn the conversation has moved past.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">registerActivityRenderer</span><span class="p">({</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nx">type</span><span class="o">:</span><span class="w"> </span><span class="s2">"approval_form"</span><span class="p">,</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nx">render</span><span class="o">:</span><span class="w"> </span><span class="p">(</span><span class="nx">content</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">previous</span><span class="p">,</span><span class="w"> </span><span class="nx">live</span><span class="w"> </span><span class="p">})</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">form</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">previous</span><span class="w"> </span><span class="o">??</span><span class="w"> </span><span class="nb">document</span><span class="p">.</span><span class="nx">createElement</span><span class="p">(</span><span class="s2">"form"</span><span class="p">);</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">previous</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="kc">null</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">      </span><span class="nx">form</span><span class="p">.</span><span class="nx">append</span><span class="p">(</span><span class="nb">document</span><span class="p">.</span><span class="nx">createElement</span><span class="p">(</span><span class="s2">"input"</span><span class="p">),</span><span class="w"> </span><span class="nb">document</span><span class="p">.</span><span class="nx">createElement</span><span class="p">(</span><span class="s2">"button"</span><span class="p">));</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">      </span><span class="nx">form</span><span class="p">.</span><span class="nx">querySelector</span><span class="p">(</span><span class="s2">"button"</span><span class="p">).</span><span class="nx">textContent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Approve"</span><span class="p">;</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">      </span><span class="nx">form</span><span class="p">.</span><span class="nx">onsubmit</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">event</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">        </span><span class="nx">event</span><span class="p">.</span><span class="nx">preventDefault</span><span class="p">();</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">        </span><span class="ow">void</span><span class="w"> </span><span class="nx">chat</span><span class="p">.</span><span class="nx">run</span><span class="p">({</span><span class="w"> </span><span class="nx">forwardedProps</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">action</span><span class="o">:</span><span class="w"> </span><span class="s2">"approve"</span><span class="p">,</span><span class="w"> </span><span class="nx">note</span><span class="o">:</span><span class="w"> </span><span class="nx">form</span><span class="p">.</span><span class="nx">elements</span><span class="p">[</span><span class="mf">0</span><span class="p">].</span><span class="nx">value</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">});</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">      </span><span class="p">};</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kd">const</span><span class="w"> </span><span class="nx">control</span><span class="w"> </span><span class="k">of</span><span class="w"> </span><span class="nx">form</span><span class="p">.</span><span class="nx">elements</span><span class="p">)</span><span class="w"> </span><span class="nx">control</span><span class="p">.</span><span class="nx">disabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">!</span><span class="nx">live</span><span class="p">;</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">form</span><span class="p">;</span>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">  </span><span class="p">},</span>
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="p">});</span>
+</code></pre></div>
+<h3 id="which-carrier-should-the-server-use">Which carrier should the server use?<a class="headerlink" href="#which-carrier-should-the-server-use" title="Permanent link">&para;</a></h3>
+<p>AG-UI leaves exactly two payload names open, and they are not
+interchangeable:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Carrier</th>
+<th>Reaches</th>
+<th>Persisted</th>
+<th>Replayed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Content</strong></td>
+<td><code>ACTIVITY_SNAPSHOT</code></td>
+<td>the transcript</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td><strong>Imperative</strong></td>
+<td><code>CUSTOM</code></td>
+<td>your page, as <a href="../host-seams/#host-seams-the-spa-story"><code>ag-ui-custom</code></a></td>
+<td>no</td>
+<td>no</td>
+</tr>
+</tbody>
+</table>
+<p>⇒ <strong>Content has a place in the conversation and should come back. An imperative
+has no place and no meaning once acted on</strong> — replaying "refetch the board" on
+every thread load is a bug, not a feature. If it has to survive a reload, it is
+content.</p>
+<h3 id="finding-out-what-arrived">Finding out what arrived<a class="headerlink" href="#finding-out-what-arrived" title="Permanent link">&para;</a></h3>
+<p>An activity nobody registered for draws nothing and logs nothing — that is the
+protocol's own answer, and warning would fire on every forward-compatible
+server. But silence is hard to debug, so the names are readable:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">unhandledActivityTypes</span><span class="p">;</span><span class="w"> </span><span class="c1">// ["build_status", …]</span>
+</code></pre></div>
+<p>Note <code>"chart"</code> appears there until you call <code>enableCharts(["activity"])</code>, which
+is the honest answer to "I pushed a chart and nothing happened".</p>
+<h2 id="a2ui-surfaces">A2UI surfaces<a class="headerlink" href="#a2ui-surfaces" title="Permanent link">&para;</a></h2>
+<p>An agent can describe a small interface as A2UI 1.0 components: a form, a
+choice, a card with a button. The <code>./a2ui</code> entry draws it from the data the
+server pushes, never from markup, and sends what the user does back as a run.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">registerA2ui</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">"@artooi/agents-web-components/a2ui"</span><span class="p">;</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="kd">const</span><span class="w"> </span><span class="nx">chat</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">document</span><span class="p">.</span><span class="nx">querySelector</span><span class="p">(</span><span class="s2">"ag-ui-chat"</span><span class="p">);</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="nx">registerA2ui</span><span class="p">(</span><span class="nx">chat</span><span class="p">,</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span><span class="nx">onError</span><span class="o">:</span><span class="w"> </span><span class="p">(</span><span class="nx">message</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">console</span><span class="p">.</span><span class="nx">warn</span><span class="p">(</span><span class="nx">message</span><span class="p">),</span><span class="w"> </span><span class="c1">// the default</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="p">});</span>
+</code></pre></div>
+<p><code>registerA2ui</code> does three things:</p>
+<ul>
+<li>registers the <code>a2ui-surface</code> activity renderer, the activity type
+  <code>@ag-ui/a2ui-middleware</code> and django-ag-ui's <code>render_a2ui</code> tool send;</li>
+<li>posts this renderer's catalog as a context entry on every run, under the
+  description the server looks it up by, so the server offers the agent a
+  <code>render_a2ui</code> tool for exactly these components. The catalog is
+  <code>a2ui/v1/catalog.json</code> in this package, and its id is that file's URL;</li>
+<li>starts a run for each action a surface sends, with the action in
+  <code>forwardedProps.a2uiAction</code> and the user turn django-ag-ui stores for it, so
+  the bubble drawn now is the one a reload shows.</li>
+</ul>
+<p>It returns the function that stops posting the catalog.</p>
+<p>The catalog is the A2UI basic catalog's twelve components (Text, Image, Icon,
+Row, Column, List, Card, Divider, Button, TextField, CheckBox, ChoicePicker)
+and fourteen functions (required, regex, length, numeric, email, formatString,
+formatNumber, formatCurrency, formatDate, pluralize, openUrl, and, or, not).</p>
+<p>An Image loads only an <code>http:</code> or <code>https:</code> URL, an image <code>data:</code> URL, or a
+relative path on the page's own host; <code>openUrl</code> takes the same, minus <code>data:</code>.
+Anything else the agent names draws no image and opens nothing.</p>
+<p>A surface restored from a stored conversation is drawn inert: its buttons do
+nothing and its inputs are disabled, because acting on it would send an action
+from a turn long past.</p>
+<p><strong>Errors go to the host.</strong> A2UI's <code>error</code> message (<code>VALIDATION_FAILED</code>,
+<code>EXPRESSION_ERROR</code>, <code>EXECUTION_ERROR</code>, <code>INTEGRITY_ERROR</code>) is meant for the
+agent, but neither <code>@ag-ui/a2ui-middleware</code> nor django-ag-ui carries one back
+yet. So a live surface hands each error, as the spec's
+<code>{version: "1.0", error: {code, surfaceId, message, path?}}</code>, to <code>onError</code>
+(by default <code>console.warn</code>) once per draw of the surface; a redraw with new
+content reports again. It draws a notice where it could not draw, and starts
+no run. A component or a catalog this renderer does not hold is drawn as an
+<code>a2ui-notice</code>.</p>
+<h3 id="vendoring-it">Vendoring it<a class="headerlink" href="#vendoring-it" title="Permanent link">&para;</a></h3>
+<p><code>./a2ui/bundle</code> (<code>dist/agents-web-components.a2ui.bundle.js</code>) is the same entry
+as one file with everything inlined, to load beside the main bundle. It reaches
+the element only through the <code>chat</code> it is handed, so it carries none of it. It
+does carry its own copy of <code>marked</code> and DOMPurify, since Text draws markdown
+through the same sanitiser as the transcript.</p>
+<h3 id="styling-a-surface">Styling a surface<a class="headerlink" href="#styling-a-surface" title="Permanent link">&para;</a></h3>
+<p>Each surface is an <code>a2ui-surface</code> part; every component on it carries
+<code>part="a2ui-&lt;kebab-case type&gt;"</code> and <code>data-a2ui-id</code>, its id on the surface. The
+parts are <code>a2ui-text</code>, <code>a2ui-image</code>, <code>a2ui-icon</code>, <code>a2ui-row</code>, <code>a2ui-column</code>,
+<code>a2ui-list</code>, <code>a2ui-card</code>, <code>a2ui-divider</code>, <code>a2ui-button</code>, <code>a2ui-text-field</code>,
+<code>a2ui-check-box</code> and <code>a2ui-choice-picker</code>. A variant shows on the component as a
+<code>data-</code> attribute: <code>data-variant</code> on Text and Image, <code>data-fit</code> on Image,
+<code>data-justify</code> and <code>data-align</code> on Row and Column, <code>data-align</code> and
+<code>data-direction</code> on List, <code>data-axis</code> on Divider, and <code>data-unknown</code> on an Icon
+whose name has no glyph. A slot whose child has not arrived yet
+holds a hidden <code>a2ui-placeholder</code>. An <code>@accessibility</code> label or description
+lands on the component's native control where it has one (the <code>&lt;button&gt;</code>, the
+<code>&lt;input&gt;</code>), and on the component otherwise. Inside the inputs:</p>
+<ul>
+<li>Button: <code>a2ui-button-control</code>, <code>a2ui-button-message</code>;</li>
+<li>TextField: <code>a2ui-text-field-label</code>, <code>a2ui-text-field-input</code>,
+  <code>a2ui-text-field-message</code>;</li>
+<li>CheckBox: <code>a2ui-check-box-label</code>, <code>a2ui-check-box-input</code>,
+  <code>a2ui-check-box-text</code>, <code>a2ui-check-box-message</code>;</li>
+<li>ChoicePicker: <code>a2ui-choice-picker-label</code>, <code>a2ui-choice-picker-filter</code>,
+  <code>a2ui-choice-picker-options</code>, <code>a2ui-choice-picker-option</code>,
+  <code>a2ui-choice-picker-input</code>, <code>a2ui-choice-picker-option-text</code>,
+  <code>a2ui-choice-picker-message</code>.</li>
+</ul>
+<p>The surfaces read the element's theme tokens, so a theme set on <code>&lt;ag-ui-chat&gt;</code>
+reaches them.</p>
+<h2 id="mcp-apps-views">MCP Apps views<a class="headerlink" href="#mcp-apps-views" title="Permanent link">&para;</a></h2>
+<p>A tool on an MCP server can come with a view: an HTML resource the
+<a href="https://github.com/modelcontextprotocol/ext-apps">MCP Apps</a> extension draws
+beside its result. The agent pushes an <code>mcp-apps</code> activity naming the view and
+its server; the <code>./mcp-apps</code> entry frames the view and speaks the host's end of
+its bridge. Without it the element draws a notice that the view cannot be shown.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">registerMcpApps</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">"@artooi/agents-web-components/mcp-apps"</span><span class="p">;</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="kd">const</span><span class="w"> </span><span class="nx">chat</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">document</span><span class="p">.</span><span class="nx">querySelector</span><span class="p">(</span><span class="s2">"ag-ui-chat"</span><span class="p">);</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="nx">registerMcpApps</span><span class="p">(</span><span class="nx">chat</span><span class="p">,</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s2">"/agent/mcp-apps/"</span><span class="p">,</span><span class="w"> </span><span class="c1">// the host's route</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span><span class="nx">sandboxProxyUrl</span><span class="o">:</span><span class="w"> </span><span class="s2">"https://sandbox.example.com/proxy.html"</span><span class="p">,</span><span class="w"> </span><span class="c1">// optional, another origin</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="p">});</span>
+</code></pre></div>
+<p>The route takes a JSON <code>POST</code> of <code>{ serverId, method, params }</code>, sent through
+<code>chat.request</code> so it carries the element's headers and credentials, and answers
+as django-ag-ui's does: <code>200</code> with <code>{ "result": ... }</code>, the MCP result object
+(a tool result with <code>isError</code> is still a <code>result</code>), or <code>{ "error": { "code",
+"message" } }</code> with a JSON-RPC code for a call it cannot relay, which a view's
+<code>tools/call</code> is answered with as it is. Any other status or body fails the call
+with <code>-32000</code>. <code>method</code> is <code>resources/read</code> (the view's HTML, read once per
+server and URI for the page) or <code>tools/call</code> (a tool the view calls). A toolset
+with no <code>id</code> sends no <code>serverId</code>, and its views draw the notice.</p>
+<p>The view is framed once it first scrolls into sight: in a <code>srcdoc</code> frame with
+<code>sandbox="allow-scripts"</code> and the view's CSP as the first <code>&lt;meta&gt;</code> of its head,
+or, with <code>sandboxProxyUrl</code>, in the proxy on its own origin. When the view leaves
+the document, in sight or not (a thread switch, a cleared conversation, or the
+chat itself removed), its frame and bridge go, and it is framed again if it
+returns. A <code>srcdoc</code> frame
+inherits the host page's CSP, so a host with a strict <code>script-src</code> sets a proxy.</p>
+<p>The package ships a proxy page, <code>@artooi/agents-web-components/mcp-apps/sandbox-proxy.html</code>
+(<code>dist/sandbox-proxy.html</code>): one static file with its script inline. Serve it as is on a
+second origin, one the page's own origin is not, and name its URL as <code>sandboxProxyUrl</code>. It
+puts the view in an inner <code>sandbox="allow-scripts"</code> frame with the view's CSP as the first
+<code>&lt;meta&gt;</code> of its head, so serve it with no CSP header of its own (an inner <code>srcdoc</code> frame
+inherits one) and let the host page's <code>frame-src</code> reach that origin.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># The static site served at https://sandbox.example.com, not the chat's origin.</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>cp<span class="w"> </span>node_modules/@artooi/agents-web-components/dist/sandbox-proxy.html<span class="w"> </span>sandbox-site/proxy.html
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nx">registerMcpApps</span><span class="p">(</span><span class="nx">chat</span><span class="p">,</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s2">"/agent/mcp-apps/"</span><span class="p">,</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="nx">sandboxProxyUrl</span><span class="o">:</span><span class="w"> </span><span class="s2">"https://sandbox.example.com/proxy.html"</span><span class="p">,</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="p">});</span>
+</code></pre></div>
+<p><strong>The bridge</strong> is JSON-RPC over <code>postMessage</code> (MCP Apps 2026-01-26), read only
+from the view's own frame:</p>
+<table>
+<thead>
+<tr>
+<th>The view sends</th>
+<th>The host</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ui/initialize</code></td>
+<td>answers with <code>hostContext</code>: <code>theme</code>, <code>styles.variables</code>, <code>locale</code>, <code>displayMode</code> (<code>inline</code> until it asks), <code>availableDisplayModes</code> (<code>["inline", "fullscreen"]</code> for a live view, <code>["inline"]</code> for a stored one), <code>containerDimensions</code> (inline, the frame's width and a <code>maxHeight</code> of 640; fullscreen, its <code>width</code> and <code>height</code>) and <code>platform: "web"</code></td>
+</tr>
+<tr>
+<td><code>ui/notifications/initialized</code></td>
+<td>sends <code>ui/notifications/tool-input</code> (the call's arguments), then <code>ui/notifications/tool-result</code></td>
+</tr>
+<tr>
+<td><code>ui/notifications/size-changed</code></td>
+<td>sets the frame's height, at most 640px; the view scrolls past it</td>
+</tr>
+<tr>
+<td><code>tools/call</code></td>
+<td>once the user allows it (below), sends it to the route with the view's <code>serverId</code> and answers its <code>result</code>, or its <code>error</code> with the route's code; declined, <code>-32000</code> "Tool call denied"</td>
+</tr>
+<tr>
+<td><code>ui/message</code></td>
+<td>once the user allows it (below), sends its text as the user's next message (<code>chat.sendMessage</code>); <code>isError</code> when nothing was sent; declined, <code>-32000</code> "Message sending denied"</td>
+</tr>
+<tr>
+<td><code>ui/open-link</code></td>
+<td>opens an <code>http(s)</code> URL in a <code>noopener</code> tab; <code>isError</code> for any other</td>
+</tr>
+<tr>
+<td><code>ui/request-display-mode</code></td>
+<td><code>fullscreen</code> fixes the view over the page in the same frame, which does not reload, with an exit control (string <code>mcpAppExitFullscreen</code>); Escape, that control or <code>inline</code> returns it to the transcript at its height. Answers the mode it is in after: the current one for <code>pip</code>, and for a stored or torn-down view</td>
+</tr>
+<tr>
+<td><code>ui/notifications/request-teardown</code></td>
+<td>sends <code>ui/resource-teardown</code>, then closes the view to the notice</td>
+</tr>
+<tr>
+<td>anything else</td>
+<td>answers <code>-32601</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>tools/call</code>, <code>ui/message</code> and <code>ui/open-link</code> are refused while the view is
+drawn from a stored conversation rather than a live run, and once it has asked
+to be torn down. Once initialised, the
+view is sent <code>ui/notifications/host-context-changed</code> with what changed when the
+<code>theme</code> attribute, the system scheme, the frame's width or its display mode does
+(<code>displayMode</code> and <code>containerDimensions</code>, however it was switched). Fullscreen
+shows the view's box as a manual popover, in the top layer, so it covers the
+viewport above the host page's own layers whatever <code>--ag-ui-z-index</code> is and in
+every placement; a browser without popover (Firefox before 125) draws it as a
+fixed box inside the host's stacking context instead. One
+view per registration is fullscreen at a time; a second's request returns the
+first inline.</p>
+<p><strong>A view never acts unseen.</strong> A view's script runs as soon as it is framed and
+can post at any moment, and the host cannot tell a click inside a cross-origin
+sandboxed frame from a script: user activation there is not visible to the page.
+So every <code>tools/call</code> and <code>ui/message</code> of a live view waits for the user in a
+confirmation card under the view's frame (pinned under it while fullscreen),
+which names the tool and its arguments, or shows the exact text to be sent.
+Confirm runs it; Cancel answers the view <code>-32000</code>. The card takes the
+confirmation card's styles and the <code>confirm</code> part (plus <code>mcp-app-consent</code>), its
+prompts are the strings <code>mcpAppConfirmTool</code> and <code>mcpAppConfirmMessage</code>, and it
+takes no focus, so a key meant for the composer cannot answer it. A view's
+requests are asked one card at a time, in order; a card still waiting when the
+view asks to be torn down, or leaves, is declined, and a request allowed after
+the view went stored or asked to be torn down is refused. There is no setting
+to turn it off. The MCP Apps specification allows exactly this: a host "MAY
+request user consent" for <code>ui/message</code>, and may subject other requests "to
+further user approval".</p>
+<p>A view that navigates its own frame is closed to the notice: a <code>srcdoc</code> frame
+seen by the host, a proxied one reported by the shipped proxy page with
+<code>ui/notifications/sandbox-view-navigated</code>.</p>
+<p><code>styles.variables</code> are the element's own tokens, resolved in the scheme drawn
+now, under the MCP Apps names: <code>--color-background-primary</code> (<code>--ag-ui-bg</code>),
+<code>--color-text-primary</code> (<code>--ag-ui-fg</code>), <code>--color-border-primary</code>
+(<code>--ag-ui-border</code>), <code>--font-sans</code> (<code>--ag-ui-font</code>), <code>--border-radius-md</code>
+(<code>--ag-ui-radius</code>) and the shades between them, so a view themed from them
+follows the chat's theme.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "search.highlight", "search.share", "search.suggest", "content.code.copy", "content.action.edit", "toc.follow"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.a5f9d56c.min.js"></script>
+      
+    
+  </body>
+</html>

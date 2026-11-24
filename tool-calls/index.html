@@ -1,0 +1,1854 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Framework-free Web Components over the AG-UI protocol - chat, threads, inbox and an agents provider.">
+      
+      
+      
+        <link rel="canonical" href="https://artui.github.io/agents-web-components/tool-calls/">
+      
+      
+        <link rel="prev" href="../messages/">
+      
+      
+        <link rel="next" href="../server-pushed-ui/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
+    
+    
+      
+        <title>Tool calls and sub-agents - agents-web-components</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#tool-calls-and-sub-agents" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="agents-web-components" class="md-header__button md-logo" aria-label="agents-web-components" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            agents-web-components
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Tool calls and sub-agents
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Artui/agents-web-components" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Artui/agents-web-components
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="agents-web-components" class="md-nav__button md-logo" aria-label="agents-web-components" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    agents-web-components
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Artui/agents-web-components" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Artui/agents-web-components
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../authentication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authenticating requests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The chat
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    The chat
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../header-and-panel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Header, collapse and resizing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../messages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Messages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tool calls and sub-agents
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tool calls and sub-agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#tool-call-display-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tool-call display modes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tool-call display modes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#choosing-how-a-group-draws-its-calls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choosing how a group draws its calls
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-step-group" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The step group
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#drawing-a-cards-body-yourself" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Drawing a card's body yourself
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#delegated-sub-agents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Delegated sub-agents
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Delegated sub-agents">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#child-sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Child sessions
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#editing-a-gated-call-before-approving-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Editing a gated call before approving it
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../server-pushed-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    What the server draws
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../skills/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Skills and run notices
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../uploads/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File uploads
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Other elements
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Other elements
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../threads/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The conversation list
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents and the inbox
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../editors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The editors on a page of their own
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hosting
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Hosting
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../host-seams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Host seams (SPA)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../durability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Durability and resuming
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Look and language
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Look and language
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theming/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Theming, density and placement
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../i18n/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Internationalization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Public API surface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../building/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Building and compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Moving from ag-ui-web-component
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#tool-call-display-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tool-call display modes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tool-call display modes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#choosing-how-a-group-draws-its-calls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choosing how a group draws its calls
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-step-group" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The step group
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#drawing-a-cards-body-yourself" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Drawing a card's body yourself
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#delegated-sub-agents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Delegated sub-agents
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Delegated sub-agents">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#child-sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Child sessions
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#editing-a-gated-call-before-approving-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Editing a gated call before approving it
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/Artui/agents-web-components/edit/main/docs/tool-calls.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="tool-calls-and-sub-agents">Tool calls and sub-agents<a class="headerlink" href="#tool-calls-and-sub-agents" title="Permanent link">&para;</a></h1>
+<h2 id="tool-call-display-modes">Tool-call display modes<a class="headerlink" href="#tool-call-display-modes" title="Permanent link">&para;</a></h2>
+<p>How tool calls are drawn is set via the <code>data-tool-display</code> attribute (or <code>toolDisplay</code>
+property), one of <code>grouped</code> / <code>inline</code> / <code>minimal</code> / <code>compact</code> / <code>full</code> (default <code>grouped</code>; an
+absent or unknown value reads as <code>grouped</code>):</p>
+<ul>
+<li><code>grouped</code> — the default. A run's consecutive tool calls fold into one quiet row, <strong>"Worked
+  through 5 steps"</strong>, with a note such as <strong>"1 failed"</strong> beside it, and the calls one click down
+  as <code>full</code> cards, or in the mode <code>data-tool-group-display</code> names. Anything else in the turn (text, a confirmation, a question) ends the group, and
+  the next call starts a new one; a call's own rendered output does not. A group of one call shows that call's own label. See
+  <a href="#the-step-group">The step group</a>.</li>
+<li><code>inline</code> — the lightest mode: a single status row (icon + summary, no card chrome) with the
+  result behind its own toggle. Reads as one line of the answer — pairs with <a href="../theming/#the-answer-well">the answer
+  well</a>.</li>
+<li><code>minimal</code> — tool name + status pill only.</li>
+<li><code>compact</code> — name + status, with arguments <em>and</em> result behind a single collapsed toggle.</li>
+<li><code>full</code> — arguments visible, result behind the toggle. The default before <code>grouped</code>: set
+  <code>data-tool-display="full"</code> to keep per-call cards.</li>
+</ul>
+<p>Whichever mode is on, a settled card's body holds <strong>two labelled regions</strong> — <code>Arguments</code> and
+<code>Result</code> (or <code>Error</code> / <code>Declined</code>) — each with its own part and each pretty-printed. They are
+never run together into one block, so where the call ends and the answer begins is always
+visible. Style them via the <code>tool-card-args</code> / <code>tool-card-result</code> parts, their headings via
+<code>tool-card-section-label</code>, and the whole body via <code>tool-card-body</code>.</p>
+<p><strong>A card names its status as a part.</strong> <code>::part()</code> takes no attribute selector, so a rule on
+<code>tool-card-status</code> reaches every outcome alike. The card and its status pill each carry a modifier
+beside the base part, one of <code>pending</code>, <code>deferred</code>, <code>done</code>, <code>error</code>, <code>declined</code> or <code>interrupted</code>,
+and it is replaced whenever the status changes:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">ag-ui-chat</span><span class="p">::</span><span class="nd">part</span><span class="o">(</span><span class="nt">tool-card-error</span><span class="o">)</span><span class="w">        </span><span class="p">{</span><span class="w"> </span><span class="k">border-color</span><span class="p">:</span><span class="w"> </span><span class="kc">crimson</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">ag-ui-chat</span><span class="p">::</span><span class="nd">part</span><span class="o">(</span><span class="nt">tool-card-status-error</span><span class="o">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">font-weight</span><span class="p">:</span><span class="w"> </span><span class="mi">700</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<p><strong>The attribute is live.</strong> Changing <code>data-tool-display</code> between the four card modes restyles every
+card already in the transcript, the way <code>data-answer-well</code> does — the modes are pure visibility
+over one DOM shape, selected by the shadow CSS from the host attribute. Grouping is decided as
+each card is built: switching <strong>to</strong> <code>grouped</code> folds only the calls drawn afterwards, and
+switching <strong>away</strong> from it flattens the groups already drawn, by CSS, into exactly the cards the
+new mode builds (the group stops generating a box and its row is hidden).</p>
+<h3 id="choosing-how-a-group-draws-its-calls">Choosing how a group draws its calls<a class="headerlink" href="#choosing-how-a-group-draws-its-calls" title="Permanent link">&para;</a></h3>
+<p>Under <code>grouped</code>, an opened group draws its calls as <code>full</code> cards unless the
+<code>data-tool-group-display</code> attribute (or <code>toolGroupDisplay</code> property) names another of the card
+modes: <code>compact</code>, <code>minimal</code> or <code>inline</code>. Each draws the regions the flat card of that mode draws,
+laid out as a row of the group's list rather than as a boxed card. An absent or unknown value
+reads as <code>full</code>, so nothing changes for a host that does not set it.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span> <span class="na">data-tool-group-display</span><span class="o">=</span><span class="s">"compact"</span><span class="p">&gt;&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
+</code></pre></div>
+<p>It is read only under <code>grouped</code>. Under one of the four card modes the groups are flattened into
+that mode's cards and the inner value is ignored; switching back to <code>grouped</code> applies it again.
+It is live like the outer attribute: changing it restyles groups already in the transcript.</p>
+<p>A call waiting on an approval shows its arguments and its Approve and Deny buttons in every inner
+mode, as it does in every card mode, and Approve takes focus when the group opens for it.</p>
+<h3 id="the-step-group">The step group<a class="headerlink" href="#the-step-group" title="Permanent link">&para;</a></h3>
+<p>Under <code>grouped</code> the row reads, by state:</p>
+<table>
+<thead>
+<tr>
+<th>State (<code>data-state</code> on the <code>tool-group</code> part)</th>
+<th>Label</th>
+<th>Mark</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>running</code></td>
+<td>"Working through 3 steps", and the running step's label as a note</td>
+<td>spinner</td>
+</tr>
+<tr>
+<td><code>waiting</code></td>
+<td>"3 steps", with "1 waiting for you"</td>
+<td>accent dot</td>
+</tr>
+<tr>
+<td><code>done</code></td>
+<td>"Worked through 3 steps"</td>
+<td>check</td>
+</tr>
+<tr>
+<td><code>error</code></td>
+<td>"Worked through 3 steps", with "1 failed" in the danger colour</td>
+<td>error mark</td>
+</tr>
+</tbody>
+</table>
+<p>"N declined" is added as a note whenever a step was declined. <code>data-count</code> carries the number of
+steps and <code>data-open</code> whether the cards are showing; the head is a button with <code>aria-expanded</code>.</p>
+<ul>
+<li><strong>It opens itself while a step waits on you.</strong> A server-side approval renders inside the gated
+  call's own card, so a folded group would hide the question it is asking: the group opens when a
+  step goes <code>deferred</code>, once per wait, and stays folded if you fold it again. It opens before the
+  approval is drawn, so the Approve button takes focus and scrolls into view. A client-side
+  confirmation and an <code>ask_user</code> question render in the answer beside the group rather than inside
+  a card, so they are in view without it opening; the row still reads <code>waiting</code> ("1 waiting for
+  you") while one is open, as the card carries a <code>data-asking</code> flag for the group to read, and its
+  <code>data-status</code> stays <code>pending</code>.</li>
+<li><strong>A one-step group is named after its call, and the card's head is not repeated inside.</strong> A turn
+  with exactly one call reads as that call's label ("Fill field"), and the opened list shows the
+  card without its own <code>tool-card-head</code> (the row's state mark and notes carry the status). The
+  Details toggle and arguments stay, except under <code>data-tool-group-display="minimal"</code>, where the
+  card is only its head: there the row draws no chevron, though it still opens for an approval. A
+  card display mode keeps the head. A run that grows to two calls brings both heads back.</li>
+<li><strong>A running sub-agent does not open it.</strong> The row keeps its spinner and names the delegation
+  instead, "Delegated to researcher" (the <code>subAgentDelegatedTo</code> string).</li>
+<li><strong>Repeated labels are told apart.</strong> Two "Fill field" steps read "Fill field" and "Fill field
+  (2)": the ordinal is an element of its own (part <code>tool-card-repeat</code>) beside the card's name, so
+  <code>tool-card-name</code> is never rewritten, and a card mode hides the ordinal.</li>
+<li><strong>Rendered output stays in view.</strong> A tool's <code>render</code> output is placed after the group, in call
+  order, rather than inside it, so a chart is never one click down. It does not end the group: a
+  later call joins the group above it, which is also how a restored conversation draws the run.</li>
+</ul>
+<p>Parts: <code>tool-group</code> (with the state beside it as <code>tool-group-waiting</code>, <code>tool-group-running</code>,
+<code>tool-group-done</code> or <code>tool-group-error</code>), <code>tool-group-head</code> (the button), <code>tool-group-icon</code>, <code>tool-group-label</code>,
+<code>tool-group-meta</code> (holding one <code>.tool-group-note</code> per note), <code>tool-group-list</code> (the cards), and
+<code>tool-card-repeat</code> on a repeated step. The focus ring is <code>--ag-ui-ring</code> and the disclosure chevron
+<code>--ag-ui-ico-chevron</code>. Strings (<code>strings</code> / <code>data-strings</code>): <code>toolGroupSteps</code>,
+<code>toolGroupWorking</code>, <code>toolGroupWorked</code> (each with <code>{count}</code>, always 2 or more), <code>toolGroupWaiting</code>,
+<code>toolGroupFailed</code>, <code>toolGroupDeclined</code> (each with <code>{count}</code>) and <code>toolStepRepeat</code> (with <code>{n}</code>).</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="cm">&lt;!-- Keep per-call cards, as before grouped was the default --&gt;</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span> <span class="na">data-tool-display</span><span class="o">=</span><span class="s">"full"</span><span class="p">&gt;&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
+</code></pre></div>
+<h3 id="drawing-a-cards-body-yourself">Drawing a card's body yourself<a class="headerlink" href="#drawing-a-cards-body-yourself" title="Permanent link">&para;</a></h3>
+<p>A thirty-field result is a wall of JSON where a host wanted a table, or a
+sentence. <code>formatToolPayload</code> is the seam: it is asked about each region of each
+card and may return a <code>Node</code> to take it over, a <code>string</code> to replace its text, or
+<code>null</code> to leave the built-in pretty-print alone.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">formatToolPayload</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">payload</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">payload</span><span class="p">.</span><span class="nx">kind</span><span class="w"> </span><span class="o">!==</span><span class="w"> </span><span class="s2">"result"</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nx">payload</span><span class="p">.</span><span class="nx">toolName</span><span class="w"> </span><span class="o">!==</span><span class="w"> </span><span class="s2">"list_orders"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span><span class="w"> </span><span class="c1">// everything else keeps the default rendering</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">table</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">document</span><span class="p">.</span><span class="nx">createElement</span><span class="p">(</span><span class="s2">"table"</span><span class="p">);</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="c1">// ... build it from JSON.parse(payload.text)</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="nx">table</span><span class="p">;</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="p">};</span>
+</code></pre></div>
+<p>Both halves come through the same hook, told apart by <code>kind</code>: <code>arguments</code>
+carries the parsed record the call was made with, <code>result</code> the raw string the
+tool returned plus the outcome it settled on. A region a formatter took over is
+marked <code>data-formatted</code>, which relaxes the preformatted whitespace the default
+JSON block relies on — a table would otherwise inherit it as mangled cell
+spacing. Whitespace only: the card's face, frame and scroll cap stay, so one long
+payload still cannot stretch the transcript, and a host wanting different
+typography restyles the <code>tool-card-result</code> part.</p>
+<p>This is <strong>presentation, not translation.</strong> The card and the model already read
+separate copies of a tool result — the model's is maintained by <code>@ag-ui/client</code>
+from the same event — so a formatter changes what the person reads and nothing
+the agent reads. That is what makes restyling safe here, and it is also why
+<em>rewording</em> belongs on the server: renamed there, the new wording reaches the
+model's prose too, instead of leaving the card disagreeing with the answer beside
+it. A returned string is set as text, never parsed as markup — this is not a
+second HTML channel into the transcript.</p>
+<p>A gated call carries the decision (<code>approved by you</code> / <code>declined by you</code>, part
+<code>tool-card-decision</code>, attribute <code>data-decision</code>) — from the client-side confirmation card and
+from the server-side approval interrupt alike. The prompt itself disappears once answered: a
+prompt and a record are different objects, and the record is the card.</p>
+<p><strong>The annotation is session-scoped</strong>, like the "run interrupted" notice. AG-UI carries no
+approval message — the answer rides <code>resume[]</code> as transient run input — so a reload restores the
+tool call and its result but not the note that a human waved it through. If you need "who
+approved what" durably, that is an audit concern rather than a transcript one; record it
+server-side.</p>
+<p>A call no person was asked about can still have been approved: by a reviewer model, or by a
+routine's standing grant. No interrupt is raised for it, so the tool call card carries the mark.
+When a result's <code>metadata.answered_by</code> (django-ag-ui 0.81.0 or later stamps it, live and on the
+stored tool message) starts <code>reviewer:</code> or <code>routine:</code>, the card gets
+<code>data-answered-by="reviewer"</code> or <code>"routine"</code> and a note in its head (part
+<code>tool-card-answered-by</code>, strings <code>answeredByReviewer</code> / <code>answeredByRoutine</code>). Any other value,
+and a result without the key, render exactly as before. Unlike the decision, the mark survives a
+reload, because it is read off the stored message. It is display only: the server's audit record
+is the authority.</p>
+<p>If a tool's schema carries an <code>x-summary</code> string (use <code>X_SUMMARY_KEY</code>), the card shows it on the
+label instead of the raw tool name.</p>
+<p>Every card leads with a <strong>status icon</strong> drawn entirely in CSS — a spinning ring while the call
+runs, then a check / cross / slash / dotted ring on success / error / decline / not finished.
+Re-theme it via custom properties (or the <code>tool-card-icon</code> part): <code>--ag-ui-tool-icon-done</code>,
+<code>--ag-ui-tool-icon-error</code>, <code>--ag-ui-tool-icon-declined</code>, <code>--ag-ui-tool-icon-interrupted</code>
+(quoted-string glyphs) and <code>--ag-ui-tool-spin-duration</code> (spinner
+speed; the spin respects <code>prefers-reduced-motion</code>).</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span> <span class="na">data-tool-display</span><span class="o">=</span><span class="s">"compact"</span><span class="p">&gt;&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
+</code></pre></div>
+<h2 id="delegated-sub-agents">Delegated sub-agents<a class="headerlink" href="#delegated-sub-agents" title="Permanent link">&para;</a></h2>
+<p>A run that hands work to a sub-agent reads as a stall. The parent's
+<code>delegate_task</code> card sits at "running…" for the child's entire duration —
+however many tools the child calls, however long it takes — with nothing on
+screen to say anything is happening.</p>
+<p>If your server narrates that, the component draws it. The wire is an ordinary
+AG-UI <code>CUSTOM</code> event named <code>ag_ui.subagent</code>, carrying:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>delegationId</code></td>
+<td>the <strong>parent's own <code>delegate_task</code> tool-call id</strong> — not the child's run id</td>
+</tr>
+<tr>
+<td><code>agent</code></td>
+<td>the child agent's name</td>
+</tr>
+<tr>
+<td><code>phase</code></td>
+<td>one of <code>started</code>, <code>tool_call</code>, <code>tool_result</code>, <code>finished</code>, <code>failed</code></td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>a pre-rendered line, ready to show</td>
+</tr>
+<tr>
+<td><code>tool</code></td>
+<td><code>toolCallId</code>, <code>name</code> and <code>ok</code>, on the two tool phases only</td>
+</tr>
+</tbody>
+</table>
+<p>Exactly one <code>started</code> opens a delegation and exactly one <code>finished</code> or <code>failed</code>
+closes it. <code>ok</code> is a tri-state: <code>null</code> while the child's call runs, <code>true</code> on a
+result it accepted, <code>false</code> on one that came back to it.</p>
+<p>Because the key is the <em>parent's</em> call id, the surface attaches to a card that
+already exists rather than floating a second element with the same identity: one
+<strong>collapsed row per delegation</strong>, live, carrying the server's <code>status</code> line and
+nothing else, expanding onto the child's own tool calls. A ten-step child costs
+one row until somebody opens it, and there is no second visual language — it
+reads the way tool cards already read.</p>
+<p><code>status</code> is why the collapsed row needs no wording of its own. The structured
+keys are there for a host that would rather write its own.</p>
+<p>The row shows in <strong>every</strong> <a href="#tool-call-display-modes">display mode</a>, including
+<code>minimal</code>. It sits outside the card body rather than in it, because the body is
+what the density modes hide — and a live progress line that only appeared in
+<code>full</code> would leave exactly the stall it exists to end. Same reasoning that shows
+a deferred card's arguments whatever the mode.</p>
+<p><strong>A failure carries no exception text on this channel, deliberately</strong> — the same
+reasoning that redacts a <code>RUN_ERROR</code>, since an exception's words are written for
+an operator. The detail rides the ordinary tool result for that delegation, which
+lands in the same card's <code>Result</code> region a few pixels below. Nothing here invents
+words the server declined to send.</p>
+<p><strong>None of it is persisted.</strong> A <code>CUSTOM</code> event never enters the message list, so
+nothing replays on a thread restore — which is the right half of the
+<a href="../server-pushed-ui/#which-carrier-should-the-server-use">carrier split</a>: a delegation that was live
+an hour ago is not live now, and replaying its progress would be a lie about a
+run that is over. Reload mid-run and the tool card is still there; the nested
+detail is not. That is the intended behaviour.</p>
+<p>Like <code>ag_ui.invalidate</code>, this name is <strong>routed</strong> rather than forwarded: it draws
+itself and does not also arrive as an <code>ag-ui-custom</code> event. Every other name
+still reaches your page untouched.</p>
+<p>Style it through <code>tool-card-subagent</code> (the region inside the card), <code>subagent</code>,
+<code>subagent-row</code>, <code>subagent-icon</code>, <code>subagent-status</code>, <code>subagent-steps</code>,
+<code>subagent-step</code>, <code>subagent-step-icon</code> and <code>subagent-step-name</code>. The two glyph
+states reuse the card's own <code>--ag-ui-tool-icon-done</code> / <code>--ag-ui-tool-icon-error</code>
+properties and its spinner speed, so re-theming the cards re-themes these. The
+row's own chrome comes from <code>subAgentWorking</code> and <code>subAgentSteps</code> in
+<a href="../i18n/#internationalization-i18n"><code>UiStrings</code></a>; everything else on the row is the
+server's text.</p>
+<h3 id="child-sessions">Child sessions<a class="headerlink" href="#child-sessions" title="Permanent link">&para;</a></h3>
+<p>A child session (django-spec-agents' <code>start_session</code>) runs headless in a thread
+of its own and sends nothing into the parent's stream. What persists is its
+receipt, the call's tool result (<code>{ agent_id, thread_id, run_id, note }</code>), so the
+link is read from that, on the live result and on a restore alike: <strong>the card
+that started a child links to the child's thread, and still does after a
+reload.</strong> A refusal, or any other result, draws no link.</p>
+<ul>
+<li><strong>A child that needs you.</strong> When the thread list the chat holds (the drawer's
+  listing, or <code>data-thread-status</code>'s watch) shows the child's row <code>waiting</code>, the
+  link reads <code>childSessionNeedsYou</code> ("The researcher task needs you") instead of
+  <code>childSessionOpen</code>, and carries <code>data-status</code>. It still only opens the child:
+  the parent never draws the child's approval or any control that answers it.</li>
+<li><strong>The breadcrumb.</strong> When the thread on screen is a child (django-ag-ui 0.86.0
+  lists <code>parent</code> on its row, read onto <code>ThreadMeta.parent</code>), a line between the
+  header and the transcript reads <code>parentThread</code> ("From {title}"), or
+  <code>parentThreadUnlisted</code> when the list does not hold the parent, and opens it.</li>
+<li><strong>The drawer</strong> nests each child under its parent's row (<code>drawer-row-child</code>,
+  inside a <code>drawer-children</code> group), in the parent's date group whatever the
+  child's own date. A child whose parent is not listed, or that a filter matched
+  without its parent, stands at the top level.</li>
+</ul>
+<p><strong>Opening a thread asks first.</strong> A link or the breadcrumb dispatches
+<strong><code>ag-ui-open-thread</code></strong> (<code>OPEN_THREAD_EVENT</code>, detail <code>{ agentId, threadId }</code>,
+typed <code>OpenThreadDetail</code>), bubbling, composed and cancelable. <code>agentId</code> is the
+receipt's <code>agent_id</code>, or the parent's store <code>scope</code> (<code>null</code> when unscoped). The
+chat cannot tell which agent it serves, so unless a listener calls
+<code>preventDefault()</code> it then opens the thread in place, as a drawer pick does,
+letting go of a run in flight. A host whose child runs on another agent's mount
+takes the event, opens that thread where it lives, and prevents the default (under an
+<a href="../agents/#several-agents-under-one-provider"><code>&lt;ag-ui-agents&gt;</code> provider</a> that is done for a listed agent):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">addEventListener</span><span class="p">(</span><span class="s2">"ag-ui-open-thread"</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="nx">event</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">detail</span><span class="p">.</span><span class="nx">agentId</span><span class="w"> </span><span class="o">!==</span><span class="w"> </span><span class="kc">null</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nx">event</span><span class="p">.</span><span class="nx">detail</span><span class="p">.</span><span class="nx">agentId</span><span class="w"> </span><span class="o">!==</span><span class="w"> </span><span class="s2">"assistant"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nx">event</span><span class="p">.</span><span class="nx">preventDefault</span><span class="p">();</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nx">openAgentThread</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">detail</span><span class="p">.</span><span class="nx">agentId</span><span class="p">,</span><span class="w"> </span><span class="nx">event</span><span class="p">.</span><span class="nx">detail</span><span class="p">.</span><span class="nx">threadId</span><span class="p">);</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="p">});</span>
+</code></pre></div>
+<p>Nothing to opt into. The breadcrumb and the needs-you wording wait for a list:
+after a reload straight onto a child under a remote store, that is the first
+drawer open, switch or <code>data-thread-status</code> tick.</p>
+<h2 id="editing-a-gated-call-before-approving-it">Editing a gated call before approving it<a class="headerlink" href="#editing-a-gated-call-before-approving-it" title="Permanent link">&para;</a></h2>
+<p>AG-UI's resume payload carries <code>editedArgs</code>, and the protocol gates it on the
+agent's own <code>approveWithEdits</code> capability. The approval card can offer it:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">approveWithEdits</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="p">;</span><span class="w"> </span><span class="c1">// your server accepts editedArgs</span>
+</code></pre></div>
+<p><strong>Off by default, and an assertion about your server rather than a
+negotiation</strong> — capabilities are not on the wire this component reads, so it
+cannot check. Turned on against a server that ignores <code>editedArgs</code>, a user would
+edit arguments it silently discards, which is worse than not offering.</p>
+<p>The card then shows the call's arguments as editable JSON. <code>editedArgs</code> rides
+the resume payload <strong>only when something actually changed</strong>, so a server can tell
+"approved as proposed" from "approved, but like this" without diffing what it
+already sent. Unparseable JSON, or JSON that is not an object, keeps the card
+open with the reason on it rather than approving the original behind the user's
+back.</p>
+<p>Only offered for an interrupt naming a tool call this component holds a card
+for — the card is where the arguments still are.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "search.highlight", "search.share", "search.suggest", "content.code.copy", "content.action.edit", "toc.follow"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.a5f9d56c.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,2755 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Framework-free Web Components over the AG-UI protocol - chat, threads, inbox and an agents provider.">
+      
+      
+      
+        <link rel="canonical" href="https://artui.github.io/agents-web-components/theming/">
+      
+      
+        <link rel="prev" href="../durability/">
+      
+      
+        <link rel="next" href="../i18n/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
+    
+    
+      
+        <title>Theming, density and placement - agents-web-components</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#theming-density-and-placement" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="agents-web-components" class="md-header__button md-logo" aria-label="agents-web-components" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            agents-web-components
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Theming, density and placement
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Artui/agents-web-components" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Artui/agents-web-components
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="agents-web-components" class="md-nav__button md-logo" aria-label="agents-web-components" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    agents-web-components
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Artui/agents-web-components" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Artui/agents-web-components
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../authentication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authenticating requests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The chat
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    The chat
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../header-and-panel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Header, collapse and resizing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../messages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Messages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tool-calls/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tool calls and sub-agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../server-pushed-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    What the server draws
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../skills/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Skills and run notices
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../uploads/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File uploads
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Other elements
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Other elements
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../threads/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The conversation list
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents and the inbox
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../editors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The editors on a page of their own
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hosting
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Hosting
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../host-seams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Host seams (SPA)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../durability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Durability and resuming
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Look and language
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Look and language
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Theming, density and placement
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Theming, density and placement
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#themes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Themes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Themes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#text-on-the-accent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Text on the accent
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#keeping-a-brand-accent-on-the-header" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keeping a brand accent on the header
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#overriding-a-theme-lightest-layer-first" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overriding a theme, lightest layer first
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Overriding a theme, lightest layer first">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-tokens" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (a) Tokens
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b-parts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (b) Parts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c-a-theme-of-your-own" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (c) A theme of your own
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d-extrastyles-the-last-mile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (d) extraStyles: the last mile
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#small-viewports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Small viewports
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-conversation-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The conversation list
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reserving-the-space-your-own-chrome-occupies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reserving the space your own chrome occupies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-to-put-the-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where to put the variables
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parts-and-slots" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parts and slots
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#header-and-launcher-icon" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Header and launcher icon
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sidebar-placement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sidebar placement
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#page-placement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Page placement
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Page placement">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-greeting-on-an-empty-page" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The greeting on an empty page
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-answer-well" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The answer well
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#model-reasoning-thoughts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model reasoning (thoughts)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-composer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The composer
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#motion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Motion
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#voice-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Voice input
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#theme-toggle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Theme toggle
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../i18n/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Internationalization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Public API surface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../building/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Building and compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Moving from ag-ui-web-component
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#themes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Themes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Themes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#text-on-the-accent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Text on the accent
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#keeping-a-brand-accent-on-the-header" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keeping a brand accent on the header
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#overriding-a-theme-lightest-layer-first" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overriding a theme, lightest layer first
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Overriding a theme, lightest layer first">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-tokens" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (a) Tokens
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b-parts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (b) Parts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c-a-theme-of-your-own" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (c) A theme of your own
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d-extrastyles-the-last-mile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (d) extraStyles: the last mile
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#small-viewports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Small viewports
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-conversation-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The conversation list
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reserving-the-space-your-own-chrome-occupies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reserving the space your own chrome occupies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-to-put-the-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where to put the variables
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parts-and-slots" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parts and slots
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#header-and-launcher-icon" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Header and launcher icon
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sidebar-placement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sidebar placement
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#page-placement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Page placement
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Page placement">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-greeting-on-an-empty-page" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The greeting on an empty page
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-answer-well" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The answer well
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#model-reasoning-thoughts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model reasoning (thoughts)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-composer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The composer
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#motion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Motion
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#voice-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Voice input
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#theme-toggle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Theme toggle
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/Artui/agents-web-components/edit/main/docs/theming.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="theming-density-and-placement">Theming, density, and placement<a class="headerlink" href="#theming-density-and-placement" title="Permanent link">&para;</a></h1>
+<p>The chat shell is styled inside its Shadow DOM and exposes a large set of <code>--ag-ui-*</code> CSS custom
+properties (colors, status, surface, spacing, layout), so you theme it from outside without
+piercing the shadow boundary. Set them anywhere above the element and they inherit in — on the
+element itself, on a wrapper, or on <code>:root</code> for a whole page. The closest declaration wins, the
+way any inherited CSS property behaves:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c">/* All three work. The most specific one that applies wins. */</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="p">:</span><span class="nd">root</span><span class="w">      </span><span class="p">{</span><span class="w"> </span><span class="nv">--ag-ui-accent</span><span class="p">:</span><span class="w"> </span><span class="mh">#4f46e5</span><span class="p">;</span><span class="w"> </span><span class="p">}</span><span class="w">  </span><span class="c">/* whole page */</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">.</span><span class="nc">chat-dock</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">--ag-ui-accent</span><span class="p">:</span><span class="w"> </span><span class="mh">#0f766e</span><span class="p">;</span><span class="w"> </span><span class="p">}</span><span class="w">  </span><span class="c">/* one region */</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nt">ag-ui-chat</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">--ag-ui-accent</span><span class="p">:</span><span class="w"> </span><span class="mh">#b91c1c</span><span class="p">;</span><span class="w"> </span><span class="p">}</span><span class="w">  </span><span class="c">/* one widget */</span>
+</code></pre></div>
+<blockquote>
+<p>Until 0.20.x the defaults were declared on <code>:host</code>, which set them <em>on the element</em> — and an
+element's own value beats anything inherited from an ancestor, so only the <code>ag-ui-chat { … }</code>
+form did anything and the wrapper form silently did nothing. The defaults now sit behind an
+internal alias, so all three forms work.</p>
+</blockquote>
+<p>A few of the knobs, at Quiet's light values:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">ag-ui-chat</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nv">--ag-ui-accent</span><span class="p">:</span><span class="w"> </span><span class="mh">#232326</span><span class="p">;</span><span class="w">        </span><span class="c">/* #f0f0f2 in the dark scheme */</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nv">--ag-ui-bg</span><span class="p">:</span><span class="w"> </span><span class="mh">#ffffff</span><span class="p">;</span><span class="w">            </span><span class="c">/* #161618 */</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nv">--ag-ui-fg</span><span class="p">:</span><span class="w"> </span><span class="mh">#1b1b1d</span><span class="p">;</span><span class="w">            </span><span class="c">/* #ececee */</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="nv">--ag-ui-radius</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="kt">px</span><span class="p">;</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span><span class="nv">--ag-ui-header-btn-size</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="kt">px</span><span class="p">;</span><span class="w">  </span><span class="c">/* the header's controls; 44px on touch */</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span><span class="nv">--ag-ui-header-gap</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="kt">px</span><span class="p">;</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span><span class="c">/* What is drawn on top of the accent and danger fills. Unset, the one on</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="c">     the accent is white or black by the accent's luminance (see Text on the</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="c">     accent below); set it to pin a colour of your own. */</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">  </span><span class="nv">--ag-ui-on-accent</span><span class="p">:</span><span class="w"> </span><span class="mh">#ffffff</span><span class="p">;</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">  </span><span class="nv">--ag-ui-on-danger</span><span class="p">:</span><span class="w"> </span><span class="mh">#ffffff</span><span class="p">;</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">  </span><span class="c">/* Layout */</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="w">  </span><span class="nv">--ag-ui-width</span><span class="p">:</span><span class="w"> </span><span class="mi">380</span><span class="kt">px</span><span class="p">;</span>
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="w">  </span><span class="nv">--ag-ui-height</span><span class="p">:</span><span class="w"> </span><span class="mi">560</span><span class="kt">px</span><span class="p">;</span>
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="w">  </span><span class="nv">--ag-ui-inset</span><span class="p">:</span><span class="w"> </span><span class="kc">auto</span><span class="w"> </span><span class="mi">24</span><span class="kt">px</span><span class="w"> </span><span class="mi">24</span><span class="kt">px</span><span class="w"> </span><span class="kc">auto</span><span class="p">;</span>
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="w">  </span><span class="nv">--ag-ui-shadow</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="mi">1</span><span class="kt">px</span><span class="w"> </span><span class="mi">2</span><span class="kt">px</span><span class="w"> </span><span class="nb">rgb</span><span class="p">(</span><span class="mi">0</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">0.05</span><span class="p">),</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="mi">12</span><span class="kt">px</span><span class="w"> </span><span class="mi">32</span><span class="kt">px</span><span class="w"> </span><span class="mi">-16</span><span class="kt">px</span><span class="w"> </span><span class="nb">rgb</span><span class="p">(</span><span class="mi">0</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">0.22</span><span class="p">);</span>
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="p">}</span>
+</code></pre></div>
+<p><code>--ag-ui-radius</code> is the theme's corner radius. It rounds the panel's frame and the corners inside
+the panel that have no radius of their own: the answer well, the conversation list's <em>New chat</em>
+button and filter field, and the <em>Undo</em> on a run notice. The frame is the exception where it meets
+the edge of the window. <code>page</code> and <code>sidebar</code> draw it square, and so does every placement but
+<code>embedded</code> on a small viewport, while the corners inside keep the theme's radius, since none of them
+meets that edge. <code>--ag-ui-panel-radius</code> sets the frame on its own, in any placement. Each theme
+gives the floating frame a radius of its own (<code>--ag-ui-frame-radius</code>: 14px in Quiet against 12px
+inside), and a host's <code>--ag-ui-radius</code> still sets both.</p>
+<h2 id="themes">Themes<a class="headerlink" href="#themes" title="Permanent link">&para;</a></h2>
+<p><code>theme</code> is up to two words, in any order, matched as words (<code>~=</code>):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>theme = [name] [scheme]
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>name   = quiet | soft | ledger | classic | &lt;a word of your own&gt;
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>scheme = light | dark | auto            default: light
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>(absent)</em></td>
+<td>Quiet, light</td>
+</tr>
+<tr>
+<td><code>dark</code></td>
+<td>Quiet, dark</td>
+</tr>
+<tr>
+<td><code>auto</code></td>
+<td>Quiet, following the system's <code>prefers-color-scheme</code></td>
+</tr>
+<tr>
+<td><code>soft</code>, <code>soft dark</code>, <code>ledger auto</code></td>
+<td>that theme in that scheme</td>
+</tr>
+<tr>
+<td><code>classic</code>, <code>classic dark</code></td>
+<td>the look from before themes, for a host that pins it</td>
+</tr>
+<tr>
+<td><code>acme</code></td>
+<td>a word the component does not ship adds no rules, so this is Quiet, ready for your <code>[theme~="acme"]</code> CSS</td>
+</tr>
+<tr>
+<td><code>soft acme</code></td>
+<td>starts from Soft; your <code>[theme~="acme"]</code> rules layer on top</td>
+</tr>
+</tbody>
+</table>
+<p>The built-in themes:</p>
+<table>
+<thead>
+<tr>
+<th>Theme</th>
+<th>Look</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>quiet</code></td>
+<td>The default. Neutral graphite on white, no bubble for the agent's turn, hairlines, status as an icon. Set one brand accent and the user's turn, the send button and the links follow it.</td>
+</tr>
+<tr>
+<td><code>soft</code></td>
+<td>Rounded and tinted: surfaces mixed from the accent, pill chips, a deep frame shadow. Violet by default.</td>
+</tr>
+<tr>
+<td><code>ledger</code></td>
+<td>Dense and editorial: paper and ink, square corners, serif for what the agent says and monospace for the chrome.</td>
+</tr>
+<tr>
+<td><code>classic</code></td>
+<td>The look before themes: the indigo header, the accent user bubble, the status pill and the round launcher. Pin it to keep that look.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The default scheme is <code>light</code>, not <code>auto</code></strong>, because the widget sits on your page and only you
+know that page's scheme. A light admin screen on a machine in dark mode would otherwise get a dark
+panel on a white page. If your page follows the system, say <code>auto</code>.</p>
+<p>Each theme is three seeds, <code>--ag-ui-bg</code>, <code>--ag-ui-fg</code> and <code>--ag-ui-accent</code>, each declared with
+<code>light-dark()</code> so the scheme word picks the half. Every other colour is mixed from them with
+<code>color-mix(in oklch, ...)</code> -- hover, borders, the secondary text inks, washes, the user's turn (the
+accent at 12% over the background) -- and every derived value still reads its own public token
+first, so each stays an override point. The tokens the themes add:</p>
+<ul>
+<li><strong>Inks and lines:</strong> <code>--ag-ui-ink-2</code>, <code>--ag-ui-ink-3</code>, <code>--ag-ui-line</code>, <code>--ag-ui-line-strong</code>.</li>
+<li><strong>Surfaces:</strong> <code>--ag-ui-wash</code>, <code>--ag-ui-accent-ink</code>, <code>--ag-ui-tint</code>, <code>--ag-ui-tint-2</code>.</li>
+<li><strong>Type:</strong> <code>--ag-ui-text-xs</code>, <code>--ag-ui-text-sm</code>, <code>--ag-ui-text-md</code>, <code>--ag-ui-text-lg</code>,
+  <code>--ag-ui-leading</code>, <code>--ag-ui-serif</code>.</li>
+<li><strong>Frame:</strong> <code>--ag-ui-frame-radius</code>, <code>--ag-ui-frame-shadow</code>. These are what a theme sets for the
+  frame; <code>--ag-ui-panel-radius</code> and <code>--ag-ui-shadow</code> stay the final say, and are what a docked
+  placement squares or flattens.</li>
+<li><strong>Charts:</strong> <code>--ag-ui-chart-1</code> to <code>--ag-ui-chart-6</code>. A host's value beats the theme's.</li>
+<li><strong>Status marks:</strong> <code>--ag-ui-ico-check</code>, <code>--ag-ui-ico-error</code>, <code>--ag-ui-ico-declined</code>, mask images
+  drawn in the state's colour, and <code>--ag-ui-ico-chevron</code>, the step group's disclosure chevron.</li>
+<li><strong>Focus:</strong> <code>--ag-ui-ring</code>, the step group head's focus outline. Unset, it is two parts accent
+  to three parts ink (<code>--ag-ui-fg</code>), which holds 3:1 against the panel for any accent.</li>
+</ul>
+<p>The font is part of the theme: Quiet, Soft and Ledger set their own stack (Inter, then the system
+UI font), and Classic inherits the page's font as the component always did. To take the page's font
+under any theme, set <code>--ag-ui-font</code> to the page's family, or to the page's own font token:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">ag-ui-chat</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">--ag-ui-font</span><span class="p">:</span><span class="w"> </span><span class="nf">var</span><span class="p">(</span><span class="nv">--body-font</span><span class="p">);</span><span class="w"> </span><span class="p">}</span><span class="w">   </span><span class="c">/* or the family itself */</span>
+</code></pre></div>
+<p><code>--ag-ui-font: inherit</code> does not do this. A CSS-wide keyword in a custom property applies to the
+custom property itself, so it takes the <code>--ag-ui-font</code> of the parent, which nothing sets, and the
+theme's stack wins.</p>
+<h3 id="text-on-the-accent">Text on the accent<a class="headerlink" href="#text-on-the-accent" title="Permanent link">&para;</a></h3>
+<p><code>--ag-ui-on-accent</code>, unless you set it, is picked from the accent's own luminance: white on an
+accent darker than WCAG relative luminance 0.179, black on a lighter one, which is the better of
+the two on every colour (never under 4.58:1). It is computed with relative colour syntax with
+channel arithmetic, behind <code>@supports</code> for that exact expression: Chrome 119, Firefox 128, Safari
+18.</p>
+<p><strong>The fallback.</strong> Two browsers at or above the floor cannot compute it: Firefox 120 to 127, which
+lack relative colour syntax, and Safari 17.5 and 17.6, which shipped an earlier draft that rejects
+this expression. They keep a fixed colour per theme instead:</p>
+<table>
+<thead>
+<tr>
+<th>Theme</th>
+<th>Without relative colour syntax</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>quiet</code>, <code>soft</code>, <code>ledger</code></td>
+<td>the scheme's: white in the light scheme, near-black (<code>#111111</code>) in the dark one</td>
+</tr>
+<tr>
+<td><code>classic</code>, <code>code</code></td>
+<td>white in both schemes, the colour they always drew</td>
+</tr>
+</tbody>
+</table>
+<p>On every built-in accent but code's the fixed colour is on the same side as the computed one, so
+those browsers see the same contrast. On code's green the computed pick is black (8.3:1) and the
+fallback white (2.5:1), as it always was. What they miss is the correction for a host's accent: a
+mid-tone brand accent can fall under 4.5:1 there, under any theme. If you support those browsers
+and set a mid-tone accent, set <code>--ag-ui-on-accent</code> yourself. There is no script path.</p>
+<h3 id="keeping-a-brand-accent-on-the-header">Keeping a brand accent on the header<a class="headerlink" href="#keeping-a-brand-accent-on-the-header" title="Permanent link">&para;</a></h3>
+<p>Quiet draws the header, the launcher and the tool names in the panel's own colours, so a host that
+sets only <code>--ag-ui-accent</code> gets a neutral header. To put the accent back without leaving Quiet, set
+the surfaces to the accent and the text on them to a colour that reads on it. The same recipe holds
+under every other theme:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">ag-ui-chat</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nv">--ag-ui-header-bg</span><span class="p">:</span><span class="w"> </span><span class="mh">#3d5afe</span><span class="p">;</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nv">--ag-ui-header-fg</span><span class="p">:</span><span class="w"> </span><span class="mh">#ffffff</span><span class="p">;</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nv">--ag-ui-launcher-bg</span><span class="p">:</span><span class="w"> </span><span class="mh">#3d5afe</span><span class="p">;</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span><span class="nv">--ag-ui-launcher-fg</span><span class="p">:</span><span class="w"> </span><span class="mh">#ffffff</span><span class="p">;</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span><span class="nv">--ag-ui-tool-fg</span><span class="p">:</span><span class="w"> </span><span class="mh">#3d5afe</span><span class="p">;</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="p">}</span>
+</code></pre></div>
+<ul>
+<li><strong>The header buttons follow <code>--ag-ui-header-fg</code>, under every theme.</strong> Unset, each theme draws
+  them its own way at 0.85 opacity: Quiet, Soft and Ledger in their third ink, Classic and Code in
+  the header text, each on its own hover square. Once you set the header text they draw in it at
+  full opacity, and the hover square is the opposite of that text at about a fifth (a darker square
+  under white text, a lighter one under dark text), so a hovered button reads at least what your
+  header pair reads. A theme word of your own starts from Quiet, so it holds there too. No
+  <code>::part(header-button)</code> rule is needed. The opposite is computed with relative
+  colour syntax; the browsers without it (see the fallback above) mix the square from the text
+  itself, which on a mid-tone header can take the hovered glyph under your pair (white on
+  <code>#3d5afe</code>: 3.75:1).</li>
+<li><strong><code>--ag-ui-header-btn-hover</code> sets the hover square outright</strong> under every theme, whether or not
+  the header text is set, and is drawn exactly as given. For a square that lightens under white
+  text instead, at the cost of contrast on a mid-tone header:</li>
+</ul>
+<p><div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">ag-ui-chat</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">--ag-ui-header-btn-hover</span><span class="p">:</span><span class="w"> </span><span class="nf">color-mix</span><span class="p">(</span><span class="n">in</span><span class="w"> </span><span class="n">srgb</span><span class="p">,</span><span class="w"> </span><span class="mh">#ffffff</span><span class="w"> </span><span class="mi">18</span><span class="kt">%</span><span class="p">,</span><span class="w"> </span><span class="kc">transparent</span><span class="p">);</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+- <strong><code>--ag-ui-tool-fg</code> colours every tool call</strong>, in a step group as well as in the card displays.
+  Unset, a grouped call is drawn in the second ink (<code>--ag-ui-ink-2</code>) under every theme.
+- Pick the pair yourself: <code>--ag-ui-header-fg</code> is not derived from the header colour the way
+  <code>--ag-ui-on-accent</code> is from the accent.</p>
+<h3 id="overriding-a-theme-lightest-layer-first">Overriding a theme, lightest layer first<a class="headerlink" href="#overriding-a-theme-lightest-layer-first" title="Permanent link">&para;</a></h3>
+<p>Four layers, each documented and each lighter than the next. Reach for the first one that does
+the job.</p>
+<h4 id="a-tokens">(a) Tokens<a class="headerlink" href="#a-tokens" title="Permanent link">&para;</a></h4>
+<p>Any <code>--ag-ui-*</code> token, on the element or any ancestor, as above. Per theme, from your own CSS:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">body</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">--ag-ui-accent</span><span class="p">:</span><span class="w"> </span><span class="mh">#0f766e</span><span class="p">;</span><span class="w"> </span><span class="p">}</span><span class="w">          </span><span class="c">/* accent only: the rest follows */</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nt">ag-ui-chat</span><span class="o">[</span><span class="nt">theme</span><span class="o">~=</span><span class="s2">"soft"</span><span class="o">]</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">--ag-ui-accent</span><span class="p">:</span><span class="w"> </span><span class="mh">#c2410c</span><span class="p">;</span><span class="w"> </span><span class="nv">--ag-ui-frame-radius</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="kt">px</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<p>A page rule always beats the theme's own value, because the theme only ever sets the private
+alias behind the public token.</p>
+<h4 id="b-parts">(b) Parts<a class="headerlink" href="#b-parts" title="Permanent link">&para;</a></h4>
+<p><code>::part()</code> reaches the structural elements, as listed in <a href="#parts-and-slots">Parts and slots</a>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">ag-ui-chat</span><span class="p">::</span><span class="nd">part</span><span class="o">(</span><span class="nt">header</span><span class="o">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">background</span><span class="p">:</span><span class="w"> </span><span class="nb">linear-gradient</span><span class="p">(</span><span class="mh">#f2f7f6</span><span class="p">,</span><span class="w"> </span><span class="kc">transparent</span><span class="p">);</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<h4 id="c-a-theme-of-your-own">(c) A theme of your own<a class="headerlink" href="#c-a-theme-of-your-own" title="Permanent link">&para;</a></h4>
+<p>Name it, and style the name. An unknown word adds no built-in rules, so it starts from Quiet (or
+from the built-in theme beside it):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">theme</span><span class="o">=</span><span class="s">"acme dark"</span><span class="p">&gt;&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">ag-ui-chat</span><span class="o">[</span><span class="nt">theme</span><span class="o">~=</span><span class="s2">"acme"</span><span class="o">]</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nv">--ag-ui-bg</span><span class="p">:</span><span class="w"> </span><span class="nf">light-dark</span><span class="p">(</span><span class="mh">#fbfaf7</span><span class="p">,</span><span class="w"> </span><span class="mh">#10161c</span><span class="p">);</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="nv">--ag-ui-fg</span><span class="p">:</span><span class="w"> </span><span class="nf">light-dark</span><span class="p">(</span><span class="mh">#14212b</span><span class="p">,</span><span class="w"> </span><span class="mh">#e4ebf0</span><span class="p">);</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span><span class="nv">--ag-ui-accent</span><span class="p">:</span><span class="w"> </span><span class="nf">light-dark</span><span class="p">(</span><span class="mh">#0b5cad</span><span class="p">,</span><span class="w"> </span><span class="mh">#6cb2ff</span><span class="p">);</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">  </span><span class="nv">--ag-ui-frame-radius</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="kt">px</span><span class="p">;</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="p">}</span>
+</code></pre></div>
+<p>Use <code>light-dark()</code> in the seeds and the scheme word, and the theme toggle, work for your theme
+too.</p>
+<h4 id="d-extrastyles-the-last-mile">(d) <code>extraStyles</code>: the last mile<a class="headerlink" href="#d-extrastyles-the-last-mile" title="Permanent link">&para;</a></h4>
+<blockquote>
+<p><strong>Unstable.</strong> <code>extraStyles</code> reaches the class names inside the shadow root, and those are not a
+public API: they may change in any minor release. Layers (a) to (c) are the supported ones; use
+this for what they cannot reach, and expect to revisit it on upgrade.</p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kd">const</span><span class="w"> </span><span class="nx">sheet</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">CSSStyleSheet</span><span class="p">();</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nx">sheet</span><span class="p">.</span><span class="nx">replaceSync</span><span class="p">(</span><span class="sb">`.message--assistant { padding: 10px 12px; border-radius: 10px; }`</span><span class="p">);</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">extraStyles</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="nx">sheet</span><span class="p">];</span>
+</code></pre></div>
+<ul>
+<li><code>extraStyles: readonly CSSStyleSheet[]</code>, per element, default <code>[]</code>. Two elements can carry
+  different sheets.</li>
+<li>Adopted after the built-in sheet, so a rule of equal specificity wins.</li>
+<li>Setting it re-adopts at once. The array is copied, so changing the one you passed does nothing
+  until you set it again; changing a sheet's rules does apply, since the sheet itself is shared.</li>
+<li>Constructed sheets are not subject to <code>style-src</code>, so this works under the same strict CSP as
+  the built-in sheet. There is no string form and no <code>&lt;style&gt;</code> injection.</li>
+</ul>
+<h2 id="small-viewports">Small viewports<a class="headerlink" href="#small-viewports" title="Permanent link">&para;</a></h2>
+<p>At <strong>600px wide and below</strong> every placement but <code>embedded</code> becomes one full-bleed
+shape: edge to edge, no radius, no shadow, no resize grips. A phone is not an
+eighth placement — it is an override that collapses the others onto one of them.
+The host picked a placement for the desktop it was designing, and a 380x560
+panel with a 24px margin is not a smaller version of that decision, it is most
+of the screen with a frame drawn round it.</p>
+<p><code>embedded</code> is left alone deliberately: it sits in a box you sized and placed, and
+only you know whether that column should become the whole screen.</p>
+<p>The <a href="#the-greeting-on-an-empty-page">greeting layout</a> changes shape here too, and
+it is the one part of this that <code>embedded</code> gets as well, because it moves nothing
+about the box you placed: an empty conversation keeps its composer at the foot of
+the panel, with the starters against it and the greeting over the space above
+them, instead of centring all three together.</p>
+<p>The corner placements still rest at their launcher, so a full-bleed panel is
+something the user opens rather than something they are given.</p>
+<p><strong>To keep your desktop layout at every width</strong>, set <code>data-small-viewport="off"</code>.
+That exists because the <em>trigger</em> is the one part of this you cannot reach: every
+value the override sets is a <code>--ag-ui-*</code> token you can re-state, but a media
+query cannot read a custom property, so the breakpoint itself is a literal.</p>
+<p><strong>A size or inset token set at every width restates the phone shape too.</strong> The phone
+block reads <code>--ag-ui-inset</code>, <code>--ag-ui-width</code>, <code>--ag-ui-height</code> and <code>--ag-ui-max-height</code>
+before it falls back to the full-bleed values, so a host rule such as the one below keeps
+its 420x640 panel with a 24px margin on a phone, and the panel runs off the screen's left
+edge. Put the desktop sizes above the breakpoint and the phone shape needs nothing:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c">/* Wrong on a phone: the tokens apply at every width. */</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nt">ag-ui-chat</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="nv">--ag-ui-inset</span><span class="p">:</span><span class="w"> </span><span class="kc">auto</span><span class="w"> </span><span class="mi">24</span><span class="kt">px</span><span class="w"> </span><span class="mi">24</span><span class="kt">px</span><span class="w"> </span><span class="kc">auto</span><span class="p">;</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span><span class="nv">--ag-ui-width</span><span class="p">:</span><span class="w"> </span><span class="mi">420</span><span class="kt">px</span><span class="p">;</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">  </span><span class="nv">--ag-ui-height</span><span class="p">:</span><span class="w"> </span><span class="mi">640</span><span class="kt">px</span><span class="p">;</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">  </span><span class="nv">--ag-ui-max-height</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="kt">vh</span><span class="p">;</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="p">}</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="c">/* Right: desktop only. At 600px and below the panel is full-bleed with no reset. */</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="p">@</span><span class="k">media</span><span class="w"> </span><span class="o">(</span><span class="nt">min-width</span><span class="o">:</span><span class="w"> </span><span class="nt">601px</span><span class="o">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="w">  </span><span class="nt">ag-ui-chat</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="w">    </span><span class="nv">--ag-ui-inset</span><span class="p">:</span><span class="w"> </span><span class="kc">auto</span><span class="w"> </span><span class="mi">24</span><span class="kt">px</span><span class="w"> </span><span class="mi">24</span><span class="kt">px</span><span class="w"> </span><span class="kc">auto</span><span class="p">;</span>
+<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="w">    </span><span class="nv">--ag-ui-width</span><span class="p">:</span><span class="w"> </span><span class="mi">420</span><span class="kt">px</span><span class="p">;</span>
+<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="w">    </span><span class="nv">--ag-ui-height</span><span class="p">:</span><span class="w"> </span><span class="mi">640</span><span class="kt">px</span><span class="p">;</span>
+<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="w">    </span><span class="nv">--ag-ui-max-height</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="kt">vh</span><span class="p">;</span>
+<a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a><span class="p">}</span>
+</code></pre></div>
+<p>Setting the tokens at every width stays right for a host that wants a non-full-bleed phone
+panel, a bottom sheet for example. The size a user dragged is a separate matter; see
+<a href="../header-and-panel/#sizes-keyboard-and-parts">Sizes, keyboard, and parts</a> for its precedence.</p>
+<p>The breakpoint is a width rather than a pointer test, and that is on purpose: a
+touch laptop is coarse-pointered and wide, a narrow desktop window is
+fine-pointered and small. Width decides the layout; the pointer decides which
+controls make sense.</p>
+<h2 id="the-conversation-list">The conversation list<a class="headerlink" href="#the-conversation-list" title="Permanent link">&para;</a></h2>
+<p>The chat-history list slides over the transcript at every width and under every
+placement, a full page included. Opening it moves nothing underneath: the
+conversation, the centred greeting and the composer are exactly where they were.
+While it is open it is a modal dialog: focus moves into it, Tab stays inside it,
+and Escape, its close control or a click on the backdrop beside it closes it and
+returns focus to where it was. <code>openThreads()</code> and <code>closeThreads()</code> do the same
+from your own chrome.</p>
+<p>The list also grows a filter once there are eight or more conversations in it
+— above that a search box is worth having, below it it is a control asking to be
+used on a list you can already read in one glance. It matches the title <strong>and</strong>
+the preview, because the title is often the model's one-line summary and the
+phrase you remember is as likely to be inside the conversation as on it, and it
+filters what the drawer already holds rather than going back to the server for a
+list that is already in memory. <code>data-threads-search="always"</code> shows it over any
+list and <code>"never"</code> hides it, for a host whose lists are always short or always long.</p>
+<p>The rows are grouped by when they were last active: <strong>Today</strong>, <strong>Previous 7 days</strong>
+and <strong>Older</strong>, counted from local midnight. A group with no rows is not drawn,
+and a list that falls in one group draws no heading at all. A conversation with no
+readable date goes under Older. A filtered list keeps its groups. The headings
+are not in the Tab order, are styled as <code>::part(drawer-group-label)</code>, and take
+their text from the <code>threadsToday</code>, <code>threadsPreviousWeek</code> and <code>threadsOlder</code>
+strings. Every drawer has them: the slide-over, the bar's popover and the popover
+beside your own button.</p>
+<h2 id="reserving-the-space-your-own-chrome-occupies">Reserving the space your own chrome occupies<a class="headerlink" href="#reserving-the-space-your-own-chrome-occupies" title="Permanent link">&para;</a></h2>
+<p>A fixed placement covers the viewport it is given, and it does not know about
+your sticky header. Tell it which edges are already spent and every placement
+does its own arithmetic:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nt">ag-ui-chat</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="nv">--ag-ui-viewport-inset-top</span><span class="p">:</span><span class="w"> </span><span class="mi">64</span><span class="kt">px</span><span class="p">;</span><span class="w">    </span><span class="c">/* your nav bar */</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="p">}</span>
+</code></pre></div>
+<p><code>page</code> and <code>full</code> inset by all four edges; <code>sidebar</code> and <code>side</code> by three, leaving
+the docked edge free; <code>floating</code> adds them to its own margins.
+<strong>The heights follow on their own</strong> — that is the point of these rather than
+restating <code>--ag-ui-inset</code> per placement, which leaves you to keep
+<code>--ag-ui-height</code> and <code>--ag-ui-max-height</code> in step by hand and overflows the panel
+off the bottom of the screen the one time you forget.</p>
+<p>Four longhands rather than one shorthand because a custom property is a token
+stream and CSS cannot index one; the height arithmetic needs the vertical pair on
+its own. Any CSS length works — <code>px</code>, <code>rem</code>, <code>env(safe-area-inset-*)</code>, or a
+<code>calc()</code> combining them; the widget reads the resolved value rather than the text
+you wrote, so the number it clamps against is the one the stylesheet uses:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nt">ag-ui-chat</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span><span class="nv">--ag-ui-viewport-inset-top</span><span class="p">:</span><span class="w"> </span><span class="nf">env</span><span class="p">(</span><span class="n">safe</span><span class="nv">-area-inset-top</span><span class="p">);</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span><span class="nv">--ag-ui-viewport-inset-bottom</span><span class="p">:</span><span class="w"> </span><span class="nf">env</span><span class="p">(</span><span class="n">safe</span><span class="nv">-area-inset-bottom</span><span class="p">);</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="p">}</span>
+</code></pre></div>
+<p>If your chrome changes height — a bar that wraps at narrow widths — measure it
+and publish the value, since no CSS length tracks it:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="ow">new</span><span class="w"> </span><span class="nx">ResizeObserver</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nb">document</span><span class="p">.</span><span class="nx">documentElement</span><span class="p">.</span><span class="nx">style</span><span class="p">.</span><span class="nx">setProperty</span><span class="p">(</span><span class="s2">"--bar-h"</span><span class="p">,</span><span class="w"> </span><span class="sb">`</span><span class="si">${</span><span class="nx">bar</span><span class="p">.</span><span class="nx">offsetHeight</span><span class="si">}</span><span class="sb">px`</span><span class="p">);</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="p">}).</span><span class="nx">observe</span><span class="p">(</span><span class="nx">bar</span><span class="p">);</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nt">ag-ui-chat</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">--ag-ui-viewport-inset-top</span><span class="p">:</span><span class="w"> </span><span class="nf">var</span><span class="p">(</span><span class="nv">--bar-h</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="kt">px</span><span class="p">);</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<p><code>--ag-ui-edge-gutter</code> (default <code>24px</code>) is the gap a resting <code>floating</code> panel
+keeps between itself and that box. The size cap subtracts the same one, so a
+panel grown to its limit reaches the far edge of the usable box and no further —
+set it to <code>0</code> for a panel flush against the corner.</p>
+<p><code>--ag-ui-anchor-gap</code> (default <code>8px</code>) is the gap between the panel and the button
+it rises from under <code>collapse-to="none"</code>; see <a href="../header-and-panel/#collapsing-to-a-bottom-bar">Collapsing to a bottom
+bar</a>.</p>
+<p><code>--ag-ui-keyboard-inset</code> overrides the lift an on-screen keyboard earns. The
+widget measures the hidden band and publishes it as
+<code>--ag-ui-visual-viewport-inset-bottom</code>; state this one instead to outrank that
+measurement, or set it to <code>0px</code> to opt out of the lift entirely.</p>
+<p><code>--ag-ui-keyboard-inset-top</code> does the same at the top. To show a field a
+keyboard would cover, a mobile browser pans the visible area down the page, and
+a panel anchored to the screen (<code>page</code>, <code>full</code>, <code>side</code>, <code>sidebar</code>, and at phone
+width the corner placements too) moves down with it. An <code>embedded</code> panel renders
+in your own box rather than against the screen, so it does not move at any width.
+The widget publishes the pan as <code>--ag-ui-visual-viewport-inset-top</code>, and the
+panel moves by as much of it as goes past your <code>--ag-ui-viewport-inset-top</code>,
+since the pan scrolls a reserved bar away with the page. State
+<code>--ag-ui-keyboard-inset-top</code> to outrank that distance, or <code>0px</code> to keep the
+panel below your reserved top.</p>
+<p><code>--ag-ui-viewport-height</code> and <code>--ag-ui-viewport-width</code> state the usable box
+outright, for the case where no viewport-percentage length describes it. An
+on-screen keyboard is the one that matters: it changes neither <code>vh</code> nor <code>dvh</code> nor
+<code>svh</code> on any current mobile browser, so a full-bleed panel has to be told the
+visual viewport's height rather than deriving it. The widget does that itself;
+where it has nothing to report, the panel falls back to <code>100dvh</code> rather than
+<code>100vh</code>, because iOS Safari resolves <code>vh</code> to the screen with its bars collapsed
+and a panel sized from it runs under them.</p>
+<p>Marks are variables too, so one vocabulary covers a re-theme rather than
+leaving half the transcript in the built-in set: <code>--ag-ui-tool-icon-done</code> /
+<code>-error</code> / <code>-declined</code> for tool status, and <code>--ag-ui-disclosure-collapsed</code> /
+<code>--ag-ui-disclosure-expanded</code> for every expandable row.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nt">ag-ui-chat</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="nv">--ag-ui-disclosure-collapsed</span><span class="p">:</span><span class="w"> </span><span class="s2">"+"</span><span class="p">;</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span><span class="nv">--ag-ui-disclosure-expanded</span><span class="p">:</span><span class="w"> </span><span class="s2">"-"</span><span class="p">;</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="p">}</span>
+</code></pre></div>
+<h2 id="where-to-put-the-variables">Where to put the variables<a class="headerlink" href="#where-to-put-the-variables" title="Permanent link">&para;</a></h2>
+<p>There is one vocabulary — the <code>--ag-ui-*</code> names above — and it works from any ancestor. What
+differs is only <em>which</em> declaration wins, and that is ordinary CSS inheritance:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c">/* A whole page or design-system scope. */</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="p">:</span><span class="nd">root</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">--ag-ui-accent</span><span class="p">:</span><span class="w"> </span><span class="nf">var</span><span class="p">(</span><span class="nv">--brand-</span><span class="mi">600</span><span class="p">);</span><span class="w"> </span><span class="nv">--ag-ui-radius</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="kt">px</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="c">/* One region — the widget picks this up through the wrapper. */</span>
+<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="nt">aside</span><span class="p">.</span><span class="nc">support-dock</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">--ag-ui-accent</span><span class="p">:</span><span class="w"> </span><span class="mh">#0f766e</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>
+<a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="c">/* One widget. Beats both of the above, because it targets the element. */</span>
+<a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a><span class="nt">ag-ui-chat</span><span class="p">#</span><span class="nn">support</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">--ag-ui-accent</span><span class="p">:</span><span class="w"> </span><span class="mh">#b91c1c</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a>
+<a id="__codelineno-17-10" name="__codelineno-17-10" href="#__codelineno-17-10"></a><span class="c">/* Set at runtime with el.style.setProperty(...) — an inline style beats all of the above. */</span>
+</code></pre></div>
+<p>Two that do not work:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c">/* ::part() reaches structural elements, not variables — a custom property set</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="c">   here applies to that part's own subtree, not to the whole shell. */</span>
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="nt">ag-ui-chat</span><span class="p">::</span><span class="nd">part</span><span class="o">(</span><span class="nt">panel</span><span class="o">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">--ag-ui-accent</span><span class="p">:</span><span class="w"> </span><span class="mh">#b91c1c</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>
+<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="c">/* The internal --_* aliases are private and unversioned; they are renamed</span>
+<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="c">   without notice. Always set the public --ag-ui-* name. */</span>
+<a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="nt">ag-ui-chat</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">--_accent</span><span class="p">:</span><span class="w"> </span><span class="mh">#b91c1c</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<p>The preset attributes below sit <em>underneath</em> anything you declare: a <code>theme="dark"</code> widget still
+honours an explicit <code>--ag-ui-bg</code> from your CSS, so you can adopt a preset and correct one token
+rather than re-declaring the whole palette.</p>
+<p><code>--ag-ui-accent</code> reaches further than the widget: it also colours the rings the DOM driver draws
+on <strong>your</strong> page. Each primitive reads it from the computed style of the element it is about to
+touch, so setting it on <code>:root</code> (or on any ancestor of the elements the agent drives) themes the
+highlights too. Without it they fall back to the package indigo.</p>
+<p>For the common cases there are three CSS-reactive <strong>preset attributes</strong> (no JS API), so you don't
+have to hand-tune the variables:</p>
+<ul>
+<li><code>theme</code> — a theme name and a scheme; see <a href="#themes">Themes</a>.</li>
+<li><code>density</code> — <code>comfortable</code> (default) / <code>compact</code>.</li>
+<li><code>placement</code> — <code>floating</code> (default) / <code>sidebar</code> / <code>page</code> / <code>embedded</code>. <code>embedded</code> drops the
+  fixed positioning and z-index so the widget sits in normal document flow; <code>page</code> is a
+  full-screen <a href="#page-placement">centred reading column</a> for a route of its own.</li>
+</ul>
+<p>Four, because those are the four shapes that differ structurally: a corner panel, a docked
+  rail, a surface that owns the screen, and a thing in your layout. Three older values --
+  <code>bottom-left</code>, <code>side</code> and <code>full</code> -- still parse and still work, and are no longer documented:
+  each is a variant of one of the four rather than a shape of its own. <code>full</code> is <code>page</code> with
+  <code>--ag-ui-content-max-width: none</code>, <code>bottom-left</code> is <code>floating</code> with a different
+  <code>--ag-ui-inset</code>, and <code>side</code> is <code>sidebar</code> that collapses to the floating launcher instead of
+  an edge rail. Nothing warns and nothing breaks; there is simply less to choose between.</p>
+<p><strong><code>embedded</code> fills the box your page gives it, so give it one.</strong> It is the placement app-shell
+layouts reach for, and a grid or flex item defaults to <code>min-height: auto</code> — which lets a growing
+transcript push the composer off the bottom of the window instead of scrolling inside the panel. The
+fix belongs to the containing element, not to the widget:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="p">.</span><span class="nc">assistant-pane</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">min-height</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="k">overflow</span><span class="p">:</span><span class="w"> </span><span class="kc">hidden</span><span class="p">;</span><span class="w"> </span><span class="p">}</span><span class="w">   </span><span class="c">/* the box the element is given */</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span> <span class="na">theme</span><span class="o">=</span><span class="s">"dark"</span> <span class="na">density</span><span class="o">=</span><span class="s">"compact"</span> <span class="na">placement</span><span class="o">=</span><span class="s">"sidebar"</span><span class="p">&gt;&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
+</code></pre></div>
+<p>See <a href="https://github.com/Artui/agents-web-components/blob/main/src/ui/shell/token_styles.ts"><code>src/ui/shell/token_styles.ts</code></a> for the full variable list and
+<a href="https://github.com/Artui/agents-web-components/tree/main/src/ui/placement/"><code>src/ui/placement/</code></a> for the placement presets. The
+<a href="https://github.com/Artui/agents-web-components/tree/main/demo/"><code>demo/</code></a> (<code>make demo</code>) has a scenario for each: placements, themes and tokens, answers and
+reasoning, tool display, and the rest, each switched live on its own page.</p>
+<p>The demo server binds every interface and prints the addresses this machine can be reached on, so you can open the demo on a phone — which is the only way to see the small-viewport layout with a real on-screen keyboard rather than a resized desktop window. <code>HOST=127.0.0.1</code> keeps it to this machine.</p>
+<h2 id="parts-and-slots">Parts and slots<a class="headerlink" href="#parts-and-slots" title="Permanent link">&para;</a></h2>
+<p>For styling beyond the <code>--ag-ui-*</code> variables, every structural element exposes a <code>part</code> so you can
+reach it from outside the Shadow DOM with <code>::part()</code> — no shadow piercing. The part names are
+<strong>public API</strong> (additions are non-breaking; renames are breaking):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="nt">ag-ui-chat</span><span class="p">::</span><span class="nd">part</span><span class="o">(</span><span class="nt">panel</span><span class="o">)</span><span class="w">   </span><span class="p">{</span><span class="w"> </span><span class="k">border-radius</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="nt">ag-ui-chat</span><span class="p">::</span><span class="nd">part</span><span class="o">(</span><span class="nt">header</span><span class="o">)</span><span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="k">background</span><span class="p">:</span><span class="w"> </span><span class="mh">#111</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="nt">ag-ui-chat</span><span class="p">::</span><span class="nd">part</span><span class="o">(</span><span class="nt">send</span><span class="o">)</span><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="k">text-transform</span><span class="p">:</span><span class="w"> </span><span class="kc">uppercase</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="nt">ag-ui-chat</span><span class="p">::</span><span class="nd">part</span><span class="o">(</span><span class="nt">tool-card</span><span class="o">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">font-family</span><span class="p">:</span><span class="w"> </span><span class="nf">var</span><span class="p">(</span><span class="nv">--my-mono</span><span class="p">);</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<p>Every part, by the feature it belongs to. Spelled out rather than abbreviated: the list used to
+read <code>tool-card</code> <em>plus</em> <code>-icon</code> / <code>-name</code>, which is compact and is also how an entire feature went
+missing from it for two releases. A test reads this table and compares it with the parts the
+component sets, so a new one cannot ship undocumented.</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Parts</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Shell</td>
+<td><code>panel</code>, <code>header</code>, <code>title</code>, <code>icon</code>, <code>header-controls</code>, <code>messages</code>, <code>empty</code>, <code>greeting</code>, <code>pending</code>, <code>stopped</code>, <code>usage-line</code>, <code>jump-latest</code>, and one per resize grip: <code>resize-handle</code> plus <code>resize-handle-top</code>, <code>resize-handle-bottom</code>, <code>resize-handle-left</code>, <code>resize-handle-right</code>, <code>resize-handle-top-left</code>, <code>resize-handle-top-right</code>, <code>resize-handle-bottom-left</code>, <code>resize-handle-bottom-right</code></td>
+</tr>
+<tr>
+<td>Header buttons</td>
+<td><code>header-button</code> on each, plus <code>skills-button</code> (with <code>data-skill-editor-button</code>), <code>routines-button</code> (with <code>data-routines-url</code>), <code>history-button</code>, <code>checkpoints-button</code>, <code>new-button</code>, <code>maximize-button</code>, <code>collapse-button</code>, <code>theme-toggle</code>, <code>more-button</code> (only while the row has moved a control into its menu, or the menu holds Make this a routine), <code>make-routine-button</code> (in the menu, with <code>data-routines-url</code> and a prompt on screen); <code>header-menu</code> on the <a href="../header-and-panel/#the-header-row-and-its-more-menu">More menu</a></td>
+</tr>
+<tr>
+<td>Collapsed widget</td>
+<td><code>launcher</code>, <code>launcher-icon</code>, <code>launcher-badge</code>, <code>rail-label</code>, <code>bar</code> (the <a href="../header-and-panel/#collapsing-to-a-bottom-bar">bottom bar</a>'s wrapper, around the launcher), <code>bar-place</code> (the place beside the bar's title; its text carries <code>place-label</code> and <code>place-detail</code>), <code>bar-history</code></td>
+</tr>
+<tr>
+<td>Answers</td>
+<td><code>answer</code> (the per-turn group), <code>message</code> (plus <code>message-user</code>, <code>message-assistant</code>), <code>code-copy</code>, <code>enqueued-messages</code> and <code>enqueued-messages-note</code> (user messages a run took in mid-turn)</td>
+</tr>
+<tr>
+<td>Reasoning</td>
+<td><code>thoughts</code>, <code>thoughts-toggle</code>, <code>thoughts-body</code>, <code>thoughts-label</code></td>
+</tr>
+<tr>
+<td>Follow-up suggestions</td>
+<td><code>suggestions</code>, <code>suggestion-chip</code></td>
+</tr>
+<tr>
+<td>Message actions</td>
+<td><code>run-error-offer</code> (the new-conversation offer under a failed run), <code>message-actions</code>, <code>message-action</code> (plus <code>message-action-retry</code>, <code>message-action-copy</code>, <code>message-action-up</code>, <code>message-action-down</code>), and the icon holder inside each: <code>message-action-icon</code> (plus <code>message-action-icon-retry</code>, <code>message-action-icon-copy</code>, <code>message-action-icon-up</code>, <code>message-action-icon-down</code>)</td>
+</tr>
+<tr>
+<td>Queued messages</td>
+<td><code>queued</code>, <code>queued-chip</code></td>
+</tr>
+<tr>
+<td>Run notices</td>
+<td><code>run-notice</code> (plus <code>run-notice-interrupted</code>, <code>run-notice-attachment-pending</code>, <code>run-notice-compaction</code>, <code>run-notice-skill</code>, <code>run-notice-history-replaced</code>, <code>run-notice-chart-undrawable</code>, <code>run-notice-surface</code>, <code>run-notice-not-connected</code>, <code>run-notice-mcp-app</code>), <code>run-notice-icon</code>, <code>run-notice-text</code>, <code>run-notice-undo</code></td>
+</tr>
+<tr>
+<td>Tool cards</td>
+<td><code>tool-card</code> (plus one status modifier: <code>tool-card-pending</code>, <code>tool-card-deferred</code>, <code>tool-card-done</code>, <code>tool-card-error</code>, <code>tool-card-declined</code>, <code>tool-card-interrupted</code>), <code>tool-card-head</code>, <code>tool-card-icon</code>, <code>tool-card-name</code>, <code>tool-card-status</code> (plus <code>tool-card-status-pending</code>, <code>tool-card-status-deferred</code>, <code>tool-card-status-done</code>, <code>tool-card-status-error</code>, <code>tool-card-status-declined</code>, <code>tool-card-status-interrupted</code>), <code>tool-card-decision</code>, <code>tool-card-answered-by</code>, <code>tool-card-toggle</code>, <code>tool-card-body</code>, <code>tool-card-section</code> (plus <code>tool-card-args-section</code>, <code>tool-card-result-section</code>), <code>tool-card-section-label</code> (plus <code>tool-card-args-label</code>, <code>tool-card-result-label</code>), <code>tool-card-args</code>, <code>tool-card-result</code>, <code>tool-card-approval</code>, <code>tool-card-subagent</code>, <code>tool-card-repeat</code></td>
+</tr>
+<tr>
+<td>Tool-step group</td>
+<td><code>tool-group</code> (plus one state modifier: <code>tool-group-waiting</code>, <code>tool-group-running</code>, <code>tool-group-done</code>, <code>tool-group-error</code>), <code>tool-group-head</code>, <code>tool-group-icon</code>, <code>tool-group-label</code>, <code>tool-group-meta</code>, <code>tool-group-list</code></td>
+</tr>
+<tr>
+<td>Delegated sub-agents</td>
+<td><code>subagent</code>, <code>subagent-row</code>, <code>subagent-icon</code>, <code>subagent-status</code>, <code>subagent-steps</code>, <code>subagent-step</code>, <code>subagent-step-icon</code>, <code>subagent-step-name</code></td>
+</tr>
+<tr>
+<td>Child sessions</td>
+<td><code>child-session-link</code>, <code>parent-breadcrumb</code>, <code>parent-breadcrumb-link</code></td>
+</tr>
+<tr>
+<td>Client-side confirmation</td>
+<td><code>confirm</code>, <code>confirm-body</code>, <code>confirm-args</code>, <code>confirm-actions</code>, <code>confirm-button</code> (plus <code>confirm-confirm</code>, <code>confirm-cancel</code>, <code>confirm-always</code>)</td>
+</tr>
+<tr>
+<td>An MCP Apps view's consent card</td>
+<td>the same parts as the confirmation card, with <code>mcp-app-consent</code> beside <code>confirm</code> on the card</td>
+</tr>
+<tr>
+<td>Server-side approval</td>
+<td><code>approval</code>, <code>approval-body</code>, <code>approval-actions</code>, <code>approval-button</code> (plus <code>approval-approve</code>, <code>approval-deny</code>), <code>approval-edit</code>, <code>approval-args</code>, <code>approval-error</code></td>
+</tr>
+<tr>
+<td>Typed question</td>
+<td><code>question</code>, <code>question-body</code>, <code>question-options</code>, <code>question-choice</code>, <code>question-choice-text</code>, <code>question-radio</code>, <code>question-input</code>, <code>question-actions</code>, <code>question-button</code></td>
+</tr>
+<tr>
+<td>Composer</td>
+<td><code>composer</code>, <code>composer-surface</code>, <code>composer-tools</code>, <code>input</code>, <code>send</code>, <code>attach-button</code>, <code>voice-button</code></td>
+</tr>
+<tr>
+<td>Place chip</td>
+<td><code>place</code> (carries <code>data-excluded</code> while the user withholds the place), <code>place-icon</code>, <code>place-label</code>, <code>place-detail</code>, <code>place-toggle</code></td>
+</tr>
+<tr>
+<td>Attachments</td>
+<td><code>attachment-tray</code>, <code>attachment-chips</code> (the read-only chips on sent bubbles), and the shared chip parts <code>attachment-chip</code>, <code>attachment-chip-icon</code>, <code>attachment-chip-name</code>, <code>attachment-chip-size</code>, <code>attachment-chip-bar</code>, <code>attachment-chip-bar-fill</code>, <code>attachment-chip-retry</code>, <code>attachment-chip-remove</code></td>
+</tr>
+<tr>
+<td>Skills</td>
+<td><code>skill-chips</code>, <code>skill-chip</code>, <code>skill-palette</code>, <code>skill-item</code>, <code>skill-item-title</code>, <code>skill-item-desc</code>, <code>skill-item-token</code>, <code>skill-hint</code> (the composer hint: a skill’s missing placeholders, and a run continuation picked with nothing typed or while a run is in flight), <code>skill-manage</code> (the "Manage skills" row, also a <code>skill-item</code>)</td>
+</tr>
+<tr>
+<td>Full-panel view</td>
+<td><code>panel-view</code>, <code>panel-view-bar</code>, <code>panel-view-title</code>, <code>panel-view-body</code>, <code>panel-view-footer</code>, and in its bar <code>back-button</code></td>
+</tr>
+<tr>
+<td>Skill editor</td>
+<td><code>skill-rows</code>, <code>skill-row</code>, <code>skill-empty</code>, <code>skill-form</code>, and in the view's bar <code>new-skill-button</code></td>
+</tr>
+<tr>
+<td>Routines</td>
+<td><code>routine-rows</code>, <code>routine-row</code>, <code>routine-empty</code>, <code>routine-last</code>, <code>routine-toggle</code>, <code>routine-run</code>, <code>make-routine</code>, <code>routine-form</code>, <code>routine-day</code>, <code>routine-time</code> (the hour and minute group), <code>routine-tools</code>, <code>routine-tool</code>, <code>routine-destructive</code>, and in the view's bar <code>new-routine-button</code></td>
+</tr>
+<tr>
+<td>Thread drawer</td>
+<td><code>drawer</code>, <code>drawer-backdrop</code>, <code>drawer-panel</code>, <code>drawer-header</code>, <code>drawer-title</code>, <code>drawer-new</code>, <code>drawer-close</code>, <code>drawer-filter</code>, <code>drawer-list</code>, <code>drawer-empty</code>, <code>drawer-group-label</code>, <code>drawer-row</code> (plus <code>drawer-row-child</code> on a child session's row), <code>drawer-children</code>, <code>drawer-row-select</code>, <code>drawer-row-title</code>, <code>drawer-row-routine</code> (on a routine's run), <code>drawer-row-time</code>, <code>drawer-row-preview</code>, <code>drawer-row-actions</code>, <code>drawer-row-rename</code>, <code>drawer-row-delete</code>, <code>drawer-rename-input</code>, <code>drawer-confirm</code>, <code>drawer-confirm-label</code>, <code>drawer-confirm-yes</code>, <code>drawer-confirm-no</code></td>
+</tr>
+<tr>
+<td>Charts</td>
+<td><code>chart-block</code>, <code>chart-title</code>, <code>chart-legend</code></td>
+</tr>
+<tr>
+<td>Checkpoints panel</td>
+<td><code>checkpoints</code>, <code>checkpoints-header</code>, <code>checkpoints-title</code>, <code>checkpoints-list</code>, <code>checkpoints-empty</code>, <code>checkpoint-row</code>, <code>checkpoint-label</code>, <code>checkpoint-time</code>, <code>checkpoint-id</code>, <code>checkpoint-branch</code>, <code>checkpoint-actions</code> (the pair's wrapper), <code>checkpoint-action</code> (plus <code>checkpoint-resume</code>, <code>checkpoint-fork</code>)</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Hiding <code>::part(header)</code> hides the controls inside it.</strong> The history, checkpoints, new-chat,
+theme and collapse buttons are all children of the header, so a host that renders its own title
+bar and does <code>ag-ui-chat::part(header) { display: none }</code> loses thread switching entirely. Every
+one of them has an imperative equivalent, so your own chrome can drive them:</p>
+<table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Method</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>History drawer</td>
+<td><code>chat.openThreads()</code></td>
+</tr>
+<tr>
+<td>Checkpoints panel</td>
+<td><code>chat.openCheckpoints()</code></td>
+</tr>
+<tr>
+<td>New chat</td>
+<td><code>chat.newChat()</code></td>
+</tr>
+<tr>
+<td>Collapse</td>
+<td><code>chat.toggleCollapsed()</code> / <code>chat.setCollapsed(bool)</code></td>
+</tr>
+<tr>
+<td>Theme toggle</td>
+<td><code>chat.toggleTheme()</code></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="nx">myHeaderButton</span><span class="p">.</span><span class="nx">onclick</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">chat</span><span class="p">.</span><span class="nx">openThreads</span><span class="p">();</span>
+</code></pre></div>
+<p>The built-in buttons call exactly these methods, so the two routes cannot drift. If you only want
+to restyle the header, prefer <code>::part(header)</code> styling or the <code>header-actions</code> slot over hiding it.</p>
+<p>To drop single controls instead, hide their parts:
+<code>ag-ui-chat::part(history-button), ag-ui-chat::part(new-button) { display: none }</code>.
+<code>display: none</code> removes them from the accessibility tree and the tab order as well.</p>
+</blockquote>
+<p>Coarse <strong>slots</strong> let you replace whole regions with your own markup (project light-DOM children
+with a matching <code>slot=</code>):</p>
+<table>
+<thead>
+<tr>
+<th>Slot</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>icon</code></td>
+<td>A header brand icon, before the title.</td>
+</tr>
+<tr>
+<td><code>header-actions</code></td>
+<td>Extra controls between the title and the built-in buttons.</td>
+</tr>
+<tr>
+<td><code>greeting</code></td>
+<td>The greeting's text, above the empty state, where the <a href="#the-greeting-on-an-empty-page">greeting layout</a> is on. Replaces the text only; <code>empty</code> and the starters still render beneath it.</td>
+</tr>
+<tr>
+<td><code>empty</code></td>
+<td>The empty-state shown before any message.</td>
+</tr>
+<tr>
+<td><code>above-composer</code></td>
+<td>Directly above the composer, below the skill chips, hint, queued turns and attachment tray. Takes no space when empty, and moves with the composer in the <a href="#the-greeting-on-an-empty-page">greeting layout</a>.</td>
+</tr>
+<tr>
+<td><code>footer</code></td>
+<td>Below the composer.</td>
+</tr>
+<tr>
+<td><code>launcher</code></td>
+<td>The collapsed widget's mark — the floating launcher, or the sidebar rail.</td>
+</tr>
+<tr>
+<td><code>icon-send</code> / <code>icon-stop</code></td>
+<td>The composer button's two glyphs (idle and mid-run).</td>
+</tr>
+<tr>
+<td><code>icon-attach</code> / <code>icon-voice</code></td>
+<td>The paperclip and mic glyphs.</td>
+</tr>
+<tr>
+<td><code>icon-history</code> / <code>icon-checkpoints</code> / <code>icon-new</code> / <code>icon-maximize</code> / <code>icon-collapse</code></td>
+<td>The header controls' glyphs. A slotted <code>icon-collapse</code> wins over <code>data-collapse-icon</code>.</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span><span class="p">&gt;</span>
+<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>  <span class="p">&lt;</span><span class="nt">img</span> <span class="na">slot</span><span class="o">=</span><span class="s">"icon"</span> <span class="na">src</span><span class="o">=</span><span class="s">"/logo.svg"</span> <span class="na">alt</span><span class="o">=</span><span class="s">""</span> <span class="p">/&gt;</span>
+<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>  <span class="p">&lt;</span><span class="nt">button</span> <span class="na">slot</span><span class="o">=</span><span class="s">"header-actions"</span> <span class="na">onclick</span><span class="o">=</span><span class="s">"openHelp()"</span><span class="p">&gt;</span>?<span class="p">&lt;/</span><span class="nt">button</span><span class="p">&gt;</span>
+<a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="p">&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
+</code></pre></div>
+<h2 id="header-and-launcher-icon">Header and launcher icon<a class="headerlink" href="#header-and-launcher-icon" title="Permanent link">&para;</a></h2>
+<p>Give the header a brand icon with either the <code>icon</code> slot (any markup) or the <code>data-icon-url</code>
+convenience attribute (an <code>&lt;img&gt;</code>); the slot wins when both are set, and with neither the header
+stays icon-less. The same icon seam feeds the collapsed sidebar rail. Size it via
+<code>--ag-ui-icon-size</code> (default <code>22px</code>) and round it with <code>--ag-ui-icon-radius</code> (default <code>4px</code>).</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span> <span class="na">data-icon-url</span><span class="o">=</span><span class="s">"/logo.png"</span><span class="p">&gt;&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
+</code></pre></div>
+<h2 id="sidebar-placement">Sidebar placement<a class="headerlink" href="#sidebar-placement" title="Permanent link">&para;</a></h2>
+<p><code>placement="sidebar"</code> is a full-height <strong>docked</strong> panel that slides open/closed and collapses to a
+slim <strong>icon rail</strong> rather than the <a href="../header-and-panel/#collapsing-to-the-launcher">floating launcher</a> — the same
+element, shaped by the placement. It docks right by default; <code>data-side="left"</code> docks it left. The
+panel slides out through the edge it docks against. Collapse state reuses the <code>collapsed</code> attribute
+(persisted per-tab), and the rail carries <code>aria-expanded</code>. The slide honours
+<code>prefers-reduced-motion</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span> <span class="na">placement</span><span class="o">=</span><span class="s">"sidebar"</span> <span class="na">data-side</span><span class="o">=</span><span class="s">"left"</span><span class="p">&gt;&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
+</code></pre></div>
+<p>It overlays the page by default (no host-layout coupling). To make the host content reflow around
+it instead, set <code>--ag-ui-position: static</code> and place the element in your own grid/flex layout.</p>
+<h2 id="page-placement">Page placement<a class="headerlink" href="#page-placement" title="Permanent link">&para;</a></h2>
+<p><code>placement="page"</code> turns the widget into a full-screen chat <strong>page</strong>: a full-bleed background with
+the conversation in a centred reading column (default ~820px, set via <code>--ag-ui-content-max-width</code>).
+The assistant turn spans the column width while the user message stays a right-aligned pill. Unlike
+<code>full</code> (edge-to-edge, left-aligned), it's the layout you want for a dedicated <code>/chat</code> route. Pairs
+naturally with the <a href="#the-answer-well">answer well</a>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span> <span class="na">placement</span><span class="o">=</span><span class="s">"page"</span> <span class="na">data-answer-well</span><span class="p">&gt;&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
+</code></pre></div>
+<h3 id="the-greeting-on-an-empty-page">The greeting on an empty page<a class="headerlink" href="#the-greeting-on-an-empty-page" title="Permanent link">&para;</a></h3>
+<p>Until the first message is sent, a page shows a greeting with the composer centred beneath it,
+and the composer moves to the foot of the page once the conversation has something in it. On a
+phone it starts at the foot, for the reason below.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span> <span class="na">placement</span><span class="o">=</span><span class="s">"page"</span> <span class="na">user-name</span><span class="o">=</span><span class="s">"Ada"</span><span class="p">&gt;&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
+</code></pre></div>
+<ul>
+<li><strong>The text</strong> is <code>Hello, {name}</code>, filled from <code>user-name</code>, or <code>Hello there</code> when there is no
+  name. Both are string-table keys, <code>greeting</code> and <code>greetingNoName</code>, so <code>strings</code> and
+  <code>data-strings</code> translate them like everything else. <code>user-name</code> is live: a name that arrives
+  after an auth handshake replaces the greeting on screen.</li>
+<li><strong>Your own greeting</strong> goes in <code>slot="greeting"</code>, which replaces the text and nothing else. A
+  brand mark belongs there too. The <code>empty</code> slot and <code>data-starters</code> still render beneath it.</li>
+<li><strong>Styling</strong>: the <code>greeting</code> part, plus <code>--ag-ui-greeting-font</code> (default: the widget's font) and
+  <code>--ag-ui-greeting-size</code> (default <code>clamp(1.5rem, 4vw, 2.25rem)</code>, scaling with the viewport rather
+  than stepping at a breakpoint).</li>
+<li><strong><code>data-empty</code></strong> is present on the element while the conversation is empty, for chrome of your
+  own that should react to the same state.</li>
+<li><strong>Which placements</strong>: on by default for <code>page</code>, which is a route of its own. <code>data-greeting="off"</code>
+  restores the plain layout there. <code>embedded</code> opts in with <code>data-greeting</code> (any value but <code>off</code>),
+  for an app shell that gives the panel a page-sized box. The corner placements and the sidebar
+  never show it: a panel opened from a launcher is already mid-task.</li>
+<li><strong>On a phone</strong> the composer stays at the foot, the starters (or your own <code>empty</code> content) sit
+  against it, and the greeting takes the middle of what they leave — the middle of the
+  transcript when there are none. Centring is a shape for a screen with room to spare; at
+  <a href="#small-viewports">600px wide and below</a> the room is what the on-screen keyboard takes, and a
+  composer centred over an empty band sits halfway up what is left of the screen, with the
+  prompts that start a conversation nowhere near the field that sends one.
+  <code>data-small-viewport="off"</code> keeps the centred shape at every width, as it keeps the rest of
+  the desktop layout.</li>
+</ul>
+<p>The composer's rows stay centred while you type, while a draft grows and while attachments are
+added, because the centring is two equal flexible halves either side of them and growth splits
+into both. Nothing in the DOM moves, so focus, the caret and IME composition are unaffected.</p>
+<p><strong>Sending is what moves it</strong>, not typing, and the composer slides to the foot of the page over
+<code>--ag-ui-motion</code> (a single frame under reduced motion). Everything else that changes the
+conversation snaps: a restored conversation mounts docked, picking a thread from the list or
+continuing a run docks at once, and a new chat returns to the centre at once. While a slow
+conversation store is still fetching, the page stays docked with the greeting hidden, so a
+restored conversation never paints the empty layout first.</p>
+<h2 id="the-answer-well">The answer well<a class="headerlink" href="#the-answer-well" title="Permanent link">&para;</a></h2>
+<p>Each assistant turn renders inside one <code>.answer</code> group (part <code>answer</code>) that holds its streamed
+text, tool cards, and pending indicator — so a turn that calls tools reads as a single answer
+rather than a string of loose siblings. Add the boolean <code>data-answer-well</code> attribute to box that
+group in a bordered, padded "well"; without it the layout is the flat stack as before. The well is
+pure CSS and turn-scoped — no JS API — and themeable via <code>--ag-ui-well-bg</code>, <code>--ag-ui-well-border</code>
+and <code>--ag-ui-well-radius</code> (and <code>::part(answer)</code>).</p>
+<p>The well's corners default to <code>--ag-ui-radius</code>, 12px unless you set it, in every placement. The
+panel's own frame is different: <code>page</code> and <code>sidebar</code> draw it square because it meets the edge of
+the window, but nothing inside the panel does, so the well stays round there too. Set
+<code>--ag-ui-well-radius</code> to round the well differently from the rest of the panel.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span> <span class="na">data-answer-well</span><span class="p">&gt;&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
+</code></pre></div>
+<h2 id="model-reasoning-thoughts">Model reasoning (thoughts)<a class="headerlink" href="#model-reasoning-thoughts" title="Permanent link">&para;</a></h2>
+<p>When a reasoning model streams its chain-of-thought (django-ag-ui forwards it as AG-UI reasoning
+events — enable a thinking budget via <code>MODEL_SETTINGS</code>, see its docs), the element renders a muted,
+collapsible <strong>thoughts region</strong> (part <code>thoughts</code>) at the top of the current answer group. It opens
+while the model reasons and folds away on the answer's first token; the reader can reopen it. The
+web component handles the <code>REASONING_*</code> event family (and the retired <code>THINKING_*</code>, which
+<code>@ag-ui/client</code> still converts onto it, with a console warning, during its deprecation window), so
+no client config is needed — the thoughts appear whenever the server forwards reasoning.</p>
+<p>The header is a toggle only once reasoning has text: a provider that opens and closes reasoning
+without sending any (redacted thinking, or summaries off) gets a plain label with no body, and no
+<code>thoughts-toggle</code> part. When reasoning ends the header settles to how long it took, string
+<code>thoughtFor</code> (<code>"Thought for {seconds}s"</code>, the sum of the turn's reasoning rounds); under a second it
+reads <code>thoughts</code>. A tool call likewise offers its details only over something: with no arguments
+and a blank result its toggle, and a one-step group's row, are not offered until a result with text
+arrives.</p>
+<h2 id="the-composer">The composer<a class="headerlink" href="#the-composer" title="Permanent link">&para;</a></h2>
+<p>The composer is one bordered surface (part <code>composer-surface</code>) that owns the border and the focus
+ring: the field sits on top and grows with what is typed until it hits its ceiling and scrolls,
+and a tool row (part <code>composer-tools</code>) sits underneath with the paperclip and mic as quiet icon
+buttons on the left and a circular <strong>Send</strong> on the right. Send is icon-only — its accessible name
+still comes from the <code>send</code> / <code>stop</code> <a href="../i18n/#internationalization-i18n">strings</a> — and it becomes the
+Stop control mid-run by swapping its glyph, so nothing moves when a run starts.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="nt">ag-ui-chat</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a><span class="w">  </span><span class="nv">--ag-ui-composer-radius</span><span class="p">:</span><span class="w"> </span><span class="mi">14</span><span class="kt">px</span><span class="p">;</span>
+<a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a><span class="w">  </span><span class="nv">--ag-ui-composer-max-height</span><span class="p">:</span><span class="w"> </span><span class="mi">40</span><span class="kt">vh</span><span class="p">;</span><span class="w">  </span><span class="c">/* where the growing field starts scrolling */</span>
+<a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a><span class="w">  </span><span class="nv">--ag-ui-tool-btn-size</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="kt">px</span><span class="p">;</span><span class="w">        </span><span class="c">/* the paperclip / mic hit targets */</span>
+<a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a><span class="w">  </span><span class="nv">--ag-ui-send-size</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="kt">px</span><span class="p">;</span><span class="w">            </span><span class="c">/* the send circle */</span>
+<a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a><span class="w">  </span><span class="nv">--ag-ui-glyph-size</span><span class="p">:</span><span class="w"> </span><span class="mi">18</span><span class="kt">px</span><span class="p">;</span>
+<a id="__codelineno-29-7" name="__codelineno-29-7" href="#__codelineno-29-7"></a><span class="w">  </span><span class="nv">--ag-ui-glyph-stroke</span><span class="p">:</span><span class="w"> </span><span class="mf">1.75</span><span class="p">;</span>
+<a id="__codelineno-29-8" name="__codelineno-29-8" href="#__codelineno-29-8"></a><span class="p">}</span>
+</code></pre></div>
+<p>Every glyph is a slot with the built-in mark as its fallback (<code>icon-send</code>, <code>icon-stop</code>,
+<code>icon-attach</code>, <code>icon-voice</code>), so projecting your own icon set never means restyling a character.</p>
+<h2 id="motion">Motion<a class="headerlink" href="#motion" title="Permanent link">&para;</a></h2>
+<p>One duration and two curves drive every collapse, expand and slide-over, so the whole widget
+settles as one thing:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="nt">ag-ui-chat</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a><span class="w">  </span><span class="nv">--ag-ui-motion</span><span class="p">:</span><span class="w"> </span><span class="mf">0.28</span><span class="kt">s</span><span class="p">;</span>
+<a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a><span class="w">  </span><span class="nv">--ag-ui-ease</span><span class="p">:</span><span class="w"> </span><span class="nb">cubic-bezier</span><span class="p">(</span><span class="mf">0.32</span><span class="p">,</span><span class="w"> </span><span class="mf">0.72</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span><span class="w">      </span><span class="c">/* the settle */</span>
+<a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a><span class="w">  </span><span class="nv">--ag-ui-ease-pop</span><span class="p">:</span><span class="w"> </span><span class="nb">cubic-bezier</span><span class="p">(</span><span class="mf">0.34</span><span class="p">,</span><span class="w"> </span><span class="mf">1.36</span><span class="p">,</span><span class="w"> </span><span class="mf">0.64</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span><span class="w"> </span><span class="c">/* the arrival, with overshoot */</span>
+<a id="__codelineno-30-5" name="__codelineno-30-5" href="#__codelineno-30-5"></a><span class="p">}</span>
+</code></pre></div>
+<p>Under <code>prefers-reduced-motion: reduce</code> the duration collapses to a single frame: states still
+change, nothing travels. Set <code>--ag-ui-motion: 0s</code> to switch the animation off outright.</p>
+<h2 id="voice-input">Voice input<a class="headerlink" href="#voice-input" title="Permanent link">&para;</a></h2>
+<p>Set <code>data-transcribe-url</code> (django-ag-ui's <code>TranscribeView</code>) to reveal a mic button in the
+composer (part <code>voice-button</code>). Click it to record via <code>MediaRecorder</code>, click again to stop — the
+clip is POSTed to the endpoint and the returned transcript is dropped into the textarea. Swap the
+transport with a custom <code>transcribeHandler</code> — <code>(audio: Blob) =&gt; Promise&lt;string&gt;</code> — to use a
+different STT endpoint or a browser Web Speech adapter without touching the button; when set, the
+mic appears even with no <code>data-transcribe-url</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span> <span class="na">data-transcribe-url</span><span class="o">=</span><span class="s">"/agent/transcribe/"</span><span class="p">&gt;&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
+</code></pre></div>
+<h2 id="theme-toggle">Theme toggle<a class="headerlink" href="#theme-toggle" title="Permanent link">&para;</a></h2>
+<p><code>theme</code> is a plain attribute you can set yourself, and a host can always drop its own switch into
+<code>slot="header-actions"</code>. For convenience, the boolean <code>data-theme-toggle</code> attribute adds a built-in
+light⇄dark toggle to the header (part <code>theme-toggle</code>) that flips the scheme word of <code>theme</code> and
+persists the choice per tab. Only the scheme changes: <code>soft</code> becomes <code>soft dark</code>, <code>soft dark</code>
+becomes <code>soft light</code>, and <code>auto</code> becomes the opposite of what the system shows, an explicit
+choice. With no scheme word the toggle flips the scheme the panel is drawn in, so a host rule
+that sets the element's <code>color-scheme</code> (to follow the page's own dark mode) is flipped from,
+and the written word then holds against that rule. The toggle's glyph follows a <code>theme</code> the host
+writes later too, so a host's own picker and the toggle never disagree, and under <code>auto</code> it
+follows the system's <code>prefers-color-scheme</code> as it changes. One change it cannot see: a host rule
+that changes the element's <code>color-scheme</code> at runtime (a class swapped on your page, say) fires no
+event, so the glyph keeps the scheme it last drew until the next click or <code>theme</code> write. Write the
+scheme word into <code>theme</code> instead, or set <code>theme</code> again after your rule changes. Only the scheme
+is saved, too:
+on the next load it is put beside whatever theme name the markup carries, so <code>dark</code> chosen on a
+<code>soft</code> page restores as <code>classic dark</code> on a <code>classic</code> one. Off by default so it never competes with
+a host-supplied control.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span> <span class="na">data-theme-toggle</span><span class="p">&gt;&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "search.highlight", "search.share", "search.suggest", "content.code.copy", "content.action.edit", "toc.follow"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.a5f9d56c.min.js"></script>
+      
+    
+  </body>
+</html>

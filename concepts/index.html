@@ -1,0 +1,2340 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Framework-free Web Components over the AG-UI protocol - chat, threads, inbox and an agents provider.">
+      
+      
+      
+        <link rel="canonical" href="https://artui.github.io/agents-web-components/concepts/">
+      
+      
+        <link rel="prev" href="../authentication/">
+      
+      
+        <link rel="next" href="../header-and-panel/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
+    
+    
+      
+        <title>Core concepts - agents-web-components</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#core-concepts" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="agents-web-components" class="md-header__button md-logo" aria-label="agents-web-components" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            agents-web-components
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Core concepts
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Artui/agents-web-components" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Artui/agents-web-components
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="agents-web-components" class="md-nav__button md-logo" aria-label="agents-web-components" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    agents-web-components
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Artui/agents-web-components" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Artui/agents-web-components
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../authentication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authenticating requests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core concepts
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-run-loop-and-the-ag-ui-client" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The run loop and the AG-UI client
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The run loop and the AG-UI client">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-tool-call-that-failed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A tool call that failed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stopping-a-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stopping a run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#runs-that-outlive-their-connection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runs that outlive their connection
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-run-the-server-stops" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A run the server stops
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-a-run-fails-and-what-it-cost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When a run fails, and what it cost
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#registering-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Registering tools
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inline-confirmation-x-destructive--x-confirm--confirmpredicate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inline confirmation (x-destructive / x-confirm / confirmPredicate)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Inline confirmation (x-destructive / x-confirm / confirmPredicate)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#always-allow-and-why-only-sometimes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "Always allow", and why only sometimes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#server-side-tool-approval-interrupts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Server-side tool approval (interrupts)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#asking-the-user-a-question-ask_user" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Asking the user a question (ask_user)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dom-driver-and-animation-primitives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DOM-driver and animation primitives
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="DOM-driver and animation primitives">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ring-colour" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ring colour
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#page-action-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Page-action tools
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The chat
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    The chat
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../header-and-panel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Header, collapse and resizing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../messages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Messages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tool-calls/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tool calls and sub-agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../server-pushed-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    What the server draws
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../skills/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Skills and run notices
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../uploads/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File uploads
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Other elements
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Other elements
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../threads/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The conversation list
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents and the inbox
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../editors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The editors on a page of their own
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hosting
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Hosting
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../host-seams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Host seams (SPA)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../durability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Durability and resuming
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Look and language
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Look and language
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theming/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Theming, density and placement
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../i18n/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Internationalization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Public API surface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../building/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Building and compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Moving from ag-ui-web-component
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-run-loop-and-the-ag-ui-client" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The run loop and the AG-UI client
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The run loop and the AG-UI client">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-tool-call-that-failed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A tool call that failed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stopping-a-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stopping a run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#runs-that-outlive-their-connection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runs that outlive their connection
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-run-the-server-stops" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A run the server stops
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-a-run-fails-and-what-it-cost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When a run fails, and what it cost
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#registering-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Registering tools
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inline-confirmation-x-destructive--x-confirm--confirmpredicate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inline confirmation (x-destructive / x-confirm / confirmPredicate)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Inline confirmation (x-destructive / x-confirm / confirmPredicate)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#always-allow-and-why-only-sometimes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "Always allow", and why only sometimes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#server-side-tool-approval-interrupts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Server-side tool approval (interrupts)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#asking-the-user-a-question-ask_user" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Asking the user a question (ask_user)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dom-driver-and-animation-primitives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DOM-driver and animation primitives
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="DOM-driver and animation primitives">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ring-colour" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ring colour
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#page-action-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Page-action tools
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/Artui/agents-web-components/edit/main/docs/concepts.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="core-concepts">Core concepts<a class="headerlink" href="#core-concepts" title="Permanent link">&para;</a></h1>
+<h2 id="the-run-loop-and-the-ag-ui-client">The run loop and the AG-UI client<a class="headerlink" href="#the-run-loop-and-the-ag-ui-client" title="Permanent link">&para;</a></h2>
+<p><code>&lt;ag-ui-chat&gt;</code> is the view; <a href="https://github.com/Artui/agents-web-components/blob/main/src/core/agui_client.ts"><code>AgUiClient</code></a> is the orchestration layer over
+an AG-UI <code>AbstractAgent</code>. On the first send the element builds a client (via the overridable
+<code>agentFactory</code>, which defaults to <a href="https://github.com/Artui/agents-web-components/blob/main/src/core/create_http_agent.ts"><code>createHttpAgent</code></a>). Each turn:</p>
+<ol>
+<li>The user message is appended and the agent runs once.</li>
+<li>AG-UI subscriber events are translated into the element's handlers — streaming text deltas
+   render into a bubble; each <code>TOOL_CALL_END</code> becomes a tool-call card.</li>
+<li>Any <strong>frontend</strong> tool calls collected during the run are executed locally, their results are
+   appended as <code>tool</code> messages, and the agent is re-run with the results.</li>
+<li>This repeats until the agent stops calling frontend tools, bounded by <code>MAX_TOOL_ROUNDS</code>
+   (10) — raise it with <code>data-max-tool-rounds</code>, or <code>AgUiClientConfig.maxToolRounds</code> when you
+   drive the client yourself. The default suits a chat whose tools answer questions; a
+   page-driving deployment reaches it legitimately, one round per field filled, and the symptom
+   is not an error but an answer that stops mid-task. A value below 1 is ignored rather than
+   honoured — it would be a send that never runs the agent at all.</li>
+</ol>
+<p>Tool calls the client doesn't own (server-side tools the server already executed) are left alone —
+the loop doesn't re-run them, but their streamed <code>TOOL_CALL_RESULT</code> is rendered into the tool-call
+card (honouring <code>data-tool-display</code>), so server-side output is visible too. The current tool catalog
+and context are read <strong>fresh on every run</strong> (<code>getTools()</code> / <code>getContext()</code>), so they always reflect
+the current page state.</p>
+<h3 id="a-tool-call-that-failed">A tool call that failed<a class="headerlink" href="#a-tool-call-that-failed" title="Permanent link">&para;</a></h3>
+<p>A <code>TOOL_CALL_RESULT</code> may say how the call ended, as an optional <strong><code>outcome</code></strong> key in the event's
+<code>metadata</code> (<code>"metadata": { "outcome": "failed" }</code>). It takes pydantic-ai's own <code>ToolReturnPart</code>
+vocabulary — read the values off <code>TOOL_OUTCOME</code>:</p>
+<table>
+<thead>
+<tr>
+<th><code>outcome</code></th>
+<th>Card</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>(absent)</em></td>
+<td>done</td>
+<td>A result, said the way every server has always said it.</td>
+</tr>
+<tr>
+<td><code>success</code></td>
+<td>done</td>
+<td>The same thing, stated.</td>
+</tr>
+<tr>
+<td><code>failed</code></td>
+<td>error</td>
+<td>The call ran and failed.</td>
+</tr>
+<tr>
+<td><code>denied</code></td>
+<td>declined</td>
+<td>A person or a guard refused it, so it never ran.</td>
+</tr>
+<tr>
+<td><code>interrupted</code></td>
+<td>not finished</td>
+<td>It produced no result because the run ended first, and nobody refused it.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Absent is a success, and anything unrecognised is too</strong> — including a value from a later protocol
+version. A card is a claim about what happened, and refusing to
+recognise a word is not grounds for claiming failure. So no server has to change to keep the
+rendering it has today, and a server that adds the field gets the truth on screen instead of a
+green card with a refusal folded inside it.</p>
+<p>It has to be in <code>metadata</code>. <code>@ag-ui/client</code> 1.0 strips every key its schemas do not declare from an
+event before any subscriber sees it, with a <code>[ag-ui][enforce]</code> console warning, and <code>metadata</code> is
+the one place on an event it declares open by key. An <code>outcome</code> at the top level of the event —
+where a server wrote it for the 0.x client, and where a django-ag-ui older than 0.63.0 still does —
+never arrives, so the card settles as done. The key arrives on <code>AgUiClientHandlers.onToolResult</code> as
+an optional third argument, typed <code>unknown</code> because the protocol validates nothing inside
+<code>metadata</code>; <code>toolStatusFromOutcome</code> does the narrowing.</p>
+<p>A <strong>frontend</strong> tool never streams this event — the client posts its own result — so its outcome is
+recorded on the <code>ToolExecution</code> the executor returns (<code>{ content, outcome: "denied" }</code>). That covers
+the two refusals the component makes itself: a confirmation card the user declined, and a call
+blocked because the page moved under the round.</p>
+<p>Either way the outcome is <strong>persisted on the tool message, in its <code>metadata</code></strong>, so a reload replays
+the card as it settled rather than as a plain result. For a server's result <code>@ag-ui/client</code> puts it
+there itself, folding the event's metadata onto the tool message it appends; for its own results the
+client writes it in the same place. See
+<a href="../durability/#mpa-durability-surviving-full-page-reloads">MPA durability</a>.</p>
+<p><strong>Every request carries a result for every tool call in it.</strong> Several model providers reject a
+turn holding a tool call with no result, and a run can leave one open in more ways than one: Stop
+while the stream is still arriving, a round that ends on <code>RUN_ERROR</code>, a call naming a tool nothing
+here owns, a server that never streamed the result. So before each request the client answers
+every call still open with the <code>callNotFinished</code> string (by default <code>Not finished: the run ended
+or moved on before this tool call returned a result.</code>) and the outcome <code>interrupted</code>, placed at the
+end of the round that made the call, and the card settles to <strong>not finished</strong> in the same words.
+That result blames nobody, because nobody declined: <code>declinedAction</code> is kept for a call a person
+was asked about and turned down — a confirmation card or an approval they declined, or one Stop
+closed while it was open. The calls a resumed approval is answering are left alone, because the
+resume is their answer.</p>
+<p>The catalog a run advertises is also the set that run can execute. Override <code>getTools</code> to scope
+what a page offers — say, exposing <code>delete_record</code> only where deleting makes sense — and a call
+naming a tool you withheld is treated exactly as a call naming a tool you never registered: no
+handler runs, the card settles as not finished, and the next request answers the call in those
+words. Withholding is per run, so the
+mount-wide registry can stay complete. Hosts that leave <code>getTools</code> alone advertise the built-ins
+plus everything registered, which is precisely what dispatch could reach anyway.</p>
+<h2 id="stopping-a-run">Stopping a run<a class="headerlink" href="#stopping-a-run" title="Permanent link">&para;</a></h2>
+<p>While a run is in flight the <strong>Send button becomes Stop</strong> (same button, label/<code>aria-label</code> swap,
+<code>data-state="running"</code> for styling); clicking it — or pressing <strong>Escape</strong> in the composer (when
+the skills palette is closed; the palette owns Escape while open) — calls <code>AgUiClient.cancel()</code>.
+AG-UI has no server-side cancel route: cancelling <strong>aborts the streaming request</strong>
+(<code>abortRun()</code>), and the server observes the disconnect. On cancel:</p>
+<ul>
+<li>Partial assistant text already streamed <strong>stays in the transcript</strong> and is persisted via
+  <code>onPersist</code>, so a reload shows the truncated exchange. A muted <strong>"⏹ Stopped"</strong> note is appended
+  (<code>.stopped-note</code>) — a deliberate stop is not an error, so no bubble.</li>
+<li>The run loop stops: tool calls collected before the abort are <strong>not executed</strong>, and no further
+  round starts. A frontend tool handler already running completes and its result is kept, but it
+  doesn't trigger a re-run, and the calls after it in the same round do not start. Each call that
+  did not run settles as <strong>not finished</strong>, and the next request answers
+  it in those words rather than sending it without a result.</li>
+<li>An <strong>open confirmation card is declined</strong> (<code>data-resolved="declined"</code>) — cancelling the run
+  answers the pending question. Likewise an open <strong>approval card</strong> is denied, and the next request
+  carries that decline as the call's result; a call already approved when Stop lands was declined
+  by nobody, so it is answered as not finished instead. An open <strong>question card</strong> (<code>ask_user</code>)
+  resolves with an empty answer. Reloading the page while a card is open does not decline it,
+  because nobody answered: the call comes back not finished; see
+  <a href="../durability/#mpa-durability-surviving-full-page-reloads">MPA durability</a>.</li>
+<li>The new <code>onCancelled()</code> handler fires instead of <code>onError()</code>; <code>onSettled()</code> still follows
+  (the terminal-rest guarantee), returning the button to <strong>Send</strong>.</li>
+</ul>
+<p><code>cancel()</code> with no run in flight is a safe no-op. <code>newChat()</code> cancels any in-flight run before
+discarding the client, and so do switching conversations, <code>reload()</code> and removing the element. A
+<a href="../durability/#resuming-a-run">checkpoint continuation</a> is the run in flight while it lasts, so Stop and all of
+these end it too. So does a turn that has not made its request yet: called from host code a send
+or a resume runs on the way — the conversation store's save, <code>getContext</code>, <code>getTools</code> —
+<code>cancel()</code> stops it before anything is sent, and <code>onCancelled()</code> and <code>onSettled()</code> fire as for any
+other Stop.</p>
+<p>A cancelled run ends a moment later, once its request has closed or a running tool handler has
+returned. What it does then stays with the conversation it belonged to: its truncated exchange is
+saved to that thread, <code>ag-ui-run-finished</code> still reports the tools it ran, and nothing reaches the
+transcript or the Stop button of the conversation that replaced it.</p>
+<p>With <a href="#runs-that-outlive-their-connection"><code>data-detach-runs</code></a>, Stop, Escape and deleting the
+thread on screen also post the thread's <code>cancel/</code>; switching, New chat, <code>reload()</code>, a <code>user-key</code>
+change and removing the element still only abort the request, and the run carries on.</p>
+<h2 id="runs-that-outlive-their-connection">Runs that outlive their connection<a class="headerlink" href="#runs-that-outlive-their-connection" title="Permanent link">&para;</a></h2>
+<p>By default a run lives inside its request: switching thread, New chat or removing the element
+aborts it, and the server cancels it. With a django-ag-ui <strong>0.82.0+</strong> mount that has a run store,
+a run can ask to carry on instead. Opt in on the element:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span> <span class="na">data-threads-url</span><span class="o">=</span><span class="s">"/agent/threads/"</span> <span class="na">data-detach-runs</span><span class="p">&gt;&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
+</code></pre></div>
+<p>or <code>chat.detachRuns = true</code>. Both are read at each request, and both need <code>data-threads-url</code>:
+the element reaches the run's log and cancel route beside it, at <code>&lt;url&gt;&lt;id&gt;/events/</code> and
+<code>&lt;url&gt;&lt;id&gt;/cancel/</code>, and does nothing extra without it. The server honours the request only on a
+mount with <code>run_store=</code> and <code>RUN_TIMEOUT_SECONDS</code> set, served over <strong>ASGI</strong>, to an
+<strong>authenticated</strong> user; anywhere else the run is cancelled on disconnect as before. Then:</p>
+<ul>
+<li><strong>Every request asks to detach.</strong> <code>RunAgentInput.forwardedProps.detach</code> is <code>true</code> on every round
+  of a turn, a frontend tool's rounds included, so leaving during one leaves it running too.</li>
+<li><strong>Leaving lets go.</strong> A thread switch, New chat, <code>reload()</code>, a <code>user-key</code> change and the element
+  leaving the page abort the request locally; the server sees a disconnect, the run finishes,
+  and no cancel is recorded.</li>
+<li><strong>Coming back joins the run.</strong> Restoring a thread (picking it, the first load, a reload, the
+  element being inserted again) asks the server once whether it has a run going: a JSON
+  <code>GET &lt;url&gt;&lt;id&gt;/events/?after=0&amp;limit=1</code>, reattaching when its <code>status</code> is <code>"running"</code>. A <code>404</code>
+  or any other status restores the thread from its store as before. It is asked rather than
+  remembered so it holds across an element a tab host unmounted; there is no status on the thread
+  list yet. Joining replays the run from its start (<code>events/?after=0</code> as an AG-UI stream), so the
+  transcript is redrawn from the replay's opening <code>MESSAGES_SNAPSHOT</code> and the answer streams in
+  as a live one does. <code>running</code> (and <code>data-running</code>) is true from the moment the run is joined
+  until it ends, so a host that defers a switch until a run is over can key on its removal. A
+  host's <code>sendMessage()</code> made while that restore is in flight waits for the joined run to end and
+  then goes out, ahead of any turn the composer parked; a Stop during the joined run drops it
+  (<code>false</code>).</li>
+<li><strong>Stop asks the server.</strong> Stop, Escape and deleting the thread on screen post
+  <code>&lt;url&gt;&lt;id&gt;/cancel/</code> with the element's headers and credentials, then abort as before. The run
+  acts on it at its next lease renewal, about ten seconds on; a <code>404</code> means it had already ended
+  and is not reported.</li>
+<li><strong>A start on a busy thread joins the busy run.</strong> A send the server refuses with <code>409</code> because
+  another run holds the thread (a Stop's cancel has not landed yet, or a second tab) joins that run
+  instead, and the turn waits in the composer's queue, attachments included, sent once that run
+  has ended (a turn that is only files is shown by their names); a refused <code>run()</code> action is not
+  sent again. The server logs a run's end a moment before it lets go of the thread, so a turn
+  refused by the very run it just waited out is asked once more, a quarter second later, and a
+  second refusal is shown as the error.</li>
+<li><strong>A queued mount's start is followed.</strong> A mount with a <code>firing_queue=</code> (django-ag-ui 0.82.0+)
+  answers a detached start with <code>200 {"thread_id", "run_id"}</code> and leaves the run to a worker; the
+  element then reads that run through <code>events/?after=0</code> and streams it as it would have streamed
+  the start, each frontend-tool round alike. The replay's opening snapshot is the stored
+  conversation, without the turn just sent, so it is not applied.</li>
+<li><strong>The run routes follow <code>data-threads-url</code>.</strong> A replay and a cancel read the attribute when they
+  are made, so a host that sets or changes it after the element connected sends the next of each
+  to the new URL; the thread list and its store still read it while connecting.</li>
+</ul>
+<p>Reattaching needs an agent that can connect: the default <code>agentFactory</code> builds one. A factory
+returning an agent that does not override <code>connect</code> gets the store-only restore. A factory that
+wraps <code>createHttpAgent</code> passes <code>getEventsUrl</code> on with the rest of the options, which is how the
+late attribute reaches the default agent; <code>getEventsUrl</code> wins over <code>eventsUrl</code>, so a factory that
+points the run log elsewhere overrides <code>getEventsUrl</code>.</p>
+<h2 id="a-run-the-server-stops">A run the server stops<a class="headerlink" href="#a-run-the-server-stops" title="Permanent link">&para;</a></h2>
+<p>A <code>RUN_FINISHED</code> whose outcome is <code>cancelled</code> is a run the server stopped, and it ends exactly as
+Stop does: the partial answer stays and is saved, the muted <strong>Stopped</strong> note is appended,
+<code>onCancelled()</code> fires instead of a finish (then <code>onSettled()</code>), tool calls the run streamed are
+not executed and settle as not finished, no usage line is drawn, and <code>ag-ui-run-finished</code> reports
+<code>outcome: "stopped"</code>. It is not a failure, so there is no bubble and no Retry. The event does
+not say why the server stopped, so the note does not either.</p>
+<p>Where it comes from: django-ag-ui streams through pydantic-ai's AG-UI adapter, which sends this
+outcome when the run ends in pydantic-ai's own cancellation (<code>RunCancelled</code>): the agent's code
+calling <code>RunContext.cancel()</code>, or a run deadline passing, which pydantic-ai raises as
+<code>RunTimedOut</code>, itself a cancellation. django-ag-ui sets no run deadline and cancels no run
+itself today, so on its own it never sends the outcome; an agent or a deadline the host adds
+does. The adapter sends it only to a client that declares AG-UI 1.0 on
+<code>RunAgentInput.protocolVersion</code>, which <code>@ag-ui/client</code> 1.0 does on every request; an older
+client gets a bare <code>RUN_FINISHED</code> and reads a finish. When you press Stop the server sees the
+request close and sends nothing, so the two never meet.</p>
+<h2 id="when-a-run-fails-and-what-it-cost">When a run fails, and what it cost<a class="headerlink" href="#when-a-run-fails-and-what-it-cost" title="Permanent link">&para;</a></h2>
+<p>A run that ends in <code>RUN_ERROR</code> draws a failed bubble with Retry. Its words come from the event's
+<code>code</code> (the server's, or <code>abort</code>, which <code>@ag-ui/client</code> sets when something other than Stop cuts
+the connection), each a key of the strings table:</p>
+<table>
+<thead>
+<tr>
+<th><code>code</code></th>
+<th>The bubble says</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>timed_out</code></td>
+<td><code>runErrorTimedOut</code></td>
+</tr>
+<tr>
+<td><code>interrupted</code></td>
+<td><code>runErrorInterrupted</code></td>
+</tr>
+<tr>
+<td><code>identifier_too_long</code></td>
+<td>The server's own message, which names the field and the limit, and an offer (<code>runErrorNewChat</code>, part <code>run-error-offer</code>) that starts a new conversation, as New chat does</td>
+</tr>
+<tr>
+<td><code>error</code>, or any other code</td>
+<td><code>runErrorFailed</code></td>
+</tr>
+<tr>
+<td>none</td>
+<td>The server's message, as before codes existed</td>
+</tr>
+</tbody>
+</table>
+<p>Where a code is known, the server's message is not shown: django-ag-ui redacts it unless told not
+to, and a code is the part a client can put words to. A server that sends no code never promised
+that, so its message is kept.</p>
+<p>A run POST the server refuses before any event arrives reads the same table when its body is
+JSON with a string <code>code</code>: django-ag-ui answers an over-long thread or run id with a 400 whose
+body is <code>{"error": &lt;message&gt;, "code": "identifier_too_long"}</code>, which draws the server's <code>error</code>
+message and the new-conversation offer, exactly as the <code>RUN_ERROR</code> would. <code>onError</code> receives the
+code in <code>RunErrorInfo</code> either way. A refusal with no <code>code</code>, or a body not sent as <code>application/json</code>, and a
+stream that drops, show the client's own error text, for example <code>HTTP 400: {"detail": ...}</code>,
+with no offer.</p>
+<p>With <code>show-usage</code> set, a finished turn ends with a muted line such as <code>1,234 in · 567 out
+tokens</code> (part <code>usage-line</code>), the sums of <code>inputTokens</code> and <code>outputTokens</code> over every usage entry
+of every round in the turn. A side no entry carried is left out (<code>usageInput</code>, <code>usageOutput</code>);
+a turn with no usage, a failed turn and a stopped one (by you or by the server) draw nothing. The line is not stored, so a conversation restored from history has none. The digits
+are grouped with commas whatever the locale; the three templates take <code>{input}</code> and
+<code>{output}</code>.</p>
+<h2 id="registering-tools">Registering tools<a class="headerlink" href="#registering-tools" title="Permanent link">&para;</a></h2>
+<p>A tool is a <code>ClientTool</code>: <code>{ name, description, parameters, handler }</code>, where <code>parameters</code> is a
+<strong>JSON Schema</strong> and <code>handler</code> receives the parsed args and returns a value that is JSON-serialised
+into the tool-result message. Register them on the element:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">registerTool</span><span class="p">({</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s2">"search_products"</span><span class="p">,</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nx">description</span><span class="o">:</span><span class="w"> </span><span class="s2">"Search the catalog."</span><span class="p">,</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nx">parameters</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nx">type</span><span class="o">:</span><span class="w"> </span><span class="s2">"object"</span><span class="p">,</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nx">properties</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">query</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">type</span><span class="o">:</span><span class="w"> </span><span class="s2">"string"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">},</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="nx">required</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"query"</span><span class="p">],</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span><span class="p">},</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span><span class="nx">handler</span><span class="o">:</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">({</span><span class="w"> </span><span class="nx">query</span><span class="w"> </span><span class="p">})</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">api</span><span class="p">.</span><span class="nx">search</span><span class="p">(</span><span class="nx">query</span><span class="p">),</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="p">});</span>
+</code></pre></div>
+<p>Registering a name twice replaces the earlier handler rather than throwing, so a re-fired
+host ref or React StrictMode's double-invoke is harmless -- but two different tools sharing
+a name means the second silently wins. Each <code>&lt;ag-ui-chat&gt;</code> element owns its own
+registry, AG-UI client, and Shadow DOM, so <strong>multiple instances on one page never interfere</strong>.
+The one record they share is which storage namespace each has claimed, and it exists to keep two
+of them out of each other's conversation.</p>
+<p><strong>A handler's thrown message leaves the browser.</strong> If a handler rejects, its <code>Error.message</code> is
+posted back as that call's tool result: into the conversation, on to the AG-UI endpoint, persisted
+there, and replayed to the model provider on every later round. That is deliberate — a real reason
+is what lets the agent recover — but it means an internal hostname, a signed URL or a
+stack-derived path in a rethrown error is disclosed to parties you never chose. Throw the message
+you would be content for the model to read, and log the detail instead.</p>
+<h2 id="inline-confirmation-x-destructive--x-confirm--confirmpredicate">Inline confirmation (<code>x-destructive</code> / <code>x-confirm</code> / <code>confirmPredicate</code>)<a class="headerlink" href="#inline-confirmation-x-destructive--x-confirm--confirmpredicate" title="Permanent link">&para;</a></h2>
+<p>When a tool call needs confirmation, the element appends an <strong>inline confirmation card</strong> (a
+<code>&lt;div class="confirm"&gt;</code>) to the transcript via
+<a href="https://github.com/Artui/agents-web-components/blob/main/src/ui/interrupts/confirmation_card.ts"><code>requestConfirmation</code></a> — it is not a modal overlay. The card reads
+naturally after the assistant's explanation, never steals focus from the page, and stays in the
+transcript as a resolved record after the decision:</p>
+<ul>
+<li><strong>Confirm</strong> → the handler runs and the result is posted back.</li>
+<li><strong>Cancel</strong> → a <code>"User declined the action."</code> result is posted; the agent acknowledges on its
+  next turn.</li>
+<li><strong>Always allow</strong> → the handler runs <em>and</em> this tool stops prompting for the rest of the
+  session. See below for when this button appears.</li>
+</ul>
+<p>Whether a call is gated is decided in this order:</p>
+<ol>
+<li>If <code>chat.autoConfirm === true</code>, the call <strong>never</strong> prompts (an "autopilot" toggle).</li>
+<li>Else if <code>chat.confirmPredicate</code> is set, its boolean return is authoritative — given the tool
+   name + parsed args it decides per-call (so one tool can be instant for some args and confirmed
+   for others, which a static flag can't express). <strong>A predicate that throws or rejects refuses
+   the call</strong>: no card, the handler does not run, the tool card settles as declined, and the agent
+   gets the <code>confirmCheckFailed</code> string as the result and carries on, as after a decline. The
+   error goes to the console, never to the endpoint. A predicate still pending when the run is
+   stopped decides nothing: the call does not run, and its card settles as not finished.</li>
+<li>Else if the user has waived this tool name for the session, the call runs.</li>
+<li>Else the element falls back to <a href="https://github.com/Artui/agents-web-components/blob/main/src/tools/is_destructive.ts"><code>isDestructive(parameters)</code></a>,
+   which reads the <code>x-destructive</code> JSON-Schema flag.</li>
+</ol>
+<h3 id="always-allow-and-why-only-sometimes">"Always allow", and why only sometimes<a class="headerlink" href="#always-allow-and-why-only-sometimes" title="Permanent link">&para;</a></h3>
+<p>A prompt that is approved nearly every time is not a decision, it is a speed bump — and the
+reflex it trains is what makes the rare refusal easy to miss. Anthropic published that users
+approve <strong>~93%</strong> of Claude Code permission prompts manually and called interactive confirmation
+<em>"behaviorally unreliable as a sole safety mechanism"</em> on that basis. The waiver exists so the
+prompts that remain still mean something.</p>
+<p><strong>The button is offered only on cards raised by step 4</strong> — the <code>x-destructive</code> default. Where
+<code>confirmPredicate</code> is what gated the call, there is no button, because that predicate is
+documented as authoritative and letting one click retire it would silently defeat a host policy.
+The offer and the allowlist sit on the same path, so there is no dead button either.</p>
+<p>The waiver is <strong>per tool name and per element</strong>, held in memory and never persisted. A session
+decision that outlived the tab would be a permanent grant made by one click — which is what
+<code>autoConfirm</code> already exists to say deliberately. It is cleared when the element goes away, and
+when <a href="../durability/#who-the-stored-conversation-belongs-to-user-key"><code>user-key</code></a> changes hands: one person's
+<em>Always allow</em> is not the next person's, and a sign-out in the same tab does not remount anything.
+The first key to arrive keeps it, for the same reason it keeps the conversation.</p>
+<p>AG-UI has no built-in risk flag, so destructiveness is carried as a JSON-Schema extension at the
+<strong>schema root</strong>: <code>parameters["x-destructive"] = true</code> (use the exported <code>X_DESTRUCTIVE_KEY</code>
+constant). There is no parallel metadata channel and no name heuristic — destructiveness is exactly
+the <code>x-destructive</code> flag (or <code>confirmPredicate</code>). The registry forwards the flag verbatim to
+<code>RunAgentInput.tools</code>.</p>
+<p>If the schema carries an <code>x-confirm</code> string (use <code>X_CONFIRM_KEY</code>), the card shows it as the prompt;
+otherwise it falls back to a generic <code>Run "&lt;tool&gt;"?</code>.</p>
+<p><strong>This gate covers frontend tools only.</strong> A server-side tool's schema never reaches the browser —
+tool definitions travel client-to-server on <code>RunAgentInput.tools</code>, and the only channel coming back
+is the label catalog (<code>data-tools-url</code>), which carries <code>{ name, summary, description? }</code> and no
+flags. So marking a server tool destructive does not produce a card here; gate it server-side
+instead (see <a href="#server-side-tool-approval-interrupts">Server-side tool approval</a>), which surfaces as
+an approval card in the same transcript.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1">// Per-call: confirm a delete only when it would remove more than one row.</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">confirmPredicate</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">name</span><span class="p">,</span><span class="w"> </span><span class="nx">args</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nx">name</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s2">"delete_rows"</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">Array</span><span class="p">.</span><span class="nx">isArray</span><span class="p">(</span><span class="nx">args</span><span class="p">.</span><span class="nx">ids</span><span class="p">)</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nx">args</span><span class="p">.</span><span class="nx">ids</span><span class="p">.</span><span class="nx">length</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mf">1</span><span class="p">;</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1">// Prompt text via x-confirm:</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">registerTool</span><span class="p">({</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s2">"activate_project"</span><span class="p">,</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span><span class="nx">description</span><span class="o">:</span><span class="w"> </span><span class="s2">"Activate the current project."</span><span class="p">,</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">  </span><span class="nx">parameters</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">type</span><span class="o">:</span><span class="w"> </span><span class="s2">"object"</span><span class="p">,</span><span class="w"> </span><span class="nx">properties</span><span class="o">:</span><span class="w"> </span><span class="p">{},</span><span class="w"> </span><span class="p">[</span><span class="nx">X_DESTRUCTIVE_KEY</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="nx">X_CONFIRM_KEY</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="s2">"Activate this project?"</span><span class="w"> </span><span class="p">},</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">  </span><span class="nx">handler</span><span class="o">:</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">api</span><span class="p">.</span><span class="nx">activate</span><span class="p">(),</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="p">});</span>
+</code></pre></div>
+<p>The confirmation card gates <strong>client-registered</strong> tools <em>before</em> they run. A <strong>server-side</strong>
+tool runs on the server, so the browser can't intercept it the same way — that is what the
+approval card below is for.</p>
+<h2 id="server-side-tool-approval-interrupts">Server-side tool approval (interrupts)<a class="headerlink" href="#server-side-tool-approval-interrupts" title="Permanent link">&para;</a></h2>
+<p>When the server gates a destructive tool (e.g. django-ag-ui's <code>ToolGuard</code>), the tool <strong>defers</strong>
+instead of executing and the run finishes on an AG-UI <em>interrupt</em>. The element then renders an
+<strong>inline approval card</strong> (a <code>&lt;div class="approval"&gt;</code>) via
+<a href="https://github.com/Artui/agents-web-components/blob/main/src/ui/interrupts/approval_card.ts"><code>requestApproval</code></a> <strong>inside the tool card of the call it gates</strong>:</p>
+<ul>
+<li><strong>Approve</strong> → the run resumes and the server runs the tool; its result streams back into the
+  same card.</li>
+<li><strong>Deny</strong> → the run resumes carrying a <code>cancelled</code> answer, so the model learns the tool was
+  declined; the card settles as declined.</li>
+</ul>
+<p>This uses the AG-UI protocol's own interrupt/resume mechanism (<code>RunAgentInput.resume[]</code>) — the
+wire stays vanilla AG-UI. A <strong>Stop</strong> while an approval card is open denies every open card and
+cancels the run. No configuration is needed on the client; the gate is enabled server-side.</p>
+<p><strong>A run can defer several calls, and each is answered on its own.</strong> Importing three rows defers
+three <code>create_event</code> calls, and the wire takes a different answer for each. So every question is
+asked <strong>at once</strong>, each in its own tool card, above that call's own arguments — which is what says
+<em>which</em> call it is about. The prompt cannot: it comes from the tool, so all three read "Add this
+event to the board?". While the run waits, those cards read <strong><code>waiting for you</code></strong>
+(<code>data-status="deferred"</code>), not "running…" — nothing is running, the stream is over and the server
+is idle. A card asking a question shows its arguments in every <code>data-tool-display</code> mode, since
+hiding them would hide the answer to "which one is this".</p>
+<p>A <strong>frontend</strong> tool such as <code>ask_user</code> stays at "running…" while its card is open, because the
+browser really is running it. Only a deferred call was claiming something untrue.</p>
+<p><strong>What the card asks.</strong> An AG-UI interrupt carries the question as <code>message</code>, and the default is the
+call spelled out — <code>Approve create_event({"title": "Design sync", …})?</code> — which is accurate and not
+something to put in front of a person. A server can supply its own wording as <strong><code>x-confirm</code> in the
+interrupt's <code>metadata</code></strong>, the same key a client-side confirmation reads off the tool's schema, and
+the card prefers it:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"int-1"</span><span class="p">,</span><span class="w"> </span><span class="nt">"reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tool_call"</span><span class="p">,</span><span class="w"> </span><span class="nt">"toolCallId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"call-1"</span><span class="p">,</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">"message"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Approve create_event({\"title\": \"Design sync\"})?"</span><span class="p">,</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">"metadata"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"x-confirm"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Book Design sync on Friday at 14:00?"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<p>Anything non-string or blank under that key is ignored in favour of <code>message</code>, and with neither the
+card falls back to <code>strings.approvalPrompt</code>.</p>
+<p><strong>The card approves or denies, and nothing else.</strong> The interrupt's <code>responseSchema</code> also advertises
+<code>editedArgs</code> and <code>reason</code> — the protocol allows a client to rewrite a gated call's arguments before
+letting it run. The built-in card does not offer that; a host that wants it can implement
+<code>approvalRenderer</code> and resolve the interrupt itself.</p>
+<p><strong>A gated write is still a write the page cannot see.</strong> Approving one runs a <em>server-side</em> tool, so
+if your page renders the data it touched, listen for
+<a href="../host-seams/#host-seams-the-spa-story"><code>ag-ui-run-finished</code></a> and refetch.</p>
+<p>Like the question card, the approval card is customizable at three levels: <strong>text</strong> (<code>strings</code>:
+<code>approveAction</code> / <code>approvalPrompt</code> / <code>approve</code> / <code>deny</code> / <code>toolDeferred</code>), <strong>CSS</strong> (<code>::part()</code>:
+<code>approval</code>, <code>approval-body</code>, <code>approval-actions</code>, <code>approval-button</code>, <code>approval-approve</code>,
+<code>approval-deny</code>, and <code>tool-card-approval</code> for the region inside the card), and <strong>full replacement</strong>
+via <code>chat.approvalRenderer</code> — given the request (<code>message</code> + <code>toolName</code>) and a Stop <code>AbortSignal</code>,
+render your own UI and resolve <code>true</code>/<code>false</code>. A renderer is called <strong>once per interrupt,
+concurrently</strong>, so a host that can only ask one thing at a time should queue inside it:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">approvalRenderer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">request</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">signal</span><span class="w"> </span><span class="p">})</span><span class="w"> </span><span class="p">=&gt;</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nx">myConfirmDialog</span><span class="p">(</span><span class="nx">request</span><span class="p">.</span><span class="nx">message</span><span class="w"> </span><span class="o">??</span><span class="w"> </span><span class="sb">`Run </span><span class="si">${</span><span class="nx">request</span><span class="p">.</span><span class="nx">toolName</span><span class="si">}</span><span class="sb">?`</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">signal</span><span class="w"> </span><span class="p">});</span>
+</code></pre></div>
+<p><strong>A renderer that throws or rejects falls back to the built-in card</strong> for that interrupt, with a
+<code>console.warn</code> naming it. The renderer decides how the question looks, not whether it is asked, so
+nothing runs without a click and the run carries on as if no renderer were set. The one exception
+is a rejection after the signal fired, which is how a renderer is expected to honour Stop: that
+wait resolves as denied, as the built-in card does on the same signal, with no card and no warning.</p>
+<h2 id="asking-the-user-a-question-ask_user">Asking the user a question (<code>ask_user</code>)<a class="headerlink" href="#asking-the-user-a-question-ask_user" title="Permanent link">&para;</a></h2>
+<p>Set <code>chat.askUser = true</code> to offer the agent a built-in <code>ask_user</code> frontend tool. When the agent
+calls it, the element renders an <strong>inline question card</strong> (a <code>&lt;div class="question"&gt;</code>) via
+<a href="https://github.com/Artui/agents-web-components/blob/main/src/ui/interrupts/question_card.ts"><code>requestQuestion</code></a> and returns the user's answer as the tool result:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">askUser</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="p">;</span><span class="w"> </span><span class="c1">// opt in; off by default so the tool catalog is unchanged otherwise</span>
+</code></pre></div>
+<p><code>ask_user(question, options?, allow_custom?)</code> renders <code>options</code> as radio buttons, adds a free-text
+field when <code>allow_custom</code> is set (or when no options are given), and feeds the chosen or typed
+answer back through the normal frontend-tool path — no new protocol. A <strong>Stop</strong> dismisses an open
+question with an empty answer.</p>
+<p>The question card is <strong>fully customizable</strong> at three levels:</p>
+<ul>
+<li><strong>Text</strong> — every label is a <code>strings</code> key: <code>askUserAction</code> (the card's <code>aria-label</code>),
+  <code>otherOption</code>, <code>answerPlaceholder</code>, <code>submit</code>.</li>
+<li><strong>CSS</strong> — every element exposes a <code>::part()</code>: <code>question</code>, <code>question-body</code>, <code>question-options</code>,
+  <code>question-choice</code>, <code>question-radio</code>, <code>question-input</code>, <code>question-actions</code>, <code>question-button</code>
+  (plus the <code>--ag-ui-*</code> theme variables). No shadow piercing.</li>
+<li><strong>Full replacement</strong> — set <code>chat.askUserRenderer</code> to own the entire UI. Given the parsed request
+  and an <code>AbortSignal</code> (fired on Stop), render anything — a native modal, a framework component —
+  and resolve with the answer (empty string = no answer). The built-in card is bypassed entirely.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1">// Level 1+2: restyle the built-in card.</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">strings</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">submit</span><span class="o">:</span><span class="w"> </span><span class="s2">"Answer"</span><span class="p">,</span><span class="w"> </span><span class="nx">answerPlaceholder</span><span class="o">:</span><span class="w"> </span><span class="s2">"Type here…"</span><span class="w"> </span><span class="p">};</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="c1">// ag-ui-chat::part(question) { border-radius: 0; }</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="c1">// Level 3: replace the card with your own UI.</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">askUserRenderer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">request</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">signal</span><span class="w"> </span><span class="p">})</span><span class="w"> </span><span class="p">=&gt;</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span><span class="nx">myModal</span><span class="p">.</span><span class="nx">ask</span><span class="p">(</span><span class="nx">request</span><span class="p">.</span><span class="nx">question</span><span class="p">,</span><span class="w"> </span><span class="nx">request</span><span class="p">.</span><span class="nx">options</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">allowCustom</span><span class="o">:</span><span class="w"> </span><span class="nx">request</span><span class="p">.</span><span class="nx">allowCustom</span><span class="p">,</span><span class="w"> </span><span class="nx">signal</span><span class="w"> </span><span class="p">});</span>
+</code></pre></div>
+<p><strong>A renderer that throws or rejects falls back to the built-in card</strong> for that call, with a
+<code>console.warn</code> naming the tool call. As with <code>approvalRenderer</code>, the renderer decides how the
+question looks, not whether it is asked, so the run carries on as if no renderer were set. The one
+exception is a rejection after the signal fired, which is how a renderer is expected to honour Stop:
+that wait resolves with an empty answer, as the built-in card does on the same signal, with no card
+and no warning.</p>
+<h2 id="dom-driver-and-animation-primitives">DOM-driver and animation primitives<a class="headerlink" href="#dom-driver-and-animation-primitives" title="Permanent link">&para;</a></h2>
+<p>So the agent can visibly drive the host page, the package ships generic, framework-free
+primitives. The <strong>animation</strong> primitives (<a href="https://github.com/Artui/agents-web-components/blob/main/src/dom/animations.ts"><code>animations.ts</code></a>) operate at
+human-readable speed (configurable; pass small/zero durations in tests):</p>
+<ul>
+<li><code>typeInto(el, value, { charDelayMs })</code> — clears and types a value character by character,
+  firing <code>input</code>/<code>change</code> events as a real user would.</li>
+<li><code>highlightThenClick(el, { highlightMs })</code> / <code>pressThenClick(el, options)</code> — outline/press an
+  element, pause, then click.</li>
+<li><code>selectOption(el, value)</code> / <code>toggleControl(el, checked)</code> — animate a <code>&lt;select&gt;</code> / checkbox.</li>
+<li><code>scrollIntoCenterView(el, { settleMs })</code> — scrolls the element to the vertical centre and
+  resolves once the scroll has <strong>settled</strong>, so the ring that follows is drawn where the user is
+  looking rather than mid-glide. Awaiting is optional; the scroll is requested synchronously
+  either way. Settlement is <code>scrollend</code> where the browser has it, a short probe when nothing
+  actually moved (the element was already in view), and a 600 ms cap otherwise.</li>
+<li><code>flash(el, { flashMs, color })</code> / <code>focusWithFlash(el, { flashMs, color, focus })</code> — ring the
+  element so the user can find it. The ring is an <code>outline</code>, not a <code>box-shadow</code>, because a shadow
+  paints outside the border box and any <code>overflow: hidden</code> ancestor sharing the element's box (a
+  card, a table cell) clips it away entirely. It holds for <strong>1200 ms</strong> by default and fades out
+  over the last third — a 200 ms blink is not long enough to be <em>found</em> by someone who does not
+  yet know where to look. The colour is <code>color</code> when passed, else — see
+  <a href="#ring-colour">Ring colour</a> — the widget's own accent.
+  <code>flash</code> leaves focus alone; <code>focusWithFlash</code> moves it — see "Flash versus focus" below.</li>
+<li><code>prefersReducedMotion()</code> — honoured by every primitive that <em>moves</em> something: the hold delays
+  in <code>pressThenClick</code> / <code>selectOption</code> / <code>toggleControl</code> collapse to instant, <code>scrollIntoCenterView</code>
+  jumps instead of gliding and settles immediately, and the flash drops its fade while still
+  holding the ring for its full duration. Reduced motion asks for no animation, not for no
+  feedback. <code>typeInto</code> and <code>highlightThenClick</code> are the exceptions: they keep their
+  explicit-duration contract, so pass <code>charDelayMs: 0</code> / <code>highlightMs: 0</code> yourself if you want
+  them instant.</li>
+</ul>
+<p>The <strong>DOM-driver</strong> primitives (<a href="https://github.com/Artui/agents-web-components/blob/main/src/dom/dom_driver.ts"><code>dom_driver.ts</code></a>) compose those into the
+operations a tool handler typically wants:</p>
+<ul>
+<li><code>fillField(el, value, options)</code> — scroll to, focus-flash, and type into a text field. The
+  flash defaults to <code>flashMs: 0</code> here: the field is about to be typed into, which is its own
+  highlight. Pass <code>flashMs</code> (and optionally <code>color</code>) to ring it first.</li>
+<li><code>clickElement(el, options)</code> / <code>pressButton(el, options)</code> — scroll to, highlight/press, and click.</li>
+<li><code>showHighlightOverlay(el, options)</code> — ring an element from an <strong>overlay drawn outside it</strong>, and
+  optionally dim everything else (<code>scrim</code>) or flow a gradient round it (<code>gradient</code>). Returns a
+  function that removes it. <code>flash</code> and <code>focusWithFlash</code> take <code>scrim</code> and <code>gradient</code> too and route
+  through this when either is asked for.</li>
+</ul>
+<p><strong>Why a second mechanism.</strong> The plain ring is an <code>outline</code> on the element, which is deliberate:
+  a <code>box-shadow</code> paints outside the border box, so an <code>overflow: hidden</code> ancestor sharing the
+  target's box clips the whole ring away while the helper still reports success. But an outline
+  takes a <em>colour</em> — there is no <code>outline-image</code> — so a gradient cannot be one, and anything else
+  that can be is a property of the target and lands back inside whatever is clipping it. Dimming
+  everything else needs a surface larger than the target, which is the same problem from the other
+  side. So they are one overlay rather than two features.</p>
+<p><strong>It is inert.</strong> The overlay never takes a pointer event, at the cut-out or anywhere else — a dim
+  that swallows clicks is a modal the user did not open, and <code>highlightThenClick</code> has to reach the
+  control it just finished pointing at. It follows the target on scroll and resize, and under
+  reduced motion the gradient is drawn but does not travel.</p>
+<p><strong>Themed from the element you point at, not from the widget.</strong> The overlay is appended to the
+  document body so it can escape the clipping it exists to avoid, which means a <code>var()</code> in its own
+  style would resolve against the body — so every token is read from the <em>target's</em> computed style
+  instead. Set them wherever they inherit to the elements the agent touches, usually <code>:root</code>. The
+  ring colour is the one exception, read from the widget as well; see
+  <a href="#ring-colour">Ring colour</a>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="p">:</span><span class="nd">root</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nv">--ag-ui-highlight-ring-color</span><span class="p">:</span><span class="w"> </span><span class="mh">#0f766e</span><span class="p">;</span><span class="w"> </span><span class="c">/* also read from ag-ui-chat; see Ring colour */</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="nv">--ag-ui-highlight-scrim</span><span class="p">:</span><span class="w"> </span><span class="nb">rgba</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="w"> </span><span class="mi">15</span><span class="p">,</span><span class="w"> </span><span class="mi">25</span><span class="p">,</span><span class="w"> </span><span class="mf">0.45</span><span class="p">);</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="nv">--ag-ui-highlight-gradient</span><span class="p">:</span><span class="w"> </span><span class="nb">linear-gradient</span><span class="p">(</span><span class="mi">115</span><span class="kt">deg</span><span class="p">,</span><span class="w"> </span><span class="kc">transparent</span><span class="w"> </span><span class="mi">20</span><span class="kt">%</span><span class="p">,</span><span class="w"> </span><span class="mh">#4f46e5</span><span class="w"> </span><span class="mi">50</span><span class="kt">%</span><span class="p">,</span><span class="w"> </span><span class="kc">transparent</span><span class="w"> </span><span class="mi">80</span><span class="kt">%</span><span class="p">);</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span><span class="nv">--ag-ui-highlight-ring-width</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w">    </span><span class="c">/* unitless; px */</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span><span class="nv">--ag-ui-highlight-flow-ms</span><span class="p">:</span><span class="w"> </span><span class="mi">2400</span><span class="p">;</span><span class="w">    </span><span class="c">/* one pass of the gradient */</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">  </span><span class="nv">--ag-ui-highlight-z-index</span><span class="p">:</span><span class="w"> </span><span class="mi">2147483001</span><span class="p">;</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="p">}</span>
+</code></pre></div>
+<p><code>ringWidth</code> and <code>flowMs</code> options override the tokens per call; <code>color</code>, <code>padding</code> and <code>radius</code>
+  have no token because they are per-target rather than per-theme. The overlay's own styles are
+  inline and it lives in the light DOM, so neither a stylesheet rule nor <code>::part</code> can reach it —
+  these tokens and options are the whole surface, which is why they cover every value it draws.
+- <code>selectControl(el, value)</code> / <code>toggleCheckbox(el, checked)</code> — animate a <code>&lt;select&gt;</code> / checkbox.
+- <code>setControlValue(el, value)</code> — set a <code>&lt;select&gt;</code> or checkbox without animation, dispatching
+  <code>input</code>/<code>change</code>.</p>
+<p>Every driver primitive <strong>awaits the scroll</strong> before it animates. A smooth scroll is not awaitable
+on its own, so a highlight fired straight after <code>scrollIntoView</code> could be applied and removed
+while the element was still travelling — visible to nobody. Budget up to ~600 ms of settle time
+per action in a browser without <code>scrollend</code>; an element already in view costs ~100 ms.</p>
+<p><strong>Flash versus focus.</strong> <code>focusWithFlash</code> does what its name says: it moves keyboard focus. That is
+rarely what you want just to <em>point at</em> something — it takes focus off the composer, can fire blur
+validation on whatever the user was mid-edit in, and can close an open menu. Reach for <code>flash(el)</code>
+to highlight, and keep <code>focusWithFlash(el)</code> for the case where the agent is about to type. Either
+way you can be explicit with <code>focus</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">await</span><span class="w"> </span><span class="nx">flash</span><span class="p">(</span><span class="nx">el</span><span class="p">);</span><span class="w">                            </span><span class="c1">// highlight, focus untouched</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="k">await</span><span class="w"> </span><span class="nx">focusWithFlash</span><span class="p">(</span><span class="nx">el</span><span class="p">);</span><span class="w">                   </span><span class="c1">// highlight and take focus</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="k">await</span><span class="w"> </span><span class="nx">focusWithFlash</span><span class="p">(</span><span class="nx">el</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">focus</span><span class="o">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">});</span><span class="w"> </span><span class="c1">// same as flash(el)</span>
+</code></pre></div>
+<p><code>focusWithFlash</code> focuses with <code>preventScroll: true</code>, so it cannot fight a smooth scroll that is
+still in flight.</p>
+<p>The native-setter helpers (<a href="https://github.com/Artui/agents-web-components/blob/main/src/dom/native_setter.ts"><code>native_setter.ts</code></a>) — <code>setNativeValue</code> /
+<code>setNativeChecked</code> — set a control through its native prototype setter so React-controlled inputs
+register the change.</p>
+<p>Each takes an element the caller has already located; host packages wrap them with
+environment-aware lookups (e.g. "find <code>#id_&lt;name&gt;</code>, then <code>fillField</code>").</p>
+<h3 id="ring-colour">Ring colour<a class="headerlink" href="#ring-colour" title="Permanent link">&para;</a></h3>
+<p>Every ring the driver draws — the flash outline, the overlay ring, the press and toggle halo — is
+drawn in the host's page, outside the widget, so a token set on <code>ag-ui-chat</code> never reaches it
+through the cascade. The driver reads the widget directly instead, so on a page that themes
+nothing the rings follow the widget's theme: Quiet's near-black, Soft's violet, the dark half in a
+dark scheme. When a call passes no <code>color</code>, the first of these that is set wins:</p>
+<ol>
+<li><code>--ag-ui-highlight-ring-color</code> on the target (so <code>:root</code> reaches every ring);</li>
+<li><code>--ag-ui-highlight-ring-color</code> on the chat — on <code>ag-ui-chat</code> or anything above it;</li>
+<li>the target's <code>--ag-ui-accent</code>, so a page that themes its accent keeps the rings it has;</li>
+<li>the chat's resolved accent, its theme's default included, held to 3:1 against the page (below);</li>
+<li>the package indigo, when no chat is on the page at all.</li>
+</ol>
+<p>The chat's own accent follows the widget's scheme, not the page's, so a dark widget's near-white
+accent would all but vanish on a light page. When the ring falls to step 4 it is measured against
+<strong>the surface behind the target</strong>: the background of the target's parent, and of each element
+above it until one is opaque, composited over the page canvas (which follows the root's
+<code>color-scheme</code>). The target's own fill is not that surface, because the ring is drawn outside its
+box: a white field on a dark page is ringed on the dark page. Background images are not read. The
+ring takes the first of these that holds 3:1 there (WCAG 2.4.13): the accent as the chat resolves
+it, the other half of the chat's <code>light-dark()</code> pair, or the accent stepped toward black or white.
+Steps 1 to 3 are a host's own choice and are drawn as given, contrast or not.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c">/* Rings in the brand colour, whatever the widget's accent. */</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nt">ag-ui-chat</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">--ag-ui-highlight-ring-color</span><span class="p">:</span><span class="w"> </span><span class="mh">#0f766e</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<p>The halo of <code>pressThenClick</code> and <code>toggleControl</code> is the chosen colour at 40%. "The chat" is the
+most recently connected <code>&lt;ag-ui-chat&gt;</code>; on a page with two, pass the one acting as the <code>chat</code>
+option (<code>RingOwnerOptions</code>, which every ring-drawing primitive and <code>showHighlightOverlay</code> take).</p>
+<h2 id="page-action-tools">Page-action tools<a class="headerlink" href="#page-action-tools" title="Permanent link">&para;</a></h2>
+<p>Two built-in client tools let the agent perform common page interactions without every host
+re-implementing them. They are <strong>opt-in</strong> via <code>data-page-actions</code> — a comma list of the tokens you
+want — so you control the agent's interaction surface:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span> <span class="na">data-page-actions</span><span class="o">=</span><span class="s">"scroll,drag"</span><span class="p">&gt;&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
+</code></pre></div>
+<ul>
+<li><strong><code>scroll_to</code></strong> — scroll a target into view. <code>target</code> is <code>"top"</code>, <code>"bottom"</code>, or a CSS selector
+  / page-map element id. Read-only (no confirmation). It centres the target <strong>vertically</strong> and
+  brings it into view <strong>horizontally</strong> (<code>inline: "nearest"</code>), so on a two-axis surface a
+  horizontal target lands at the near edge rather than in the middle. In view is the contract;
+  "centred" is not, in that axis.</li>
+<li><strong><code>drag_and_drop</code></strong> — drag the <code>from</code> element onto the <code>to</code> element (selectors / page-map ids),
+  firing the standard HTML5 drag sequence (<code>dragstart</code> → <code>dragenter</code>/<code>dragover</code>/<code>drop</code> → <code>dragend</code>)
+  so the page's own drop handler reacts. Useful for reordering sortable lists.</li>
+<li><strong><code>chat</code></strong> — four tools that let the agent move the panel it is speaking from:
+  <code>read_chat_surface</code>, <code>move_chat</code>, <code>minimise_chat</code>, <code>restore_chat</code>.</li>
+</ul>
+<p>This is the one nobody else can offer. Every other assistant's chat is a surface of its own, so
+  there is nothing for it to be in the way <em>of</em>; ours is mounted in the page the user is working
+  in, which makes "let me move this aside so you can see the table" something the agent can act on
+  rather than apologise for.</p>
+<p><strong>They report what happened, not what was asked.</strong> A panel that fills the screen has nowhere to
+  move to, and a placement that places itself owns its position — so <code>move_chat</code> answers
+  <code>moved: false</code> with the reason and what would work instead, rather than reporting success on a
+  panel that did not budge. <code>read_chat_surface</code> is there so the agent can ask before it acts
+  instead of learning through a failure; it is read-only.</p>
+<p>None of them is stamped <code>x-destructive</code>. Moving a window destroys nothing, and a confirmation
+  card in front of it would be worse than the move.</p>
+<p><strong>Your drag surface must listen to drag events, and many "modern" ones do not.</strong> <code>drag_and_drop</code>
+dispatches the native HTML5 sequence with one shared <code>DataTransfer</code>. A surface built on a
+pointer-event drag library — dnd-kit, most React DnD packages, the Angular CDK — listens to
+<code>pointerdown</code>/<code>pointermove</code> and <strong>never sees any of it</strong>: the agent's drag is a silent no-op that
+still reports success. Either use the native API or pick a library that listens to drag events.
+React's synthetic <code>onDrop</code> does receive the dispatched sequence, <code>DataTransfer</code> included.</p>
+<p><strong>A page action reports that it fired, not that it worked.</strong> <code>drag_and_drop</code> returns as soon as the
+sequence is dispatched; whether your drop handler's save succeeded is invisible to it, so a refused
+change still looks like a successful tool call. Two things follow. Have the page report its own
+refusals somewhere the agent can read them, and have the agent re-read the page before claiming
+anything. Where the outcome matters more than the gesture, call the operation as a <strong>server tool</strong>
+instead — it can return the real error.</p>
+<p><strong>A page that saves asynchronously should say so.</strong> A verification read straight after a drag can
+outrun the page's own save and conclude that nothing happened. Report a busy flag in your
+<code>getPageMap</code> (<code>{ saving: true }</code> while a write is in flight) and the agent can wait for a page that
+says it is busy. It cannot wait for one that does not.</p>
+<p>Targets resolve through the overridable <code>resolvePageTarget</code> property — <code>(target) =&gt; HTMLElement |
+null</code>, defaulting to <code>document.querySelector</code>. A host with a page map overrides it to map its own
+element ids (the same way the DOM-driver primitives are wrapped with environment-aware lookups):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">resolvePageTarget</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">id</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">myPageMap</span><span class="p">.</span><span class="nx">elementFor</span><span class="p">(</span><span class="nx">id</span><span class="p">);</span>
+</code></pre></div>
+<p><strong>Destructiveness.</strong> Page actions are <em>not</em> stamped <code>x-destructive</code> — a drag rearranges transient
+state, and the durable change happens at the page's explicit commit (a Save), which stays in the
+user's hands. If your page persists <em>on drop</em> (a kanban board firing a PATCH from the drop
+handler), gate <code>drag_and_drop</code> with <a href="#inline-confirmation-x-destructive--x-confirm--confirmpredicate"><code>confirmPredicate</code></a>
+— or don't enable it. A target that resolves to nothing returns a clean, model-readable tool error.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "search.highlight", "search.share", "search.suggest", "content.code.copy", "content.action.edit", "toc.follow"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.a5f9d56c.min.js"></script>
+      
+    
+  </body>
+</html>
