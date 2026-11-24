@@ -148,4 +148,13 @@ describe("uploadAttachment", () => {
     expect(xhr.last().aborted).toBe(true);
     await expect(promise).rejects.toThrow("cancelled");
   });
+
+  it("sends nothing for a signal that fired before it began, as while async headers resolved", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      uploadAttachment(file(), { url: "/u/", signal: controller.signal }),
+    ).rejects.toThrow("cancelled");
+    expect(xhr.instances).toHaveLength(0);
+  });
 });

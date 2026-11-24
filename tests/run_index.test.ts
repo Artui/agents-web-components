@@ -124,3 +124,19 @@ describe("sibling endpoints", () => {
     expect(new RunIndex("/agent/runs/").resumeUrl("a/b")).toBe("/agent/resume/a%2Fb/");
   });
 });
+
+describe("RunIndex with an async header source", () => {
+  it("sends the resolved header on the listing", async () => {
+    const spy = mockFetch({ runs: [] });
+    await new RunIndex("/agent/runs/", async () => ({ Authorization: "Bearer t" })).list();
+    const init = spy.mock.calls[0]?.[1] as RequestInit;
+    expect(new Headers(init.headers).get("Authorization")).toBe("Bearer t");
+  });
+
+  it("lists nothing, sending nothing, when the source rejects", async () => {
+    const spy = mockFetch({ runs: [row()] });
+    const index = new RunIndex("/agent/runs/", () => Promise.reject(new Error("refresh failed")));
+    expect(await index.list()).toEqual([]);
+    expect(spy).not.toHaveBeenCalled();
+  });
+});

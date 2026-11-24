@@ -12,6 +12,7 @@ import {
 } from "./conversation_store.js";
 import { ThreadsWatch } from "./threads_watch.js";
 import { mintThread, withCredentials } from "./utils.js";
+import { type MaybeAsync, whenReady } from "./when_ready.js";
 
 /**
  * One row of the server thread index (django-ag-ui's `ThreadsView` wire shape).
@@ -35,8 +36,11 @@ type Listing = readonly ServerThreadRow[] | null;
 
 const PROVISIONAL_TITLE = "New conversation";
 
-/** Live header source, read per request so rotated tokens / CSRF reach the server. */
-type HeadersProvider = () => Record<string, string>;
+/**
+ * Live header source, read per request so rotated tokens / CSRF reach the
+ * server; a Promise is awaited, and its rejection fails that request.
+ */
+type HeadersProvider = () => MaybeAsync<Record<string, string>>;
 
 /**
  * Live cookie policy, read per request. A provider rather than a value: the
@@ -398,9 +402,8 @@ export class RemoteConversationStore implements ClientConversationStore {
   /** GET that resolves to the `Response`, or `null` on a network error. */
   async #get(url: string, extra: Record<string, string> = {}): Promise<Response | null> {
     try {
-      return await fetch(
-        url,
-        withCredentials({ headers: { ...this.#headers(), ...extra } }, this.#credentials()),
+      return await whenReady(this.#headers(), (headers) =>
+        fetch(url, withCredentials({ headers: { ...headers, ...extra } }, this.#credentials())),
       );
     } catch {
       return null;
@@ -414,18 +417,20 @@ export class RemoteConversationStore implements ClientConversationStore {
     body?: { title: string },
     route = "",
   ): Promise<void> {
-    const headers = this.#headers();
+    const source = this.#headers();
     try {
-      await fetch(
-        `${this.#url}${encodeURIComponent(threadId)}/${route}`,
-        withCredentials(
-          {
-            method,
-            headers:
-              body === undefined ? headers : { ...headers, "content-type": "application/json" },
-            body: body === undefined ? null : JSON.stringify(body),
-          },
-          this.#credentials(),
+      await whenReady(source, (headers) =>
+        fetch(
+          `${this.#url}${encodeURIComponent(threadId)}/${route}`,
+          withCredentials(
+            {
+              method,
+              headers:
+                body === undefined ? headers : { ...headers, "content-type": "application/json" },
+              body: body === undefined ? null : JSON.stringify(body),
+            },
+            this.#credentials(),
+          ),
         ),
       );
     } catch {

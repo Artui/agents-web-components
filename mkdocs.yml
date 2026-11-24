@@ -82,6 +82,7 @@ nav:
       - File uploads: uploads.md
   - Other elements:
       - The conversation list: threads.md
+      - The threads contract: threads-contract.md
       - Agents and the inbox: agents.md
       - The editors on a page of their own: editors.md
   - Hosting:

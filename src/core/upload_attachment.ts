@@ -49,6 +49,11 @@ export interface UploadOptions {
  */
 export function uploadAttachment(file: File, options: UploadOptions): Promise<AttachmentRef> {
   return new Promise<AttachmentRef>((resolve, reject) => {
+    // A chip removed while an async header source was still resolving.
+    if (options.signal?.aborted === true) {
+      reject(new Error("upload cancelled"));
+      return;
+    }
     const form = new FormData();
     form.append("file", file);
 

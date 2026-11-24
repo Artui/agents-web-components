@@ -208,6 +208,67 @@ describe("<ag-ui-inbox> rows", () => {
     ]);
   });
 
+  it("summarises an approval by its x-confirm prompt, and by its message without one", async () => {
+    const call = { id: "int-c", reason: "tool_call", toolCallId: "c" };
+    serve([
+      row("p", "board", {
+        status: "waiting",
+        interrupts: [
+          {
+            ...call,
+            message: "Approve discard_book({'id': 7})?",
+            metadata: { destructive: false, kind: "approval", "x-confirm": "Discard this book?" },
+          },
+        ],
+      }),
+      row("b", "board", {
+        status: "waiting",
+        interrupts: [
+          {
+            ...call,
+            message: "Approve discard_book({'id': 8})?",
+            metadata: { destructive: false, kind: "approval", "x-confirm": "  " },
+          },
+        ],
+      }),
+      row("n", "board", {
+        status: "waiting",
+        interrupts: [
+          {
+            ...call,
+            message: "Approve discard_book({'id': 9})?",
+            metadata: { destructive: false, kind: "approval", "x-confirm": 7 },
+          },
+        ],
+      }),
+      row("m", "board", { status: "waiting", interrupts: [ARCHIVE] }),
+      row("q", "board", {
+        status: "waiting",
+        interrupts: [
+          {
+            ...call,
+            message: "Which shelf?",
+            metadata: { destructive: false, kind: "question", "x-confirm": "Not a question" },
+          },
+        ],
+      }),
+    ]);
+    const home = provider();
+    const list = inbox({ variant: "list" });
+    home.append(list);
+    document.body.append(home);
+    await vi.advanceTimersByTimeAsync(0);
+
+    const summaries = rows(list).map((item) => item.querySelector(".summary")?.textContent);
+    expect(summaries).toEqual([
+      "Approval: Discard this book?",
+      "Approval: Approve discard_book({'id': 8})?",
+      "Approval: Approve discard_book({'id': 9})?",
+      "Approval: Archive the board?",
+      "Question: Which shelf?",
+    ]);
+  });
+
   it("draws a title as text, and an untitled row by the strings", async () => {
     serve([
       row("h", "board", { status: "waiting", interrupts: [ARCHIVE], title: "<img src=x>" }),
@@ -882,5 +943,54 @@ describe("<ag-ui-inbox> surviving mutants", () => {
     await vi.advanceTimersByTimeAsync(0);
     expect("runId" in (home.inbox[0] as object)).toBe(true);
     expect("runId" in (home.inbox[1] as object)).toBe(false);
+  });
+});
+
+describe("<ag-ui-inbox> answering with an async header source", () => {
+  async function mountWith(
+    getHeaders: () => Promise<Record<string, string>>,
+    answers: (Response | Error)[],
+  ) {
+    const sent = serveAnswers(answers);
+    const home = provider();
+    home.headers = { "X-CSRFToken": "static" };
+    let listing = true;
+    home.getHeaders = () => (listing ? Promise.resolve({}) : getHeaders());
+    const list = inbox({ variant: "list" });
+    home.append(list);
+    document.body.append(home);
+    await vi.advanceTimersByTimeAsync(0);
+    listing = false;
+    const answered: InboxAnswerDetail[] = [];
+    document.addEventListener(INBOX_ANSWER_EVENT, (event) =>
+      answered.push((event as CustomEvent<InboxAnswerDetail>).detail),
+    );
+    return { list, answered, ...sent };
+  }
+
+  it("sends the resolved header on the answer, not a spread Promise", async () => {
+    const { list, posts } = await mountWith(async () => ({ Authorization: "Bearer t" }), [sse()]);
+    action(list, "a", "approve").click();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect((posts[0] as [string, RequestInit])[1].headers).toEqual({
+      "X-CSRFToken": "static",
+      Authorization: "Bearer t",
+      "Content-Type": "application/json",
+      Accept: "text/event-stream",
+    });
+  });
+
+  it("reads a rejected source as a failed answer, sending nothing", async () => {
+    const { list, posts, answered } = await mountWith(
+      () => Promise.reject(new Error("refresh failed")),
+      [],
+    );
+    action(list, "a", "approve").click();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(posts).toEqual([]);
+    expect(answered.map((detail) => [detail.outcome, detail.status])).toEqual([["failed", 0]]);
+    expect(action(list, "a", "approve").disabled).toBe(false);
   });
 });

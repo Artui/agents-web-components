@@ -5,6 +5,7 @@ import {
 } from "../../constants.js";
 import type { AttachmentsDetail } from "../../core/events/attachments_detail.js";
 import { type UploadHandler, uploadAttachment } from "../../core/upload_attachment.js";
+import { type MaybeAsync, whenReady } from "../../core/when_ready.js";
 import type { UiStrings } from "../ui_strings.js";
 import { AttachmentTray } from "./attachment_tray.js";
 
@@ -25,7 +26,7 @@ export interface ComposerAttachmentsHost {
   /** The host's `uploadHandler`, read when the tray is wired. */
   readonly uploadHandler: () => UploadHandler | null;
   /** The headers a request to `url` carries. */
-  readonly headersFor: (url: string) => Record<string, string>;
+  readonly headersFor: (url: string) => MaybeAsync<Record<string, string>>;
   /** The cookie policy every request carries, when one is configured. */
   readonly credentialsOption: () => { credentials?: RequestCredentials };
 }
@@ -123,13 +124,15 @@ export class ComposerAttachments {
     // Forward the tray's abort signal so removing a chip (or tearing the
     // element down) cancels the XHR.
     return (file, onProgress, signal) =>
-      uploadAttachment(file, {
-        url,
-        headers: this.#host.headersFor(url),
-        ...this.#host.credentialsOption(),
-        onProgress,
-        signal,
-      });
+      whenReady(this.#host.headersFor(url), (headers) =>
+        uploadAttachment(file, {
+          url,
+          headers,
+          ...this.#host.credentialsOption(),
+          onProgress,
+          signal,
+        }),
+      );
   }
 
   /** The client-side upload size cap from `data-attachment-max-bytes`. */

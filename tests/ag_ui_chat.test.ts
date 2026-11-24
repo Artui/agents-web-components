@@ -240,7 +240,7 @@ describe("AgUiChat", () => {
         emit.runEnd();
       },
     });
-    let captured: (() => Record<string, string>) | undefined;
+    let captured: (() => unknown) | undefined;
     el.agentFactory = (options) => {
       captured = options.getHeaders;
       return handle.agent;

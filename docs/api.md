@@ -85,6 +85,10 @@ paths.
 | `RouteWithParams` | type | A route resolved with `:param` path segments + leftover query params. |
 | `createPageMapContext(...)` | function | Build the per-run `page_map` context entry. |
 | `PageMap` | type | The compact page-surface shape. |
+| `pageMapFrom(root?, options?)` | function | Read a page map from the live DOM, with no field values; opt in with `chat.getPageMap = () => pageMapFrom()`. |
+| `PageMapFromOptions` / `PageMapKind` | type | Its options (per-kind `limits`) and the kinds it lists. |
+| `resolvePageMapHandle(target)` | function | The default `resolvePageTarget`: `document.querySelector`, then, for a `[data-agent-handle="n"]` handle only, the open shadow roots. |
+| `PAGE_MAP_HANDLE_ATTRIBUTE` / `PAGE_MAP_IGNORE_ATTRIBUTE` / `PAGE_MAP_LIMITS` | constant | `data-agent-handle`, `data-agent-ignore`, the default caps. |
 | `Place` | type | Where the user is: what `getPlace` returns and the chip draws. |
 | `createPageStateTools(binding)` | function | Build `read_<name>` / `set_<name>` tools. |
 | `PageState` | type | A page-state binding declaration. |

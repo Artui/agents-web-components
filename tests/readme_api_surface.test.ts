@@ -108,7 +108,13 @@ const SKILLS_ELEMENT = [
   "skills_element_strings.ts",
   "skills_element_types.ts",
 ].map((name) => join("src", "skills", name));
+// The page-map walker reads the host page's attributes (role, aria-*, name, ...),
+// never the element's, so its reads are not the element's API.
+const PAGE_WALKER = ["page_map_from.ts", "resolve_page_map_handle.ts"].map((name) =>
+  join("src", "tools", name),
+);
 const OWN_SECTIONS = [
+  ...PAGE_WALKER,
   THREADS_DIR,
   AGENTS_DIR,
   INBOX_DIR,

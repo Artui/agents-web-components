@@ -497,6 +497,35 @@ async function handleAgent(res, body) {
       `${where}. `,
       page ? "I was given the page map too." : "I was not given the page map.",
     ]);
+  } else if (/\bwhat is on this page\b/i.test(prompt) && !isFollowUp) {
+    // The walker's map as the run carried it: how many of each kind, and the
+    // field labels, so a value that leaked would be visible here.
+    const context = Array.isArray(input.context) ? input.context : [];
+    const entry = context.find((item) => item.description === "page_map");
+    const map = entry === undefined ? {} : JSON.parse(entry.value);
+    const kinds = Object.entries(map)
+      .filter(([kind]) => kind !== "truncated")
+      .map(([kind, list]) => `${list.length} ${kind}`);
+    const labels = (map.fields ?? []).map((field) => `${field.label ?? field.name} (${field.type})`);
+    await streamText(res, id("msg"), [
+      entry === undefined ? "I was not given the page map. " : `I see ${kinds.join(", ")}. `,
+      labels.length > 0 ? `The fields are ${labels.join(", ")}.` : "",
+    ]);
+  } else if (/\bpoint at (deep )?save\b/i.test(prompt) && !isFollowUp) {
+    // Scroll to a button by the handle the walker gave it, through scroll_to,
+    // which resolves it with the element's resolvePageTarget.
+    const deep = /\bdeep\b/i.test(prompt);
+    const context = Array.isArray(input.context) ? input.context : [];
+    const entry = context.find((item) => item.description === "page_map");
+    const buttons = entry === undefined ? [] : (JSON.parse(entry.value).buttons ?? []);
+    const button = buttons.find((item) => item.name === (deep ? "Deep save" : "Save"));
+    const parent = id("msg");
+    if (button === undefined) {
+      await streamText(res, parent, ["The page map lists no such button."]);
+    } else {
+      await streamText(res, parent, [`Scrolling to \`${button.handle}\`.`]);
+      emitToolCall(res, id("call"), "scroll_to", { target: button.handle }, parent);
+    }
   } else if (/\bshow context\b/i.test(prompt)) {
     // What this round's context carried, by description, so an entry a host
     // added with registerContext can be seen arriving.

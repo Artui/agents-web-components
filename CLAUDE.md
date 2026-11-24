@@ -43,7 +43,7 @@ The AG-UI stack design doc (`django-ag-ui-plan.md`) lives in the private ecosyst
 | `make test` | Vitest with 100% line+branch+function+statement coverage gate |
 | `make lint` | `biome check .` + `tsc --noEmit` |
 | `make format` | `biome format --write .` |
-| `make build` | esbuild library (split per entry), vendored bundles, the MCP Apps sandbox proxy page + `tsc` declarations into `dist/` |
+| `make build` | esbuild library (split per entry), vendored bundles, the MCP Apps sandbox proxy page + `tsc` declarations into `dist/`, and the vendored bundle's self-contained `.bundle.d.ts` (`scripts/bundle-types.mjs`: api-extractor roll-up, then a scratch host type-checks it with no `node_modules`) |
 | `make demo` | install, build and serve the demo on port 5173, in one command from a clean checkout |
 | `make docs` | build the docs site into `site/` with `mkdocs build --strict` (uv supplies the pinned tools) |
 

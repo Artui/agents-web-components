@@ -42,6 +42,7 @@ import { type ResolvePageTarget } from "../tools/page_action_tools.js";
 import { createPageMapContext, type PageMap } from "../tools/page_map.js";
 // biome-ignore lint/style/useImportType: the emitted declaration file copies this form
 import { type PageState } from "../tools/page_state.js";
+import { resolvePageMapHandle } from "../tools/resolve_page_map_handle.js";
 // biome-ignore lint/style/useImportType: the emitted declaration file copies this form
 import { type RouteMap } from "../tools/route_map.js";
 import { ToolCatalog } from "../tools/tool_catalog.js";
@@ -143,6 +144,7 @@ import { type TranscribeHandler } from "./transcribe_audio.js";
 // biome-ignore lint/style/useImportType: the emitted declaration file copies this form
 import { type UploadHandler } from "./upload_attachment.js";
 import { warnOnCrossOriginCredentials, withCredentials } from "./utils.js";
+import { type MaybeAsync, whenReady } from "./when_ready.js";
 
 /**
  * Attributes read once while connecting, to decide what chrome exists at all.
@@ -292,8 +294,12 @@ export class AgUiChat extends HTMLElement {
    * Composes with {@link headers} rather than replacing it: merged per key with
    * `getHeaders()` winning, so a static `X-Client` and a rotating
    * `Authorization` are configured independently and neither drops the other.
+   *
+   * May return a Promise, so a host can await a token refresh: each request
+   * waits for it, and a rejection fails that request with the same error,
+   * sending nothing. A synchronous source is read in the same tick as before.
    */
-  getHeaders: (() => Record<string, string>) | null = null;
+  getHeaders: (() => Record<string, string> | Promise<Record<string, string>>) | null = null;
 
   /**
    * Origins, besides the page's own, that this element may send {@link headers}
@@ -439,8 +445,9 @@ export class AgUiChat extends HTMLElement {
    * and every tool round sends it as one `place` context entry from the same
    * read, after whatever {@link getContext} returns, so a host that replaces
    * that keeps it. Read before every round, on connect, on expand, when the
-   * composer gains focus, on `popstate` and `hashchange`, when the conversation
-   * changes, and on {@link refreshPlace}.
+   * composer gains focus, on `popstate` and `hashchange`, on the Navigation API's
+   * `currententrychange` where it exists, when the conversation changes, and on
+   * {@link refreshPlace}.
    *
    * When unset, the {@link routeMap} route matching `location.pathname` stands
    * in: its title (else its id) as the label, its group as the detail, the
@@ -601,11 +608,13 @@ export class AgUiChat extends HTMLElement {
 
   /**
    * Resolve a `scroll_to` / `drag_and_drop` target string to a host-page
-   * element (or `null`). Defaults to a CSS-selector lookup; override to map
-   * page-map element ids. The page-action tools are opt-in via the
-   * `data-page-actions` attribute (`"scroll"` / `"drag"` / `"chat"`).
+   * element (or `null`). Defaults to {@link resolvePageMapHandle}: a CSS-selector
+   * lookup, which also reaches into open shadow roots for a handle that
+   * `pageMapFrom` stamped; override to map page-map element ids. The
+   * page-action tools are opt-in via the `data-page-actions` attribute
+   * (`"scroll"` / `"drag"` / `"chat"`).
    */
-  resolvePageTarget: ResolvePageTarget = (target) => document.querySelector<HTMLElement>(target);
+  resolvePageTarget: ResolvePageTarget = (target) => resolvePageMapHandle(target);
 
   /**
    * Foreign origins already reported, so the notice is once per origin per
@@ -1760,23 +1769,39 @@ export class AgUiChat extends HTMLElement {
    * Every request site goes through here, so "how this element authenticates"
    * is one answer rather than one per endpoint.
    */
-  #requestHeaders(): Record<string, string> {
-    return { ...this.headers, ...this.getHeaders?.() };
+  #requestHeaders(): MaybeAsync<Record<string, string>> {
+    return whenReady(this.getHeaders?.(), (live) => ({ ...this.headers, ...live }));
   }
 
   /**
    * The request headers, having first reported the destination if it is
    * foreign: the one path that has both the headers and the URL.
    */
-  #headersFor(url: string): Record<string, string> {
-    const headers = this.#requestHeaders();
-    warnOnCrossOriginCredentials(
-      url,
-      Object.keys(headers),
-      this.trustedOrigins,
-      this.#warnedOrigins,
-    );
-    return headers;
+  #headersFor(url: string): MaybeAsync<Record<string, string>> {
+    return whenReady(this.#requestHeaders(), (headers) => {
+      warnOnCrossOriginCredentials(
+        url,
+        Object.keys(headers),
+        this.trustedOrigins,
+        this.#warnedOrigins,
+      );
+      return headers;
+    });
+  }
+
+  /**
+   * The agent's build-time headers: the merged set from a synchronous source,
+   * as before, and the static {@link headers} alone from an async one, whose
+   * value the agent's per-request overlay awaits (its rejection is that
+   * request's to report, so this read's own is dropped).
+   */
+  #buildHeaders(): Record<string, string> {
+    const built = this.#requestHeaders();
+    if (built instanceof Promise) {
+      built.catch(() => undefined);
+      return { ...this.headers };
+    }
+    return built;
   }
 
   /** The configured cookie policy as `fetch` spells it; `undefined` when unset. */
@@ -1799,8 +1824,10 @@ export class AgUiChat extends HTMLElement {
   }
 
   /** The `fetch` init for the element's own plain GETs (catalogs). */
-  #fetchInit(url: string): RequestInit | undefined {
-    return withCredentials({ headers: this.#headersFor(url) }, this.#requestCredentials());
+  #fetchInit(url: string): MaybeAsync<RequestInit | undefined> {
+    return whenReady(this.#headersFor(url), (headers) =>
+      withCredentials({ headers }, this.#requestCredentials()),
+    );
   }
 
   /**
@@ -1813,12 +1840,18 @@ export class AgUiChat extends HTMLElement {
    * through, so the headers and the cookie policy stay one answer.
    */
   request(url: string, init: RequestInit = {}): Promise<Response> {
-    const headers = new Headers(this.#headersFor(url));
-    new Headers(init.headers).forEach((value, name) => {
-      headers.set(name, value);
+    return whenReady(this.#headersFor(url), (own) => {
+      const headers = new Headers(own);
+      new Headers(init.headers).forEach((value, name) => {
+        headers.set(name, value);
+      });
+      const credentials = init.credentials ?? this.#requestCredentials();
+      return fetch(url, {
+        ...init,
+        headers,
+        ...(credentials === undefined ? {} : { credentials }),
+      });
     });
-    const credentials = init.credentials ?? this.#requestCredentials();
-    return fetch(url, { ...init, headers, ...(credentials === undefined ? {} : { credentials }) });
   }
 
   /**
@@ -3644,6 +3677,10 @@ export class AgUiChat extends HTMLElement {
     this.#input.addEventListener("focus", () => this.refreshPlace(), { signal });
     window.addEventListener("popstate", () => this.refreshPlace(), { signal });
     window.addEventListener("hashchange", () => this.refreshPlace(), { signal });
+    // A pushState move fires neither event above; the Navigation API reports it.
+    window.navigation?.addEventListener("currententrychange", () => this.refreshPlace(), {
+      signal,
+    });
     this.refreshPlace();
 
     // Host content against the input, after everything of the turn being
@@ -4707,7 +4744,7 @@ export class AgUiChat extends HTMLElement {
     const runRoutes = this.#runRoutes();
     const agent = this.agentFactory({
       endpoint: seed.endpoint,
-      headers: this.#requestHeaders(),
+      headers: this.#buildHeaders(),
       // Live getter: the client is built once and cached, but a rotated
       // token must still reach every request — the factory's fetch wrapper
       // re-reads this on each call.

@@ -1,6 +1,7 @@
 import type { Tool } from "@ag-ui/core";
 import { READ_PAGE_TOOL, X_SUMMARY_KEY } from "../constants.js";
 import { commaTokens } from "../core/utils.js";
+import { type MaybeAsync, whenReady } from "../core/when_ready.js";
 import type { PendingDecision } from "../ui/interrupts/pending_decision.js";
 import {
   type QuestionRenderer,
@@ -54,7 +55,7 @@ export interface ToolCatalogHost {
   /** Keep the transcript at its foot, if the reader is there. */
   readonly follow: () => void;
   /** The fetch options every request the element makes carries. */
-  readonly fetchInit: (url: string) => RequestInit | undefined;
+  readonly fetchInit: (url: string) => MaybeAsync<RequestInit | undefined>;
 }
 
 /**
@@ -152,7 +153,7 @@ export class ToolCatalog {
       return;
     }
     try {
-      const response = await fetch(url, this.#host.fetchInit(url));
+      const response = await whenReady(this.#host.fetchInit(url), (init) => fetch(url, init));
       this.#toolCatalog = parseToolCatalog(await response.json());
     } catch {
       // Network/parse failure: cards fall back to toolSummaries / raw names.

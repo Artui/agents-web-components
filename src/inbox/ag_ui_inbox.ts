@@ -8,6 +8,8 @@ import {
   INBOX_SELECT_EVENT,
 } from "../constants.js";
 import { randomRunId } from "../core/random_run_id.js";
+import { whenReady } from "../core/when_ready.js";
+import { confirmPhrase } from "../tools/confirm_phrase.js";
 import { DEFAULT_INBOX_STRINGS } from "./inbox_strings.js";
 import { INBOX_STYLES } from "./inbox_styles.js";
 import type {
@@ -521,21 +523,25 @@ export class AgUiInbox extends HTMLElement {
       forwardedProps: { detach: true },
       resume,
     };
-    const init: RequestInit = {
-      method: "POST",
-      headers: {
-        ...provider.headers,
-        ...provider.getHeaders?.(),
-        "Content-Type": "application/json",
-        Accept: "text/event-stream",
-      },
-      body: JSON.stringify(body),
+    const send = (live: Record<string, string> | undefined): Promise<Response> => {
+      const init: RequestInit = {
+        method: "POST",
+        headers: {
+          ...provider.headers,
+          ...live,
+          "Content-Type": "application/json",
+          Accept: "text/event-stream",
+        },
+        body: JSON.stringify(body),
+      };
+      if (typeof provider.credentials === "string") {
+        init.credentials = provider.credentials;
+      }
+      return fetch(url, init);
     };
-    if (typeof provider.credentials === "string") {
-      init.credentials = provider.credentials;
-    }
+    const source = provider.getHeaders?.();
     try {
-      const response = await fetch(url, init);
+      const response = await whenReady(source, send);
       // The detached run goes on without this reader; drained, not aborted, the stream ends cleanly.
       response.text().catch(() => undefined);
       return response.status;
@@ -564,8 +570,9 @@ export class AgUiInbox extends HTMLElement {
       destructive.textContent = ` · ${strings.destructive}`;
       summary.append(destructive);
     }
-    if (typeof first.message === "string" && first.message !== "") {
-      summary.append(`: ${first.message}`);
+    const wording = (kind === "approval" ? confirmPhrase(first) : undefined) ?? first.message;
+    if (typeof wording === "string" && wording !== "") {
+      summary.append(`: ${wording}`);
     }
     if (interrupts.length > 1) {
       summary.append(` ${strings.more.replace("{count}", String(interrupts.length - 1))}`);

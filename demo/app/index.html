@@ -874,6 +874,9 @@
             >
             <div class="ctl"><span>Chip</span><output id="cfg-place-out">-</output></div>
             <div class="ctl"><span>Ask</span><button type="button" id="cfg-place-ask">Where am I?</button></div>
+            <div class="ctl"
+              ><span>Router</span><button type="button" id="cfg-place-push">pushState to Billing</button></div
+            >
           </div>
         </div>
         <div class="notes">
@@ -884,6 +887,11 @@
               the host's router and calls <code>refreshPlace()</code>.
             </li>
             <li>
+              <strong>A <code>pushState</code> move.</strong> <em>pushState to Billing</em> moves the URL
+              (<code>?place=billing</code>) and calls nothing else; where the browser has the Navigation
+              API the chip follows by itself.
+            </li>
+            <li>
               <strong>What was sent.</strong> <em>Where am I?</em> quotes the <code>place</code>
               entry the run carried, and says whether the page map came too.
             </li>
@@ -891,6 +899,63 @@
               <strong>Withholding.</strong> The eye on the chip withholds the place (dashed, struck
               through) and the page map with it. <em>A long one</em> truncates before Send;
               <em>None</em> takes no space.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section data-scenario="page-map" hidden>
+        <div class="panel">
+          <h2>A host page</h2>
+          <div id="pm-page">
+            <nav aria-label="Account sections">
+              <div role="tablist">
+                <button type="button" role="tab" aria-selected="true">Profile</button>
+                <button type="button" role="tab" aria-selected="false">Billing</button>
+              </div>
+            </nav>
+            <form aria-label="Profile form" onsubmit="return false">
+              <h3>Profile</h3>
+              <label class="ctl"><span>Display name</span><input name="display_name" value="Ada Lovelace" required></label>
+              <label class="ctl"><span>Password</span><input name="password" type="password" value="correct-horse"></label>
+              <label class="ctl"><span>Plan</span>
+                <select name="plan"><option>Free</option><option selected>Team</option></select></label>
+              <input type="hidden" name="csrf" value="not-for-the-model">
+              <button type="submit">Save</button>
+              <pm-shadow-actions></pm-shadow-actions>
+            </form>
+            <table>
+              <caption>Invoices</caption>
+              <thead><tr><th>Number</th><th>Amount</th></tr></thead>
+              <tbody><tr><td>INV-1</td><td>12.00</td></tr></tbody>
+            </table>
+            <div data-agent-ignore><button type="button">Never listed (data-agent-ignore)</button></div>
+          </div>
+        </div>
+        <div class="panel">
+          <h2>Controls</h2>
+          <div class="controls">
+            <div class="ctl"><span>Read</span><button type="button" id="pm-read">pageMapFrom()</button></div>
+          </div>
+          <pre id="pm-out"></pre>
+        </div>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>No values.</strong> <em>pageMapFrom()</em> prints what the run sends (the walk
+              is rooted at the host page above): the filled name, the password, the selected plan and
+              the hidden input never appear, only labels and types. The ignored button is not listed.
+            </li>
+            <li>
+              <strong>Handles.</strong> Each entry carries a selector for the
+              <code>data-agent-handle</code> it stamped. <em>Point at Save</em> scrolls to it through
+              the default <code>resolvePageTarget</code>.
+            </li>
+            <li>
+              <strong>Shadow roots.</strong> The second button lives in an open shadow root: it is
+              listed, and <em>Point at the shadow button</em> scrolls to it through the same default
+              resolver, with no host override.
             </li>
           </ul>
         </div>

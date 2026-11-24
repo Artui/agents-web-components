@@ -127,3 +127,59 @@ describe("RemoteConversationStore watch beside other listings", () => {
     expect(got).toEqual([["t1"], ["t1"]]);
   });
 });
+
+describe("RemoteConversationStore watch with an async header source", () => {
+  const auth = async (): Promise<Record<string, string>> => ({ Authorization: "Bearer t" });
+
+  beforeEach(() => {
+    sessionStorage.clear();
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("sends the resolved header on every poll", async () => {
+    fetchMock.mockResolvedValue(list([row("t1", "2026-01-01T00:00:01+00:00", null)], '"e1"'));
+    const store = new RemoteConversationStore(URL_, auth);
+    const stop = store.watchThreads(() => undefined, "poll");
+    await vi.advanceTimersByTimeAsync(5000);
+    stop();
+    expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+    for (const [, init] of fetchMock.mock.calls) {
+      expect(new Headers(init?.headers).get("Authorization")).toBe("Bearer t");
+    }
+  });
+
+  it("sends the resolved header on the stream, beside its own Accept", async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 503 }));
+    const store = new RemoteConversationStore(URL_, auth);
+    const stop = store.watchThreads(() => undefined, "stream");
+    await vi.advanceTimersByTimeAsync(0);
+    stop();
+    expect(fetchMock.mock.calls[0]?.[1]?.headers).toEqual({
+      Authorization: "Bearer t",
+      Accept: "text/event-stream",
+    });
+  });
+
+  it("opens no stream when the source rejects, and tries again on the interval", async () => {
+    let calls = 0;
+    const store = new RemoteConversationStore(URL_, () => {
+      calls += 1;
+      return calls === 1 ? Promise.reject(new Error("refresh failed")) : auth();
+    });
+    fetchMock.mockResolvedValue(new Response(null, { status: 503 }));
+    const stop = store.watchThreads(() => undefined, "stream");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetchMock).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(5000);
+    stop();
+    expect(new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get("Authorization")).toBe(
+      "Bearer t",
+    );
+  });
+});

@@ -79,7 +79,7 @@ The full walkthrough, with headers, attributes and sending from your own UI, is 
 
 ## Topics
 
-- [Authenticating requests](https://artui.github.io/agents-web-components/authentication/): headers, cookies, trusted origins.
+- [Authenticating requests](https://artui.github.io/agents-web-components/authentication/): headers (a sync or async `getHeaders`), cookies, trusted origins.
 - [Core concepts](https://artui.github.io/agents-web-components/concepts/): the run loop, stopping, tools, confirmation, DOM drivers.
 - [Header, collapse and resizing](https://artui.github.io/agents-web-components/header-and-panel/): the header, launcher, bottom bar, resizing.
 - [Messages](https://artui.github.io/agents-web-components/messages/): markdown, follow-ups, timestamps, message actions, quoting.
@@ -88,7 +88,7 @@ The full walkthrough, with headers, attributes and sending from your own UI, is 
 - [Skills and run notices](https://artui.github.io/agents-web-components/skills/): prompt chips, the slash palette, the skill editor, routines and their time fields.
 - [The editors on a page of their own](https://artui.github.io/agents-web-components/editors/): `<ag-ui-routines>`, `<ag-ui-skills>`, binding, requests, `ag-ui-open-editor`.
 - [File uploads](https://artui.github.io/agents-web-components/uploads/): attachments and pasting.
-- [Host seams](https://artui.github.io/agents-web-components/host-seams/): the SPA route map, page state, the place chip.
+- [Host seams](https://artui.github.io/agents-web-components/host-seams/): the SPA route map, page state, the page-map walker, the place chip.
 - [Durability and resuming](https://artui.github.io/agents-web-components/durability/): surviving full page reloads, resuming a run.
 - [Theming, density and placement](https://artui.github.io/agents-web-components/theming/): themes, tokens, parts, slots, placement.
 - [Internationalization](https://artui.github.io/agents-web-components/i18n/): the UI strings table.

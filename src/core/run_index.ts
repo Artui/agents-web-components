@@ -1,4 +1,5 @@
 import { withCredentials } from "./utils.js";
+import { type MaybeAsync, whenReady } from "./when_ready.js";
 
 /** One row of the server run index (django-ag-ui's `RunsView` wire shape). */
 export interface RunRow {
@@ -21,7 +22,7 @@ export interface RunRow {
 }
 
 /** Live header source, read per request so rotated tokens / CSRF reach the server. */
-type HeadersProvider = () => Record<string, string>;
+type HeadersProvider = () => MaybeAsync<Record<string, string>>;
 
 /** Live cookie policy, read per request; see `RemoteConversationStore`'s note. */
 type CredentialsProvider = () => RequestCredentials | undefined;
@@ -65,14 +66,13 @@ export class RunIndex {
    */
   async list(): Promise<readonly RunRow[]> {
     try {
-      const response = await fetch(
-        this.#url,
-        withCredentials(
-          {
-            method: "GET",
-            headers: { Accept: "application/json", ...this.#headers() },
-          },
-          this.#credentials(),
+      const response = await whenReady(this.#headers(), (headers) =>
+        fetch(
+          this.#url,
+          withCredentials(
+            { method: "GET", headers: { Accept: "application/json", ...headers } },
+            this.#credentials(),
+          ),
         ),
       );
       if (!response.ok) {

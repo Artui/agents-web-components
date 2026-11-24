@@ -145,8 +145,9 @@ export function commaTokens(value: string): string[] {
  * "sends a not-finished result for a call that arrived before it"; a turn with
  * calls after a result closing it by "answers each round's open call before the
  * next round starts"; the answered check by "sends the decline Stop gave the
- * open approval"; and the exclusion by "leaves the call it resumes for the
- * server to answer".
+ * open approval"; the exclusion by "leaves the call it resumes for the
+ * server to answer"; and the skip of a sub-agent's tagged round by "owe no parent result for
+ * a child's call that never came back" in `ag_ui_chat_subagent_tagged.test.ts`.
  */
 export function answerUnansweredCalls(
   messages: readonly Message[],
@@ -163,6 +164,11 @@ export function answerUnansweredCalls(
   let owed: string[] = [];
   let afterResult = false;
   for (const message of messages) {
+    // A sub-agent's own round, kept under its delegation's tag: never the parent's to answer.
+    if (message.subagentRunId !== undefined) {
+      result.push(message);
+      continue;
+    }
     const calls = message.role === "assistant" ? toolCallIds(message.toolCalls) : [];
     const continuesRound = message.role === "tool" || (calls.length > 0 && !afterResult);
     if (!continuesRound) {

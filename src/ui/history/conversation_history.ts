@@ -16,6 +16,7 @@ import type { MessageRole } from "../../core/message_role.js";
 import { RunIndex } from "../../core/run_index.js";
 import { toolStatusFromOutcome } from "../../core/tool_outcome.js";
 import { answerUnansweredCalls, metadataOrTopLevel, mintThread } from "../../core/utils.js";
+import type { MaybeAsync } from "../../core/when_ready.js";
 import type { ToolCatalog } from "../../tools/tool_catalog.js";
 import type { ChildSessions } from "../progress/child_sessions.js";
 import type { AnswerActions } from "../transcript/answer_actions.js";
@@ -60,7 +61,7 @@ export interface ConversationHistoryHost {
   /** The element's `navigationResult`. */
   readonly navigationResult: () => (checkpoint: NavigationCheckpoint) => unknown;
   /** The request headers, having first reported the destination if it is foreign. */
-  readonly headersFor: (url: string) => Record<string, string>;
+  readonly headersFor: (url: string) => MaybeAsync<Record<string, string>>;
   /** The configured cookie policy as `fetch` spells it. */
   readonly requestCredentials: () => RequestCredentials | undefined;
   /** The element's `appendMessage`, which a restored bubble opens through. */
@@ -1028,6 +1029,11 @@ export class ConversationHistory {
    * the full transcript — tool calls and their results — not just the prose.
    */
   replay(message: Message): void {
+    // A sub-agent's own round, kept by the client under its delegation's tag: the parent's
+    // transcript never drew it live, so a reload does not draw it either.
+    if (message.subagentRunId !== undefined) {
+      return;
+    }
     const text = typeof message.content === "string" ? message.content : "";
     if (message.role === MESSAGE_ROLE.USER) {
       const attachments = messageAttachments(message);

@@ -34,6 +34,9 @@ export {
   MESSAGE_ROLE,
   OPEN_EDITOR_EVENT,
   OPEN_THREAD_EVENT,
+  PAGE_MAP_HANDLE_ATTRIBUTE,
+  PAGE_MAP_IGNORE_ATTRIBUTE,
+  PAGE_MAP_LIMITS,
   RUN_FINISHED_EVENT,
   STATE_EVENT,
   SUBMIT_EVENT,
@@ -176,8 +179,10 @@ export {
   type ResolvePageTarget,
 } from "./tools/page_action_tools.js";
 export { createPageMapContext, type PageMap } from "./tools/page_map.js";
+export { type PageMapFromOptions, type PageMapKind, pageMapFrom } from "./tools/page_map_from.js";
 export { createPageStateTools, type PageState } from "./tools/page_state.js";
 export { parseToolCatalog, type ToolCatalogEntry } from "./tools/parse_tool_catalog.js";
+export { resolvePageMapHandle } from "./tools/resolve_page_map_handle.js";
 export {
   createRouteTools,
   type Route,

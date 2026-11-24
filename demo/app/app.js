@@ -14,6 +14,7 @@ import {
   VERSION,
   defineChat,
   fillField,
+  pageMapFrom,
   pressButton,
   selectControl,
   showHighlightOverlay,
@@ -932,17 +933,51 @@ function mount(pathname, restart) {
     $("cfg-place-out").textContent = place === null ? "no chip" : place.label;
   };
   if (on("place", "requests", "drive")) {
-    chat.getPlace = () => PLACES[$("cfg-place").value] ?? null;
+    // A ?place= the router pushed wins over the select.
+    chat.getPlace = () =>
+      PLACES[new URLSearchParams(location.search).get("place") ?? $("cfg-place").value] ?? null;
     chat.getPageMap = () => ({ form: "article", fields: ["title", "slug", "status", "featured"] });
     // Set after the element connected, so the first read is asked for here.
     chat.refreshPlace();
   }
   syncPlaceReadout();
   $("cfg-place").addEventListener("change", () => {
+    if (location.search !== "") {
+      history.replaceState(null, "", location.pathname);
+    }
     chat.refreshPlace();
     syncPlaceReadout();
   }, { signal });
   $("cfg-place-ask").addEventListener("click", () => send("Where am I?"), { signal });
+  $("cfg-place-push").addEventListener("click", () => {
+    history.pushState(null, "", `${location.pathname}?place=billing`);
+    syncPlaceReadout();
+  }, { signal });
+
+  // ── The page-map walker ──────────────────────────────────────────────────────
+
+  // The host opts in with one line; the readout prints exactly what read_page
+  // and the page_map context entry carry.
+  if (on("page-map")) {
+    if (!customElements.get("pm-shadow-actions")) {
+      customElements.define(
+        "pm-shadow-actions",
+        class extends HTMLElement {
+          connectedCallback() {
+            if (this.shadowRoot === null) {
+              this.attachShadow({ mode: "open" }).innerHTML = "<button type='button'>Deep save</button>";
+            }
+          }
+        },
+      );
+    }
+    // Rooted at the stand-in host page, so the demo's own nav stays out of it.
+    const walk = () => pageMapFrom(document.getElementById("pm-page") ?? document);
+    chat.getPageMap = walk;
+    $("pm-read").addEventListener("click", () => {
+      $("pm-out").textContent = JSON.stringify(walk(), null, 2);
+    }, { signal });
+  }
 
   // ── Requests and run context ─────────────────────────────────────────────────
 

@@ -3,6 +3,11 @@
 `<ag-ui-chat>` is a generic embedding kit; these typed seams let a host feed the agent richer
 context up front so it explores less. All are framework-free and admin-agnostic.
 
+A router that moves with `history.pushState` fires no `popstate`. Where the browser has the
+Navigation API, the chat follows such a move by itself; elsewhere, call **`refreshPlace()`** after
+each move so the place chip names the new page between runs. The chip's freshness rules are in
+[Where the user is](#where-the-user-is-the-place-chip).
+
 **`routeMap: RouteMap`** — a manifest of navigable routes (`{ id, path, title?, group?,
 description? }`). When set, the element exposes two built-in tools so the agent navigates by intent
 rather than by exploring:
@@ -28,8 +33,13 @@ surface (field names/types/labels, button labels+handles — *not* values). It i
 each run's `context` as a `page_map` entry (toggle with `autoInjectPageMap`):
 
 ```js
-chat.getPageMap = () => ({ fields: introspectForm(), buttons: visibleButtons() });
+import { pageMapFrom } from "@artooi/agents-web-components";
+
+chat.getPageMap = () => pageMapFrom();
 ```
+
+`pageMapFrom` is the walker the package ships ([below](#reading-the-page-pagemapfrom)); a host
+with its own model of the page returns that instead, in any shape.
 
 It is recomputed at the top of **every tool round**, not once per `send()` — so after the agent
 acts, the next round already sees the resulting page. Within a round the agent can pull a fresh
@@ -253,6 +263,84 @@ across repos with independent release cadences.
 **Note:** it reaches **the page that started the run**, during the run. There is one
 response stream per run and no channel to anybody else's browser.
 
+## Reading the page: `pageMapFrom`
+
+**`pageMapFrom(root?, options?): PageMap`** reads the live DOM under `root` (the document by
+default) and returns what a model needs to act on it, never what the user typed. It is opt-in:
+nothing changes for a host that leaves `getPageMap` unset, or sets its own.
+
+```js
+chat.getPageMap = () => pageMapFrom();
+chat.getPageMap = () => pageMapFrom(document.querySelector("main"), { limits: { links: 10 } });
+```
+
+Each kind is a key holding a list, left out when empty:
+
+| Key | Lists | Each entry has | Cap |
+| --- | --- | --- | --- |
+| `headings` | `h1`-`h6`, `role="heading"` | `level`, `text` | 30 |
+| `landmarks` | `main`, `nav`, `aside`, `search`, a top-level `header` / `footer`, a named `form` / `section`, landmark roles | `role`, `name` | 20 |
+| `tabs` | `role="tab"` | `name`, `selected` | 30 |
+| `fields` | inputs, `textarea`, `select`, field roles (`textbox`, `combobox`, `checkbox`, `slider`, ...), `contenteditable` | `name` (the attribute), `type`, `label`, `required`, `disabled` | 50 |
+| `buttons` | `button`, button inputs, `role="button"` | `name`, `disabled` | 50 |
+| `links` | `a[href]`, `role="link"` | `name`, `href` | 50 |
+| `tables` | `table`, `role="table"` / `"grid"` | `name`, `headers` (column headers, at most 20) | 10 |
+| `dialogs` | an open `dialog`, `role="dialog"` / `"alertdialog"` | `name`, `modal` | 5 |
+
+Past a cap, `truncated` counts what was left out per kind (`{ "links": 12 }`); `options.limits`
+replaces any cap, and `PAGE_MAP_LIMITS` holds the defaults. Names and texts are cut at 80
+characters. `required`, `disabled` appear only when true.
+
+**What it never reads.** A value rides into the model's context, so the walker reads what the page
+*says about* a control, never what is *in* it:
+
+- no field's value, and no password or hidden input at all;
+- no `aria-valuenow` / `aria-valuetext` (a slider lists its label and role, not its position);
+- no text of a `contenteditable` region: an editable element is listed as a field (type
+  `contenteditable`, or its field role), even a heading, tab or header cell, and nothing inside it
+  is listed or read;
+- no text of a `textarea`, `select`, `input` or `output`, nor of anything not rendered
+  (`hidden`, `display: none`, `visibility: hidden`, `aria-hidden="true"`), marked
+  `data-agent-ignore`, or of this package's elements (`ag-ui-*`, their shadow roots included).
+  This holds wherever a name or text comes from: an element's own content, a `<label>` wrapping its
+  control, a table's header cells, or an `aria-labelledby` reference, so a reference that points at
+  an editable region, a textarea or a select names nothing (and a reference to a hidden element
+  names nothing either);
+- no option text, so neither the selected option nor the choices are listed;
+- no link's query string or fragment: `href` is the path, with the origin when it is another site,
+  cut at 80 characters, and for a scheme other than `http:` / `https:` (`mailto:`, `tel:`,
+  `javascript:`, `data:`) the scheme alone;
+- nothing inside a field: a `listbox`, an editable region or any other field ends the walk;
+- a `placeholder` only as the label of last resort, after `aria-labelledby`, `aria-label`, the
+  field's `<label>`s and `title`, since it is author text.
+
+Text the page itself writes is read as it is: a heading or label that prints user data ("Signed in
+as ...") reaches the model like any other text. Mark such a region `data-agent-ignore`.
+
+**What it skips.** The subtree of every element of this package (`ag-ui-*`, so the chat never lists
+itself), of anything marked `data-agent-ignore`, and of anything hidden (`hidden`, `display: none`,
+`visibility: hidden`), `inert` or `aria-hidden="true"`. It walks open shadow roots of your
+components; a closed one is unreachable by design.
+
+**Handles.** Each listed element is stamped `data-agent-handle="n"`, and its entry carries the
+selector for it, `[data-agent-handle="n"]`, which the default `resolvePageTarget` resolves, so
+`scroll_to` and `drag_and_drop` act on it with no host code. A handle is kept across reads while its
+element is listed, and a clone that carries the same stamp gets a new one. Numbers are not reserved
+for good: a new element may be given the number of one that was removed, or of one in a shadow root
+the read did not list, so treat a handle as valid for the read that returned it.
+
+The default resolver is `resolvePageMapHandle`: `document.querySelector` first, and only when that
+misses and the target is exactly a handle of this form, a search of the open shadow roots under the
+document (skipping this package's own elements), so a handle the walker stamped inside a component
+resolves too. Any other selector resolves in the light DOM alone, as before. A host that overrides
+`resolvePageTarget` and still wants handles to resolve falls back to it:
+
+```js
+import { resolvePageMapHandle } from "@artooi/agents-web-components";
+
+chat.resolvePageTarget = (target) => myPageMap.elementFor(target) ?? resolvePageMapHandle(target);
+```
+
 ## Where the user is: the place chip
 
 The composer can say where in your app the user is writing from: a chip in its tool row, between the
@@ -279,10 +367,11 @@ chat.getPlace = () => ({
   route-mapped host out.
 - **When it is read.** Before every tool round, so an agent that navigates mid-run is told the new
   page on its next round; and on connect, on expand, when the composer gains focus, on `popstate`
-  and `hashchange`, and when the conversation on screen changes (`switchThread`, the drawer,
+  and `hashchange`, on the Navigation API's `currententrychange` where the browser has it (which a
+  `pushState` move fires), and when the conversation on screen changes (`switchThread`, the drawer,
   `newChat`): the chip always names the live page, never the page a thread started on. Between runs
-  it shows the last read. A single-page app calls **`refreshPlace()`** after its router moves,
-  since `pushState` fires no event.
+  it shows the last read. In a browser without the Navigation API a single-page app calls
+  **`refreshPlace()`** after its router moves, since `pushState` fires no other event.
 - **The entry rides after your `getContext`.** It is appended to whatever `getContext` returns, so a
   host that replaces `getContext` still sends it.
 - **The eye toggle withholds it.** Pressing it leaves the chip in place, dashed and struck through

@@ -1,4 +1,5 @@
 import { type TranscribeHandler, transcribeAudio } from "../../core/transcribe_audio.js";
+import { type MaybeAsync, whenReady } from "../../core/when_ready.js";
 import type { UiStrings } from "../ui_strings.js";
 import { VoiceInput } from "./voice_input.js";
 
@@ -15,7 +16,7 @@ export interface ComposerVoiceHost {
   /** The host's `transcribeHandler`, read when the mic is wired. */
   readonly transcribeHandler: () => TranscribeHandler | null;
   /** The headers a request to `url` carries. */
-  readonly headersFor: (url: string) => Record<string, string>;
+  readonly headersFor: (url: string) => MaybeAsync<Record<string, string>>;
   /** The cookie policy every request carries, when one is configured. */
   readonly credentialsOption: () => { credentials?: RequestCredentials };
   /** React to the composer's value changing, as typing does. */
@@ -75,11 +76,9 @@ export class ComposerVoice {
       return null;
     }
     return (audio) =>
-      transcribeAudio(audio, {
-        url,
-        headers: this.#host.headersFor(url),
-        ...this.#host.credentialsOption(),
-      });
+      whenReady(this.#host.headersFor(url), (headers) =>
+        transcribeAudio(audio, { url, headers, ...this.#host.credentialsOption() }),
+      );
   }
 
   /** Drop a voice transcript into the composer (appended to any typed text). */

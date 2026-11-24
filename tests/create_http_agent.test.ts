@@ -185,3 +185,46 @@ describe("createHttpAgent", () => {
     }
   });
 });
+
+describe("createHttpAgent with an async header source", () => {
+  it("sends the resolved header on the run POST", async () => {
+    const agent = createHttpAgent({
+      endpoint: "/agent/",
+      headers: { "X-Client": "admin" },
+      getHeaders: async () => ({ Authorization: "Bearer t" }),
+    }) as HttpAgent;
+    const original = globalThis.fetch;
+    const seen: Headers[] = [];
+    globalThis.fetch = ((_url: string, init: RequestInit) => {
+      seen.push(new Headers(init.headers));
+      return Promise.resolve(new Response("ok"));
+    }) as typeof fetch;
+    try {
+      await agent.fetch("/agent/", { method: "POST", headers: { "X-Client": "admin" } });
+      expect(seen[0]?.get("Authorization")).toBe("Bearer t");
+      expect(seen[0]?.get("X-Client")).toBe("admin");
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  it("fails the run request with the source's own error, sending nothing", async () => {
+    const failure = new Error("refresh failed");
+    const agent = createHttpAgent({
+      endpoint: "/agent/",
+      getHeaders: () => Promise.reject(failure),
+    }) as HttpAgent;
+    const original = globalThis.fetch;
+    let sent = 0;
+    globalThis.fetch = (() => {
+      sent += 1;
+      return Promise.resolve(new Response("ok"));
+    }) as typeof fetch;
+    try {
+      await expect(agent.fetch("/agent/", { method: "POST" })).rejects.toBe(failure);
+      expect(sent).toBe(0);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+});

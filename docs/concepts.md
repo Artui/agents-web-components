@@ -664,7 +664,8 @@ outrun the page's own save and conclude that nothing happened. Report a busy fla
 says it is busy. It cannot wait for one that does not.
 
 Targets resolve through the overridable `resolvePageTarget` property — `(target) => HTMLElement |
-null`, defaulting to `document.querySelector`. A host with a page map overrides it to map its own
+null`, defaulting to `document.querySelector` (which reaches into open shadow roots only for a
+[`pageMapFrom` handle](host-seams.md#reading-the-page-pagemapfrom)). A host with a page map overrides it to map its own
 element ids (the same way the DOM-driver primitives are wrapped with environment-aware lookups):
 
 ```js

@@ -7,6 +7,83 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] — 2026-11-24
+
+### Added
+
+- **The vendored bundle ships its own types.** `dist/agents-web-components.bundle.d.ts` sits
+  beside `dist/agents-web-components.bundle.js` in the tarball: one declaration file, rolled
+  up with api-extractor, with the `@ag-ui/core`, `@ag-ui/client`, `dompurify` and `rxjs` types
+  it needs inlined. A TypeScript host that vendors copies the two files and type-checks with
+  no `node_modules`; `pnpm build` proves it by type-checking such a host in a scratch
+  directory. A host that copies only the `.bundle.js` is unaffected. See
+  [Install](https://artui.github.io/agents-web-components/install/#types-for-a-vendoring-typescript-host).
+
+- **The threads contract is a docs page.** `docs/threads-contract.md` states every route, status
+  code and row key of the server `data-threads-url` talks to (what the component requires and
+  what django-ag-ui adds), the ETag and 304 rules, the stream framing, the 404 semantics, what
+  restores a waiting approval, and that `GET <id>/` may carry `activity` messages the component
+  redraws. Its examples are quoted from `tests/fixtures/thread_status.json`, re-recorded against
+  django-ag-ui 0.89.0 (rows now carry `parent` and `routine`, and a waiting row `run_id`), with
+  the detail, rename, delete and chart-restore answers added. The `data-threads-url` row and the chart docs
+  link it, and the chart docs name django-ag-ui's `thread_activity_source`.
+
+- **`getHeaders` may return a Promise**, so a host can await a token refresh before a request
+  goes. Widened on `AgUiChat.getHeaders`, `AgUiAgents.getHeaders`, the inbox provider's
+  `getHeaders`, `HttpAgentOptions.getHeaders` and the `RemoteConversationStore` constructor's
+  header provider. Every request awaits it: the run, the thread list, detail, rename, delete and
+  read, the thread and inbox watches (poll and stream), the run index, the catalogs, uploads,
+  transcription, `request()` on the chat and the provider, and the inbox's answers. A rejected
+  Promise fails that request with the same error and sends nothing; there is no retry. A
+  synchronous source behaves as before, with no added microtask. Nothing to opt in to: assigning
+  an async function is the opt-in. Host code that calls `chat.getHeaders()` itself and uses the
+  result as a record now has to handle a Promise at the type level. An upload whose signal fired
+  before it began is now rejected as cancelled rather than sent.
+
+- **`pageMapFrom(root?, options?)`, a page-map walker a host opts into** with
+  `chat.getPageMap = () => pageMapFrom()`. It reads the live DOM (open shadow roots included) and
+  lists headings, landmarks, tabs, form fields, buttons, links, table column headers and open
+  dialogs, each capped per kind (`PAGE_MAP_LIMITS`, with a `truncated` count). It never reads
+  what a user put in a control: no field value, no password or hidden input, no
+  `aria-valuenow` / `aria-valuetext`, no option text, and no text of a `contenteditable` region
+  (an editable heading, tab or cell is listed as a field, and nothing inside a field is listed). No
+  name or text, whether from content, a wrapping label, a header cell or an `aria-labelledby`
+  reference, reads a textarea, select, input or output, an editable region, this package's
+  elements, anything opted out, or anything not rendered. A link's `href` is its path (with the
+  origin for another site), cut at 80 characters, and its scheme alone for anything but http(s).
+  It skips this package's own elements, anything marked `data-agent-ignore` and anything hidden,
+  `inert` or `aria-hidden`. Each entry carries a handle, `[data-agent-handle="n"]`, kept across
+  reads while its element is listed and stamped on the element, which the default
+  `resolvePageTarget` resolves, inside an open shadow root too: the default is now
+  `resolvePageMapHandle`, which calls `document.querySelector` first and searches open shadow
+  roots only when that misses and the target is exactly such a handle, so every other selector
+  resolves as before. Opt-in: a host that sets its own `getPageMap`, or none, sees no change.
+
+- **The place chip follows a `pushState` move by itself where the browser has the Navigation
+  API.** The chat listens for `navigation`'s `currententrychange` beside `popstate` and
+  `hashchange`, with or without `navigate` set, so a single-page app's chip names the new page
+  between runs without a focus, an expand or a run. Without the API nothing changes and
+  `refreshPlace()` still works; a host that already calls it reads twice per move, harmlessly.
+  The [SPA section](https://artui.github.io/agents-web-components/host-seams/) names
+  `refreshPlace()` and links the chip's freshness rules.
+
+### Fixed
+
+- **A sub-agent's tagged tool calls are the child's, never the parent's.** A `TOOL_CALL_*`
+  event carrying `subagentRunId` (django-ag-ui 0.90.0 sends a delegation's tool calls this
+  way, beside its `ag_ui.subagent` steps) drew a tool card of the parent's mid-turn. After the
+  run the call was dispatched, so a child tool named like a frontend tool ran in the browser.
+  A tagged call now draws no parent card and is never dispatched. The tagged messages
+  `@ag-ui/client` keeps are skipped by a restored thread, and a child's call that never came
+  back is no longer answered as "not finished" in the next request, where it reached the
+  parent's history as a result with no call. The delegation row is unchanged. See
+  [Delegated sub-agents](https://artui.github.io/agents-web-components/tool-calls/#delegated-sub-agents).
+- **An inbox row words an approval by its `x-confirm` prompt.** For a server whose stored
+  interrupt carries the prompt in `metadata["x-confirm"]` and the raw call in `message`, the
+  summary now prefers the prompt, as the approval card already does, and falls back to the
+  message when the prompt is absent, blank or not a string. django-ag-ui's rows are unchanged:
+  their `message` is already the prompt. The approval card's wording is unchanged.
+
 ## [0.14.0] — 2026-11-24
 
 ### Changed
@@ -798,7 +875,8 @@ move page walks a host over. Each entry below says whether a host opts in.
   kept offering the moon under `theme="dark"`. Only the toggle's own click redrew it before. A host
   opts in to nothing.
 
-[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/Artui/agents-web-components/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/Artui/agents-web-components/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/Artui/agents-web-components/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/Artui/agents-web-components/compare/v0.11.0...v0.12.0

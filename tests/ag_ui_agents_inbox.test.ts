@@ -256,3 +256,67 @@ describe("<ag-ui-agents> inbox by stream", () => {
     });
   });
 });
+
+describe("<ag-ui-agents> with an async header source", () => {
+  const auth = async (): Promise<Record<string, string>> => ({ Authorization: "Bearer t" });
+  const sent = (): (string | null)[] =>
+    fetchMock.mock.calls.map(([, init]) => new Headers(init?.headers).get("Authorization"));
+
+  it("sends the resolved header on the directory and every inbox poll", async () => {
+    fetchMock.mockImplementation(async (url) =>
+      url === "/home/agents/"
+        ? new Response(JSON.stringify({ agents: [] }), { status: 200 })
+        : inbox([waiting]),
+    );
+    const home = provider({ "data-agents-url": "/home/agents/" });
+    home.getHeaders = auth;
+    const got = received(home);
+    document.body.append(home);
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(["/home/agents/", INBOX, INBOX]);
+    expect(sent()).toEqual(["Bearer t", "Bearer t", "Bearer t"]);
+    expect(got.at(-1)?.map((row) => row.threadId)).toEqual(["w"]);
+  });
+
+  it("sends the resolved header on the stream", async () => {
+    fetchMock.mockImplementation(() => new Promise<Response>(() => undefined));
+    const home = provider({ "data-inbox-transport": "stream" });
+    home.headers = { "X-Client": "admin" };
+    home.getHeaders = auth;
+    document.body.append(home);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(fetchMock.mock.calls[0]?.[1]?.headers).toEqual({
+      "X-Client": "admin",
+      Authorization: "Bearer t",
+      Accept: "text/event-stream",
+    });
+  });
+
+  it("sends the resolved header through request(), the init winning per key", async () => {
+    fetchMock.mockResolvedValue(new Response("{}", { status: 200 }));
+    const home = provider();
+    home.removeAttribute("data-inbox-url");
+    home.headers = { "X-Client": "admin" };
+    home.getHeaders = auth;
+    await home.request("/home/routines/", { headers: { "X-Client": "routines" } });
+
+    const headers = new Headers(fetchMock.mock.calls[0]?.[1]?.headers);
+    expect(headers.get("Authorization")).toBe("Bearer t");
+    expect(headers.get("X-Client")).toBe("routines");
+  });
+
+  it("rejects request() with the source's own error, and lists nothing, sending nothing", async () => {
+    const failure = new Error("refresh failed");
+    const home = provider({ "data-agents-url": "/home/agents/" });
+    home.getHeaders = () => Promise.reject(failure);
+    const got = received(home);
+    document.body.append(home);
+    await vi.advanceTimersByTimeAsync(0);
+
+    await expect(home.request("/home/routines/")).rejects.toBe(failure);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(got).toEqual([]);
+  });
+});
