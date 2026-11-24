@@ -61,7 +61,7 @@ export class AgUiSkills extends EditorElement<AgUiSkillsStrings> {
 
   protected asked(): void {}
 
-  protected override chatEvents(): readonly (readonly [string, (event: Event) => void])[] {
+  protected chatEvents(): readonly (readonly [string, (event: Event) => void])[] {
     return [[CUSTOM_AGENT_EVENT, this.#onCustom]];
   }
 

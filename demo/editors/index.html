@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>agents-web-components — editor elements</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        color: light-dark(#1a1a2e, #ececf1);
+        background: light-dark(#f7f7fb, #101014);
+      }
+      header.bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px 16px;
+        padding: 10px 20px;
+        border-bottom: 1px solid light-dark(#e3e3ea, #2a2a33);
+      }
+      header.bar nav {
+        display: flex;
+        gap: 12px;
+        font-size: 14px;
+      }
+      header.bar a {
+        color: inherit;
+      }
+      header.bar a[aria-current="page"] {
+        font-weight: 600;
+        text-decoration: none;
+      }
+      main {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+        gap: 16px;
+        padding: 16px 20px;
+        height: calc(100vh - 50px);
+        min-height: 560px;
+      }
+      main.alone {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .settings {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 16px;
+        min-height: 0;
+      }
+      .card {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+        border: 1px solid light-dark(#e3e3ea, #2a2a33);
+        border-radius: 12px;
+      }
+      .card ag-ui-routines,
+      .card ag-ui-skills {
+        flex: 1 1 auto;
+      }
+      .try {
+        grid-column: 1 / -1;
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.5;
+        color: light-dark(#6b6b7b, #a0a0ad);
+      }
+      ag-ui-chat {
+        height: 100%;
+      }
+      @media (max-width: 720px) {
+        main {
+          grid-template-columns: minmax(0, 1fr);
+          height: auto;
+        }
+        .card {
+          height: 520px;
+        }
+        ag-ui-chat {
+          height: 560px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="bar">
+      <strong>Editor elements</strong>
+      <nav>
+        <a href="/editors/" id="nav-bound">Beside a chat</a>
+        <a href="/editors/?alone" id="nav-alone">Alone</a>
+        <a href="/scenarios/routines/">Back to the demo</a>
+      </nav>
+    </header>
+    <main id="main">
+      <div class="settings">
+        <p class="try" id="hint"></p>
+        <div class="card" id="routines-card"></div>
+        <div class="card" id="skills-card"></div>
+      </div>
+    </main>
+    <script type="module" src="/editors/editors.js"></script>
+  </body>
+</html>

@@ -75,7 +75,7 @@ export class AgUiRoutines extends EditorElement<AgUiRoutinesStrings> {
     }
   }
 
-  protected override chatEvents(): readonly (readonly [string, (event: Event) => void])[] {
+  protected chatEvents(): readonly (readonly [string, (event: Event) => void])[] {
     return [
       [THREAD_EVENT, this.#onConversation],
       [RUN_FINISHED_EVENT, this.#onConversation],

@@ -15,6 +15,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   view on the pre-filled New routine form, as the list's button does. It leaves with New chat,
   and `makeRoutine()` and the list-foot button are unchanged. It reuses the `makeRoutine`
   string, so a host that localised it needs no new key.
+- **`<ag-ui-routines>` and `<ag-ui-skills>`: the routines and skill editors as elements of
+  their own.** Each draws the view the chat opens in its panel, as an inline block that fills
+  its container, from its own entry (`./routines`, `./skills`) and vendored bundle
+  (`/routines/bundle`, `/skills/bundle`), neither in the main bundle. Each works alone with only
+  its URL attribute (`data-routines-url`, `data-skill-editor-url`); bound to a chat by `for` or
+  the `chat` property, or to an `<ag-ui-agents>` provider's chat, it takes the URL from there and
+  sends through that one's `request()`. Its own `data-csrf-token` or `data-csrf-cookie` (sent as
+  `data-csrf-header`, `X-CSRFToken` by default) and `credentials` serve it alone, and the token
+  wins when set. Bound, Make this a routine reads the chat's conversation, a last result fires
+  the cancelable `ag-ui-routines-open-thread` and then opens the thread in the chat or through the
+  provider, Draft one with the agent asks the chat, and a skill write refreshes the chat's
+  palette. Alone, the first and third are absent. Opt-in: a page that loads neither entry sees no
+  change.
+- **`<ag-ui-chat data-editors="external">` hands its editors to the page.** With it, the Skills
+  and Routines buttons, Make this a routine and the palette's Manage skills fire the cancelable
+  `ag-ui-open-editor` (`OPEN_EDITOR_EVENT`, `{ editor, fromConversation }`) instead of opening
+  the panel view, for a bound editor element to answer. `openSkillEditor()`, `openRoutines()` and
+  `makeRoutine()` still open the panel. Opt-in: without the attribute the chat behaves as in
+  0.12.0. New methods for an editor element to call: `refreshSkills()` and `routineSeed()` on
+  the chat, and `request(url, init?)` on `<ag-ui-agents>`, which sends the provider's `headers`,
+  `getHeaders()` and `credentials`.
 
 ### Fixed
 

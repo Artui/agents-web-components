@@ -72,6 +72,7 @@ This package is the successor of `@artooi/ag-ui-web-component`. Coming from it? 
 - [Quoting a selection](#quoting-a-selection)
 - [Run notices: compaction and agent skills](#run-notices-compaction-and-agent-skills)
 - [Skills: prompt chips and slash palette](#skills-prompt-chips-and-slash-palette)
+- [The editors on a page of their own](#the-editors-on-a-page-of-their-own)
 - [MPA durability: surviving full page reloads](#mpa-durability-surviving-full-page-reloads)
   - [Who the stored conversation belongs to (`user-key`)](#who-the-stored-conversation-belongs-to-user-key)
   - [Mounting more than one chat on a page](#mounting-more-than-one-chat-on-a-page)
@@ -103,6 +104,10 @@ The package ships two builds (see [`package.json` exports](package.json)):
 | `@artooi/agents-web-components/threads/bundle` | The same entry as a vendored file, minified, inlining none of the element | Beside `/bundle` with no build step; the main bundle does not carry the list. |
 | `@artooi/agents-web-components/inbox` | `<ag-ui-inbox>`, what waits on the user across agents, as a navbar badge or a list: `AgUiInbox` and `defineInbox` | Beside `./chat` and an `<ag-ui-agents>` provider. |
 | `@artooi/agents-web-components/inbox/bundle` | The same entry as a vendored file, minified, inlining none of the element or the provider | Beside `/bundle` with no build step; the main bundle does not carry the inbox. |
+| `@artooi/agents-web-components/routines` | `<ag-ui-routines>`, the routines editor as an element of its own: `AgUiRoutines` and `defineRoutines` | When the routines live on a page or in a rail of their own, away from the chat. |
+| `@artooi/agents-web-components/routines/bundle` | The same entry as a vendored file, minified, inlining none of the chat or the provider | Beside `/bundle`, or alone, with no build step. |
+| `@artooi/agents-web-components/skills` | `<ag-ui-skills>`, the stored-skill editor as an element of its own: `AgUiSkills` and `defineSkills` | When the skills live on a page of their own, away from the chat. |
+| `@artooi/agents-web-components/skills/bundle` | The same entry as a vendored file, minified, inlining none of the chat or the provider | Beside `/bundle`, or alone, with no build step. |
 | `@artooi/agents-web-components/bundle` | ESM bundle with `@ag-ui/*` **inlined**, minified | Drop in via a single `<script type="module">` with no build step. |
 
 ### The vendored-bundle story
@@ -205,6 +210,7 @@ another origin, add `credentials="include"` too; see
 | `data-skill-editor-url` | — | URL of django-ag-ui's skill editor endpoint (`skills/editor/`). Opts into the [skill editor](#the-skill-editor): a "Manage skills" row at the foot of the `/` palette under `data-slash-commands`, a header button with `data-skill-editor-button`, or `openSkillEditor()`. |
 | `data-routines-url` | — | URL of django-ag-ui's routines editor (`routines/`, from 0.86.0). Opts into [routines](#routines): a Routines button in the header, a Make this a routine item in its More menu, `openRoutines()` and `makeRoutine()`. Read at connect time, like the other endpoint URLs. |
 | `data-skill-editor-button` | absent | With `data-skill-editor-url`, also puts a Skills button in the header. Off by default. On a narrow panel it moves into the header's [More menu](#the-header-row-and-its-more-menu) like the other optional controls. |
+| `data-editors` | absent | `external` hands the skill editor and routines to the page: the Skills and Routines buttons, Make this a routine and the palette's Manage skills fire `ag-ui-open-editor` instead of opening the view in the panel, for an [editor element](#the-editors-on-a-page-of-their-own) to answer. Read at each click. The methods still open the panel. |
 | `data-tools-url` | — | URL of a server tool-label catalog (`[{ name, summary, description? }]`), fetched with the element's headers and cookie policy; labels tool-call cards for server-side tools. |
 | `user-key` | `userKey` | Who the stored conversation belongs to — any string identifying the signed-in principal. Joins the storage namespace, and **changing it purges what the previous principal left behind**. Live (not connect-time): a logout is the host's to announce. See [Who the stored conversation belongs to](#who-the-stored-conversation-belongs-to-user-key). |
 | `user-name` | `userName` | The signed-in user's display name, for the [greeting](#the-greeting-on-an-empty-page) an empty conversation shows under `placement="page"`. Presentation only: unlike `user-key` it scopes nothing and is never sent. Absent or blank gives the nameless greeting. Live. |
@@ -348,7 +354,7 @@ keyboard focus and styleable via the `code-copy` part. Override its labels with
 the `copyCode` / `copied` / `copyFailed` strings.
 
 **Methods**: `registerTool`, `registerPageState`, `registerActivityRenderer`, `registerContext`,
-`setSkills`, `openSkillEditor`, `closeSkillEditor`, `openRoutines`, `makeRoutine`, `closeRoutines`, `sendMessage`, `run`, `attachFile`, `appendMessage`, `retryLastTurn`, `quote`, `offerQuoteInPage`,
+`setSkills`, `refreshSkills`, `openSkillEditor`, `closeSkillEditor`, `openRoutines`, `makeRoutine`, `routineSeed`, `closeRoutines`, `sendMessage`, `run`, `attachFile`, `appendMessage`, `retryLastTurn`, `quote`, `offerQuoteInPage`,
 `enableCharts`, `newChat`, `setCollapsed`, `toggleCollapsed`, `setMaximized`, `toggleMaximized`,
 `describeSurface`, `moveTo`, `resetSize`, `toggleTheme`, `openThreads`, `closeThreads`, `switchThread`, `deleteThread`, `openTab`, `closeTab`,
 `openCheckpoints`, `closeCheckpoints`, `toggleCheckpoints`, `refreshPlace`, `request`, `tokenValues` and `reload`.
@@ -357,6 +363,11 @@ the `copyCode` / `copied` / `copyFailed` strings.
 `init.headers` (which win per key), and `credentials` unless `init` names its own. A destination
 outside `trustedOrigins` is reported as the element's own requests are. It is the seam a separate
 entry such as `./mcp-apps` reaches the host's routes through.
+
+`refreshSkills()` fetches `data-skills-url` again, so the `/` palette lists a skill written
+elsewhere. `routineSeed()` is what Make this a routine would fill a form with: `{ prompt, name }`
+from the conversation's user messages, or `null` before anything is said. An
+[editor element](#the-editors-on-a-page-of-their-own) bound to the chat calls both.
 
 `colorScheme` is the scheme the panel is drawn in now (`"light"` or `"dark"`); a change of the
 `theme` attribute fires `ag-ui-theme` with `{ scheme }`. `locale` is the nearest `lang` attribute,
@@ -3589,6 +3600,105 @@ editor. With `data-threads-url` on the same mount, a thread a routine started ca
 the routine's name in the thread list. `openRoutines()` and `closeRoutines()` open and close the
 view; a principal change closes it.
 
+The skill editor and routines can also stand on the page as elements of their own; see
+[The editors on a page of their own](#the-editors-on-a-page-of-their-own).
+
+---
+
+## The editors on a page of their own
+
+`<ag-ui-routines>` and `<ag-ui-skills>` draw the same views the chat opens in its panel, as
+elements of their own: an inline block that fills its container, for a settings page, a rail or
+a dialog. Each works alone with only its URL, beside a chat, or under an
+[`<ag-ui-agents>` provider](#several-agents-under-one-provider).
+
+```html
+<ag-ui-chat id="chat" endpoint="/agent/" data-routines-url="/agent/routines/"
+  data-skill-editor-url="/agent/skills/editor/" data-editors="external"></ag-ui-chat>
+<section class="settings">
+  <ag-ui-routines for="chat"></ag-ui-routines>
+  <ag-ui-skills for="chat"></ag-ui-skills>
+</section>
+
+<script type="module">
+  import { defineChat } from "@artooi/agents-web-components/chat";
+  import { defineRoutines } from "@artooi/agents-web-components/routines";
+  import { defineSkills } from "@artooi/agents-web-components/skills";
+  defineChat();
+  defineRoutines();
+  defineSkills();
+</script>
+```
+
+Both elements share these rules:
+
+- **Binding.** `for` names a chat's `id`, looked up in the element's own root; a chat added
+  later is picked up when it first reports its thread. Or set the `chat` property, which wins
+  over `for` until it is set back to `null`. With neither, the element binds to the chat of an
+  `<ag-ui-agents>` provider: the one its `agents` attribute names by id, else the nearest one
+  around it, and loads again each time the provider moves to another agent. **`provider`**
+  *(read-only)* is that provider. Bound to nothing, the element works alone.
+- **URL.** Its own URL attribute wins; else the bound chat's same attribute; else, under a
+  provider, the URL the agent on screen lists in the directory. With none, the element draws
+  nothing. **`url`** *(read-only)* is the one in use, and **`reload()`** reads it again from
+  the list.
+- **Requests.** Bound to a chat, they go through `chat.request()`; under a provider, through
+  `provider.request()`, which sends the provider's `headers` and `getHeaders()`; so the headers
+  and cookie policy are the ones the page already set. Alone, they go through `fetch` with the
+  `credentials` attribute (`omit`, `same-origin` by default, or `include`). Either way the
+  element's own `data-csrf-token`, or else the cookie `data-csrf-cookie` names, read at each
+  request, is sent as `data-csrf-header` (`X-CSRFToken` by default), winning per header.
+  **`request(url, init?)`** is that `fetch`.
+- **Opening from the chat.** With `data-editors="external"` on the chat, its Skills and Routines
+  buttons, Make this a routine and the palette's Manage skills fire **`ag-ui-open-editor`**
+  (`OPEN_EDITOR_EVENT`, detail `{ editor, fromConversation }`, where `editor` is `routines` or
+  `skills`; bubbling, composed and cancelable) instead of opening the panel. A bound element
+  answers it: it calls `preventDefault()`, takes focus on its heading and, for Make this a
+  routine, opens the new routine's form. Scroll it into view or open the dialog it sits in from
+  your own listener. Without an element to answer, nothing opens.
+- **Focus.** The list has no back arrow; a form's arrow steps back to the list. A redraw moves
+  focus only when focus was already inside the element.
+- **Styling.** The full-panel view's parts (`panel-view`, `panel-view-bar`, `panel-view-title`,
+  `panel-view-body`, `panel-view-footer`, `back-button`) and the view's own, as listed under
+  [Theming](#theming-density-and-placement). The chat's colour, font and size tokens apply,
+  plus `--ag-ui-danger`. The element takes the page's `color-scheme`, unless its `theme`
+  attribute names `light`, `dark` or `auto`.
+- **Strings.** `strings` translates the view's text, merged over the English, with the same
+  keys as the chat's `strings` for that view, plus `back` (the arrow's label).
+
+Neither element is in the main `/bundle`. Without a build step, load `/routines/bundle` or
+`/skills/bundle`; each carries the element and its view, and none of the chat or the provider.
+
+### The routines element
+
+`<ag-ui-routines>` reads **`data-routines-url`** (django-ag-ui's `routines/`, from 0.86.0). The
+list, Pause or Resume, Run now and the form are the chat's [routines](#routines) view.
+
+- **Make this a routine** is at the foot of the list while the bound chat has a prompt on
+  screen, and follows that conversation as it moves on. **`makeRoutine()`** opens the form the
+  same way. Bound to nothing, it is absent.
+- **A last result** fires **`ag-ui-routines-open-thread`** (`ROUTINES_OPEN_THREAD_EVENT`,
+  detail `{ threadId }`, bubbling, composed and cancelable). Unless a listener prevents it, a
+  chat bound by `for` or the property switches to that thread, and a provider opens it on the
+  agent on screen. Alone, the event is all there is.
+- **Strings** are `AgUiRoutinesStrings`, the chat's routines keys (`routines`, `newRoutine`,
+  `makeRoutine`, `pause`, `resume`, `runNow` and the form's) plus `back`, "Back to the routines"
+  by default.
+
+### The skills element
+
+`<ag-ui-skills>` reads **`data-skill-editor-url`** (django-ag-ui's `skills/editor/`, from
+0.83.0). The list, Turn on and the form are the chat's [skill editor](#the-skill-editor).
+
+- **Draft one with the agent** sends `/create-skill` to the bound chat. Bound to nothing, it is
+  absent.
+- **The palette follows.** After each write, the element calls the bound chat's
+  `refreshSkills()`. When a run in that chat sends django-ag-ui's `ag_ui.skills_changed`
+  CUSTOM event, the list reloads.
+- **Strings** are `AgUiSkillsStrings`, the chat's skill editor keys (`skills`, `newSkill`,
+  `noSkills`, `draftSkill`, `writeSkill`, `turnOn`, `turnOff` and the form's) plus `back`,
+  "Back to the skills" by default.
+
 ---
 
 ## MPA durability: surviving full page reloads
@@ -4272,6 +4382,7 @@ paths.
 | `ThreadTitleDetail` | type | `detail` shape of the `ag-ui-thread-title` event (`{ threadId, title }`). |
 | `UnreadDetail` | type | `detail` shape of the `ag-ui-unread` event (`{ unread, threadIds }`). |
 | `ThreadsChangeDetail` | type | `detail` shape of the `ag-ui-threads-change` event (`{ threads }`). |
+| `OpenEditorDetail` | type | `detail` shape of the `ag-ui-open-editor` event (`{ editor, fromConversation }`). |
 | `AgUiAgents` | class | The headless `<ag-ui-agents>` provider: the agents directory, the inbox, and the chat it mounts on an entry. See [Several agents under one provider](#several-agents-under-one-provider). |
 | `defineAgents()` | function | Register `<ag-ui-agents>`; a no-op if it is already registered, and throws if another class holds the tag. |
 | `AgentEntry` | type | One directory entry: `id`, `name`, `description`, `endpoint` and one URL per route, `null` where the mount serves none (`routines_url` may be absent from an older server), and `capabilities`, optional: what the mount declares of AG-UI's `AgentCapabilities`. |
@@ -4442,6 +4553,7 @@ paths.
 | `ELEMENT_TAG` | The registered tag name (`ag-ui-chat`). |
 | `SUBMIT_EVENT` | The submit CustomEvent name. |
 | `THREAD_EVENT` | The conversation-changed CustomEvent name (`ag-ui-thread`). |
+| `OPEN_EDITOR_EVENT` | The open-an-editor CustomEvent name (`ag-ui-open-editor`), fired cancelable under `data-editors="external"`; see [The editors on a page of their own](#the-editors-on-a-page-of-their-own). |
 | `OPEN_THREAD_EVENT` | The open-another-thread CustomEvent name (`ag-ui-open-thread`), fired cancelable by a child-session link or a parent breadcrumb; see [Child sessions](#child-sessions). |
 | `THREAD_TITLE_EVENT` | The thread-title CustomEvent name (`ag-ui-thread-title`). |
 | `TABS_EVENT` | The tabs CustomEvent name (`ag-ui-tabs`); see [Open threads (tabs)](#open-threads-tabs). |

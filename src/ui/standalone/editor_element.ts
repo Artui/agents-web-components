@@ -102,9 +102,7 @@ export abstract class EditorElement<S extends EditorStrings> extends HTMLElement
   protected abstract asked(detail: OpenEditorDetail): void;
 
   /** Events of the bound chat the subclass reacts to, added and removed with the binding. */
-  protected chatEvents(): readonly (readonly [string, (event: Event) => void])[] {
-    return [];
-  }
+  protected abstract chatEvents(): readonly (readonly [string, (event: Event) => void])[];
 
   /**
    * The chat this element is bound to: the one set here or named by `for`,
@@ -241,7 +239,7 @@ export abstract class EditorElement<S extends EditorStrings> extends HTMLElement
 
   #load(): void {
     const url = this.url;
-    if (url === this.#opened && (url === null || this.view.isOpen)) {
+    if (url === this.#opened) {
       return;
     }
     this.#close();
