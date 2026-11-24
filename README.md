@@ -2402,6 +2402,25 @@ page, or only the pieces you need, each imported from its own entry.
   <ag-ui-chat placement="page" data-greeting="off"></ag-ui-chat>
 </ag-ui-agents>
 
+<style>
+  /* header 52px, rail 292px wide; the rail is a 220px strip under the header at 640px and below */
+  header { position: fixed; inset: 0 0 auto 0; height: 52px; }
+  aside { position: fixed; inset: 52px auto 0 0; width: 292px; overflow-y: auto; }
+  ag-ui-chat {
+    --ag-ui-inset: 52px 0 0 292px;
+    --ag-ui-width: calc(100vw - 292px);
+    --ag-ui-height: calc(100dvh - 52px);
+  }
+  @media (max-width: 640px) {
+    aside { inset: 52px 0 auto 0; width: auto; height: 220px; }
+    ag-ui-chat {
+      --ag-ui-inset: 272px 0 0 0;
+      --ag-ui-width: 100vw;
+      --ag-ui-height: calc(100dvh - 272px);
+    }
+  }
+</style>
+
 <script type="module">
   import { defineAgents } from "@artooi/agents-web-components";
   import { defineChat } from "@artooi/agents-web-components/chat";
@@ -2417,9 +2436,12 @@ page, or only the pieces you need, each imported from its own entry.
 - **Each piece stays its own entry.** Drop the inbox and leave out `./inbox`; drop the list and
   leave out `./threads`; a lone chat needs no provider. The inbox list and the threads need the
   provider only for the agents and the inbox they read.
-- **The chat is the page, fixed to the viewport.** `placement="page"` is not a grid cell: leave
-  room for your header and rail with `--ag-ui-inset` (top right bottom left; the demo sets
-  `52px 0 0 292px`), and set `data-greeting="off"` where the page has its own heading. Switching the agent remounts the chat, as [described above](#several-agents-under-one-provider).
+- **The chat is the page, fixed to the viewport.** `placement="page"` sizes itself to the
+  viewport whatever `--ag-ui-inset` says, so state the box you leave with the inset, width and
+  height tokens together, as above, and set `data-greeting="off"` where the page has its own
+  heading. At 640px and below the rail becomes a scrolling strip under the header and the chat
+  sits beneath it, so the inbox list and the threads stay reachable; the demo does the same.
+  Switching the agent remounts the chat, as [described above](#several-agents-under-one-provider).
 - **Try it.** `make demo`, then `/agents/` for the whole page and `/agents/alone.html?piece=inbox`
   (or `threads`, `chat`) for one piece imported alone, both against the mock server.
 
