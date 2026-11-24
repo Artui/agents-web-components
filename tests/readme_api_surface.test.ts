@@ -1,7 +1,7 @@
 /**
- * The README, checked against the API it describes.
+ * The documentation (README.md and the docs/ pages), checked against the API it describes.
  *
- * The README is this package's only reference — there is no generated API doc
+ * The docs are this package's only reference — there is no generated API doc
  * to fall back on — so a wrong cell is worse than a missing one: a consumer who
  * reads that `title-text` is "the only observed attribute" concludes the
  * connect-time warning machinery does not exist, and a consumer who writes a
@@ -63,7 +63,15 @@ import { STYLES } from "../src/ui/styles.js";
 const ENTRIES = ["src/index.ts", "src/chat.ts"]
   .map((path) => readFileSync(path, "utf8"))
   .join("\n");
-const README = readFileSync("README.md", "utf8");
+/** Every documentation file: the README and each page of the docs site, read as one. */
+const DOC_FILES = [
+  "README.md",
+  ...readdirSync("docs")
+    .filter((name) => name.endsWith(".md"))
+    .map((name) => join("docs", name)),
+];
+const DOCS = new Map(DOC_FILES.map((path) => [path, readFileSync(path, "utf8")]));
+const README = [...DOCS.values()].join("\n\n");
 const ELEMENT = readFileSync("src/core/ag_ui_chat.ts", "utf8");
 
 function sourcePaths(dir: string): string[] {
@@ -350,17 +358,21 @@ function signatureParams(name: string): string[] | null {
 // Reading the README
 // --------------------------------------------------------------------------
 
-/** The slice under `heading`, up to the next heading of the same depth or less. */
+/** The slice under `heading` at any depth (a page may promote it), up to the next of its depth or less. */
 function section(heading: string): string {
-  const start = README.indexOf(`\n${heading}\n`);
-  const depth = (heading.match(/#/g) ?? []).length;
+  const title = heading.replace(/^#+ /, "");
+  const found = new RegExp(`\\n(#{1,6}) ${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\n`).exec(
+    README,
+  );
+  const start = found?.index ?? -1;
+  const depth = found?.[1]?.length ?? 0;
   const stop = new RegExp(`\\n#{1,${depth}} `, "g");
   stop.lastIndex = start + 1;
   const end = stop.exec(README)?.index;
   /* c8 ignore next 3 -- both headings exist; this only fires if one is renamed
      without renaming it here, and then the message is the useful part. */
   if (start < 0 || end === undefined) {
-    throw new Error(`expected a '${heading}' section in README.md`);
+    throw new Error(`expected a '${heading}' section in README.md or docs/`);
   }
   return README.slice(start, end);
 }
@@ -514,7 +526,7 @@ describe("the README's public API surface", () => {
     expect(drift).toEqual([]);
   });
 
-  it("points every in-page link at a heading that exists", () => {
+  it("points every in-page and cross-page link at a heading that exists", () => {
     // Two links pointed at an `#events` section that has never existed. The
     // slug rule is the one GitHub applies: lower-case, drop anything that is
     // not a word character, space or hyphen, then swap each space for a hyphen
@@ -524,14 +536,41 @@ describe("the README's public API surface", () => {
         .toLowerCase()
         .replace(/[^\w\s-]/g, "")
         .replace(/\s/g, "-");
-    const headings = new Set(
-      [...README.matchAll(/^#{2,6} (.+)$/gm)].map((match) => slug(match[1] ?? "")),
-    );
-    const broken = [...README.matchAll(/\]\(#([a-z0-9-]+)\)/g)]
-      .map((match) => match[1] ?? "")
-      .filter((target) => !headings.has(target));
+    const headings = (text: string): Set<string> =>
+      new Set([...text.matchAll(/^#{1,6} (.+)$/gm)].map((match) => slug(match[1] ?? "")));
+    const broken = DOC_FILES.flatMap((path) => {
+      const own = headings(DOCS.get(path) ?? "");
+      return [...(DOCS.get(path) ?? "").matchAll(/\]\(([a-z0-9-]+\.md)?#([a-z0-9-]+)\)/g)]
+        .filter(([, page, target]) => {
+          const pageText = page === undefined ? undefined : DOCS.get(join("docs", page));
+          return !(page === undefined ? own : headings(pageText ?? "")).has(target ?? "");
+        })
+        .map(([link]) => `${path}: ${link}`);
+    });
 
     expect([...new Set(broken)]).toEqual([]);
+  });
+
+  it("points every README link into the site at a page and heading that exist", () => {
+    const slug = (heading: string): string =>
+      heading
+        .toLowerCase()
+        .replace(/[^\w\s-]/g, "")
+        .replace(/\s/g, "-");
+    const site = /https:\/\/artui\.github\.io\/agents-web-components\/([^)>\s#]*)(?:#([^)>\s]+))?/g;
+    const links = [...(DOCS.get("README.md") ?? "").matchAll(site)];
+    const broken = links
+      .filter(([, page, target]) => {
+        const text = DOCS.get(join("docs", `${(page ?? "").replace(/\/$/, "") || "index"}.md`));
+        const ids = new Set(
+          [...(text ?? "").matchAll(/^#{1,6} (.+)$/gm)].map((match) => slug(match[1] ?? "")),
+        );
+        return text === undefined || (target !== undefined && !ids.has(target));
+      })
+      .map(([link]) => link);
+
+    expect(links.length).toBeGreaterThan(10);
+    expect(broken).toEqual([]);
   });
 
   it("starts every run of table rows with a header separator", () => {

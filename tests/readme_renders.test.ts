@@ -1,8 +1,8 @@
 /**
- * The README is the documentation, so it has to render where it is read.
+ * The README is the landing page, so it has to render where it is read.
  *
- * There is no docs site here: this file is what GitHub shows and what npm puts
- * on the package page. Neither understands MkDocs admonitions, and the failure
+ * The docs site understands MkDocs admonitions; this file is what GitHub shows
+ * and what npm puts on the package page. Neither does, and the failure
  * is worse than a missed callout -- `!!! note` renders as a literal line and
  * its indented body becomes a *code block*, so a warning is displayed as
  * something to copy.

@@ -87,6 +87,15 @@ jobs:
           path: coverage/
           if-no-files-found: ignore
 
+  docs:
+    name: docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - name: mkdocs build --strict
+        run: make docs
+
   secrets:
     name: secret scan
     runs-on: ubuntu-latest
@@ -106,7 +115,7 @@ jobs:
     # always(), never !cancelled(): a skipped job reports a skipped check, and
     # branch protection counts a skipped required check as passing.
     if: always()
-    needs: [lint, build, test]
+    needs: [lint, build, test, docs]
     runs-on: ubuntu-latest
     steps:
       # Pass on an exact `success` from every job above, rather than failing on

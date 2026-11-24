@@ -1,13 +1,13 @@
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { page } from "vitest/browser";
-import readme from "../../README.md?raw";
+import readme from "../../docs/agents.md?raw";
 import type { InboxRow } from "../../src/agents/types.js";
 import { ELEMENT_TAG } from "../../src/constants.js";
 import { defineChat } from "../../src/core/define_chat.js";
 import { type AgUiInbox, defineInbox, INBOX_TAG } from "../../src/inbox.js";
 
 /**
- * The README's "An agents home" stylesheet, read from the README itself: a fixed header is its
+ * The "An agents home" stylesheet, read from its docs page (docs/agents.md): a fixed header is its
  * own stacking context, so the inbox popover in it must out-rank the page chat to stay visible.
  */
 

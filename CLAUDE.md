@@ -45,6 +45,7 @@ The AG-UI stack design doc (`django-ag-ui-plan.md`) lives in the private ecosyst
 | `make format` | `biome format --write .` |
 | `make build` | esbuild library (split per entry), vendored bundles, the MCP Apps sandbox proxy page + `tsc` declarations into `dist/` |
 | `make demo` | install, build and serve the demo on port 5173, in one command from a clean checkout |
+| `make docs` | build the docs site into `site/` with `mkdocs build --strict` (uv supplies the pinned tools) |
 
 `tsconfig.build.json` sets `rootDir: "./src"` explicitly: TypeScript 7 no longer
 infers it from the common source directory (TS5011). It is the value 5.x
@@ -64,6 +65,16 @@ that the scenario's prompt reaches. A feature that cannot be shown (packaging, a
 removed API, console-only output) is named as left out, with its reason, in the
 PR. `make demo` builds and serves the demo in one command from a clean checkout;
 keep it that way. `demo/page/` is the chat as a host's full-page route.
+
+## Every feature has a docs page and one README line
+
+The documentation is the mkdocs-material site under `docs/` (nav in `mkdocs.yml`),
+deployed to gh-pages by `release.yml` with each release; `make docs` builds it with
+`--strict`. A feature a host can use is documented in the change that adds it: a section on
+the page for its topic, or a new page added to the nav. The README stays a landing page
+(what, install, quick start, element list, topic links, under 300 lines): a new element or
+topic gets one line there linking into the site, never a section. Headings use GitHub's
+slugs (`pymdownx.slugs`), so links keep working across a move between pages.
 
 ## Structural rules
 
