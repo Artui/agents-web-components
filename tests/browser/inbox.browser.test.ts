@@ -410,4 +410,40 @@ describe("<ag-ui-inbox variant=list> hands focus on when its row leaves in Chrom
     expect(shadow(inbox).activeElement).toBe(shadow(inbox).querySelector(".panel"));
     expect(document.activeElement).toBe(inbox);
   });
+
+  it("draws no ring on the list after a mouse answer", async () => {
+    vi.stubGlobal("fetch", () => Promise.resolve(new Response("", { status: 200 })));
+    const { inbox, leave } = await list(["a"]);
+    await userEvent.click(part(inbox, "a", ".approve"));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    leave("a");
+    const panel = shadow(inbox).querySelector(".panel") as HTMLElement;
+    expect(shadow(inbox).activeElement).toBe(panel);
+    expect(getComputedStyle(panel).outlineStyle).toBe("none");
+  });
+
+  it.each(["light", "dark"])(
+    "draws the list's ring after a keyboard answer, in %s",
+    async (scheme) => {
+      document.documentElement.style.colorScheme = scheme;
+      vi.stubGlobal("fetch", () => Promise.resolve(new Response("", { status: 200 })));
+      const { inbox, leave } = await list(["a"]);
+      const approve = part(inbox, "a", ".approve");
+      approve.focus();
+      await userEvent.keyboard("{Enter}");
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      leave("a");
+      const panel = shadow(inbox).querySelector(".panel") as HTMLElement;
+      expect(shadow(inbox).activeElement).toBe(panel);
+      expect(panel.matches(":focus-visible")).toBe(true);
+      const style = getComputedStyle(panel);
+      expect(style.outlineStyle).toBe("solid");
+      expect(Number.parseFloat(style.outlineWidth)).toBe(2);
+      expect(Number.parseFloat(style.outlineOffset)).toBeLessThan(0);
+      const probe = document.createElement("div");
+      probe.style.cssText = "outline: 2px solid var(--_ring)";
+      shadow(inbox).append(probe);
+      expect(style.outlineColor).toBe(getComputedStyle(probe).outlineColor);
+    },
+  );
 });
