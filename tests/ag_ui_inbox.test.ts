@@ -296,6 +296,20 @@ describe("<ag-ui-inbox> binding", () => {
     expect(badge(badgeOnly).getAttribute("aria-label")).toBe("Needs you: 3");
   });
 
+  it("binds the provider that takes the id of the one it was bound to once that one leaves", async () => {
+    serve();
+    const badgeOnly = inbox({ agents: "home" });
+    const home = provider();
+    document.body.append(badgeOnly, home);
+    await vi.advanceTimersByTimeAsync(0);
+    home.remove();
+    const next = provider();
+    document.body.append(next);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(badgeOnly.provider).toBe(next);
+  });
+
   it("takes a provider set by property over agents, and lets go when removed", async () => {
     serve();
     const home = provider();

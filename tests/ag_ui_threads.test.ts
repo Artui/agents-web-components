@@ -171,6 +171,17 @@ describe("binding", () => {
     expect(list.chat).toBe(chat);
   });
 
+  it("binds the chat that takes the id of the one it was bound to once that one leaves", async () => {
+    const { chat, list } = mount();
+    await flush();
+    chat.remove();
+    const next = chatWith();
+    document.body.append(next);
+    await flush();
+
+    expect(list.chat).toBe(next);
+  });
+
   it("ignores another element's thread event while waiting", async () => {
     const list = document.createElement(THREADS_TAG) as AgUiThreads;
     list.setAttribute("for", "chat");

@@ -235,9 +235,9 @@ export class AgUiInbox extends HTMLElement {
     return root.getElementById(id) as InboxProvider | null;
   }
 
-  /** A provider that was not there when the inbox connected, reporting in. */
+  /** A provider reporting in while the inbox has none, or holds one that left the page. */
   readonly #onRootEvent = (): void => {
-    if (this.#provider === null) {
+    if (this.#provider === null || !this.#provider.isConnected) {
       this.#bind();
     }
   };
