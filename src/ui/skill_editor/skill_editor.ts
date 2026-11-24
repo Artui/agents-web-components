@@ -4,16 +4,16 @@ import type { SkillEditorClient, SkillEditorRefusal } from "../../skills/skill_e
 import { fillUiString } from "../fill_ui_string.js";
 import { headerButton } from "../shell/header_button.js";
 import type { PanelView } from "../shell/panel_view.js";
-import type { UiStrings } from "../ui_strings.js";
 import { buildSkillForm } from "./build_skill_form.js";
+import type { SkillEditorStrings } from "./skill_editor_strings.js";
 
 /** What the skill editor needs from the element that owns it. */
 export interface SkillEditorHost {
   /** The full-panel view the editor draws into. */
   readonly view: PanelView;
-  readonly strings: () => UiStrings;
-  /** Leave the editor and ask the agent to draft a skill. */
-  readonly onDraft: () => void;
+  readonly strings: () => SkillEditorStrings;
+  /** Leave the editor and ask the agent to draft a skill; `null` when no chat is there to ask. */
+  readonly onDraft: (() => void) | null;
   /** A write landed: the palette's catalog is stale. */
   readonly onChanged: () => void;
   /** Leave the editor for the conversation. */
@@ -51,6 +51,11 @@ export class SkillEditor {
   /** Whether the editor is showing. */
   get isOpen(): boolean {
     return this.#screen !== "closed";
+  }
+
+  /** Whether the editor shows its first screen (the list), with nothing to step back to inside it. */
+  get atRoot(): boolean {
+    return this.#screen !== "edit";
   }
 
   /** Open on the list, loaded fresh through `client`. */
@@ -129,7 +134,7 @@ export class SkillEditor {
       sub: String(this.#skills.length),
       actions: [add],
       body: [rows],
-      footer: [this.#draftButton("skill-editor-btn skill-editor-btn--block")],
+      footer: this.#draftButtons("skill-editor-btn skill-editor-btn--block"),
     });
   }
 
@@ -202,19 +207,24 @@ export class SkillEditor {
     wrap.append(
       heading,
       text,
-      this.#draftButton("skill-editor-btn skill-editor-btn--primary"),
+      ...this.#draftButtons("skill-editor-btn skill-editor-btn--primary"),
       write,
     );
     return wrap;
   }
 
-  #draftButton(className: string): HTMLButtonElement {
+  /** The draft-with-the-agent button, or none when the host has no chat to ask. */
+  #draftButtons(className: string): HTMLButtonElement[] {
+    const onDraft = this.#host.onDraft;
+    if (onDraft === null) {
+      return [];
+    }
     const draft = document.createElement("button");
     draft.type = "button";
     draft.className = className;
     draft.textContent = this.#host.strings().draftSkill;
-    draft.addEventListener("click", () => this.#host.onDraft());
-    return draft;
+    draft.addEventListener("click", () => onDraft());
+    return [draft];
   }
 
   #edit(skill: EditorSkill | null): void {

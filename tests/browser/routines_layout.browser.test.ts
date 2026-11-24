@@ -78,6 +78,13 @@ function part(el: AgUiChat, selector: string): HTMLElement {
   return found;
 }
 
+function option(value: string): HTMLOptionElement {
+  const choice = document.createElement("option");
+  choice.value = value;
+  choice.textContent = value;
+  return choice;
+}
+
 function inside(inner: DOMRect, outer: DOMRect): boolean {
   return (
     inner.left >= outer.left - 0.5 &&
@@ -183,6 +190,155 @@ describe("routines (real browser)", () => {
       expect(getComputedStyle(saturday as HTMLElement).outlineStyle).toBe("solid");
     },
   );
+
+  async function openForm(el: AgUiChat, existing: boolean): Promise<void> {
+    await settle();
+    part(el, ".header-btn--routines").click();
+    await settle();
+    part(el, existing ? ".routine-row .skill-row-open" : ".header-btn--new-routine").click();
+    await settle();
+  }
+
+  it("pins each weekday's hidden checkbox out of flow, so the label sits on the pill's padding", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => answer(String(url))),
+    );
+    const el = mount("380px");
+    await openForm(el, false);
+    for (const chip of all(el, "[part=routine-day]")) {
+      const text = [...chip.childNodes].find((node) => node.nodeType === Node.TEXT_NODE) as Text;
+      const range = document.createRange();
+      range.selectNodeContents(text);
+      const style = getComputedStyle(chip);
+      const inner = chip.getBoundingClientRect().left + Number.parseFloat(style.borderLeftWidth);
+      const padding = Number.parseFloat(style.paddingLeft);
+      expect(range.getBoundingClientRect().left - inner).toBeCloseTo(padding, 0);
+      expect(chip.scrollWidth).toBe(chip.clientWidth);
+    }
+  });
+
+  it.each(["", "dark", "ledger dark"])(
+    "draws the time as two themed selects, no native time popup, under theme '%s'",
+    async (theme) => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (url: string) => answer(String(url))),
+      );
+      const el = mount("380px");
+      if (theme !== "") {
+        el.setAttribute("theme", theme);
+      }
+      await openForm(el, true);
+      expect(all(el, "input[type=time]")).toHaveLength(0);
+      const group = part(el, ".routine-time");
+      expect(group.getAttribute("role")).toBe("group");
+      const labelled = part(el, `#${group.getAttribute("aria-labelledby")}`);
+      expect(labelled.textContent).toBe("At");
+      const [hour, minute] = all(el, ".routine-time select") as HTMLSelectElement[];
+      expect([hour?.value, minute?.value]).toEqual(["08", "00"]);
+      const zone = part(el, "#routine-field-timezone");
+      const panel = getComputedStyle(part(el, ".panel-view"));
+      for (const select of [hour, minute] as HTMLSelectElement[]) {
+        const style = getComputedStyle(select);
+        expect(style.colorScheme).toBe(panel.colorScheme);
+        expect(style.backgroundColor).toBe(getComputedStyle(zone).backgroundColor);
+        expect(style.color).toBe(panel.color);
+        expect(
+          inside(select.getBoundingClientRect(), part(el, ".routine-form").getBoundingClientRect()),
+        ).toBe(true);
+      }
+      expect(theme.includes("dark") ? "dark" : "light").toBe(panel.colorScheme);
+    },
+  );
+
+  it("keeps the hour and minute selects and the timezone input inside the form at 240px", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => answer(String(url))),
+    );
+    const el = mount("240px");
+    await openForm(el, true);
+    const form = part(el, ".routine-form").getBoundingClientRect();
+    const controls = [...all(el, ".routine-time select"), part(el, "#routine-field-timezone")];
+    expect(controls).toHaveLength(3);
+    for (const control of controls) {
+      expect(control.getBoundingClientRect().width).toBeGreaterThan(0);
+      expect(inside(control.getBoundingClientRect(), form)).toBe(true);
+    }
+  });
+
+  it("changes the time and the zone from the keyboard alone and saves 'HH:MM'", async () => {
+    const fetch = vi.fn(async (url: string, _init?: RequestInit) => answer(String(url)));
+    vi.stubGlobal("fetch", fetch);
+    const el = mount("380px");
+    await openForm(el, true);
+    expect(all(el, ".routine-time select")).toHaveLength(2);
+    const [hour, minute] = all(el, ".routine-time select") as HTMLSelectElement[];
+    all(el, "[part=routine-day] input").at(-1)?.focus();
+    await userEvent.keyboard("{Tab}");
+    expect(el.shadowRoot?.activeElement).toBe(hour);
+    await userEvent.keyboard("1");
+    await userEvent.keyboard("{Tab}");
+    expect(el.shadowRoot?.activeElement).toBe(minute);
+    await userEvent.keyboard("3");
+    await userEvent.keyboard("{Tab}");
+    const zone = part(el, "#routine-field-timezone") as HTMLInputElement;
+    expect(el.shadowRoot?.activeElement).toBe(zone);
+    await userEvent.keyboard("Asia/Tokyo");
+    expect([hour?.value, minute?.value, zone.value]).toEqual(["10", "30", "Asia/Tokyo"]);
+    all(el, ".panel-view-footer button")
+      .find((button) => button.textContent === "Save")
+      ?.click();
+    await settle();
+    const write = fetch.mock.calls.find(([, init]) => init?.method === "PUT");
+    expect(JSON.parse(String(write?.[1]?.body))).toMatchObject({
+      schedule: { kind: "weekly", at: "10:30" },
+      timezone: "Asia/Tokyo",
+    });
+  });
+
+  it("projects a plain select slotted as routine-time or routine-timezone, writes the routine in, saves its value", async () => {
+    const fetch = vi.fn(async (url: string, _init?: RequestInit) => answer(String(url)));
+    vi.stubGlobal("fetch", fetch);
+    const el = mount("380px");
+    const time = document.createElement("select");
+    time.slot = "routine-time";
+    time.setAttribute("aria-label", "Run at");
+    const zone = document.createElement("select");
+    zone.slot = "routine-timezone";
+    zone.setAttribute("aria-label", "Zone");
+    for (const [control, values] of [
+      [time, ["07:00", "08:00", "19:30"]],
+      [zone, ["UTC", "Europe/Paris", "America/New_York"]],
+    ] as const) {
+      for (const value of values) {
+        control.append(option(value));
+      }
+      control.value = values[0];
+      el.append(control);
+    }
+    await openForm(el, true);
+    expect([time.value, zone.value]).toEqual(["08:00", "Europe/Paris"]);
+    expect(time.getBoundingClientRect().width).toBeGreaterThan(0);
+    expect(
+      inside(time.getBoundingClientRect(), part(el, ".routine-form").getBoundingClientRect()),
+    ).toBe(true);
+    expect(all(el, ".routine-time select")[0]?.getBoundingClientRect().width).toBe(0);
+    time.focus();
+    await userEvent.keyboard("1");
+    zone.value = "America/New_York";
+    zone.dispatchEvent(new Event("change", { bubbles: true }));
+    all(el, ".panel-view-footer button")
+      .find((button) => button.textContent === "Save")
+      ?.click();
+    await settle();
+    const write = fetch.mock.calls.find(([, init]) => init?.method === "PUT");
+    expect(JSON.parse(String(write?.[1]?.body))).toMatchObject({
+      schedule: { kind: "weekly", at: "19:30" },
+      timezone: "America/New_York",
+    });
+  });
 
   it("badges a routine's run in the drawer without pushing the row's actions out, at 240px", async () => {
     vi.stubGlobal(

@@ -10,6 +10,8 @@ import {
   INBOX_BUNDLE,
   LIBRARY,
   MCP_APPS_BUNDLE,
+  ROUTINES_BUNDLE,
+  SKILLS_BUNDLE,
   THREADS_BUNDLE,
   VENDORED_BUNDLE,
 } from "../esbuild.config.mjs";
@@ -20,6 +22,8 @@ import { ELEMENT_TAG } from "../src/constants.js";
 import * as inbox from "../src/inbox.js";
 import * as index from "../src/index.js";
 import * as mcpApps from "../src/mcp_apps.js";
+import * as routines from "../src/routines.js";
+import * as skills from "../src/skills.js";
 import * as threads from "../src/threads.js";
 
 interface Manifest {
@@ -251,5 +255,78 @@ describe("the package entries", () => {
           path.includes("@ag-ui"),
       ),
     ).toEqual([]);
+  });
+
+  // Both editor entries, and the shared base under them, stay out of every other tree.
+  const EDITOR_ONLY = [
+    "src/routines.ts",
+    "src/skills.ts",
+    "src/routines/",
+    "src/skills/ag_ui_skills.ts",
+    "src/skills/define_skills.ts",
+    "src/skills/skills_element_strings.ts",
+    "src/ui/standalone/",
+  ];
+  const editorOnly = (path: string): boolean => EDITOR_ONLY.some((own) => path.startsWith(own));
+
+  it("publishes each editor as its own entry and its own vendored file", () => {
+    expect(Object.keys(routines).sort()).toEqual([
+      "AgUiRoutines",
+      "ROUTINES_OPEN_THREAD_EVENT",
+      "ROUTINES_TAG",
+      "defineRoutines",
+    ]);
+    expect(Object.keys(skills).sort()).toEqual(["AgUiSkills", "SKILLS_TAG", "defineSkills"]);
+    for (const [name, entry, outfile] of [
+      ["routines", "src/routines.ts", ROUTINES_BUNDLE],
+      ["skills", "src/skills.ts", SKILLS_BUNDLE],
+    ] as const) {
+      expect(MANIFEST.exports[`./${name}`]).toEqual({
+        types: `./dist/${name}.d.ts`,
+        import: `./dist/${name}.js`,
+      });
+      expect(outfile.entryPoints).toEqual([entry]);
+      expect(MANIFEST.exports[`./${name}/bundle`]).toEqual({
+        types: `./dist/${name}.d.ts`,
+        import: `./${outfile.outfile}`,
+      });
+    }
+    expect(Object.keys(index).filter((name) => name in routines || name in skills)).toEqual([]);
+    expect(customElements.get(routines.ROUTINES_TAG)).toBeUndefined();
+    expect(customElements.get(skills.SKILLS_TAG)).toBeUndefined();
+  });
+
+  it("keeps the editor elements out of the main bundle", async () => {
+    for (const name of ["AgUiRoutines", "defineRoutines", "AgUiSkills", "defineSkills"]) {
+      expect(Object.keys(bundle)).not.toContain(name);
+    }
+    const result = await build({ ...VENDORED_BUNDLE, write: false, metafile: true });
+    expect(Object.keys(result.metafile.inputs).filter(editorOnly)).toEqual([]);
+  });
+
+  it("keeps the chat, the provider, the string table and the protocol packages out of each editor bundle", async () => {
+    for (const [entry, options] of [
+      ["src/routines.ts", ROUTINES_BUNDLE],
+      ["src/skills.ts", SKILLS_BUNDLE],
+    ] as const) {
+      const result = await build({ ...options, write: false, metafile: true });
+      const inputs = Object.keys(result.metafile.inputs);
+      expect(inputs).toContain(entry);
+      expect(
+        inputs.filter(
+          (path) =>
+            path === "src/index.ts" ||
+            path === "src/chat.ts" ||
+            path === "src/core/ag_ui_chat.ts" ||
+            path === "src/agents/ag_ui_agents.ts" ||
+            path === "src/ui/ui_strings.ts" ||
+            path.startsWith("src/a2ui") ||
+            path.startsWith("src/mcp_apps") ||
+            path.startsWith("src/threads") ||
+            path.startsWith("src/inbox") ||
+            path.includes("@ag-ui"),
+        ),
+      ).toEqual([]);
+    }
   });
 });

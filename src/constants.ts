@@ -800,3 +800,31 @@ export const INBOX_ANSWER_EVENT = "ag-ui-inbox-answer";
 
 /** The header's More button, which opens the menu of controls the row has no room for. */
 export const ICON_MORE = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg>`;
+
+/** The Custom Element tag name registered by {@link defineRoutines}. */
+export const ROUTINES_TAG = "ag-ui-routines";
+
+/** The Custom Element tag name registered by {@link defineSkills}. */
+export const SKILLS_TAG = "ag-ui-skills";
+
+/**
+ * A routine's last result was picked in `<ag-ui-routines>`, to open the thread
+ * it ran in. `detail` is {@link EditorOpenThreadDetail}.
+ *
+ * Cancelable, as an inbox row is: unless a host calls `preventDefault()` the
+ * element opens the thread in the chat it is bound to (`for` or the `chat`
+ * property), or through the `<ag-ui-agents>` provider it is bound to; bound to
+ * neither, the event is all.
+ */
+export const ROUTINES_OPEN_THREAD_EVENT = "ag-ui-routines-open-thread";
+
+/**
+ * A chat with `data-editors="external"` was asked, from one of its own entry
+ * points (a header button, a More menu item, the palette's Manage skills row),
+ * for an editor it leaves to an element placed elsewhere. `detail` is
+ * {@link OpenEditorDetail}. An `<ag-ui-routines>` or `<ag-ui-skills>` bound to
+ * that chat answers it (focused, and on a new routine's form for Make this a
+ * routine) and calls `preventDefault()`, so a listener above the chat reads
+ * `defaultPrevented` as answered; one that is not answered is the host's to place.
+ */
+export const OPEN_EDITOR_EVENT = "ag-ui-open-editor";

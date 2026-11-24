@@ -123,6 +123,16 @@ export const SCENARIOS = [
     },
   },
   {
+    slug: "editors",
+    group: "Conversation",
+    title: "Editor elements",
+    since: "0.13.0",
+    summary:
+      "<ag-ui-routines> and <ag-ui-skills> away from the chat: a settings page with both bound to a chat whose editors are external, so its Routines and Skills buttons land on the page, and the same two elements alone with only their URL.",
+    prompts: [],
+    link: ["Open the editors page", "/editors/"],
+  },
+  {
     slug: "threads",
     group: "Conversation",
     title: "Threads and durability",

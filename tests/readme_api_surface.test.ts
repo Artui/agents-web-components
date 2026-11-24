@@ -91,12 +91,34 @@ const THREADS_DIR = join("src", "threads");
 const AGENTS_DIR = join("src", "agents");
 const INBOX_DIR = join("src", "inbox");
 
+/** The editor elements, likewise: their shared base, the routines element, and the skills element's files beside the chat's. */
+const EDITOR_BASE = [join("src", "ui", "standalone")];
+const ROUTINES_ELEMENT = [join("src", "routines")];
+const SKILLS_ELEMENT = [
+  "ag_ui_skills.ts",
+  "define_skills.ts",
+  "skills_element_strings.ts",
+  "skills_element_types.ts",
+].map((name) => join("src", "skills", name));
+const OWN_SECTIONS = [
+  THREADS_DIR,
+  AGENTS_DIR,
+  INBOX_DIR,
+  ...EDITOR_BASE,
+  ...ROUTINES_ELEMENT,
+  ...SKILLS_ELEMENT,
+];
+
+function sourcesUnder(prefixes: readonly string[]): string[] {
+  return sourcePaths("src")
+    .filter((path) => prefixes.some((prefix) => path.startsWith(prefix)))
+    .map((path) => readFileSync(path, "utf8"));
+}
+
 const SOURCE = sources("src")
   .filter((_, index) => {
     const path = sourcePaths("src")[index] ?? "";
-    return (
-      !path.startsWith(THREADS_DIR) && !path.startsWith(AGENTS_DIR) && !path.startsWith(INBOX_DIR)
-    );
+    return !OWN_SECTIONS.some((prefix) => path.startsWith(prefix));
   })
   .join("\n");
 
@@ -712,5 +734,26 @@ describe("the README's inbox section", () => {
 
     expect(read.length).toBeGreaterThan(0);
     expect([...new Set(read)].filter((name) => !reference.includes(`\`${name}\``))).toEqual([]);
+  });
+});
+
+describe("the README's editor elements section", () => {
+  it("names every attribute the editor elements read, the dynamic URL ones included", () => {
+    const reference = section("## The editors on a page of their own");
+    const source = sourcesUnder([...EDITOR_BASE, ...ROUTINES_ELEMENT, ...SKILLS_ELEMENT]).join(
+      "\n",
+    );
+    const read = [...source.matchAll(/getAttribute\("([a-z][a-z0-9-]*)"\)/g)].map(
+      (match) => match[1] ?? "",
+    );
+    const urls = [...source.matchAll(/urlAttribute = "([a-z][a-z0-9-]*)"/g)].map(
+      (match) => match[1] ?? "",
+    );
+
+    expect(read.length).toBeGreaterThan(0);
+    expect(urls).toEqual(["data-routines-url", "data-skill-editor-url"]);
+    expect(
+      [...new Set([...read, ...urls])].filter((name) => !reference.includes(`\`${name}\``)),
+    ).toEqual([]);
   });
 });

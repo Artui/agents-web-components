@@ -241,9 +241,9 @@ export class AgUiThreads extends HTMLElement {
     void this.refresh();
   };
 
-  /** A chat that was not there when the list connected, reporting in. */
+  /** A chat reporting in while the list has none, or holds one that left the page. */
   readonly #onRootThread = (): void => {
-    if (this.#chat === null) {
+    if (this.#chat === null || !this.#chat.isConnected) {
       this.#bind();
     }
   };
