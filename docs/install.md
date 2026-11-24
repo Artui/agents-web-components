@@ -28,3 +28,26 @@ that can't (or won't) run a JS build — for example a Django app — copies the
 `static/` directory and serves it directly. `django-admin-agent` re-vendors a pinned built bundle
 on every release. For SPA hosts that already have a bundler, import the bare package name instead
 so `@ag-ui/client` / `@ag-ui/core` are deduped against the rest of your app.
+
+### Types for a vendoring TypeScript host
+
+Beside the bundle the package ships `dist/agents-web-components.bundle.d.ts`, one
+self-contained declaration file for everything the bundle exports. The `@ag-ui/core`,
+`@ag-ui/client`, `dompurify` and `rxjs` types it needs are inlined into it, as their code is
+inlined into the bundle, so a TypeScript host that vendors needs nothing else: copy both
+files into the same directory and import the `.js` path.
+
+```ts
+// static/vendor/ holds agents-web-components.bundle.js and agents-web-components.bundle.d.ts
+import { type AgUiChat, defineChat } from "./static/vendor/agents-web-components.bundle.js";
+
+defineChat();
+const chat = document.querySelector("ag-ui-chat") as AgUiChat;
+chat.routeMap = [{ id: "home", path: "/", title: "Home" }];
+chat.navigate = (path) => history.pushState(null, "", path);
+```
+
+No `node_modules` and no `@types` package are involved; `pnpm build` type-checks exactly
+this kind of host (`scripts/bundle-types.mjs`) and fails if the file ever reaches for a package.
+A host that copies only the `.bundle.js` (as `django-admin-agent` does, for templates with no
+TypeScript) is unaffected.

@@ -80,7 +80,7 @@
     "NOTICE"
   ],
   "scripts": {
-    "build": "node esbuild.config.mjs && tsc -p tsconfig.build.json",
+    "build": "node esbuild.config.mjs && tsc -p tsconfig.build.json && node scripts/bundle-types.mjs",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
@@ -127,6 +127,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.6",
+    "@microsoft/api-extractor": "^7.60.1",
     "@types/node": "^26.1.2",
     "@vitest/browser": "^5.0.0",
     "@vitest/browser-playwright": "^5.0.0",

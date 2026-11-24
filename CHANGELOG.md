@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **The vendored bundle ships its own types.** `dist/agents-web-components.bundle.d.ts` sits
+  beside `dist/agents-web-components.bundle.js` in the tarball: one declaration file, rolled
+  up with api-extractor, with the `@ag-ui/core`, `@ag-ui/client`, `dompurify` and `rxjs` types
+  it needs inlined. A TypeScript host that vendors copies the two files and type-checks with
+  no `node_modules`; `pnpm build` proves it by type-checking such a host in a scratch
+  directory. A host that copies only the `.bundle.js` is unaffected. See
+  [Install](https://artui.github.io/agents-web-components/install/#types-for-a-vendoring-typescript-host).
+
 ## [0.14.0] — 2026-11-24
 
 ### Changed
