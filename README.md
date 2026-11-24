@@ -4359,6 +4359,7 @@ paths.
 | `TabsDetail` | type | `ag-ui-tabs` event detail (`{ tabs, reason }`). |
 | `ThreadMeta` | type | A thread-drawer row (`{ threadId, title, updatedAt, preview, unread?, status?, reason?, interrupts?, parent?, routine? }`, `routine` `{ id, name }` on a thread a routine started); see [Thread status](#thread-status), [Child sessions](#child-sessions) and [Routines](#routines). |
 | `ThreadParent` | type | A child thread's parent, as `ThreadMeta.parent` names it (`{ threadId, scope }`, `scope` `null` in an unscoped store). |
+| `ThreadRoutine` | type | The routine that started a thread, as `ThreadMeta.routine` names it (`{ id, name }`). |
 | `ThreadStatus` | type | A thread's run status as the server lists it: `idle`, `running`, `waiting` or `failed`. |
 | `ThreadsTransport` | type | How `watchThreads` follows the list: `poll` or `stream`. |
 | `NavigationCheckpoint` | type | The pre-reload checkpoint marker. |
