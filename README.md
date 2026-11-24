@@ -58,6 +58,7 @@ This package is the successor of `@artooi/ag-ui-web-component`. Coming from it? 
   - [Collapsing to the launcher](#collapsing-to-the-launcher)
   - [Collapsing to a bottom bar](#collapsing-to-a-bottom-bar)
 - [Several agents under one provider](#several-agents-under-one-provider)
+- [An agents home](#an-agents-home)
 - [What needs the user, across agents](#what-needs-the-user-across-agents)
 - [A2UI surfaces](#a2ui-surfaces)
 - [MCP Apps views](#mcp-apps-views)
@@ -2373,6 +2374,46 @@ The provider is exported from the root entry (and so from `/bundle`) with `defin
 throws naming the tag when another class holds it. A lone `<ag-ui-chat>` needs none of this and
 works as it always has. Runs and reattach stay in the chat. The element is an ordinary inline
 element, so give it `display: contents` when it should not affect layout.
+
+## An agents home
+
+A home page for a host with several agents is three elements you already have under one
+`<ag-ui-agents>` provider: what waits on the user (`<ag-ui-inbox variant="list">`), the
+conversations of the agent in front (`<ag-ui-threads>`), and the chat as the page
+(`<ag-ui-chat placement="page">`). There is no home element and no new attribute: copy the whole
+page, or only the pieces you need, each imported from its own entry.
+
+```html
+<ag-ui-agents id="home" data-agents-url="/agents-home/agents/"
+              data-inbox-url="/agents-home/inbox/" style="display: contents">
+  <header><ag-ui-inbox></ag-ui-inbox></header>
+  <aside>
+    <ag-ui-inbox variant="list"></ag-ui-inbox>
+    <ag-ui-threads></ag-ui-threads>
+  </aside>
+  <ag-ui-chat placement="page" data-greeting="off"></ag-ui-chat>
+</ag-ui-agents>
+
+<script type="module">
+  import { defineAgents } from "@artooi/agents-web-components";
+  import { defineChat } from "@artooi/agents-web-components/chat";
+  import { defineThreads } from "@artooi/agents-web-components/threads";
+  import { defineInbox } from "@artooi/agents-web-components/inbox";
+  defineAgents();
+  defineChat();
+  defineThreads();
+  defineInbox();
+</script>
+```
+
+- **Each piece stays its own entry.** Drop the inbox and leave out `./inbox`; drop the list and
+  leave out `./threads`; a lone chat needs no provider. The inbox list and the threads need the
+  provider only for the agents and the inbox they read.
+- **The chat is the page, fixed to the viewport.** `placement="page"` is not a grid cell: leave
+  room for your header and rail with `--ag-ui-inset` (top right bottom left; the demo sets
+  `52px 0 0 292px`), and set `data-greeting="off"` where the page has its own heading. Switching the agent remounts the chat, as [described above](#several-agents-under-one-provider).
+- **Try it.** `make demo`, then `/agents/` for the whole page and `/agents/alone.html?piece=inbox`
+  (or `threads`, `chat`) for one piece imported alone, both against the mock server.
 
 ## What needs the user, across agents
 

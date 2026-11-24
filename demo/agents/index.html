@@ -15,6 +15,7 @@
         background: #f7f7fb;
       }
       header {
+        height: 52px;
         display: flex;
         flex-wrap: wrap;
         align-items: center;
@@ -46,9 +47,19 @@
         margin-inline-start: auto;
         color: #fff;
       }
+      /* placement="page" is fixed to the viewport: the host leaves room for its
+         header and rail through --ag-ui-inset (top right bottom left). */
       ag-ui-chat {
-        display: block;
-        height: 70vh;
+        --ag-ui-inset: 52px 0 0 292px;
+      }
+      @media (max-width: 640px) {
+        ag-ui-chat {
+          --ag-ui-inset: 52px 0 0 0;
+        }
+      }
+      nav a {
+        color: #9cc2ff;
+        font-size: 0.85rem;
       }
       .log {
         font: 12px ui-monospace, monospace;
@@ -68,6 +79,11 @@
         <strong>Agents home</strong>
         <span id="agents" role="group" aria-label="Agents"></span>
         <ag-ui-inbox></ag-ui-inbox>
+        <nav aria-label="Each piece alone">
+          <a href="/agents/alone.html?piece=inbox">inbox alone</a>
+          <a href="/agents/alone.html?piece=threads">threads alone</a>
+          <a href="/agents/alone.html?piece=chat">chat alone</a>
+        </nav>
       </header>
       <div class="home">
         <aside>
@@ -76,7 +92,7 @@
           <h2>This agent's conversations</h2>
           <ag-ui-threads></ag-ui-threads>
         </aside>
-        <ag-ui-chat placement="inline" data-start-open></ag-ui-chat>
+        <ag-ui-chat placement="page" data-greeting="off" data-start-open></ag-ui-chat>
       </div>
     </ag-ui-agents>
     <ol class="log" id="log" aria-label="Provider events"></ol>

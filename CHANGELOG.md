@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **An agents home recipe: the README's "An agents home" section and `demo/agents/`.** The
+  inbox list, `<ag-ui-threads>` and `<ag-ui-chat placement="page">` under one `<ag-ui-agents>`,
+  each piece also imported alone (`/agents/alone.html?piece=inbox|threads|chat`) in the demo.
+  No new element or API. No opt-in: nothing in the package changed.
+
 ### Fixed
 
 - **`<ag-ui-inbox>` answers a row in place on a page served over plain HTTP.** Approve and
