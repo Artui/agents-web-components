@@ -23,17 +23,18 @@ export interface RoutineForm {
  * starts granted. `onSubmit` runs on Enter in a one-line field.
  *
  * The time and the timezone are the named slots routine-time and
- * routine-timezone of the element the form is shown in, falling back to the
- * built-in fields. Once the form is in that element's shadow root (a microtask
- * after building, since the caller shows it straight away) it writes the
- * routine's values into any plugged control and reads the host's
- * data-routine-minute-step.
+ * routine-timezone of `host`, the element whose shadow root shows the form,
+ * falling back to the built-in fields. The form writes the routine's values
+ * into the host's plugged controls and reads its data-routine-minute-step as
+ * it is built; without `host` it does so a microtask later, from the shadow
+ * root it was shown in.
  */
 export function buildRoutineForm(
   draft: RoutineDraft,
   tools: readonly GrantableTool[],
   strings: RoutinesStrings,
   onSubmit: () => void,
+  host: HTMLElement | null = null,
 ): RoutineForm {
   const form = document.createElement("form");
   form.className = "skill-form routine-form";
@@ -161,14 +162,21 @@ export function buildRoutineForm(
     intervalPart.hidden = weekly.checked;
   }
   syncKind();
-  queueMicrotask(() => {
-    const root = form.getRootNode();
-    if (root instanceof ShadowRoot) {
-      time.useStep(root.host.getAttribute("data-routine-minute-step"));
-    }
-    at.bind();
-    timezone.bind();
-  });
+  const plug = (target: Element): void => {
+    time.useStep(target.getAttribute("data-routine-minute-step"));
+    at.bind(target);
+    timezone.bind(target);
+  };
+  if (host !== null) {
+    plug(host);
+  } else {
+    queueMicrotask(() => {
+      const root = form.getRootNode();
+      if (root instanceof ShadowRoot) {
+        plug(root.host);
+      }
+    });
+  }
 
   const grant = document.createElement("fieldset");
   grant.className = "skill-field routine-tools";

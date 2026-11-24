@@ -142,6 +142,18 @@ describe("buildRoutineForm's time and timezone fields", () => {
     expect(form.read().timezone).toBe(VIEWER);
   });
 
+  it("applies a host it is handed at once: its step and its slotted controls, before it is shown", () => {
+    const host = document.createElement("div");
+    host.setAttribute("data-routine-minute-step", "30");
+    const time = plugged("routine-time", ["06:00", "08:07"]);
+    const zone = plugged("routine-timezone", ["UTC", "Europe/Paris"]);
+    const other = plugged("routine-other", ["21:00", "08:07"]);
+    host.append(time, zone, other);
+    const form = buildRoutineForm(draft("08:07"), [], DEFAULT_UI_STRINGS, () => {}, host);
+    expect(minutes(form)).toEqual(["00", "07", "30"]);
+    expect([time.value, zone.value, other.value]).toEqual(["08:07", "Europe/Paris", "21:00"]);
+  });
+
   it("writes the routine's values into slotted controls and saves what they hold", async () => {
     const time = plugged("routine-time", ["06:00", "08:07", "18:00"]);
     const zone = plugged("routine-timezone", ["UTC", "Europe/Paris", "Asia/Tokyo"]);

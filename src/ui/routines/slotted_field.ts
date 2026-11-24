@@ -3,8 +3,8 @@ export interface SlottedField {
   readonly slot: HTMLSlotElement;
   /** The plugged control's value, or the default's when nothing is plugged. */
   value(): string;
-  /** Write the routine's value into any plugged control not yet written. */
-  bind(): void;
+  /** Write the routine's value into any control not yet written: plugged, or slotted on `host`. */
+  bind(host?: Element): void;
 }
 
 /**
@@ -24,15 +24,19 @@ export function slottedField(
   slot.name = name;
   slot.append(...fallback);
   const written = new WeakSet<Element>();
-  const bind = (): void => {
-    for (const control of slot.assignedElements()) {
+  const bind = (host?: Element): void => {
+    const controls =
+      host === undefined
+        ? slot.assignedElements()
+        : [...host.children].filter((child) => child.getAttribute("slot") === name);
+    for (const control of controls) {
       if (!written.has(control)) {
         written.add(control);
         (control as unknown as { value: string }).value = initial;
       }
     }
   };
-  slot.addEventListener("slotchange", bind);
+  slot.addEventListener("slotchange", () => bind());
   return {
     slot,
     bind,
