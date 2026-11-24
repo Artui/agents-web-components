@@ -87,7 +87,7 @@ paths.
 | `PageMap` | type | The compact page-surface shape. |
 | `pageMapFrom(root?, options?)` | function | Read a page map from the live DOM, with no field values; opt in with `chat.getPageMap = () => pageMapFrom()`. |
 | `PageMapFromOptions` / `PageMapKind` | type | Its options (per-kind `limits`) and the kinds it lists. |
-| `resolvePageMapHandle(target)` | function | Resolve a handle in the document, then in open shadow roots. |
+| `resolvePageMapHandle(target)` | function | The default `resolvePageTarget`: `document.querySelector`, then, for a `[data-agent-handle="n"]` handle only, the open shadow roots. |
 | `PAGE_MAP_HANDLE_ATTRIBUTE` / `PAGE_MAP_IGNORE_ATTRIBUTE` / `PAGE_MAP_LIMITS` | constant | `data-agent-handle`, `data-agent-ignore`, the default caps. |
 | `Place` | type | Where the user is: what `getPlace` returns and the chip draws. |
 | `createPageStateTools(binding)` | function | Build `read_<name>` / `set_<name>` tools. |

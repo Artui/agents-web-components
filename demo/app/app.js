@@ -16,7 +16,6 @@ import {
   fillField,
   pageMapFrom,
   pressButton,
-  resolvePageMapHandle,
   selectControl,
   showHighlightOverlay,
   toggleCheckbox,
@@ -966,10 +965,6 @@ function mount(pathname, restart) {
     // Rooted at the stand-in host page, so the demo's own nav stays out of it.
     const walk = () => pageMapFrom(document.getElementById("pm-page") ?? document);
     chat.getPageMap = walk;
-    const fallback = chat.resolvePageTarget;
-    $("pm-deep").addEventListener("change", (event) => {
-      chat.resolvePageTarget = event.target.checked ? resolvePageMapHandle : fallback;
-    }, { signal });
     $("pm-read").addEventListener("click", () => {
       $("pm-out").textContent = JSON.stringify(walk(), null, 2);
     }, { signal });

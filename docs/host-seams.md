@@ -307,18 +307,20 @@ itself), of anything marked `data-agent-ignore`, and of anything hidden (`hidden
 components; a closed one is unreachable by design.
 
 **Handles.** Each listed element is stamped `data-agent-handle="n"`, and its entry carries the
-selector for it, `[data-agent-handle="n"]`, which the default `resolvePageTarget`
-(`document.querySelector`) resolves, so `scroll_to` and `drag_and_drop` act on it with no host
-code. A handle survives later reads, and is given to a new element when a clone carries the same
-stamp. An element inside a shadow root is listed with a handle too, but `document.querySelector`
-cannot reach into a shadow root: for those, set the resolver the package ships, which tries the
-document and then each open shadow root:
+selector for it, `[data-agent-handle="n"]`, which the default `resolvePageTarget` resolves, so
+`scroll_to` and `drag_and_drop` act on it with no host code. A handle survives later reads, and is
+given to a new element when a clone carries the same stamp.
+
+The default resolver is `resolvePageMapHandle`: `document.querySelector` first, and only when that
+misses and the target is exactly a handle of this form, a search of the open shadow roots under the
+document (skipping this package's own elements), so a handle the walker stamped inside a component
+resolves too. Any other selector resolves in the light DOM alone, as before. A host that overrides
+`resolvePageTarget` and still wants handles to resolve falls back to it:
 
 ```js
-import { pageMapFrom, resolvePageMapHandle } from "@artooi/agents-web-components";
+import { resolvePageMapHandle } from "@artooi/agents-web-components";
 
-chat.getPageMap = () => pageMapFrom();
-chat.resolvePageTarget = resolvePageMapHandle;
+chat.resolvePageTarget = (target) => myPageMap.elementFor(target) ?? resolvePageMapHandle(target);
 ```
 
 ## Where the user is: the place chip

@@ -927,10 +927,6 @@
         <div class="panel">
           <h2>Controls</h2>
           <div class="controls">
-            <label class="ctl"
-              ><span>Resolve deep</span><input type="checkbox" id="pm-deep"> chat.resolvePageTarget =
-              resolvePageMapHandle</label
-            >
             <div class="ctl"><span>Read</span><button type="button" id="pm-read">pageMapFrom()</button></div>
           </div>
           <pre id="pm-out"></pre>
@@ -950,8 +946,8 @@
             </li>
             <li>
               <strong>Shadow roots.</strong> The second button lives in an open shadow root: it is
-              listed, but the default resolver cannot reach it, so <em>Point at the shadow button</em>
-              fails until <em>Resolve deep</em> is ticked.
+              listed, and <em>Point at the shadow button</em> scrolls to it through the same default
+              resolver, with no host override.
             </li>
           </ul>
         </div>

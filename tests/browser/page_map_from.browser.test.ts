@@ -209,7 +209,18 @@ describe("pageMapFrom", () => {
     expect(field["label"]).toBe("Deep");
     expect(entries(map, "buttons").map((b) => b["name"])).toEqual(["Slotted name"]);
     expect(document.querySelector(field.handle)).toBeNull();
-    expect(resolvePageMapHandle(field.handle)).toBe(shadow.querySelector("input"));
+    expect(chat().resolvePageTarget(field.handle)).toBe(shadow.querySelector("input"));
+  });
+
+  it("resolves a selector that is not a handle in the light DOM only, as before", () => {
+    const root = stage(`<div id="host"></div>`);
+    const shadow = (root.querySelector("#host") as HTMLElement).attachShadow({ mode: "open" });
+    shadow.innerHTML = `<button class="only-deep" data-agent-handle="41">Deep</button>`;
+    const el = chat();
+    expect(el.resolvePageTarget(".only-deep")).toBeNull();
+    expect(el.resolvePageTarget('button[data-agent-handle="41"]')).toBeNull();
+    expect(el.resolvePageTarget("[data-agent-handle='41']")).toBeNull();
+    expect(el.resolvePageTarget('[data-agent-handle="41"]')).toBe(shadow.querySelector("button"));
   });
 
   it("never reads a value through a name that points at an editable region", () => {
@@ -350,11 +361,12 @@ describe("pageMapFrom", () => {
 
   it("resolves nothing for a handle no element holds, skipping the chat's shadow", () => {
     const el = chat();
-    el.shadowRoot?.append(Object.assign(document.createElement("b"), { id: "inner" }));
+    const inner = el.shadowRoot?.appendChild(document.createElement("b"));
+    inner?.setAttribute("data-agent-handle", "998");
     const plain = stage(`<div id="h"></div>`);
     (plain.querySelector("#h") as HTMLElement).attachShadow({ mode: "open" });
-    expect(resolvePageMapHandle("#inner")).toBeNull();
-    expect(resolvePageMapHandle('[data-agent-handle="999"]')).toBeNull();
+    expect(resolvePageMapHandle('[data-agent-handle="998"]')).toBeNull();
+    expect(el.resolvePageTarget('[data-agent-handle="999"]')).toBeNull();
   });
 
   it("caps each kind and says how many it left out", () => {

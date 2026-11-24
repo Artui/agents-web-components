@@ -47,9 +47,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   string, and a label never echoes the control it wraps. It skips this package's own elements,
   anything marked `data-agent-ignore` and anything hidden, `inert` or `aria-hidden`. Each entry
   carries a handle, `[data-agent-handle="n"]`, stamped on the element, which the default
-  `resolvePageTarget` resolves; for an element inside a shadow root, set
-  `chat.resolvePageTarget = resolvePageMapHandle`. Opt-in: a host that sets its own
-  `getPageMap`, or none, sees no change.
+  `resolvePageTarget` resolves, inside an open shadow root too: the default is now
+  `resolvePageMapHandle`, which calls `document.querySelector` first and searches open shadow
+  roots only when that misses and the target is exactly such a handle, so every other selector
+  resolves as before. Opt-in: a host that sets its own `getPageMap`, or none, sees no change.
 
 ## [0.14.0] — 2026-11-24
 

@@ -42,6 +42,7 @@ import { type ResolvePageTarget } from "../tools/page_action_tools.js";
 import { createPageMapContext, type PageMap } from "../tools/page_map.js";
 // biome-ignore lint/style/useImportType: the emitted declaration file copies this form
 import { type PageState } from "../tools/page_state.js";
+import { resolvePageMapHandle } from "../tools/resolve_page_map_handle.js";
 // biome-ignore lint/style/useImportType: the emitted declaration file copies this form
 import { type RouteMap } from "../tools/route_map.js";
 import { ToolCatalog } from "../tools/tool_catalog.js";
@@ -606,11 +607,13 @@ export class AgUiChat extends HTMLElement {
 
   /**
    * Resolve a `scroll_to` / `drag_and_drop` target string to a host-page
-   * element (or `null`). Defaults to a CSS-selector lookup; override to map
-   * page-map element ids. The page-action tools are opt-in via the
-   * `data-page-actions` attribute (`"scroll"` / `"drag"` / `"chat"`).
+   * element (or `null`). Defaults to {@link resolvePageMapHandle}: a CSS-selector
+   * lookup, which also reaches into open shadow roots for a handle that
+   * `pageMapFrom` stamped; override to map page-map element ids. The
+   * page-action tools are opt-in via the `data-page-actions` attribute
+   * (`"scroll"` / `"drag"` / `"chat"`).
    */
-  resolvePageTarget: ResolvePageTarget = (target) => document.querySelector<HTMLElement>(target);
+  resolvePageTarget: ResolvePageTarget = (target) => resolvePageMapHandle(target);
 
   /**
    * Foreign origins already reported, so the notice is once per origin per
