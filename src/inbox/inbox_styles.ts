@@ -173,6 +173,7 @@ export const INBOX_STYLES: string = `
   font-size: 13px;
 }
 .badge:focus-visible,
+.panel:focus-visible,
 .row-main:focus-visible,
 .action:focus-visible {
   outline: 2px solid var(--_ring);
