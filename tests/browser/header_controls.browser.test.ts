@@ -84,6 +84,30 @@ describe("header controls (real browser)", () => {
     }
   });
 
+  it.each(["480px", "300px", "240px"])(
+    "keeps at most four beside More and a readable title at %s once Make this a routine is offered",
+    async (width) => {
+      const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+      el.setAttribute("endpoint", "/agent/");
+      el.setAttribute("placement", "floating");
+      el.setAttribute("title-text", "Admin Copilot");
+      el.setAttribute("data-start-open", "");
+      el.setAttribute("data-routines-url", "/routines/");
+      el.setAttribute("data-threads-url", "/threads/");
+      el.style.setProperty("--ag-ui-width", width);
+      document.body.appendChild(el);
+      await settle();
+      void el.sendMessage("echo check the build").catch(() => {});
+      await settle();
+      expect(menu(el).querySelector(".header-btn--make-routine")).not.toBeNull();
+      expect(inline(el).filter((b) => !b.matches(".header-btn--more")).length).toBeLessThanOrEqual(
+        4,
+      );
+      const title = root(el).querySelector(".header-title") as HTMLElement;
+      expect(title.clientWidth).toBeGreaterThanOrEqual(64);
+    },
+  );
+
   it.each(["480px", "380px", "300px", "240px"])(
     "keeps the row even, apart, inside the header and at most four beside More at %s",
     async (width) => {

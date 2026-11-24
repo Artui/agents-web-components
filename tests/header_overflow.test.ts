@@ -272,4 +272,31 @@ describe("HeaderOverflow", () => {
 
     expect(r.overflow.open).toBe(false);
   });
+
+  it("fits when reading the focused node throws, and keeps an open menu open across an unchanged offer", () => {
+    const r = rig(FULL, MOVABLE);
+    r.controls.getRootNode = () => {
+      throw new TypeError("focus is in another tree");
+    };
+    expect(() => r.overflow.fit()).not.toThrow();
+
+    const make = headerButton("make-routine", "make", "<svg></svg>");
+    const offered = rig(FULL, MOVABLE);
+    const withMake = new HeaderOverflow({
+      header: offered.header,
+      title: offered.title,
+      controls: offered.controls,
+      row: [...offered.controls.children] as HTMLButtonElement[],
+      movable: [],
+      menuOnly: make,
+      label: "More",
+      signal: offered.abort.signal,
+    });
+    withMake.offer(true);
+    withMake.show(false);
+    withMake.offer(true);
+    expect(withMake.open).toBe(true);
+    withMake.offer(false);
+    expect(withMake.menu.contains(make)).toBe(false);
+  });
 });

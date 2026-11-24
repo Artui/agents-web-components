@@ -1013,10 +1013,7 @@ export class AgUiChat extends HTMLElement {
     ensureGroup: () => this.#transcript.ensureGroup(),
     strings: () => this.#strings,
     hidePending: () => this.#transcript.hidePending(),
-    updateEmptyState: () => {
-      this.#transcript.updateEmptyState();
-      this.#syncMakeRoutine();
-    },
+    updateEmptyState: () => this.#transcript.updateEmptyState(),
     follow: () => this.#transcript.follow(),
     fetchInit: (url) => this.#fetchInit(url),
   });
@@ -1084,6 +1081,7 @@ export class AgUiChat extends HTMLElement {
       element: this,
       messages: this.#messages,
       emptyWrap: this.#emptyWrap,
+      changed: () => this.#syncMakeRoutine(),
       strings: () => this.#strings,
       allowImages: () => this.allowImages,
       resolveTool: (name) => this.#tools.resolve(name),
@@ -2364,7 +2362,9 @@ export class AgUiChat extends HTMLElement {
 
   /** Show the More menu's Make this a routine only while the conversation has a prompt (the item exists only with a routines URL). */
   #syncMakeRoutine(): void {
-    this.#headerOverflow?.offer(this.#routineSeed() !== null);
+    if (this.#routinesUrl() !== null) {
+      this.#headerOverflow?.offer(this.#routineSeed() !== null);
+    }
   }
 
   /** What the conversation on screen would ask as a routine, or `null` before anything is said. */

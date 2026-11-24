@@ -74,7 +74,7 @@ export class HeaderOverflow {
     const { controls, row, movable, header, title } = this.#options;
     const was = this.open;
     // Before the header is attached its root is a plain element, which holds no focus.
-    const active = (controls.getRootNode() as ShadowRoot).activeElement ?? null;
+    const active = this.#active();
     const held =
       active !== null && (controls.contains(active) || this.menu.contains(active)) ? active : null;
     this.close();
@@ -90,13 +90,17 @@ export class HeaderOverflow {
       extra.setAttribute("role", "menuitem");
       extra.tabIndex = -1;
     }
+    const offered = extra !== null && this.#offered;
+    if (offered) {
+      this.#seat();
+    }
     const laidOut = header.clientWidth > 0;
     const crowded = (): boolean =>
       laidOut && (header.scrollWidth > header.clientWidth + 1 || title.clientWidth < TITLE_MIN_PX);
     // A menu of one is a button behind a click, so one control over the cap stays.
     let inline = present.length;
     const overCap = (): boolean =>
-      inline > INLINE_CAP + 1 || (this.#moved() && inline > INLINE_CAP);
+      inline > INLINE_CAP + 1 || ((offered || this.#moved()) && inline > INLINE_CAP);
     for (const b of movable) {
       if (!overCap() && !crowded()) {
         break;
@@ -104,8 +108,7 @@ export class HeaderOverflow {
       this.#move(b);
       inline -= 1;
     }
-    if (extra !== null && this.#offered) {
-      this.#seat();
+    if (offered) {
       this.menu.append(extra);
     }
     if (was && this.#moved()) {
@@ -122,12 +125,21 @@ export class HeaderOverflow {
     }
   }
 
+  /** The focused node in this tree; happy-dom throws when focus is in another shadow tree. */
+  #active(): Element | null {
+    try {
+      return (this.#options.controls.getRootNode() as ShadowRoot).activeElement ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   /** Refocus the header control the reshuffle blurred, or More once it is in the closed menu. */
   #restore(held: Element | null): void {
     if (held === null) {
       return;
     }
-    const hidden = this.menu.contains(held) && !this.open;
+    const hidden = (this.menu.contains(held) && !this.open) || !held.isConnected;
     (hidden ? this.trigger : (held as HTMLElement)).focus();
   }
 

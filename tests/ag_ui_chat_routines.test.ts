@@ -581,7 +581,7 @@ describe("the routines view in <ag-ui-chat>", () => {
     expect(item(el)?.getAttribute("aria-label")).toBe("Make this a routine");
 
     more.focus();
-    more.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    more.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }));
     expect(shadow(el).activeElement).toBe(item(el));
     item(el)?.click();
     await flush();
@@ -605,6 +605,47 @@ describe("the routines view in <ag-ui-chat>", () => {
     await flush();
     expect(shadow(el).querySelector(".header-btn--make-routine")).toBeNull();
     expect(shadow(el).querySelector(".header-btn--more")).toBeNull();
+  });
+
+  it("offers Make this a routine for a restored conversation and after a reconnect, and withdraws it on a thread with no prompt", async () => {
+    const item = (el: AgUiChat): Element | null =>
+      shadow(el).querySelector(".header-menu .header-btn--make-routine");
+    const threads = new Map<string, unknown[]>([
+      ["a", [{ id: "u1", role: "user", content: "Real ask" }]],
+      ["b", []],
+    ]);
+    let active = "a";
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("endpoint", "/agent/");
+    el.setAttribute("data-routines-url", ROUTINES_URL);
+    el.conversationStore = {
+      threadId: () => active,
+      setActiveThread: (id: string) => {
+        active = id;
+      },
+      loadMessages: (id: string) => Promise.resolve((threads.get(id) ?? []) as never),
+      saveMessages: () => {},
+      loadCheckpoint: () => null,
+      saveCheckpoint: () => {},
+      clear: () => {},
+      listThreads: () => Promise.resolve([]),
+      renameThread: () => {},
+    };
+    document.body.appendChild(el);
+    await flush();
+    expect(item(el)).not.toBeNull();
+
+    el.remove();
+    document.body.appendChild(el);
+    await flush();
+    expect(item(el)).not.toBeNull();
+
+    await el.switchThread("b");
+    await flush();
+    expect(item(el)).toBeNull();
+    await el.switchThread("a");
+    await flush();
+    expect(item(el)).not.toBeNull();
   });
 
   it("seeds only the user turns that hold text, from a restored conversation", async () => {
