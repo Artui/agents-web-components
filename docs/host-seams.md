@@ -296,10 +296,21 @@ characters. `required`, `disabled` appear only when true.
 
 - no field's value, and no password or hidden input at all;
 - no `aria-valuenow` / `aria-valuetext` (a slider lists its label and role, not its position);
-- no text of a `contenteditable` region, nor of a `textarea`, `select`, `input` or `output` inside
-  a label, button or heading, so a label wrapping its control never echoes the control;
+- no text of a `contenteditable` region: an editable element is listed as a field (type
+  `contenteditable`, or its field role), even a heading, tab or header cell, and nothing inside it
+  is listed or read;
+- no text of a `textarea`, `select`, `input` or `output`, nor of anything not rendered
+  (`hidden`, `display: none`, `visibility: hidden`, `aria-hidden="true"`), marked
+  `data-agent-ignore`, or of this package's elements (`ag-ui-*`, their shadow roots included).
+  This holds wherever a name or text comes from: an element's own content, a `<label>` wrapping its
+  control, a table's header cells, or an `aria-labelledby` reference, so a reference that points at
+  an editable region, a textarea or a select names nothing (and a reference to a hidden element
+  names nothing either);
 - no option text, so neither the selected option nor the choices are listed;
-- no link's query string or fragment (`href` is the path, with the origin when it is another site);
+- no link's query string or fragment: `href` is the path, with the origin when it is another site,
+  cut at 80 characters, and for a scheme other than `http:` / `https:` (`mailto:`, `tel:`,
+  `javascript:`, `data:`) the scheme alone;
+- nothing inside a field: a `listbox`, an editable region or any other field ends the walk;
 - a `placeholder` only as the label of last resort, after `aria-labelledby`, `aria-label`, the
   field's `<label>`s and `title`, since it is author text.
 
@@ -313,8 +324,10 @@ components; a closed one is unreachable by design.
 
 **Handles.** Each listed element is stamped `data-agent-handle="n"`, and its entry carries the
 selector for it, `[data-agent-handle="n"]`, which the default `resolvePageTarget` resolves, so
-`scroll_to` and `drag_and_drop` act on it with no host code. A handle survives later reads, and is
-given to a new element when a clone carries the same stamp.
+`scroll_to` and `drag_and_drop` act on it with no host code. A handle is kept across reads while its
+element is listed, and a clone that carries the same stamp gets a new one. Numbers are not reserved
+for good: a new element may be given the number of one that was removed, or of one in a shadow root
+the read did not list, so treat a handle as valid for the read that returned it.
 
 The default resolver is `resolvePageMapHandle`: `document.querySelector` first, and only when that
 misses and the target is exactly a handle of this form, a search of the open shadow roots under the

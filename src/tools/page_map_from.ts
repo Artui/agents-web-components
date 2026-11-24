@@ -89,7 +89,7 @@ const SECTIONING = "article, aside, main, nav, section";
  * `data-agent-ignore`, and of anything hidden, `inert` or `aria-hidden`.
  *
  * Each listed element is stamped with `data-agent-handle`; a handle is kept
- * across reads and never handed to a second element. Each kind is capped (see
+ * across reads while its element is listed. Each kind is capped (see
  * `PAGE_MAP_LIMITS`, overridable per call), and `truncated` counts what a cap
  * left out.
  */
@@ -159,6 +159,17 @@ function classify(el: HTMLElement): Found | null {
   const role = explicitRole(el);
   const tag = el.localName;
   const found = (kind: PageMapKind, fields: Fields): Found => ({ kind, element: el, fields });
+  // First, so an editable heading, tab or cell is a field and its text is never read.
+  const field = fieldType(el, role);
+  if (field !== null) {
+    const name = el.getAttribute("name");
+    return found("fields", {
+      ...(name === null ? {} : { name }),
+      type: field,
+      ...named("label", fieldLabel(el)),
+      ...flags(el),
+    });
+  }
   if (role === "heading" || (role === null && /^h[1-6]$/.test(tag))) {
     const level = Number(el.getAttribute("aria-level") ?? (role === null ? tag.slice(1) : "2"));
     return found("headings", { level, ...named("text", textOf(el)) });
@@ -180,16 +191,6 @@ function classify(el: HTMLElement): Found | null {
   }
   if (role === "table" || role === "grid" || (role === null && tag === "table")) {
     return found("tables", { ...named("name", labelName(el)), headers: headersOf(el) });
-  }
-  const field = fieldType(el, role);
-  if (field !== null) {
-    const name = el.getAttribute("name");
-    return found("fields", {
-      ...(name === null ? {} : { name }),
-      type: field,
-      ...named("label", fieldLabel(el)),
-      ...flags(el),
-    });
   }
   if (role === "button" || (role === null && isButton(el))) {
     return found("buttons", { ...named("name", buttonName(el)), ...flags(el) });
@@ -327,7 +328,10 @@ function headersOf(table: HTMLElement): string[] {
     .slice(0, PAGE_MAP_TABLE_HEADER_LIMIT);
 }
 
-/** An element's rendered text, without form controls, editable regions or hidden parts. */
+/**
+ * An element's rendered text: empty when the element itself is silent, and
+ * without the silent parts under it.
+ */
 function textOf(node: Node): string {
   const parts: string[] = [];
   const visit = (current: Node): void => {
@@ -335,16 +339,7 @@ function textOf(node: Node): string {
       parts.push(current.nodeValue as string);
       return;
     }
-    if (!(current instanceof Element)) {
-      return;
-    }
-    if (
-      SILENT_TAGS.has(current.localName) ||
-      current.hasAttribute("hidden") ||
-      current.hasAttribute(PAGE_MAP_IGNORE_ATTRIBUTE) ||
-      current.getAttribute("aria-hidden") === "true" ||
-      (current instanceof HTMLElement && current.isContentEditable)
-    ) {
+    if (!(current instanceof Element) || silent(current)) {
       return;
     }
     if (current.localName === "img") {
@@ -359,10 +354,25 @@ function textOf(node: Node): string {
       visit(child);
     }
   };
-  for (const child of childrenOf(node)) {
-    visit(child);
-  }
+  visit(node);
   return clip(parts.join(""));
+}
+
+/**
+ * Whether a name never reads an element's text: a control or a value, an
+ * editable region, this package's own element, an opt-out, or anything not
+ * rendered (a display: contents wrapper, a slot among them, is still read).
+ */
+function silent(el: Element): boolean {
+  return (
+    SILENT_TAGS.has(el.localName) ||
+    el.localName.startsWith(ELEMENT_TAG_PREFIX) ||
+    el.hasAttribute(PAGE_MAP_IGNORE_ATTRIBUTE) ||
+    el.getAttribute("aria-hidden") === "true" ||
+    (el instanceof HTMLElement && el.isContentEditable) ||
+    (!el.checkVisibility({ visibilityProperty: true }) &&
+      getComputedStyle(el).display !== "contents")
+  );
 }
 
 /** A node's children in the rendered tree: an open shadow root's in place of its own. */
@@ -375,10 +385,16 @@ function clip(text: string): string {
   return flat.length > PAGE_MAP_TEXT_LIMIT ? `${flat.slice(0, PAGE_MAP_TEXT_LIMIT - 1)}…` : flat;
 }
 
-/** A link's target without its query or fragment, which may carry a token or an id. */
+/**
+ * A link's target without its query or fragment, which may carry a token or an
+ * id; for a scheme other than http(s) (mailto:, tel:, data:, ...) the scheme alone.
+ */
 function pathOf(href: string): string {
   const url = new URL(href, location.href);
-  return url.origin === location.origin ? url.pathname : `${url.origin}${url.pathname}`;
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return url.protocol;
+  }
+  return clip(url.origin === location.origin ? url.pathname : `${url.origin}${url.pathname}`);
 }
 
 /**
