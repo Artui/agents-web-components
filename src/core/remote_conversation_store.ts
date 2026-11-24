@@ -5,6 +5,7 @@ import {
   SessionStorageStore,
   type ThreadMeta,
   type ThreadParent,
+  type ThreadRoutine,
   type ThreadStatus,
   type ThreadsTransport,
   threadTitleFrom,
@@ -26,6 +27,7 @@ export interface ServerThreadRow {
   readonly reason?: string | null;
   readonly interrupts?: readonly Interrupt[];
   readonly parent?: unknown;
+  readonly routine?: unknown;
 }
 
 /** What a listing answered: the rows, or `null` when the list could not be read. */
@@ -359,6 +361,7 @@ export class RemoteConversationStore implements ClientConversationStore {
       updatedAt,
       preview: row.preview,
       ...parentOf(row),
+      ...routineOf(row),
     };
     if (row.status === undefined) {
       return meta;
@@ -456,4 +459,20 @@ function parentOf(row: ServerThreadRow): { parent?: ThreadParent } {
     return {};
   }
   return { parent: { threadId, scope: typeof scope === "string" ? scope : null } };
+}
+
+/**
+ * The routine that fired a row's thread as {@link ThreadMeta.routine}, or nothing
+ * when the row names none. A routine without a string id and name is ignored.
+ */
+function routineOf(row: ServerThreadRow): { routine?: ThreadRoutine } {
+  const routine: unknown = row.routine;
+  if (typeof routine !== "object" || routine === null) {
+    return {};
+  }
+  const { id, name } = routine as Record<string, unknown>;
+  if (typeof id !== "string" || typeof name !== "string") {
+    return {};
+  }
+  return { routine: { id, name } };
 }

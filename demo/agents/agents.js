@@ -1,7 +1,8 @@
 // The agents home demo: one <ag-ui-agents> provider over two agents, a button
 // per directory entry switching its chat, an <ag-ui-inbox> badge in the header
 // and its list in the rail (what waits on the user, every agent), and an
-// <ag-ui-threads> bound through the provider. /agents/?stream watches the
+// <ag-ui-threads> bound through the provider, and the chat as placement="page".
+// alone.html?piece=inbox|threads|chat imports each piece by itself. /agents/?stream watches the
 // inbox by SSE instead of polling.
 import {
   AGENT_CHANGE_EVENT,

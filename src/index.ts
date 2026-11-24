@@ -79,6 +79,7 @@ export {
   SessionStorageStore,
   type ThreadMeta,
   type ThreadParent,
+  type ThreadRoutine,
   type ThreadStatus,
   type ThreadsTransport,
 } from "./core/conversation_store.js";

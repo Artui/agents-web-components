@@ -554,6 +554,9 @@ export const ICON_HISTORY = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden=
 /** The skill editor's header control (a page with lines). */
 export const ICON_SKILLS = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h10l4 4v12H5z"/><path d="M9 12h6M9 16h4"/></svg>`;
 
+/** The routines view's header control (a clock). */
+export const ICON_ROUTINES = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="7"/><path d="M12 9v4l2.5 2.5M9 3h6"/></svg>`;
+
 /** The back arrow out of a full-panel view. */
 export const ICON_BACK = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>`;
 

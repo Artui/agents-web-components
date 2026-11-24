@@ -110,6 +110,19 @@ export const SCENARIOS = [
     },
   },
   {
+    slug: "routines",
+    group: "Conversation",
+    title: "Routines",
+    since: "0.12.0",
+    summary:
+      "A caller's scheduled prompts: the Routines button lists each with its schedule in words, its next run and its last result, with Pause or Resume and Run now. Granting drop_table asks first, a run lands in the thread list badged with its routine, and Make this a routine starts one from the conversation.",
+    prompts: [["Send a turn", "echo check the overnight build"]],
+    attrs: {
+      "data-routines-url": "/routines/routines/",
+      "data-threads-url": "/routines/threads/",
+    },
+  },
+  {
     slug: "threads",
     group: "Conversation",
     title: "Threads and durability",

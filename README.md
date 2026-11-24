@@ -58,6 +58,7 @@ This package is the successor of `@artooi/ag-ui-web-component`. Coming from it? 
   - [Collapsing to the launcher](#collapsing-to-the-launcher)
   - [Collapsing to a bottom bar](#collapsing-to-a-bottom-bar)
 - [Several agents under one provider](#several-agents-under-one-provider)
+- [An agents home](#an-agents-home)
 - [What needs the user, across agents](#what-needs-the-user-across-agents)
 - [A2UI surfaces](#a2ui-surfaces)
 - [MCP Apps views](#mcp-apps-views)
@@ -202,6 +203,7 @@ another origin, add `credentials="include"` too; see
 | `data-skills` | — | Inline JSON skill catalog. A value that will not parse is ignored and reported on the console, rather than reading as an empty catalog. |
 | `data-skills-url` | — | URL of a JSON skill catalog (fetched with the element's headers and cookie policy). |
 | `data-skill-editor-url` | — | URL of django-ag-ui's skill editor endpoint (`skills/editor/`). Opts into the [skill editor](#the-skill-editor): a "Manage skills" row at the foot of the `/` palette under `data-slash-commands`, a header button with `data-skill-editor-button`, or `openSkillEditor()`. |
+| `data-routines-url` | — | URL of django-ag-ui's routines editor (`routines/`, from 0.86.0). Opts into [routines](#routines): a Routines button in the header, `openRoutines()` and `makeRoutine()`. Read at connect time, like the other endpoint URLs. |
 | `data-skill-editor-button` | absent | With `data-skill-editor-url`, also puts a Skills button in the header. Off by default. On a narrow panel it moves into the header's [More menu](#the-header-row-and-its-more-menu) like the other optional controls. |
 | `data-tools-url` | — | URL of a server tool-label catalog (`[{ name, summary, description? }]`), fetched with the element's headers and cookie policy; labels tool-call cards for server-side tools. |
 | `user-key` | `userKey` | Who the stored conversation belongs to — any string identifying the signed-in principal. Joins the storage namespace, and **changing it purges what the previous principal left behind**. Live (not connect-time): a logout is the host's to announce. See [Who the stored conversation belongs to](#who-the-stored-conversation-belongs-to-user-key). |
@@ -300,7 +302,7 @@ the element enters the DOM, or remove and re-insert it. See
 [Framework hosts](#framework-hosts-configure-before-you-insert), where the boundary bites hardest.
 The list: `data-attachments-url`, `data-attachment-accept`, `data-attachment-max-bytes`,
 `data-transcribe-url`, `data-threads-url`, `data-threads-cache`, `data-tools-url`,
-`data-skills-url`, `data-skill-editor-url`, `data-skill-editor-button`, `data-skills`, `data-prompt-chips`,
+`data-skills-url`, `data-skill-editor-url`, `data-skill-editor-button`, `data-routines-url`, `data-skills`, `data-prompt-chips`,
 `data-slash-commands`, `data-theme-toggle`, `data-strings`, `data-icon-url`.
 
 What re-inserting costs: the chrome is built again from the attributes as they stand, a run in
@@ -346,7 +348,7 @@ keyboard focus and styleable via the `code-copy` part. Override its labels with
 the `copyCode` / `copied` / `copyFailed` strings.
 
 **Methods**: `registerTool`, `registerPageState`, `registerActivityRenderer`, `registerContext`,
-`setSkills`, `openSkillEditor`, `closeSkillEditor`, `sendMessage`, `run`, `attachFile`, `appendMessage`, `retryLastTurn`, `quote`, `offerQuoteInPage`,
+`setSkills`, `openSkillEditor`, `closeSkillEditor`, `openRoutines`, `makeRoutine`, `closeRoutines`, `sendMessage`, `run`, `attachFile`, `appendMessage`, `retryLastTurn`, `quote`, `offerQuoteInPage`,
 `enableCharts`, `newChat`, `setCollapsed`, `toggleCollapsed`, `setMaximized`, `toggleMaximized`,
 `describeSurface`, `moveTo`, `resetSize`, `toggleTheme`, `openThreads`, `closeThreads`, `switchThread`, `deleteThread`, `openTab`, `closeTab`,
 `openCheckpoints`, `closeCheckpoints`, `toggleCheckpoints`, `refreshPlace`, `request`, `tokenValues` and `reload`.
@@ -2329,19 +2331,27 @@ agent at a time.
 ```
 
 - **The directory.** `data-agents-url` answers `{ agents: [...] }`, each entry an `id`, `name`,
-  `description`, `endpoint` and one URL per route its mount serves (`null` for one it does not).
-  It is read on connect and by `refresh()`, with the last ETag, and listed in **`agents`**
+  `description`, `endpoint` and one URL per route its mount serves (`null` for one it does not),
+  and from django-ag-ui 0.88.1 its `capabilities`. It is read on connect and by `refresh()`, with the last ETag, and listed in **`agents`**
   *(read-only)* and **`ag-ui-agents-change`** (`AGENTS_CHANGE_EVENT`, detail `{ agents }`).
 - **Its chat** is the first `<ag-ui-chat>` inside it, or the element set as **`chat`**.
 - **Switching agents is a remount.** The chat is mounted on the entry **`agent`** names (the
   first entry without it): taken out of the document, given the entry's `endpoint`,
   `data-tools-url`, `data-threads-url`, `data-runs-url`, `data-skills-url`,
-  `data-skill-editor-url`, `data-attachments-url` and `data-transcribe-url` (removed where the
-  entry has `null`), and put back where it was. That is how a chat applies its
+  `data-skill-editor-url`, `data-routines-url`, `data-attachments-url` and
+  `data-transcribe-url` (removed where the entry has `null` or no such key), and put back where it was. That is how a chat applies its
   [connect-time attributes](#when-each-attribute-is-read), so no warning is raised, and like any
   remount it cancels a run in flight. Setting `agent` (attribute or property) switches;
   **`ag-ui-agent-change`** (`AGENT_CHANGE_EVENT`, detail `{ agent }`) fires each time. The
   getter answers the id of the entry the chat is on.
+- **What the agent declares.** **`getCapabilities()`** resolves the mounted entry's
+  `capabilities`, AG-UI's `AgentCapabilities` as `AbstractAgent.getCapabilities()` answers it,
+  or `undefined` before a listing and for an entry from a server that predates them. A host can
+  hide a control the agent lacks, reading it on `ag-ui-agent-change` and again on
+  `ag-ui-agents-change` (a re-listing can change it without a switch). An undeclared key is
+  absent, never `false`: hide on a declaration (`humanInTheLoop` missing from a declared set,
+  `reasoning.supported === false`), never on `undefined`. Declarations are informative; the
+  chat draws whatever the stream sends.
 - **Each agent keeps its own conversations.** The chat's built-in store is replaced by one under
   the entry's id (`agent:<id>`, plus `#<user-key>` when one is set), so each agent has its own
   thread pointer, history and messages, and coming back to an agent restores where it was. A
@@ -2373,6 +2383,73 @@ The provider is exported from the root entry (and so from `/bundle`) with `defin
 throws naming the tag when another class holds it. A lone `<ag-ui-chat>` needs none of this and
 works as it always has. Runs and reattach stay in the chat. The element is an ordinary inline
 element, so give it `display: contents` when it should not affect layout.
+
+## An agents home
+
+A home page for a host with several agents is three elements you already have under one
+`<ag-ui-agents>` provider: what waits on the user (`<ag-ui-inbox variant="list">`), the
+conversations of the agent in front (`<ag-ui-threads>`), and the chat as the page
+(`<ag-ui-chat placement="page">`). There is no home element and no new attribute: copy the whole
+page, or only the pieces you need, each imported from its own entry.
+
+```html
+<ag-ui-agents id="home" data-agents-url="/agents-home/agents/"
+              data-inbox-url="/agents-home/inbox/" style="display: contents">
+  <header><ag-ui-inbox></ag-ui-inbox></header>
+  <aside>
+    <ag-ui-inbox variant="list"></ag-ui-inbox>
+    <ag-ui-threads></ag-ui-threads>
+  </aside>
+  <ag-ui-chat placement="page" data-greeting="off"></ag-ui-chat>
+</ag-ui-agents>
+
+<style>
+  /* header 52px, rail 292px wide; the rail is a 220px strip under the header at 640px and below */
+  header {
+    position: fixed; inset: 0 0 auto 0; height: 52px;
+    display: flex; justify-content: flex-end; align-items: center;
+    z-index: calc(var(--ag-ui-z-index, 2147483000) + 1);
+  }
+  aside { position: fixed; inset: 52px auto 0 0; width: 292px; overflow-y: auto; }
+  ag-ui-chat {
+    --ag-ui-inset: 52px 0 0 292px;
+    --ag-ui-width: calc(100vw - 292px);
+    --ag-ui-height: calc(100dvh - 52px);
+  }
+  @media (max-width: 640px) {
+    aside { inset: 52px 0 auto 0; width: auto; height: 220px; }
+    ag-ui-chat {
+      --ag-ui-inset: 272px 0 0 0;
+      --ag-ui-width: 100vw;
+      --ag-ui-height: calc(100dvh - 272px);
+    }
+  }
+</style>
+
+<script type="module">
+  import { defineAgents } from "@artooi/agents-web-components";
+  import { defineChat } from "@artooi/agents-web-components/chat";
+  import { defineThreads } from "@artooi/agents-web-components/threads";
+  import { defineInbox } from "@artooi/agents-web-components/inbox";
+  defineAgents();
+  defineChat();
+  defineThreads();
+  defineInbox();
+</script>
+```
+
+- **Each piece stays its own entry.** Drop the inbox and leave out `./inbox`; drop the list and
+  leave out `./threads`; a lone chat needs no provider. The inbox list and the threads need the
+  provider only for the agents and the inbox they read.
+- **The header sits above the chat, its badge at the far end.** A fixed header is its own stacking context, so it takes one more than the chat's `--ag-ui-z-index`, or the page chat paints over the inbox popover, which opens toward the start from the badge, so the header pushes the badge to the end.
+- **The chat is the page, fixed to the viewport.** `placement="page"` sizes itself to the
+  viewport whatever `--ag-ui-inset` says, so state the box you leave with the inset, width and
+  height tokens together, as above, and set `data-greeting="off"` where the page has its own
+  heading. At 640px and below the rail becomes a scrolling strip under the header and the chat
+  sits beneath it, so the inbox list and the threads stay reachable; the demo does the same.
+  Switching the agent remounts the chat, as [described above](#several-agents-under-one-provider).
+- **Try it.** `make demo`, then `/agents/` for the whole page and `/agents/alone.html?piece=inbox`
+  (or `threads`, `chat`) for one piece imported alone, both against the mock server.
 
 ## What needs the user, across agents
 
@@ -3486,6 +3563,30 @@ The palette catches up without a reload: after each save from the editor, on eve
 forwarded to the page as `ag-ui-custom`). A `user-key` handover also closes the editor and drops
 what it held, the previous principal's skill bodies included.
 
+### Routines
+
+django-ag-ui (0.86.0 on, with `routine_model=`) serves a caller's routines: prompts the agent
+runs on a schedule. Point `data-routines-url` at that mount's `routines/` route and the header
+gains a Routines button that opens them in the full-panel view:
+
+```html
+<ag-ui-chat endpoint="/agent/" data-routines-url="/agent/routines/" data-threads-url="/agent/threads/"></ag-ui-chat>
+```
+
+Each row says its schedule in words (in the routine's own timezone, named when it is not the
+viewer's), its next run (or why it is paused) and its last result, which opens that run's thread.
+Pause or Resume and Run now act on the row. The view's bar adds a routine, and a row opens its
+form: name, prompt, a weekly or every-few-hours schedule, the timezone, and the tools each run
+may use without asking, offered from the server's `grantable` list. A destructive tool is marked,
+and granting it asks first, naming it destructive; the grant is then sent in `confirmDestructive`
+on every save, as the server requires. Make this a routine, at the foot of the list and as
+`makeRoutine()`, opens the form with the conversation's own prompts as the routine's.
+
+Writes are JSON and carry `getHeaders()`, so a CSRF header reaches them as it reaches the skill
+editor. With `data-threads-url` on the same mount, a thread a routine started carries a badge with
+the routine's name in the thread list. `openRoutines()` and `closeRoutines()` open and close the
+view; a principal change closes it.
+
 ---
 
 ## MPA durability: surviving full page reloads
@@ -4171,7 +4272,7 @@ paths.
 | `ThreadsChangeDetail` | type | `detail` shape of the `ag-ui-threads-change` event (`{ threads }`). |
 | `AgUiAgents` | class | The headless `<ag-ui-agents>` provider: the agents directory, the inbox, and the chat it mounts on an entry. See [Several agents under one provider](#several-agents-under-one-provider). |
 | `defineAgents()` | function | Register `<ag-ui-agents>`; a no-op if it is already registered, and throws if another class holds the tag. |
-| `AgentEntry` | type | One directory entry: `id`, `name`, `description`, `endpoint` and one URL per route, `null` where the mount serves none. |
+| `AgentEntry` | type | One directory entry: `id`, `name`, `description`, `endpoint` and one URL per route, `null` where the mount serves none (`routines_url` may be absent from an older server), and `capabilities`, optional: what the mount declares of AG-UI's `AgentCapabilities`. |
 | `InboxRow` | type | An inbox row: a `ThreadMeta` plus `agentId`. |
 | `InboxServerRow` | type | An inbox row as the server lists it: a thread row plus `agent_id`. |
 | `InboxTransport` | type | How the inbox is watched: `poll` or `stream`. |
@@ -4261,8 +4362,9 @@ paths.
 | `ClientConversationStore` | type | The persistence seam. |
 | `ThreadTab` | type | One open thread in `tabs` (`{ threadId, title }`). |
 | `TabsDetail` | type | `ag-ui-tabs` event detail (`{ tabs, reason }`). |
-| `ThreadMeta` | type | A thread-drawer row (`{ threadId, title, updatedAt, preview, unread?, status?, reason?, interrupts?, parent? }`); see [Thread status](#thread-status) and [Child sessions](#child-sessions). |
+| `ThreadMeta` | type | A thread-drawer row (`{ threadId, title, updatedAt, preview, unread?, status?, reason?, interrupts?, parent?, routine? }`, `routine` `{ id, name }` on a thread a routine started); see [Thread status](#thread-status), [Child sessions](#child-sessions) and [Routines](#routines). |
 | `ThreadParent` | type | A child thread's parent, as `ThreadMeta.parent` names it (`{ threadId, scope }`, `scope` `null` in an unscoped store). |
+| `ThreadRoutine` | type | The routine that started a thread, as `ThreadMeta.routine` names it (`{ id, name }`). |
 | `ThreadStatus` | type | A thread's run status as the server lists it: `idle`, `running`, `waiting` or `failed`. |
 | `ThreadsTransport` | type | How `watchThreads` follows the list: `poll` or `stream`. |
 | `NavigationCheckpoint` | type | The pre-reload checkpoint marker. |
@@ -4902,7 +5004,7 @@ component sets, so a new one cannot ship undocumented.
 | Feature | Parts |
 | --- | --- |
 | Shell | `panel`, `header`, `title`, `icon`, `header-controls`, `messages`, `empty`, `greeting`, `pending`, `stopped`, `usage-line`, `jump-latest`, and one per resize grip: `resize-handle` plus `resize-handle-top`, `resize-handle-bottom`, `resize-handle-left`, `resize-handle-right`, `resize-handle-top-left`, `resize-handle-top-right`, `resize-handle-bottom-left`, `resize-handle-bottom-right` |
-| Header buttons | `header-button` on each, plus `skills-button` (with `data-skill-editor-button`), `history-button`, `checkpoints-button`, `new-button`, `maximize-button`, `collapse-button`, `theme-toggle`, `more-button` (only while the row has moved a control into its menu); `header-menu` on the [More menu](#the-header-row-and-its-more-menu) |
+| Header buttons | `header-button` on each, plus `skills-button` (with `data-skill-editor-button`), `routines-button` (with `data-routines-url`), `history-button`, `checkpoints-button`, `new-button`, `maximize-button`, `collapse-button`, `theme-toggle`, `more-button` (only while the row has moved a control into its menu); `header-menu` on the [More menu](#the-header-row-and-its-more-menu) |
 | Collapsed widget | `launcher`, `launcher-icon`, `launcher-badge`, `rail-label`, `bar` (the [bottom bar](#collapsing-to-a-bottom-bar)'s wrapper, around the launcher), `bar-place` (the place beside the bar's title; its text carries `place-label` and `place-detail`), `bar-history` |
 | Answers | `answer` (the per-turn group), `message` (plus `message-user`, `message-assistant`), `code-copy`, `enqueued-messages` and `enqueued-messages-note` (user messages a run took in mid-turn) |
 | Reasoning | `thoughts`, `thoughts-toggle`, `thoughts-body`, `thoughts-label` |
@@ -4924,7 +5026,8 @@ component sets, so a new one cannot ship undocumented.
 | Skills | `skill-chips`, `skill-chip`, `skill-palette`, `skill-item`, `skill-item-title`, `skill-item-desc`, `skill-item-token`, `skill-hint` (the composer hint: a skill’s missing placeholders, and a run continuation picked with nothing typed or while a run is in flight), `skill-manage` (the "Manage skills" row, also a `skill-item`) |
 | Full-panel view | `panel-view`, `panel-view-bar`, `panel-view-title`, `panel-view-body`, `panel-view-footer`, and in its bar `back-button` |
 | Skill editor | `skill-rows`, `skill-row`, `skill-empty`, `skill-form`, and in the view's bar `new-skill-button` |
-| Thread drawer | `drawer`, `drawer-backdrop`, `drawer-panel`, `drawer-header`, `drawer-title`, `drawer-new`, `drawer-close`, `drawer-filter`, `drawer-list`, `drawer-empty`, `drawer-group-label`, `drawer-row` (plus `drawer-row-child` on a child session's row), `drawer-children`, `drawer-row-select`, `drawer-row-title`, `drawer-row-time`, `drawer-row-preview`, `drawer-row-actions`, `drawer-row-rename`, `drawer-row-delete`, `drawer-rename-input`, `drawer-confirm`, `drawer-confirm-label`, `drawer-confirm-yes`, `drawer-confirm-no` |
+| Routines | `routine-rows`, `routine-row`, `routine-empty`, `routine-last`, `routine-toggle`, `routine-run`, `make-routine`, `routine-form`, `routine-day`, `routine-tools`, `routine-tool`, `routine-destructive`, and in the view's bar `new-routine-button` |
+| Thread drawer | `drawer`, `drawer-backdrop`, `drawer-panel`, `drawer-header`, `drawer-title`, `drawer-new`, `drawer-close`, `drawer-filter`, `drawer-list`, `drawer-empty`, `drawer-group-label`, `drawer-row` (plus `drawer-row-child` on a child session's row), `drawer-children`, `drawer-row-select`, `drawer-row-title`, `drawer-row-routine` (on a routine's run), `drawer-row-time`, `drawer-row-preview`, `drawer-row-actions`, `drawer-row-rename`, `drawer-row-delete`, `drawer-rename-input`, `drawer-confirm`, `drawer-confirm-label`, `drawer-confirm-yes`, `drawer-confirm-no` |
 | Charts | `chart-block`, `chart-title`, `chart-legend` |
 | Checkpoints panel | `checkpoints`, `checkpoints-header`, `checkpoints-title`, `checkpoints-list`, `checkpoints-empty`, `checkpoint-row`, `checkpoint-label`, `checkpoint-time`, `checkpoint-id`, `checkpoint-branch`, `checkpoint-actions` (the pair's wrapper), `checkpoint-action` (plus `checkpoint-resume`, `checkpoint-fork`) |
 

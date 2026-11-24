@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] — 2026-11-24
+
+### Added
+
+- **`<ag-ui-agents>` answers `getCapabilities()` from the mounted entry.** django-ag-ui 0.88.1
+  lists each directory entry with `capabilities`, AG-UI's `AgentCapabilities` in its camelCase
+  keys (`humanInTheLoop`, `multimodal`, `reasoning`, `execution.maxExecutionTime`, ...). The
+  provider's `getCapabilities()` resolves the entry the chat is on, or `undefined` before a
+  listing and for an entry from an older server. An undeclared key is absent, never `false`, so
+  a host hides a control only on a declaration it can read (no `humanInTheLoop`, or
+  `reasoning.supported === false`), and keeps every control for an entry that declares nothing.
+  Declarations are informative: the chat still draws every event the stream sends. Opt-in: a
+  host that does not call `getCapabilities()` sees no change. The provider also forwards an
+  entry's `routines_url` to its chat as `data-routines-url`, removed where the entry has `null`
+  or no key; no opt-in.
+- **An agents home recipe: the README's "An agents home" section and `demo/agents/`.** The
+  inbox list, `<ag-ui-threads>` and `<ag-ui-chat placement="page">` under one `<ag-ui-agents>`,
+  each piece also imported alone (`/agents/alone.html?piece=inbox|threads|chat`) in the demo.
+  No new element or API. No opt-in: nothing in the package changed.
+- **Routines: a caller's scheduled prompts, from django-ag-ui's routines editor. Opt-in: a
+  standalone host sets `data-routines-url`; under `<ag-ui-agents>`, a mount whose entry serves
+  routines gets it with no host change, since the provider passes the entry's `routines_url` on.** A
+  Routines button in the header opens them in the full-panel view: each row says its schedule in
+  words, its next run and its last result, with Pause or Resume and Run now. A routine is created
+  and edited in a form whose pre-approved tools come from the server's `grantable` list; a
+  destructive one is marked and granting it asks first. Make this a routine (`makeRoutine()`)
+  starts one from the conversation's prompts, and a thread a routine started is badged with its
+  name in the thread list (`ThreadMeta.routine`, read off the threads index). The form's
+  weekdays are toggle pills, filled in the accent when chosen, each a checkbox for the keyboard
+  and screen readers; a host restyles them through `::part(routine-day)`.
+
 ### Fixed
 
 - **`<ag-ui-inbox>` answers a row in place on a page served over plain HTTP.** Approve and
@@ -15,6 +46,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   threw and nothing was sent. The id is now built on `crypto.getRandomValues`, as the A2UI
   actions' run ids already were, which keeps the protocol packages out of the inbox bundle.
   No opt-in: a host that already answers in place gets the fix.
+- **`<ag-ui-inbox>`'s badge names its popup, the popover is a labelled dialog, and focus
+  leaving it closes it.** The badge carries `aria-haspopup="dialog"`, and the popover panel is
+  `role="dialog"` named by its heading (as a list, a `role="group"` with the same name). Tab
+  past the last row, or Shift+Tab past the badge, used to leave the popover open behind the
+  focus. It now closes, and focus stays where the key sent it. Escape still closes and hands
+  focus back to the badge, and a press outside still closes it. No opt-in.
+- **`<ag-ui-inbox variant="list">` keeps keyboard focus in the list when the focused row
+  leaves.** A row answered in place, answered elsewhere, or no longer waiting on the next
+  refresh used to drop focus to the page. Focus now moves to the row that took its place,
+  else the previous row, else the list itself (its panel, focusable by script only and named
+  like the list). The badge variant is unchanged: focus goes back to the badge. No opt-in.
+- **The header's More menu shows its rows' names whole.** A name such as "Toggle theme" was
+  clipped at the baseline, since the row kept the header button's line height of one font
+  size under the clip that ellipsises a long name. The name now has a line height of its own.
+  No opt-in.
 
 ## [0.11.0] — 2026-11-23
 
@@ -683,7 +729,8 @@ move page walks a host over. Each entry below says whether a host opts in.
   kept offering the moon under `theme="dark"`. Only the toggle's own click redrew it before. A host
   opts in to nothing.
 
-[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/Artui/agents-web-components/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/Artui/agents-web-components/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/Artui/agents-web-components/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/Artui/agents-web-components/compare/v0.8.0...v0.9.0

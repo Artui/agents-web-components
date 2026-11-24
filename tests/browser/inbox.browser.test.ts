@@ -318,3 +318,96 @@ describe("<ag-ui-inbox> stacking in Chromium", () => {
     expect(document.elementFromPoint(x, y)).toBe(inbox);
   });
 });
+
+function between(inbox: AgUiInbox): { before: HTMLButtonElement; after: HTMLButtonElement } {
+  const before = document.createElement("button");
+  before.textContent = "Before";
+  const after = document.createElement("button");
+  after.textContent = "After";
+  inbox.before(before);
+  inbox.after(after);
+  return { before, after };
+}
+
+describe("<ag-ui-inbox> names its popup and closes when focus leaves it in Chromium", () => {
+  it("is a button with a dialog popup, the dialog named by its heading", async () => {
+    const { inbox } = await mount([waiting("a", "First")]);
+    const badge = shadow(inbox).querySelector(".badge") as HTMLButtonElement;
+    expect(badge.getAttribute("aria-haspopup")).toBe("dialog");
+    await userEvent.click(badge);
+    await expect.element(page.getByRole("dialog", { name: "Needs you" })).toBeVisible();
+  });
+
+  it("closes on Tab past the last row, focus going on to the next page element", async () => {
+    const { inbox } = await mount([waiting("a", "First"), waiting("b", "Second")]);
+    const { after } = between(inbox);
+    await userEvent.click(shadow(inbox).querySelector(".badge") as HTMLElement);
+    await userEvent.keyboard("{ArrowDown}");
+    expect(shadow(inbox).activeElement).toBe(part(inbox, "b", ".row-main"));
+    await userEvent.keyboard("{Tab}");
+    expect(inbox.open).toBe(false);
+    expect(document.activeElement).toBe(after);
+  });
+
+  it("stays open on Shift+Tab to its badge, and closes on Shift+Tab past it", async () => {
+    const { inbox } = await mount([waiting("a", "First")]);
+    const { before } = between(inbox);
+    const badge = shadow(inbox).querySelector(".badge") as HTMLButtonElement;
+    await userEvent.click(badge);
+    await userEvent.keyboard("{Shift>}{Tab}{/Shift}");
+    expect(shadow(inbox).activeElement).toBe(badge);
+    expect(inbox.open).toBe(true);
+    await userEvent.keyboard("{Shift>}{Tab}{/Shift}");
+    expect(inbox.open).toBe(false);
+    expect(document.activeElement).toBe(before);
+  });
+
+  it("is a labelled group, not a dialog, as a list", async () => {
+    const { inbox } = await mount([waiting("a", "First")], "list");
+    const panel = shadow(inbox).querySelector(".panel") as HTMLElement;
+    expect(panel.getAttribute("role")).toBe("group");
+    await expect.element(page.getByRole("group", { name: "Needs you" })).toBeVisible();
+    expect(page.getByRole("dialog").elements()).toHaveLength(0);
+  });
+});
+
+describe("<ag-ui-inbox variant=list> hands focus on when its row leaves in Chromium", () => {
+  async function list(
+    threadIds: readonly string[],
+  ): Promise<{ inbox: AgUiInbox; leave: (...gone: string[]) => void }> {
+    const { inbox, provider } = await mount(threadIds.map(answerable), "list");
+    Object.assign(provider, { agents: [{ id: "board", name: "Board", endpoint: "/board/" }] });
+    const leave = (...gone: string[]): void => {
+      const rows = threadIds.filter((id) => !gone.includes(id)).map(answerable);
+      Object.assign(provider, { inbox: rows });
+      provider.dispatchEvent(new CustomEvent(INBOX_CHANGE_EVENT));
+    };
+    provider.dispatchEvent(new CustomEvent(INBOX_CHANGE_EVENT));
+    return { inbox, leave };
+  }
+
+  it("moves to the row that took the place of the middle one, answered by Approve", async () => {
+    vi.stubGlobal("fetch", () => Promise.resolve(new Response("", { status: 200 })));
+    const { inbox, leave } = await list(["a", "b", "c"]);
+    part(inbox, "b", ".approve").focus();
+    await userEvent.keyboard("{Enter}");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    leave("b");
+    expect(shadow(inbox).activeElement).toBe(part(inbox, "c", ".row-main"));
+  });
+
+  it("moves to the previous row when the last one leaves", async () => {
+    const { inbox, leave } = await list(["a", "b", "c"]);
+    part(inbox, "c", ".row-main").focus();
+    leave("c");
+    expect(shadow(inbox).activeElement).toBe(part(inbox, "b", ".row-main"));
+  });
+
+  it("moves to the list itself when the only row leaves", async () => {
+    const { inbox, leave } = await list(["a"]);
+    part(inbox, "a", ".row-main").focus();
+    leave("a");
+    expect(shadow(inbox).activeElement).toBe(shadow(inbox).querySelector(".panel"));
+    expect(document.activeElement).toBe(inbox);
+  });
+});

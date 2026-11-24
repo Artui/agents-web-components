@@ -19,7 +19,16 @@ const THEMES = ["", "quiet", "soft", "ledger", "classic", "modern"].flatMap((nam
   `${name} dark`.trim(),
 ]);
 
-const EVERY = ["skills", "history", "checkpoints", "new", "theme", "maximize", "collapse"];
+const EVERY = [
+  "skills",
+  "routines",
+  "history",
+  "checkpoints",
+  "new",
+  "theme",
+  "maximize",
+  "collapse",
+];
 
 function mount(width?: string, extra: Record<string, string> = {}): AgUiChat {
   const el = document.createElement(ELEMENT_TAG) as AgUiChat;
@@ -32,6 +41,7 @@ function mount(width?: string, extra: Record<string, string> = {}): AgUiChat {
   el.setAttribute("data-runs-url", "/runs/");
   el.setAttribute("data-skill-editor-url", "/skills/editor/");
   el.setAttribute("data-skill-editor-button", "");
+  el.setAttribute("data-routines-url", "/routines/");
   for (const [name, value] of Object.entries(extra)) {
     el.setAttribute(name, value);
   }
@@ -111,6 +121,7 @@ describe("header controls (real browser)", () => {
 
     for (const name of EVERY) {
       const button = control(el, name);
+      expect(button, name).not.toBeNull();
       expect(button.closest(".header-controls, .header-menu"), name).not.toBeNull();
       const rect = button.getBoundingClientRect();
       expect(rect.width, name).toBeGreaterThan(20);
@@ -124,6 +135,21 @@ describe("header controls (real browser)", () => {
     }
     // A row in the menu shows its name beside its glyph.
     expect(getComputedStyle(control(el, "skills"), "::after").content).toBe('"Skills"');
+  });
+
+  it("gives a menu row's name a box tall enough for its descenders under every theme", async () => {
+    for (const theme of THEMES) {
+      const el = mount("240px", theme === "" ? {} : { theme });
+      await settle();
+      control(el, "more").dispatchEvent(new MouseEvent("click", { detail: 1 }));
+      const label = getComputedStyle(control(el, "theme"), "::after");
+
+      expect(label.overflow, theme).toBe("hidden");
+      expect(Number.parseFloat(label.height), theme).toBeGreaterThanOrEqual(
+        Number.parseFloat(label.fontSize) * 1.2,
+      );
+      el.remove();
+    }
   });
 
   it("shows a row of five that fits without a More button", async () => {

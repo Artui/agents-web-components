@@ -76,6 +76,8 @@ import { renderRunNotice } from "../ui/progress/run_notice.js";
 import { SubAgentProgress } from "../ui/progress/subagent_progress.js";
 // biome-ignore lint/style/useImportType: the emitted declaration file copies this form
 import { type ToolDisplayMode, type ToolPayloadFormatter } from "../ui/progress/tool_call_card.js";
+import { RoutinesClient } from "../ui/routines/routines_client.js";
+import { RoutinesView } from "../ui/routines/routines_view.js";
 import { adoptStyles } from "../ui/shell/adopt_styles.js";
 import { buildHeader } from "../ui/shell/build_header.js";
 import { buildLauncher } from "../ui/shell/build_launcher.js";
@@ -163,6 +165,7 @@ const CONNECT_TIME_ATTRIBUTES = [
   "data-skills-url",
   "data-skill-editor-url",
   "data-skill-editor-button",
+  "data-routines-url",
   "data-skills",
   "data-prompt-chips",
   "data-slash-commands",
@@ -1054,6 +1057,8 @@ export class AgUiChat extends HTMLElement {
 
   /** The stored-skill editor, offered when `data-skill-editor-url` is set. */
   readonly #skillEditor: SkillEditor;
+  /** The routines view, offered when `data-routines-url` is set. */
+  readonly #routines: RoutinesView;
 
   constructor() {
     super();
@@ -1245,7 +1250,7 @@ export class AgUiChat extends HTMLElement {
     });
     this.#panelView = new PanelView(
       () => this.#strings.backToConversation,
-      () => this.#skillEditor.back(),
+      () => (this.#routines.isOpen ? this.#routines.back() : this.#skillEditor.back()),
     );
     this.#skillEditor = new SkillEditor({
       view: this.#panelView,
@@ -1258,6 +1263,16 @@ export class AgUiChat extends HTMLElement {
         void this.#skills.fetch();
       },
       onClose: () => this.closeSkillEditor(),
+    });
+    this.#routines = new RoutinesView({
+      view: this.#panelView,
+      strings: () => this.#strings,
+      fromConversation: () => this.#routineSeed(),
+      onOpenThread: (threadId) => {
+        this.closeRoutines();
+        void this.switchThread(threadId).catch(() => {});
+      },
+      onClose: () => this.closeRoutines(),
     });
     this.#drawer = new ThreadDrawer({
       onSelect: (threadId) => {
@@ -2269,6 +2284,7 @@ export class AgUiChat extends HTMLElement {
       return;
     }
     this.#skillsMenu.close();
+    this.#dropPanelView();
     this.#chat.toggleAttribute("data-panel-view", true);
     this.#skillEditor.open(new SkillEditorClient(url, (to, init) => this.request(to, init)));
   }
@@ -2278,15 +2294,83 @@ export class AgUiChat extends HTMLElement {
     if (!this.#skillEditor.isOpen) {
       return;
     }
-    this.#dropSkillEditor();
+    this.#dropPanelView();
     this.#input.focus();
   }
 
-  /** Close the editor and forget what it held, without moving focus. */
-  #dropSkillEditor(): void {
+  /** Close whichever full-panel view is open and forget what it held, without moving focus. */
+  #dropPanelView(): void {
     this.#skillEditor.reset();
+    this.#routines.reset();
     this.#panelView.close();
     this.#chat.toggleAttribute("data-panel-view", false);
+  }
+
+  /**
+   * Open the routines view in place of the conversation: the caller's
+   * routines from `data-routines-url` (django-ag-ui's routines editor), each
+   * with its schedule, next run and last result, Pause or Resume and Run now.
+   * Its header button calls this; without the attribute it does nothing.
+   *
+   * Every write sends {@link headers} and {@link getHeaders} as read at that
+   * moment, so the CSRF token the editor checks by default goes with each one.
+   */
+  openRoutines(): void {
+    this.#openRoutines(false);
+  }
+
+  /**
+   * Open a new routine's form with its prompt taken from the conversation on
+   * screen (its user messages, in order) and its name from the first. Without
+   * `data-routines-url`, or with nothing said yet, it opens the list.
+   */
+  makeRoutine(): void {
+    this.#openRoutines(true);
+  }
+
+  /** Close the routines view and return to the conversation, with focus in the composer. */
+  closeRoutines(): void {
+    if (!this.#routines.isOpen) {
+      return;
+    }
+    this.#dropPanelView();
+    this.#input.focus();
+  }
+
+  #openRoutines(fromConversation: boolean): void {
+    const url = this.#routinesUrl();
+    if (url === null) {
+      return;
+    }
+    this.#skillsMenu.close();
+    this.#dropPanelView();
+    this.#chat.toggleAttribute("data-panel-view", true);
+    const client = new RoutinesClient(url, (to, init) => this.request(to, init));
+    if (fromConversation) {
+      this.#routines.openFromConversation(client);
+    } else {
+      this.#routines.open(client);
+    }
+  }
+
+  /** `data-routines-url`, with an empty value meaning unset. */
+  #routinesUrl(): string | null {
+    const url = this.getAttribute("data-routines-url");
+    return url === null || url === "" ? null : url;
+  }
+
+  /** What the conversation on screen would ask as a routine, or `null` before anything is said. */
+  #routineSeed(): { readonly prompt: string; readonly name: string } | null {
+    const messages = this.#client?.messages ?? this.#history.restored;
+    const asked = messages.flatMap((message) =>
+      message.role === "user" && typeof message.content === "string" && message.content.trim()
+        ? [message.content.trim()]
+        : [],
+    );
+    if (asked.length === 0) {
+      return null;
+    }
+    return { prompt: asked.join("\n\n"), name: serverTitleFrom(messages) };
   }
 
   /** `data-skill-editor-url`, with an empty value meaning unset. */
@@ -2862,7 +2946,7 @@ export class AgUiChat extends HTMLElement {
     this.#forgetUnread([...this.#unreadByThread.keys()], true);
     // Their stored skills too: the catalog's and the editor's, bodies included.
     this.#skills.forget();
-    this.#dropSkillEditor();
+    this.#dropPanelView();
     if (!live) {
       return;
     }
@@ -2943,7 +3027,7 @@ export class AgUiChat extends HTMLElement {
    * {@link toggleCollapsed} and {@link toggleTheme}.
    */
   openThreads(options: { readonly anchor?: Element } = {}): void {
-    this.#dropSkillEditor();
+    this.#dropPanelView();
     // Collapsed into the bar, the list opens as a popover over the bar rather
     // than expanding the panel: the same drawer, moved beside the bar, since
     // nothing inside the hidden panel can be drawn. Under the host's own bar it
@@ -3030,7 +3114,7 @@ export class AgUiChat extends HTMLElement {
    * an empty panel.
    */
   openCheckpoints(): void {
-    this.#dropSkillEditor();
+    this.#dropPanelView();
     this.#history.openCheckpoints();
   }
 
@@ -3181,7 +3265,7 @@ export class AgUiChat extends HTMLElement {
     // Stop any in-flight run first — discarding the client mid-run would
     // leave the old agent streaming into a cleared transcript.
     this.#cancelRun();
-    this.#dropSkillEditor();
+    this.#dropPanelView();
     const leaving = this.#history.threadId;
     this.#untouchedTab = this.conversationStore.isUnsent?.(leaving) === true ? leaving : null;
     this.#history.reapUnsent();
@@ -3421,6 +3505,7 @@ export class AgUiChat extends HTMLElement {
         this.#skillEditorUrl() === null || !this.hasAttribute("data-skill-editor-button")
           ? null
           : () => this.openSkillEditor(),
+      onRoutines: this.#routinesUrl() === null ? null : () => this.openRoutines(),
       onHistory: () => this.openThreads(),
       onCheckpoints: () => this.toggleCheckpoints(),
       onNewChat: () => this.newChat(),
@@ -3525,7 +3610,7 @@ export class AgUiChat extends HTMLElement {
     // `/`), the chips, the hint saying what the composer still needs, the
     // queued messages and the pending-attachments tray, then the host's own
     // content directly over the input.
-    this.#dropSkillEditor();
+    this.#dropPanelView();
     this.#chat.replaceChildren(
       header,
       overflow.menu,

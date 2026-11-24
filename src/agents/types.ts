@@ -1,3 +1,4 @@
+import type { AgentCapabilities } from "@ag-ui/core";
 import type { AgUiChat } from "../core/ag_ui_chat.js";
 import type { ThreadMeta, ThreadsTransport } from "../core/conversation_store.js";
 import type { ServerThreadRow } from "../core/remote_conversation_store.js";
@@ -21,6 +22,11 @@ export interface AgentEntry {
   readonly routines_url?: string | null;
   readonly attachments_url: string | null;
   readonly transcribe_url: string | null;
+  /**
+   * What the mount declares of AG-UI's `AgentCapabilities` (django-ag-ui 0.88.1),
+   * absent from an older server. An undeclared key is absent, never `false`.
+   */
+  readonly capabilities?: AgentCapabilities;
 }
 
 /** A thread row as `inbox/` lists it: a mount's `threads/` row, plus the agent it belongs to. */

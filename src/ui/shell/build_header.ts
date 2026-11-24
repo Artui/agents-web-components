@@ -4,6 +4,7 @@ import {
   ICON_HISTORY,
   ICON_MAXIMIZE,
   ICON_NEW_CHAT,
+  ICON_ROUTINES,
   ICON_SKILLS,
 } from "../../constants.js";
 import type { UiStrings } from "../ui_strings.js";
@@ -27,6 +28,8 @@ export interface HeaderOptions {
   readonly signal: AbortSignal;
   /** Opens the skill editor; `null` when the host did not configure one. */
   readonly onSkills: (() => void) | null;
+  /** Opens the routines view; `null` when the host did not configure one. */
+  readonly onRoutines: (() => void) | null;
   readonly onHistory: () => void;
   readonly onCheckpoints: () => void;
   readonly onNewChat: () => void;
@@ -107,6 +110,12 @@ export function buildHeader(options: HeaderOptions): BuiltHeader {
     skills = headerButton("skills", strings.skills, ICON_SKILLS);
     skills.addEventListener("click", options.onSkills);
   }
+  // Offered only with a routines endpoint, the same way.
+  let routines: HTMLButtonElement | null = null;
+  if (options.onRoutines !== null) {
+    routines = headerButton("routines", strings.routines, ICON_ROUTINES);
+    routines.addEventListener("click", options.onRoutines);
+  }
   // Optional built-in theme toggle: off unless the host opts in, so
   // it never competes with a host-supplied switch in `slot="header-actions"`.
   const toggle = options.themeToggle;
@@ -123,8 +132,8 @@ export function buildHeader(options: HeaderOptions): BuiltHeader {
   const shown = options.withCheckpoints ? checkpoints : null;
   const present = (xs: readonly (HTMLButtonElement | null)[]): HTMLButtonElement[] =>
     xs.filter((x): x is HTMLButtonElement => x !== null);
-  const row = present([skills, history, shown, newChat, toggle, maximize, collapse]);
-  controls.append(...present([skills, history, shown, newChat, toggle, collapse]));
+  const row = present([skills, routines, history, shown, newChat, toggle, maximize, collapse]);
+  controls.append(...present([skills, routines, history, shown, newChat, toggle, collapse]));
   header.append(title, headerActions, controls);
   const overflow = new HeaderOverflow({
     header,
@@ -132,7 +141,7 @@ export function buildHeader(options: HeaderOptions): BuiltHeader {
     controls,
     row,
     // The first to leave the row as it narrows; new chat and the window controls never do.
-    movable: present([toggle, skills, shown, history]),
+    movable: present([toggle, skills, routines, shown, history]),
     label: strings.moreControls,
     signal: options.signal,
   });

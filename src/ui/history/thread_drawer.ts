@@ -1,4 +1,5 @@
 import type { ThreadMeta } from "../../core/conversation_store.js";
+import { fillUiString } from "../fill_ui_string.js";
 import { DEFAULT_UI_STRINGS, type UiStrings } from "../ui_strings.js";
 import { type RelativeTimeFormatter, relativeTime } from "./relative_time.js";
 import { openerElement } from "./utils.js";
@@ -447,7 +448,16 @@ export class ThreadDrawer {
     preview.className = "drawer-row-preview";
     preview.setAttribute("part", "drawer-row-preview");
     preview.textContent = meta.preview;
-    select.append(title, time, preview);
+    select.append(title);
+    if (meta.routine !== undefined) {
+      const badge = document.createElement("span");
+      badge.className = "drawer-row-routine";
+      badge.setAttribute("part", "drawer-row-routine");
+      badge.title = fillUiString(this.#strings.routineBadge, { name: meta.routine.name });
+      badge.textContent = meta.routine.name;
+      select.append(badge);
+    }
+    select.append(time, preview);
     select.addEventListener("click", () => {
       this.close();
       this.#callbacks.onSelect(meta.threadId);

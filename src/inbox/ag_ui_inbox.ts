@@ -22,6 +22,13 @@ import type {
   InboxVariant,
 } from "./types.js";
 
+/** Where focus sat in the list before a redraw: the row's thread, its index and its control. */
+interface Held {
+  readonly threadId: string;
+  readonly index: number;
+  readonly control: string;
+}
+
 /** The provider events the inbox redraws on: new rows, and new agent names for them. */
 const LISTEN_TO = [INBOX_CHANGE_EVENT, AGENTS_CHANGE_EVENT] as const;
 
@@ -83,7 +90,7 @@ export class AgUiInbox extends HTMLElement {
     this.#badge.type = "button";
     this.#badge.className = "badge";
     this.#badge.setAttribute("part", "badge");
-    this.#badge.setAttribute("aria-haspopup", "true");
+    this.#badge.setAttribute("aria-haspopup", "dialog");
     this.#badge.setAttribute("aria-expanded", "false");
     this.#badge.append(inboxIcon());
     this.#count = document.createElement("span");
@@ -101,6 +108,7 @@ export class AgUiInbox extends HTMLElement {
     this.#heading = document.createElement("p");
     this.#heading.className = "heading";
     this.#heading.setAttribute("part", "heading");
+    this.#heading.id = "heading";
     this.#list = document.createElement("ul");
     this.#list.className = "list";
     this.#list.setAttribute("part", "list");
@@ -109,6 +117,8 @@ export class AgUiInbox extends HTMLElement {
     this.#empty.setAttribute("part", "empty");
     this.#panel.append(this.#heading, this.#list, this.#empty);
     this.#panel.addEventListener("keydown", this.#onPanelKey);
+    this.#panel.setAttribute("aria-labelledby", "heading");
+    root.addEventListener("focusout", this.#onFocusOut);
     root.append(this.#badge, this.#panel);
     this.#render();
   }
@@ -283,6 +293,14 @@ export class AgUiInbox extends HTMLElement {
     return true;
   };
 
+  /** Focus leaving for the page closes the popover where it went; a removed row moves it nowhere. */
+  readonly #onFocusOut = (event: Event): void => {
+    const next = (event as FocusEvent).relatedTarget;
+    if (next instanceof Node && !this.#badge.contains(next) && !this.#panel.contains(next)) {
+      this.#toggle(false);
+    }
+  };
+
   readonly #onPanelKey = (event: KeyboardEvent): void => {
     if (this.#closeOnEscape(event)) {
       return;
@@ -314,6 +332,12 @@ export class AgUiInbox extends HTMLElement {
     this.#count.hidden = count === 0;
     this.#count.textContent = count > 99 ? "99+" : String(count);
     this.#panel.hidden = badge && !this.#open;
+    this.#panel.setAttribute("role", badge ? "dialog" : "group");
+    if (badge) {
+      this.#panel.removeAttribute("tabindex");
+    } else {
+      this.#panel.tabIndex = -1;
+    }
     this.#heading.hidden = !badge;
     this.#heading.textContent = strings.label;
     this.#list.setAttribute("aria-label", strings.label);
@@ -327,19 +351,23 @@ export class AgUiInbox extends HTMLElement {
     }
   }
 
-  /** The row and control that hold focus in the list, to find again after a redraw. */
-  #held(): { readonly threadId: string; readonly control: string } | null {
+  /** The row, its index and the control that hold focus in the list, to find after a redraw. */
+  #held(): Held | null {
     const active = (this.shadowRoot as ShadowRoot).activeElement;
     const row = active?.closest<HTMLElement>(".row");
     if (active === null || active === undefined || row === null || row === undefined) {
       return null;
     }
     const control = ["approve", "deny"].find((name) => active.classList.contains(name));
-    return { threadId: row.dataset["threadId"] as string, control: control ?? "row-main" };
+    return {
+      threadId: row.dataset["threadId"] as string,
+      index: [...this.#list.children].indexOf(row),
+      control: control ?? "row-main",
+    };
   }
 
-  /** Refocus the rebuilt control; its row's button when it is gone or disabled; else the badge. */
-  #refocus(held: { readonly threadId: string; readonly control: string }): void {
+  /** Refocus the rebuilt control, else its row's button; a row gone hands focus to a neighbour. */
+  #refocus(held: Held): void {
     const row = [...this.#list.children].find(
       (child) => (child as HTMLElement).dataset["threadId"] === held.threadId,
     );
@@ -350,7 +378,16 @@ export class AgUiInbox extends HTMLElement {
       (row.querySelector(".row-main") as HTMLButtonElement).focus();
     } else if (this.#open) {
       this.#badge.focus();
+    } else if (this.variant === "list") {
+      this.#neighbour(held.index).focus();
     }
+  }
+
+  /** The row now at a gone row's index, else the last one before it, else the list itself. */
+  #neighbour(index: number): HTMLElement {
+    const rows = [...this.#list.children];
+    const row = rows[Math.min(index, rows.length - 1)];
+    return row === undefined ? this.#panel : (row.querySelector(".row-main") as HTMLElement);
   }
 
   #row(item: InboxItem): HTMLLIElement {

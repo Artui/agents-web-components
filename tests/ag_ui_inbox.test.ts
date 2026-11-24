@@ -438,6 +438,14 @@ describe("<ag-ui-inbox> badge", () => {
     expect(element.open).toBe(false);
   });
 
+  it("takes the panel out of the tab order again when a list becomes a badge", async () => {
+    const { element } = await mounted();
+    element.variant = "list";
+    expect(panel(element).getAttribute("tabindex")).toBe("-1");
+    element.variant = "badge";
+    expect(panel(element).hasAttribute("tabindex")).toBe(false);
+  });
+
   it("translates by strings, merged over the defaults", async () => {
     const { element } = await mounted();
     element.strings = { badge: "{count} warten", more: "und {count}" };

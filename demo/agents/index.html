@@ -15,8 +15,9 @@
         background: #f7f7fb;
       }
       header {
+        height: 52px;
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         align-items: center;
         gap: 8px 12px;
         padding: 10px 20px;
@@ -27,15 +28,20 @@
         background: #9cc2ff;
         color: #15151f;
       }
-      .home {
-        display: grid;
-        grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
-        gap: 16px;
-        padding: 16px 20px;
+      aside {
+        position: fixed;
+        inset: 52px auto 0 0;
+        width: 292px;
+        padding: 0 16px 16px 20px;
+        overflow-y: auto;
       }
       @media (max-width: 640px) {
-        .home {
-          grid-template-columns: minmax(0, 1fr);
+        aside {
+          inset: 52px 0 auto 0;
+          width: auto;
+          height: 220px;
+          padding: 0 20px 8px;
+          border-bottom: 1px solid #d8d8e4;
         }
       }
       aside h2 {
@@ -46,13 +52,28 @@
         margin-inline-start: auto;
         color: #fff;
       }
+      /* placement="page" is fixed to the viewport and sizes itself to it, so the
+         host states the box it leaves: inset, width and height together. The rail is
+         a fixed column wide, and a 220px strip under the header at 640px and below. */
       ag-ui-chat {
-        display: block;
-        height: 70vh;
+        --ag-ui-inset: 52px 0 0 292px;
+        --ag-ui-width: calc(100vw - 292px);
+        --ag-ui-height: calc(100dvh - 52px);
+      }
+      @media (max-width: 640px) {
+        ag-ui-chat {
+          --ag-ui-inset: 272px 0 0 0;
+          --ag-ui-width: 100vw;
+          --ag-ui-height: calc(100dvh - 272px);
+        }
+      }
+      nav a {
+        margin-inline-end: 8px;
+        font-size: 0.85rem;
       }
       .log {
         font: 12px ui-monospace, monospace;
-        padding: 0 20px 20px;
+        padding: 0 0 0 16px;
         overflow-wrap: anywhere;
       }
     </style>
@@ -69,17 +90,21 @@
         <span id="agents" role="group" aria-label="Agents"></span>
         <ag-ui-inbox></ag-ui-inbox>
       </header>
-      <div class="home">
         <aside>
           <h2>Needs you, every agent</h2>
           <ag-ui-inbox variant="list"></ag-ui-inbox>
           <h2>This agent's conversations</h2>
           <ag-ui-threads></ag-ui-threads>
+          <nav aria-label="Each piece alone">
+            <a href="/agents/alone.html?piece=inbox">inbox alone</a>
+            <a href="/agents/alone.html?piece=threads">threads alone</a>
+            <a href="/agents/alone.html?piece=chat">chat alone</a>
+          </nav>
+          <h2>Provider events</h2>
+          <ol class="log" id="log" aria-label="Provider events"></ol>
         </aside>
-        <ag-ui-chat placement="inline" data-start-open></ag-ui-chat>
-      </div>
+      <ag-ui-chat placement="page" data-greeting="off" data-start-open></ag-ui-chat>
     </ag-ui-agents>
-    <ol class="log" id="log" aria-label="Provider events"></ol>
     <script type="module" src="/agents/agents.js"></script>
     <script src="/viewport-readout.js"></script>
   </body>
