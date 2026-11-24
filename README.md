@@ -2405,7 +2405,11 @@ page, or only the pieces you need, each imported from its own entry.
 
 <style>
   /* header 52px, rail 292px wide; the rail is a 220px strip under the header at 640px and below */
-  header { position: fixed; inset: 0 0 auto 0; height: 52px; }
+  header {
+    position: fixed; inset: 0 0 auto 0; height: 52px;
+    display: flex; justify-content: flex-end; align-items: center;
+    z-index: calc(var(--ag-ui-z-index, 2147483000) + 1);
+  }
   aside { position: fixed; inset: 52px auto 0 0; width: 292px; overflow-y: auto; }
   ag-ui-chat {
     --ag-ui-inset: 52px 0 0 292px;
@@ -2437,6 +2441,7 @@ page, or only the pieces you need, each imported from its own entry.
 - **Each piece stays its own entry.** Drop the inbox and leave out `./inbox`; drop the list and
   leave out `./threads`; a lone chat needs no provider. The inbox list and the threads need the
   provider only for the agents and the inbox they read.
+- **The header sits above the chat, its badge at the far end.** A fixed header is its own stacking context, so it takes one more than the chat's `--ag-ui-z-index`, or the page chat paints over the inbox popover, which opens toward the start from the badge, so the header pushes the badge to the end.
 - **The chat is the page, fixed to the viewport.** `placement="page"` sizes itself to the
   viewport whatever `--ag-ui-inset` says, so state the box you leave with the inset, width and
   height tokens together, as above, and set `data-greeting="off"` where the page has its own
@@ -4267,7 +4272,7 @@ paths.
 | `ThreadsChangeDetail` | type | `detail` shape of the `ag-ui-threads-change` event (`{ threads }`). |
 | `AgUiAgents` | class | The headless `<ag-ui-agents>` provider: the agents directory, the inbox, and the chat it mounts on an entry. See [Several agents under one provider](#several-agents-under-one-provider). |
 | `defineAgents()` | function | Register `<ag-ui-agents>`; a no-op if it is already registered, and throws if another class holds the tag. |
-| `AgentEntry` | type | One directory entry: `id`, `name`, `description`, `endpoint` and one URL per route, `null` where the mount serves none. |
+| `AgentEntry` | type | One directory entry: `id`, `name`, `description`, `endpoint` and one URL per route, `null` where the mount serves none (`routines_url` may be absent from an older server), and `capabilities`, optional: what the mount declares of AG-UI's `AgentCapabilities`. |
 | `InboxRow` | type | An inbox row: a `ThreadMeta` plus `agentId`. |
 | `InboxServerRow` | type | An inbox row as the server lists it: a thread row plus `agent_id`. |
 | `InboxTransport` | type | How the inbox is watched: `poll` or `stream`. |

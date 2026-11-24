@@ -307,8 +307,8 @@ describe("the routines view in <ag-ui-chat>", () => {
     await flush();
     button(el, "Run now").click();
     await flush();
-    expect(writes().map((seen) => [seen.url, seen.method, seen.body])).toEqual([
-      ["/agent/routines/1/run/", "POST", {}],
+    expect(writes().map((seen) => [seen.url, seen.method, seen.csrf, seen.body])).toEqual([
+      ["/agent/routines/1/run/", "POST", "token-1", {}],
     ]);
     expect(all(el, ".routine-last")).toEqual(["Running"]);
     expect(q(el, ".panel-view-status").textContent).toBe("standup is running");
@@ -690,5 +690,50 @@ describe("the routines view in <ag-ui-chat>", () => {
     expect(q(el, ".panel-view-title").textContent).toBe("Edit routine");
     button(el, "Cancel", ".panel-view-footer").click();
     expect(all(el, ".routine-last")).toEqual(["Running"]);
+  });
+  it("keeps an open form when a Run now answer lands", async () => {
+    server.routines = [{ ...STANDUP }];
+    const el = mount();
+    await flush();
+    el.openRoutines();
+    await flush();
+    let release = () => {};
+    server.hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    q<HTMLButtonElement>(el, ".routine-row [part=routine-run]").click();
+    q<HTMLButtonElement>(el, ".routine-row .skill-row-open").click();
+    expect(q(el, ".panel-view-title").textContent).toBe("Edit routine");
+    release();
+    await flush();
+    expect(q(el, ".panel-view-title").textContent).toBe("Edit routine");
+  });
+
+  it("opens the list, not a seeded form, on openRoutines after a conversation", async () => {
+    server.routines = [{ ...STANDUP }];
+    const el = mount();
+    await flush();
+    await el.sendMessage("check the build");
+    await flush();
+    el.openRoutines();
+    await flush();
+    expect(q(el, ".panel-view-title").textContent).toBe("Routines");
+  });
+  it("keeps an open form when a Pause answer lands", async () => {
+    server.routines = [{ ...STANDUP }];
+    const el = mount();
+    await flush();
+    el.openRoutines();
+    await flush();
+    let release = () => {};
+    server.hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    q<HTMLButtonElement>(el, ".routine-row [part=routine-toggle]").click();
+    q<HTMLButtonElement>(el, ".routine-row .skill-row-open").click();
+    expect(q(el, ".panel-view-title").textContent).toBe("Edit routine");
+    release();
+    await flush();
+    expect(q(el, ".panel-view-title").textContent).toBe("Edit routine");
   });
 });

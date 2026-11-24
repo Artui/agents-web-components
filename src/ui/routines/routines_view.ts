@@ -322,6 +322,7 @@ export class RoutinesView {
     this.#landed(
       result.value,
       enabled ? strings.routineResumedStatus : strings.routinePausedStatus,
+      false,
     );
   }
 
@@ -338,18 +339,24 @@ export class RoutinesView {
       return;
     }
     this.#last.set(routine.id, { threadId: result.value, state: "pending" });
-    this.#drawList();
+    if (this.#screen === "list") {
+      this.#drawList();
+    }
     this.#host.view.announce(fillUiString(strings.routineStarted, { name: routine.name }));
   }
 
-  /** A write the server accepted: the list takes its answer. */
-  #landed(saved: Routine, template: string): void {
+  /** A write the server accepted: the list takes its answer; a toggle never leaves an open form. */
+  #landed(saved: Routine, template: string, leaveForm = true): void {
     const known = this.#routines.some((routine) => routine.id === saved.id);
     this.#routines = known
       ? this.#routines.map((routine) => (routine.id === saved.id ? saved : routine))
       : [saved, ...this.#routines];
-    this.#screen = "list";
-    this.#drawList();
+    if (leaveForm) {
+      this.#screen = "list";
+    }
+    if (this.#screen === "list") {
+      this.#drawList();
+    }
     this.#host.view.announce(fillUiString(template, { name: saved.name }));
   }
 }
