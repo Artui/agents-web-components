@@ -551,6 +551,28 @@ describe("the README's public API surface", () => {
     expect([...new Set(broken)]).toEqual([]);
   });
 
+  it("points every README link into the site at a page and heading that exist", () => {
+    const slug = (heading: string): string =>
+      heading
+        .toLowerCase()
+        .replace(/[^\w\s-]/g, "")
+        .replace(/\s/g, "-");
+    const site = /https:\/\/artui\.github\.io\/agents-web-components\/([^)>\s#]*)(?:#([^)>\s]+))?/g;
+    const links = [...(DOCS.get("README.md") ?? "").matchAll(site)];
+    const broken = links
+      .filter(([, page, target]) => {
+        const text = DOCS.get(join("docs", `${(page ?? "").replace(/\/$/, "") || "index"}.md`));
+        const ids = new Set(
+          [...(text ?? "").matchAll(/^#{1,6} (.+)$/gm)].map((match) => slug(match[1] ?? "")),
+        );
+        return text === undefined || (target !== undefined && !ids.has(target));
+      })
+      .map(([link]) => link);
+
+    expect(links.length).toBeGreaterThan(10);
+    expect(broken).toEqual([]);
+  });
+
   it("starts every run of table rows with a header separator", () => {
     // A blank line ends a table, so a paragraph dropped into the middle of one
     // leaves the rows below it rendering as a second, header-less table — which

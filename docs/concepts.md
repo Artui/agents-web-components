@@ -274,7 +274,7 @@ you would be content for the model to read, and log the detail instead.
 
 When a tool call needs confirmation, the element appends an **inline confirmation card** (a
 `<div class="confirm">`) to the transcript via
-[`requestConfirmation`](https://github.com/Artui/agents-web-components/blob/main/src/ui/confirmation_card.ts) — it is not a modal overlay. The card reads
+[`requestConfirmation`](https://github.com/Artui/agents-web-components/blob/main/src/ui/interrupts/confirmation_card.ts) — it is not a modal overlay. The card reads
 naturally after the assistant's explanation, never steals focus from the page, and stays in the
 transcript as a resolved record after the decision:
 
@@ -357,7 +357,7 @@ approval card below is for.
 When the server gates a destructive tool (e.g. django-ag-ui's `ToolGuard`), the tool **defers**
 instead of executing and the run finishes on an AG-UI *interrupt*. The element then renders an
 **inline approval card** (a `<div class="approval">`) via
-[`requestApproval`](https://github.com/Artui/agents-web-components/blob/main/src/ui/approval_card.ts) **inside the tool card of the call it gates**:
+[`requestApproval`](https://github.com/Artui/agents-web-components/blob/main/src/ui/interrupts/approval_card.ts) **inside the tool card of the call it gates**:
 
 - **Approve** → the run resumes and the server runs the tool; its result streams back into the
   same card.
@@ -427,7 +427,7 @@ wait resolves as denied, as the built-in card does on the same signal, with no c
 
 Set `chat.askUser = true` to offer the agent a built-in `ask_user` frontend tool. When the agent
 calls it, the element renders an **inline question card** (a `<div class="question">`) via
-[`requestQuestion`](https://github.com/Artui/agents-web-components/blob/main/src/ui/question_card.ts) and returns the user's answer as the tool result:
+[`requestQuestion`](https://github.com/Artui/agents-web-components/blob/main/src/ui/interrupts/question_card.ts) and returns the user's answer as the tool result:
 
 ```js
 chat.askUser = true; // opt in; off by default so the tool catalog is unchanged otherwise

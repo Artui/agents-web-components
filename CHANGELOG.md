@@ -15,7 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to gh-pages with each release (`make docs` builds it, strict). Anchors keep GitHub's slugs,
   so a link to an old README heading finds the same heading on its page. The README keeps
   what the package is, install, a minimal quick start, the element list and a link per topic.
-  The npm and License badges name the package URL-encoded (`%40artooi%2F...`).
+  The npm and License badges name the package URL-encoded (`%40artooi%2F...`), the CI badge
+  uses the workflow file's path, and a Docs badge links the site.
 
 ## [0.13.0] — 2026-11-24
 
