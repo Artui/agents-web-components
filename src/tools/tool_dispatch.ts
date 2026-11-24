@@ -18,6 +18,7 @@ import type { ToolCallCard } from "../ui/progress/tool_call_card.js";
 import type { Transcript } from "../ui/transcript/transcript.js";
 import type { UiStrings } from "../ui/ui_strings.js";
 import type { ClientTool } from "./client_tool_registry.js";
+import { confirmPhrase } from "./confirm_phrase.js";
 import { isDestructive } from "./is_destructive.js";
 import { isNavigates } from "./is_navigates.js";
 import type { ToolCatalog } from "./tool_catalog.js";
@@ -429,16 +430,6 @@ export class ToolDispatch {
   #pageMoved(): boolean {
     return this.#contextHref !== null && this.#contextHref !== window.location.href;
   }
-}
-
-/**
- * A server-authored question for a gated call, read off the interrupt's metadata under
- * `x-confirm`, as a client-side confirmation reads it from the schema. Narrowed because
- * `metadata` is untyped on the wire and a non-string would render as "[object Object]".
- */
-function confirmPhrase(interrupt: Interrupt): string | undefined {
-  const phrase = interrupt.metadata?.[X_CONFIRM_KEY];
-  return typeof phrase === "string" && phrase.trim() !== "" ? phrase : undefined;
 }
 
 /**

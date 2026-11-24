@@ -208,6 +208,56 @@ describe("<ag-ui-inbox> rows", () => {
     ]);
   });
 
+  it("summarises an approval by its x-confirm prompt, and by its message without one", async () => {
+    const call = { id: "int-c", reason: "tool_call", toolCallId: "c" };
+    serve([
+      row("p", "board", {
+        status: "waiting",
+        interrupts: [
+          {
+            ...call,
+            message: "Approve discard_book({'id': 7})?",
+            metadata: { destructive: false, kind: "approval", "x-confirm": "Discard this book?" },
+          },
+        ],
+      }),
+      row("b", "board", {
+        status: "waiting",
+        interrupts: [
+          {
+            ...call,
+            message: "Approve discard_book({'id': 8})?",
+            metadata: { destructive: false, kind: "approval", "x-confirm": "  " },
+          },
+        ],
+      }),
+      row("n", "board", {
+        status: "waiting",
+        interrupts: [
+          {
+            ...call,
+            message: "Approve discard_book({'id': 9})?",
+            metadata: { destructive: false, kind: "approval", "x-confirm": 7 },
+          },
+        ],
+      }),
+      row("m", "board", { status: "waiting", interrupts: [ARCHIVE] }),
+    ]);
+    const home = provider();
+    const list = inbox({ variant: "list" });
+    home.append(list);
+    document.body.append(home);
+    await vi.advanceTimersByTimeAsync(0);
+
+    const summaries = rows(list).map((item) => item.querySelector(".summary")?.textContent);
+    expect(summaries).toEqual([
+      "Approval: Discard this book?",
+      "Approval: Approve discard_book({'id': 8})?",
+      "Approval: Approve discard_book({'id': 9})?",
+      "Approval: Archive the board?",
+    ]);
+  });
+
   it("draws a title as text, and an untitled row by the strings", async () => {
     serve([
       row("h", "board", { status: "waiting", interrupts: [ARCHIVE], title: "<img src=x>" }),
