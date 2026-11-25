@@ -250,6 +250,38 @@ describe("server-resolved skills", () => {
   });
 });
 
+describe("a slash pick of a skill that ships no prompt", () => {
+  beforeAll(() => {
+    defineChat();
+  });
+
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    sessionStorage.clear();
+  });
+
+  it("resizes the composer once the typed query is cleared", async () => {
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("endpoint", "/agent/");
+    el.setAttribute("data-slash-commands", "true");
+    el.setAttribute("data-skills", embed([{ name: "triage", title: "Triage" }]));
+    const fake = makeFakeAgent({ script: () => {} });
+    el.agentFactory = () => fake.agent;
+    document.body.appendChild(el);
+    typeQuery(el, "/tri");
+    let content = 120;
+    Object.defineProperty(input(el), "scrollHeight", { get: () => content });
+    input(el).style.height = "120px";
+    content = 24;
+    input(el).dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", cancelable: true }));
+    await flush();
+
+    expect(fake.messages.at(-1)?.content).toBe("/triage");
+    expect(input(el).value).toBe("");
+    expect(input(el).style.height).toBe("24px");
+  });
+});
+
 describe("the typed trigger after a pick", () => {
   beforeAll(() => {
     defineChat();

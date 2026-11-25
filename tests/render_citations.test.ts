@@ -87,6 +87,7 @@ describe("renderCitations", () => {
       { kind: "marker", start: 0, end: 2 },
       { kind: "content", start: 6, end: 11 },
       { kind: "content", start: -1, end: 2 },
+      { kind: "content", start: -5, end: 10 },
       { kind: "content", start: 4, end: 4 },
       { kind: "content", start: 1.5, end: 4 },
       { kind: "content", start: 0, end: "2" },

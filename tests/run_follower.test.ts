@@ -57,13 +57,16 @@ describe("RunFollower", () => {
 
   it("polls only while the chat is idle on a thread something was sent in", async () => {
     vi.useFakeTimers();
-    let idle = false;
+    let idle = true;
     let threadId: string | null = null;
     const { follow, probes } = follower({ idle: () => idle, threadId: () => threadId });
     const stop = follow.start();
     await vi.advanceTimersByTimeAsync(5000);
+    expect(probes).toEqual([]);
+    idle = false;
     threadId = "t1";
     await vi.advanceTimersByTimeAsync(5000);
+    expect(probes).toEqual([]);
     idle = true;
     await vi.advanceTimersByTimeAsync(5000);
     stop();

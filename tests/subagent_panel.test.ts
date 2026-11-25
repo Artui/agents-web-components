@@ -262,6 +262,17 @@ describe("a task-controlled delegation panel", () => {
     expect(panel.element.getAttribute("data-cancel")).toBe("requested");
   });
 
+  it("reads a cancellation that does not say forced as requested, not forced", () => {
+    const panel = new SubAgentPanel();
+    const forced = narrowed("cancelled", "cancel_requested");
+    panel.report({
+      ...forced,
+      task: forced.task === null ? null : { ...forced.task, forced: null },
+    });
+
+    expect(panel.element.getAttribute("data-cancel")).toBe("requested");
+  });
+
   it("stamps a retried task's attempt", () => {
     const panel = new SubAgentPanel();
     const retried = subAgentUpdate(RETRIED_STEP);
@@ -272,6 +283,21 @@ describe("a task-controlled delegation panel", () => {
 
     expect(panel.element.getAttribute("data-phase")).toBe("retried");
     expect(panel.element.getAttribute("data-attempt")).toBe("2");
+  });
+
+  it("stamps no attempt on a retried task that names none", () => {
+    const panel = new SubAgentPanel();
+    const retried = subAgentUpdate(RETRIED_STEP);
+    if (retried === null) {
+      throw new Error("the encoder's retried step did not narrow");
+    }
+    panel.report({
+      ...retried,
+      task: retried.task === null ? null : { ...retried.task, attempt: null },
+    });
+
+    expect(panel.element.getAttribute("data-phase")).toBe("retried");
+    expect(panel.element.hasAttribute("data-attempt")).toBe(false);
   });
 
   it("drops a question still open when the task settles, whichever way", () => {

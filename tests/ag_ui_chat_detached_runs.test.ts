@@ -90,14 +90,14 @@ function replayHalves(): [string, string] {
   return [full.slice(0, at), full.slice(at)];
 }
 
-/** A fresh run on `t1` the server streams to its end: a start, one answer, a finish. */
-function finishedRun(runId: string, text: string): string {
+/** A fresh run the server streams to its end: a start, one answer, a finish. */
+function finishedRun(runId: string, text: string, threadId = "t1"): string {
   return [
-    { type: "RUN_STARTED", threadId: "t1", runId },
+    { type: "RUN_STARTED", threadId, runId },
     { type: "TEXT_MESSAGE_START", messageId: `m-${runId}`, role: "assistant" },
     { type: "TEXT_MESSAGE_CONTENT", messageId: `m-${runId}`, delta: text },
     { type: "TEXT_MESSAGE_END", messageId: `m-${runId}` },
-    { type: "RUN_FINISHED", threadId: "t1", runId },
+    { type: "RUN_FINISHED", threadId, runId },
   ]
     .map((event) => `data: ${JSON.stringify(event)}\n\n`)
     .join("");
@@ -1215,6 +1215,54 @@ describe("a run the server starts on the thread on screen, under data-thread-sta
     expect(el.running).toBe(false);
   });
 
+  it("is joined when a run of the server's own follows the chat's run that ended", async () => {
+    const { el, server } = mount({ "data-detach-runs": "", "data-thread-status": "stream" });
+    await el.switchThread("t4");
+    server.running.add("t4");
+    server.pages.set("t4", { ...SERVER_RUN_PAGE, run_id: "r1" });
+    server.starts.push(() => sse(finishedRun("r1", "partial answer and the rest", "t4")));
+    await el.sendMessage("First question");
+    await settle();
+    expect(el.running).toBe(false);
+    expect(answers(el)).toBe(1);
+    server.pages.set("t4", SERVER_RUN_PAGE);
+    server.replays.push(() => sse(recorded.secondTurnReplay));
+    listRunning(server, "t4", "e1");
+    await settle();
+
+    expect(replays(server).map((call) => call.url)).toEqual(["/agent/threads/t4/events/?after=0"]);
+    expect(answers(el)).toBe(2);
+    expect(el.running).toBe(false);
+  });
+
+  it("is not joined when the person sent while the server was asked", async () => {
+    const { el, server } = mount({ "data-detach-runs": "", "data-thread-status": "stream" });
+    await openThenWake(el, server);
+    let answer!: () => void;
+    server.probeHold = new Promise((resolve) => {
+      answer = resolve;
+    });
+    listRunning(server, "t4", "e1");
+    await settle();
+    let stream: Live | undefined;
+    server.starts.push((init) => {
+      stream = live(
+        init,
+        finishedRun("r8", "the next answer", "t4").split('data: {"type":"RUN_FINISHED')[0] ?? "",
+      );
+      return stream.response;
+    });
+    composerSend(el, "And another");
+    await settle();
+    answer();
+    await settle();
+
+    expect(el.running).toBe(true);
+    expect(server.starts_().length).toBe(1);
+    expect(replays(server)).toEqual([]);
+    stream?.end();
+  });
+
   it("is not looked for when another thread lists running, or the log says it has ended", async () => {
     const { el, server } = mount({ "data-detach-runs": "", "data-thread-status": "stream" });
     await openThenWake(el, server);
@@ -1271,6 +1319,39 @@ describe("data-poll-runs", () => {
     expect(server.threadList).toBeNull();
     expect(replays(server).map((call) => call.url)).toEqual(["/agent/threads/t4/events/?after=0"]);
     expect(answers(el)).toBe(2);
+  });
+
+  it("is not joined while the chat drives its own run, nor once that run ended and still runs", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { el, server } = mount({ "data-detach-runs": "", "data-poll-runs": "" });
+    await el.switchThread("t1");
+    const stream = await startLiveRun(el, server);
+    const driving = server.to("events/").length;
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(server.to("events/").length).toBe(driving);
+
+    stream.push(replayHalves()[1]);
+    stream.end();
+    await settle();
+    expect(el.running).toBe(false);
+    const asked = server.to("events/").length;
+    await vi.advanceTimersByTimeAsync(5000);
+    await settle();
+
+    expect(server.to("events/").length).toBe(asked + 1);
+    expect(replays(server)).toEqual([]);
+    expect(el.running).toBe(false);
+  });
+
+  it("asks nothing of a thread nothing was sent in", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { el, server } = mount({ "data-detach-runs": "", "data-poll-runs": "" });
+    await settle();
+    await vi.advanceTimersByTimeAsync(10000);
+    await settle();
+
+    expect(server.to("events/")).toEqual([]);
+    expect(el.running).toBe(false);
   });
 
   it("stops when the attribute is removed or the element leaves the page", async () => {
