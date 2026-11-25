@@ -144,6 +144,51 @@ describe("RemoteConversationStore thread status", () => {
     expect((await store.listThreads())[0]?.unread).toBe(false);
   });
 
+  it("holds a read made before the first status list, and sends it once with it", async () => {
+    const row = recorded.firstTurnRowAfterRunAway;
+    fetchMock
+      .mockResolvedValueOnce(list([row]))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(list([row], '"e-2"'));
+    const store = new RemoteConversationStore(URL_);
+    store.markRead("t-first");
+    await flush();
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    expect((await store.listThreads())[0]?.unread).toBe(false);
+    await flush();
+    expect(fetchMock).toHaveBeenLastCalledWith(`${URL_}t-first/read/`, expect.anything());
+    expect((await store.listThreads())[0]?.unread).toBe(false);
+    await flush();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("reads a held thread as read here when the first status list has no ETag", async () => {
+    fetchMock.mockImplementation(async () =>
+      Response.json({ threads: [recorded.firstTurnRowAfterRunAway] }),
+    );
+    const store = new RemoteConversationStore(URL_);
+    store.markRead("t-first");
+
+    expect((await store.listThreads())[0]?.unread).toBe(false);
+  });
+
+  it("drops a held read of a thread deleted before the first status list", async () => {
+    fetchMock
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(list([recorded.rowAfterRunAway]));
+    const store = new RemoteConversationStore(URL_);
+    store.markRead("t-first");
+    store.clear("t-first");
+    await store.listThreads();
+    await flush();
+
+    expect(fetchMock.mock.calls.map(([, init]) => init?.method ?? "GET")).toEqual([
+      "DELETE",
+      "GET",
+    ]);
+  });
+
   it("adds no status keys for a server without a run store", async () => {
     fetchMock.mockResolvedValueOnce(
       list([{ thread_id: "t1", title: "A", updated_at: null, preview: "" }]),

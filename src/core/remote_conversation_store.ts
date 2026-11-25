@@ -90,6 +90,8 @@ export class RemoteConversationStore implements ClientConversationStore {
   #statusServed = false;
   /** Each thread read here, with the `updatedAt` it was read at: read until it moves on. */
   readonly #readAt = new Map<string, number>();
+  /** Reads made before any list carried status, sent with the first one that does. */
+  readonly #heldReads = new Set<string>();
 
   /**
    * @param cacheMessages Whether to mirror message bodies into the local store.
@@ -191,6 +193,7 @@ export class RemoteConversationStore implements ClientConversationStore {
     this.#local.clear(threadId);
     this.#dropped.add(threadId);
     this.#provisional.delete(threadId);
+    this.#heldReads.delete(threadId);
     void this.#mutate(threadId, "DELETE");
   }
 
@@ -208,15 +211,15 @@ export class RemoteConversationStore implements ClientConversationStore {
    *
    * Sent only once a listing carried `status`: the route is mounted only
    * beside a run store, and posting to a server without one would answer
-   * `404` for every answer the user watched arrive.
+   * `404` for every answer the user watched arrive. Until then the read is
+   * held, in this page only.
    */
   markRead(threadId: string): void {
-    const listed = this.#listed?.rows.find((row) => row.thread_id === threadId);
-    if (listed !== undefined) {
-      this.#readAt.set(threadId, updatedAtOf(listed));
-    }
+    this.#readHere(threadId, this.#listed?.rows);
     if (this.#statusServed) {
       void this.#mutate(threadId, "POST", undefined, "read/");
+    } else {
+      this.#heldReads.add(threadId);
     }
   }
 
@@ -281,6 +284,25 @@ export class RemoteConversationStore implements ClientConversationStore {
   #seen(etag: string | null, rows: readonly ServerThreadRow[]): void {
     this.#statusServed = rows.some((row) => row.status !== undefined);
     this.#listed = etag === null ? null : { etag, rows };
+    if (this.#statusServed) {
+      this.#sendHeldReads(rows);
+    }
+  }
+
+  /** Taken from `rows`, not `#listed`, which a list without an ETag leaves empty. */
+  #sendHeldReads(rows: readonly ServerThreadRow[]): void {
+    for (const threadId of this.#heldReads) {
+      this.#readHere(threadId, rows);
+      void this.#mutate(threadId, "POST", undefined, "read/");
+    }
+    this.#heldReads.clear();
+  }
+
+  #readHere(threadId: string, rows: readonly ServerThreadRow[] | undefined): void {
+    const listed = rows?.find((row) => row.thread_id === threadId);
+    if (listed !== undefined) {
+      this.#readAt.set(threadId, updatedAtOf(listed));
+    }
   }
 
   #metasFrom(rows: readonly ServerThreadRow[]): readonly ThreadMeta[] {

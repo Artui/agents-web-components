@@ -78,6 +78,8 @@ server, or a mount without a run store, lists none of them and nothing below hap
 - **Read.** When the element reads a thread (`markRead`), the store posts
   `POST <threads-url><id>/read/`, and only once a list carried `status`, since the route is
   mounted only beside a run store. The thread then reads as read here until it changes again.
+  A read made before such a list is held and sent with the first one; a page reloaded before
+  any list loses it, and the thread shows unread until opened again.
 - **Keeping it fresh is the host's choice, and opt-in.** `data-thread-status="poll"` asks the
   list again every five seconds with its ETag (a `304` costs nothing); `"stream"` follows the
   same URL as Server-Sent Events, read with `fetch` so the headers and cookie policy apply,
