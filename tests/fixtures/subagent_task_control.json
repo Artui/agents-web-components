@@ -1,0 +1,973 @@
+{
+  "generator": "scripts/record_task_control_fixture.py",
+  "djangoAgUi": "0.90.0",
+  "pydanticAiHarness": "0.74.0",
+  "agUiProtocol": "1.0.0",
+  "canonicalized": [
+    "timestamp",
+    "uuid ids",
+    "task ids"
+  ],
+  "runs": {
+    "steered": [
+      {
+        "type": "RUN_STARTED",
+        "timestamp": 1735689600000,
+        "threadId": "thread-fixture",
+        "runId": "run-fixture",
+        "protocolVersion": "1.0"
+      },
+      {
+        "type": "TEXT_MESSAGE_START",
+        "timestamp": 1735689600000,
+        "messageId": "message-1",
+        "role": "assistant"
+      },
+      {
+        "type": "TEXT_MESSAGE_END",
+        "timestamp": 1735689600000,
+        "messageId": "message-1"
+      },
+      {
+        "type": "TOOL_CALL_START",
+        "timestamp": 1735689600000,
+        "toolCallId": "call-1",
+        "toolCallName": "delegate_task",
+        "parentMessageId": "message-1"
+      },
+      {
+        "type": "TOOL_CALL_ARGS",
+        "timestamp": 1735689600000,
+        "toolCallId": "call-1",
+        "delta": "{\"agent_name\": \"researcher\", \"task\": \"Find them.\", \"background\": true}"
+      },
+      {
+        "type": "TOOL_CALL_END",
+        "timestamp": 1735689600000,
+        "toolCallId": "call-1"
+      },
+      {
+        "type": "SUBAGENT_STARTED",
+        "timestamp": 1735689600000,
+        "subagentRunId": "subagent-call-1",
+        "name": "researcher",
+        "parentToolCallId": "call-1"
+      },
+      {
+        "type": "CUSTOM",
+        "timestamp": 1735689600000,
+        "name": "ag_ui.subagent",
+        "value": {
+          "delegationId": "call-1",
+          "agent": "researcher",
+          "phase": "backgrounded",
+          "status": "researcher: moved to the background",
+          "tool": null,
+          "task": {
+            "taskId": "task-1",
+            "reason": "requested"
+          }
+        }
+      },
+      {
+        "type": "TOOL_CALL_RESULT",
+        "timestamp": 1735689600000,
+        "messageId": "message-2",
+        "toolCallId": "call-1",
+        "content": "Task task-1 is running in the background. This is an acceptance receipt, not a result. Do not claim completion or invent findings. A task report will be delivered after it settles.",
+        "role": "tool"
+      },
+      {
+        "type": "TEXT_MESSAGE_START",
+        "timestamp": 1735689600000,
+        "messageId": "message-3",
+        "role": "assistant"
+      },
+      {
+        "type": "TEXT_MESSAGE_END",
+        "timestamp": 1735689600000,
+        "messageId": "message-3"
+      },
+      {
+        "type": "TOOL_CALL_START",
+        "timestamp": 1735689600000,
+        "toolCallId": "call-2",
+        "toolCallName": "message_task",
+        "parentMessageId": "message-3"
+      },
+      {
+        "type": "TOOL_CALL_ARGS",
+        "timestamp": 1735689600000,
+        "toolCallId": "call-2",
+        "delta": "{\"task_id\": \"task-1\", \"message\": \"Only 2024.\"}"
+      },
+      {
+        "type": "TOOL_CALL_END",
+        "timestamp": 1735689600000,
+        "toolCallId": "call-2"
+      },
+      {
+        "type": "CUSTOM",
+        "timestamp": 1735689600000,
+        "name": "ag_ui.subagent",
+        "value": {
+          "delegationId": "call-1",
+          "agent": "researcher",
+          "phase": "tool_call",
+          "status": "researcher: calling read_handbook",
+          "tool": {
+            "toolCallId": "sub-1",
+            "name": "read_handbook",
+            "ok": null
+          }
+        }
+      },
+      {
+        "type": "TOOL_CALL_START",
+        "timestamp": 1735689600000,
+        "subagentRunId": "subagent-call-1",
+        "toolCallId": "sub-1",
+        "toolCallName": "read_handbook"
+      },
+      {
+        "type": "TOOL_CALL_ARGS",
+        "timestamp": 1735689600000,
+        "subagentRunId": "subagent-call-1",
+        "toolCallId": "sub-1",
+        "delta": "{\"phrase\": \"settlement\"}"
+      },
+      {
+        "type": "TOOL_CALL_END",
+        "timestamp": 1735689600000,
+        "subagentRunId": "subagent-call-1",
+        "toolCallId": "sub-1"
+      },
+      {
+        "type": "CUSTOM",
+        "timestamp": 1735689600000,
+        "name": "ag_ui.subagent",
+        "value": {
+          "delegationId": "call-1",
+          "agent": "researcher",
+          "phase": "steered",
+          "status": "researcher: steered",
+          "tool": null,
+          "task": {
+            "taskId": "task-1"
+          }
+        }
+      },
+      {
+        "type": "TOOL_CALL_RESULT",
+        "timestamp": 1735689600000,
+        "messageId": "message-4",
+        "toolCallId": "call-2",
+        "content": "Message sent to task task-1.",
+        "role": "tool"
+      },
+      {
+        "type": "TEXT_MESSAGE_START",
+        "timestamp": 1735689600000,
+        "messageId": "message-5",
+        "role": "assistant"
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "timestamp": 1735689600000,
+        "messageId": "message-5",
+        "delta": "Done."
+      },
+      {
+        "type": "TEXT_MESSAGE_END",
+        "timestamp": 1735689600000,
+        "messageId": "message-5"
+      },
+      {
+        "type": "CUSTOM",
+        "timestamp": 1735689600000,
+        "name": "ag_ui.subagent",
+        "value": {
+          "delegationId": "call-1",
+          "agent": "researcher",
+          "phase": "tool_result",
+          "status": "researcher: read_handbook returned",
+          "tool": {
+            "toolCallId": "sub-1",
+            "name": "read_handbook",
+            "ok": true
+          }
+        }
+      },
+      {
+        "type": "TOOL_CALL_RESULT",
+        "timestamp": 1735689600000,
+        "subagentRunId": "subagent-call-1",
+        "messageId": "subagent-call-1:sub-1",
+        "toolCallId": "sub-1",
+        "content": "Three passages mention settlement.",
+        "role": "tool"
+      },
+      {
+        "type": "SUBAGENT_FINISHED",
+        "timestamp": 1735689600000,
+        "subagentRunId": "subagent-call-1"
+      },
+      {
+        "type": "TEXT_MESSAGE_START",
+        "timestamp": 1735689600000,
+        "messageId": "message-6",
+        "role": "assistant"
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "timestamp": 1735689600000,
+        "messageId": "message-6",
+        "delta": "Done."
+      },
+      {
+        "type": "TEXT_MESSAGE_END",
+        "timestamp": 1735689600000,
+        "messageId": "message-6"
+      },
+      {
+        "type": "RUN_FINISHED",
+        "timestamp": 1735689600000,
+        "threadId": "thread-fixture",
+        "runId": "run-fixture",
+        "outcome": {
+          "type": "success"
+        }
+      }
+    ],
+    "question": [
+      {
+        "type": "RUN_STARTED",
+        "timestamp": 1735689600000,
+        "threadId": "thread-fixture",
+        "runId": "run-fixture",
+        "protocolVersion": "1.0"
+      },
+      {
+        "type": "TEXT_MESSAGE_START",
+        "timestamp": 1735689600000,
+        "messageId": "message-7",
+        "role": "assistant"
+      },
+      {
+        "type": "TEXT_MESSAGE_END",
+        "timestamp": 1735689600000,
+        "messageId": "message-7"
+      },
+      {
+        "type": "TOOL_CALL_START",
+        "timestamp": 1735689600000,
+        "toolCallId": "call-1",
+        "toolCallName": "delegate_task",
+        "parentMessageId": "message-7"
+      },
+      {
+        "type": "TOOL_CALL_ARGS",
+        "timestamp": 1735689600000,
+        "toolCallId": "call-1",
+        "delta": "{\"agent_name\": \"researcher\", \"task\": \"Find them.\"}"
+      },
+      {
+        "type": "TOOL_CALL_END",
+        "timestamp": 1735689600000,
+        "toolCallId": "call-1"
+      },
+      {
+        "type": "SUBAGENT_STARTED",
+        "timestamp": 1735689600000,
+        "subagentRunId": "subagent-call-1",
+        "name": "researcher",
+        "parentToolCallId": "call-1"
+      },
+      {
+        "type": "CUSTOM",
+        "timestamp": 1735689600000,
+        "name": "ag_ui.subagent",
+        "value": {
+          "delegationId": "call-1",
+          "agent": "researcher",
+          "phase": "tool_call",
+          "status": "researcher: calling ask_parent",
+          "tool": {
+            "toolCallId": "sub-q",
+            "name": "ask_parent",
+            "ok": null
+          }
+        }
+      },
+      {
+        "type": "TOOL_CALL_START",
+        "timestamp": 1735689600000,
+        "subagentRunId": "subagent-call-1",
+        "toolCallId": "sub-q",
+        "toolCallName": "ask_parent"
+      },
+      {
+        "type": "TOOL_CALL_ARGS",
+        "timestamp": 1735689600000,
+        "subagentRunId": "subagent-call-1",
+        "toolCallId": "sub-q",
+        "delta": "{\"question\": \"Which year?\"}"
+      },
+      {
+        "type": "TOOL_CALL_END",
+        "timestamp": 1735689600000,
+        "subagentRunId": "subagent-call-1",
+        "toolCallId": "sub-q"
+      },
+      {
+        "type": "CUSTOM",
+        "timestamp": 1735689600000,
+        "name": "ag_ui.subagent",
+        "value": {
+          "delegationId": "call-1",
+          "agent": "researcher",
+          "phase": "question",
+          "status": "researcher: asked a question",
+          "tool": null,
+          "task": {
+            "taskId": "task-2",
+            "questionId": "q-1"
+          }
+        }
+      },
+      {
+        "type": "CUSTOM",
+        "timestamp": 1735689600000,
+        "name": "ag_ui.subagent",
+        "value": {
+          "delegationId": "call-1",
+          "agent": "researcher",
+          "phase": "backgrounded",
+          "status": "researcher: moved to the background",
+          "tool": null,
+          "task": {
+            "taskId": "task-2",
+            "reason": "question"
+          }
+        }
+      },
+      {
+        "type": "TOOL_CALL_RESULT",
+        "timestamp": 1735689600000,
+        "messageId": "message-8",
+        "toolCallId": "call-1",
+        "content": "Task task-2 is running in the background. This is an acceptance receipt, not a result. Do not claim completion or invent findings. A task report will be delivered after it settles.",
+        "role": "tool"
+      },
+      {
+        "type": "TEXT_MESSAGE_START",
+        "timestamp": 1735689600000,
+        "messageId": "message-9",
+        "role": "assistant"
+      },
+      {
+        "type": "TEXT_MESSAGE_END",
+        "timestamp": 1735689600000,
+        "messageId": "message-9"
+      },
+      {
+        "type": "TOOL_CALL_START",
+        "timestamp": 1735689600000,
+        "toolCallId": "call-2",
+        "toolCallName": "answer_task",
+        "parentMessageId": "message-9"
+      },
+      {
+        "type": "TOOL_CALL_ARGS",
+        "timestamp": 1735689600000,
+        "toolCallId": "call-2",
+        "delta": "{\"task_id\": \"task-2\", \"answer\": \"2024\"}"
+      },
+      {
+        "type": "TOOL_CALL_END",
+        "timestamp": 1735689600000,
+        "toolCallId": "call-2"
+      },
+      {
+        "type": "CUSTOM",
+        "timestamp": 1735689600000,
+        "name": "ag_ui.subagent",
+        "value": {
+          "delegationId": "call-1",
+          "agent": "researcher",
+          "phase": "answered",
+          "status": "researcher: question answered",
+          "tool": null,
+          "task": {
+            "taskId": "task-2",
+            "questionId": "q-1"
+          }
+        }
+      },
+      {
+        "type": "CUSTOM",
+        "timestamp": 1735689600000,
+        "name": "ag_ui.subagent",
+        "value": {
+          "delegationId": "call-1",
+          "agent": "researcher",
+          "phase": "tool_result",
+          "status": "researcher: ask_parent returned",
+          "tool": {
+            "toolCallId": "sub-q",
+            "name": "ask_parent",
+            "ok": true
+          }
+        }
+      },
+      {
+        "type": "TOOL_CALL_RESULT",
+        "timestamp": 1735689600000,
+        "subagentRunId": "subagent-call-1",
+        "messageId": "subagent-call-1:sub-q",
+        "toolCallId": "sub-q",
+        "content": "2024",
+        "role": "tool"
+      },
+      {
+        "type": "TOOL_CALL_RESULT",
+        "timestamp": 1735689600000,
+        "messageId": "message-10",
+        "toolCallId": "call-2",
+        "content": "Answer sent to task task-2.",
+        "role": "tool"
+      },
+      {
+        "type": "TEXT_MESSAGE_START",
+        "timestamp": 1735689600000,
+        "messageId": "message-11",
+        "role": "assistant"
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "timestamp": 1735689600000,
+        "messageId": "message-11",
+        "delta": "Done."
+      },
+      {
+        "type": "TEXT_MESSAGE_END",
+        "timestamp": 1735689600000,
+        "messageId": "message-11"
+      },
+      {
+        "type": "SUBAGENT_FINISHED",
+        "timestamp": 1735689600000,
+        "subagentRunId": "subagent-call-1"
+      },
+      {
+        "type": "TEXT_MESSAGE_START",
+        "timestamp": 1735689600000,
+        "messageId": "message-12",
+        "role": "assistant"
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "timestamp": 1735689600000,
+        "messageId": "message-12",
+        "delta": "Done."
+      },
+      {
+        "type": "TEXT_MESSAGE_END",
+        "timestamp": 1735689600000,
+        "messageId": "message-12"
+      },
+      {
+        "type": "RUN_FINISHED",
+        "timestamp": 1735689600000,
+        "threadId": "thread-fixture",
+        "runId": "run-fixture",
+        "outcome": {
+          "type": "success"
+        }
+      }
+    ],
+    "cancelled": [
+      {
+        "type": "RUN_STARTED",
+        "timestamp": 1735689600000,
+        "threadId": "thread-fixture",
+        "runId": "run-fixture",
+        "protocolVersion": "1.0"
+      },
+      {
+        "type": "TEXT_MESSAGE_START",
+        "timestamp": 1735689600000,
+        "messageId": "message-13",
+        "role": "assistant"
+      },
+      {
+        "type": "TEXT_MESSAGE_END",
+        "timestamp": 1735689600000,
+        "messageId": "message-13"
+      },
+      {
+        "type": "TOOL_CALL_START",
+        "timestamp": 1735689600000,
+        "toolCallId": "call-1",
+        "toolCallName": "delegate_task",
+        "parentMessageId": "message-13"
+      },
+      {
+        "type": "TOOL_CALL_ARGS",
+        "timestamp": 1735689600000,
+        "toolCallId": "call-1",
+        "delta": "{\"agent_name\": \"researcher\", \"task\": \"Find them.\", \"background\": true}"
+      },
+      {
+        "type": "TOOL_CALL_END",
+        "timestamp": 1735689600000,
+        "toolCallId": "call-1"
+      },
+      {
+        "type": "SUBAGENT_STARTED",
+        "timestamp": 1735689600000,
+        "subagentRunId": "subagent-call-1",
+        "name": "researcher",
+        "parentToolCallId": "call-1"
+      },
+      {
+        "type": "CUSTOM",
+        "timestamp": 1735689600000,
+        "name": "ag_ui.subagent",
+        "value": {
+          "delegationId": "call-1",
+          "agent": "researcher",
+          "phase": "backgrounded",
+          "status": "researcher: moved to the background",
+          "tool": null,
+          "task": {
+            "taskId": "task-3",
+            "reason": "requested"
+          }
+        }
+      },
+      {
+        "type": "TOOL_CALL_RESULT",
+        "timestamp": 1735689600000,
+        "messageId": "message-14",
+        "toolCallId": "call-1",
+        "content": "Task task-3 is running in the background. This is an acceptance receipt, not a result. Do not claim completion or invent findings. A task report will be delivered after it settles.",
+        "role": "tool"
+      },
+      {
+        "type": "TEXT_MESSAGE_START",
+        "timestamp": 1735689600000,
+        "messageId": "message-15",
+        "role": "assistant"
+      },
+      {
+        "type": "TEXT_MESSAGE_END",
+        "timestamp": 1735689600000,
+        "messageId": "message-15"
+      },
+      {
+        "type": "TOOL_CALL_START",
+        "timestamp": 1735689600000,
+        "toolCallId": "call-2",
+        "toolCallName": "cancel_task",
+        "parentMessageId": "message-15"
+      },
+      {
+        "type": "TOOL_CALL_ARGS",
+        "timestamp": 1735689600000,
+        "toolCallId": "call-2",
+        "delta": "{\"task_id\": \"task-3\", \"force\": true}"
+      },
+      {
+        "type": "TOOL_CALL_END",
+        "timestamp": 1735689600000,
+        "toolCallId": "call-2"
+      },
+      {
+        "type": "CUSTOM",
+        "timestamp": 1735689600000,
+        "name": "ag_ui.subagent",
+        "value": {
+          "delegationId": "call-1",
+          "agent": "researcher",
+          "phase": "tool_call",
+          "status": "researcher: calling read_handbook",
+          "tool": {
+            "toolCallId": "sub-1",
+            "name": "read_handbook",
+            "ok": null
+          }
+        }
+      },
+      {
+        "type": "TOOL_CALL_START",
+        "timestamp": 1735689600000,
+        "subagentRunId": "subagent-call-1",
+        "toolCallId": "sub-1",
+        "toolCallName": "read_handbook"
+      },
+      {
+        "type": "TOOL_CALL_ARGS",
+        "timestamp": 1735689600000,
+        "subagentRunId": "subagent-call-1",
+        "toolCallId": "sub-1",
+        "delta": "{\"phrase\": \"settlement\"}"
+      },
+      {
+        "type": "TOOL_CALL_END",
+        "timestamp": 1735689600000,
+        "subagentRunId": "subagent-call-1",
+        "toolCallId": "sub-1"
+      },
+      {
+        "type": "CUSTOM",
+        "timestamp": 1735689600000,
+        "name": "ag_ui.subagent",
+        "value": {
+          "delegationId": "call-1",
+          "agent": "researcher",
+          "phase": "cancel_requested",
+          "status": "researcher: cancellation requested",
+          "tool": null,
+          "task": {
+            "taskId": "task-3",
+            "forced": true
+          }
+        }
+      },
+      {
+        "type": "SUBAGENT_ERROR",
+        "timestamp": 1735689600000,
+        "subagentRunId": "subagent-call-1",
+        "message": "researcher was cancelled",
+        "code": "cancelled"
+      },
+      {
+        "type": "TOOL_CALL_RESULT",
+        "timestamp": 1735689600000,
+        "messageId": "message-16",
+        "toolCallId": "call-2",
+        "content": "Cancelling task task-3. Its report goes to you. It can be resumed afterwards.",
+        "role": "tool"
+      },
+      {
+        "type": "TEXT_MESSAGE_START",
+        "timestamp": 1735689600000,
+        "messageId": "message-17",
+        "role": "assistant"
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "timestamp": 1735689600000,
+        "messageId": "message-17",
+        "delta": "Done."
+      },
+      {
+        "type": "TEXT_MESSAGE_END",
+        "timestamp": 1735689600000,
+        "messageId": "message-17"
+      },
+      {
+        "type": "RUN_FINISHED",
+        "timestamp": 1735689600000,
+        "threadId": "thread-fixture",
+        "runId": "run-fixture",
+        "outcome": {
+          "type": "success"
+        }
+      }
+    ],
+    "resumed": [
+      {
+        "type": "RUN_STARTED",
+        "timestamp": 1735689600000,
+        "threadId": "thread-fixture",
+        "runId": "run-fixture",
+        "protocolVersion": "1.0"
+      },
+      {
+        "type": "TEXT_MESSAGE_START",
+        "timestamp": 1735689600000,
+        "messageId": "message-18",
+        "role": "assistant"
+      },
+      {
+        "type": "TEXT_MESSAGE_END",
+        "timestamp": 1735689600000,
+        "messageId": "message-18"
+      },
+      {
+        "type": "TOOL_CALL_START",
+        "timestamp": 1735689600000,
+        "toolCallId": "call-1",
+        "toolCallName": "delegate_task",
+        "parentMessageId": "message-18"
+      },
+      {
+        "type": "TOOL_CALL_ARGS",
+        "timestamp": 1735689600000,
+        "toolCallId": "call-1",
+        "delta": "{\"agent_name\": \"researcher\", \"task\": \"Find them.\"}"
+      },
+      {
+        "type": "TOOL_CALL_END",
+        "timestamp": 1735689600000,
+        "toolCallId": "call-1"
+      },
+      {
+        "type": "SUBAGENT_STARTED",
+        "timestamp": 1735689600000,
+        "subagentRunId": "subagent-call-1",
+        "name": "researcher",
+        "parentToolCallId": "call-1"
+      },
+      {
+        "type": "CUSTOM",
+        "timestamp": 1735689600000,
+        "name": "ag_ui.subagent",
+        "value": {
+          "delegationId": "call-1",
+          "agent": "researcher",
+          "phase": "tool_call",
+          "status": "researcher: calling read_handbook",
+          "tool": {
+            "toolCallId": "sub-1",
+            "name": "read_handbook",
+            "ok": null
+          }
+        }
+      },
+      {
+        "type": "TOOL_CALL_START",
+        "timestamp": 1735689600000,
+        "subagentRunId": "subagent-call-1",
+        "toolCallId": "sub-1",
+        "toolCallName": "read_handbook"
+      },
+      {
+        "type": "TOOL_CALL_ARGS",
+        "timestamp": 1735689600000,
+        "subagentRunId": "subagent-call-1",
+        "toolCallId": "sub-1",
+        "delta": "{\"phrase\": \"settlement\"}"
+      },
+      {
+        "type": "TOOL_CALL_END",
+        "timestamp": 1735689600000,
+        "subagentRunId": "subagent-call-1",
+        "toolCallId": "sub-1"
+      },
+      {
+        "type": "CUSTOM",
+        "timestamp": 1735689600000,
+        "name": "ag_ui.subagent",
+        "value": {
+          "delegationId": "call-1",
+          "agent": "researcher",
+          "phase": "tool_result",
+          "status": "researcher: read_handbook returned",
+          "tool": {
+            "toolCallId": "sub-1",
+            "name": "read_handbook",
+            "ok": true
+          }
+        }
+      },
+      {
+        "type": "TOOL_CALL_RESULT",
+        "timestamp": 1735689600000,
+        "subagentRunId": "subagent-call-1",
+        "messageId": "subagent-call-1:sub-1",
+        "toolCallId": "sub-1",
+        "content": "Three passages mention settlement.",
+        "role": "tool"
+      },
+      {
+        "type": "SUBAGENT_FINISHED",
+        "timestamp": 1735689600000,
+        "subagentRunId": "subagent-call-1"
+      },
+      {
+        "type": "TOOL_CALL_RESULT",
+        "timestamp": 1735689600000,
+        "messageId": "message-19",
+        "toolCallId": "call-1",
+        "content": "Task task-4 (ok):\nThree passages mention settlement.",
+        "role": "tool"
+      },
+      {
+        "type": "TEXT_MESSAGE_START",
+        "timestamp": 1735689600000,
+        "messageId": "message-20",
+        "role": "assistant"
+      },
+      {
+        "type": "TEXT_MESSAGE_END",
+        "timestamp": 1735689600000,
+        "messageId": "message-20"
+      },
+      {
+        "type": "TOOL_CALL_START",
+        "timestamp": 1735689600000,
+        "toolCallId": "call-2",
+        "toolCallName": "delegate_task",
+        "parentMessageId": "message-20"
+      },
+      {
+        "type": "TOOL_CALL_ARGS",
+        "timestamp": 1735689600000,
+        "toolCallId": "call-2",
+        "delta": "{\"agent_name\": \"researcher\", \"task\": \"And 2023?\", \"resume\": \"task-4\"}"
+      },
+      {
+        "type": "TOOL_CALL_END",
+        "timestamp": 1735689600000,
+        "toolCallId": "call-2"
+      },
+      {
+        "type": "SUBAGENT_STARTED",
+        "timestamp": 1735689600000,
+        "subagentRunId": "subagent-call-2",
+        "name": "researcher",
+        "parentToolCallId": "call-2"
+      },
+      {
+        "type": "SUBAGENT_FINISHED",
+        "timestamp": 1735689600000,
+        "subagentRunId": "subagent-call-2"
+      },
+      {
+        "type": "TOOL_CALL_RESULT",
+        "timestamp": 1735689600000,
+        "messageId": "message-21",
+        "toolCallId": "call-2",
+        "content": "Task task-4 (ok):\nThree passages mention settlement.",
+        "role": "tool"
+      },
+      {
+        "type": "TEXT_MESSAGE_START",
+        "timestamp": 1735689600000,
+        "messageId": "message-22",
+        "role": "assistant"
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "timestamp": 1735689600000,
+        "messageId": "message-22",
+        "delta": "Done."
+      },
+      {
+        "type": "TEXT_MESSAGE_END",
+        "timestamp": 1735689600000,
+        "messageId": "message-22"
+      },
+      {
+        "type": "RUN_FINISHED",
+        "timestamp": 1735689600000,
+        "threadId": "thread-fixture",
+        "runId": "run-fixture",
+        "outcome": {
+          "type": "success"
+        }
+      }
+    ],
+    "unfinished": [
+      {
+        "type": "RUN_STARTED",
+        "timestamp": 1735689600000,
+        "threadId": "thread-fixture",
+        "runId": "run-fixture",
+        "protocolVersion": "1.0"
+      },
+      {
+        "type": "TEXT_MESSAGE_START",
+        "timestamp": 1735689600000,
+        "messageId": "message-23",
+        "role": "assistant"
+      },
+      {
+        "type": "TEXT_MESSAGE_END",
+        "timestamp": 1735689600000,
+        "messageId": "message-23"
+      },
+      {
+        "type": "TOOL_CALL_START",
+        "timestamp": 1735689600000,
+        "toolCallId": "call-1",
+        "toolCallName": "delegate_task",
+        "parentMessageId": "message-23"
+      },
+      {
+        "type": "TOOL_CALL_ARGS",
+        "timestamp": 1735689600000,
+        "toolCallId": "call-1",
+        "delta": "{\"agent_name\": \"researcher\", \"task\": \"Find them.\", \"background\": true}"
+      },
+      {
+        "type": "TOOL_CALL_END",
+        "timestamp": 1735689600000,
+        "toolCallId": "call-1"
+      },
+      {
+        "type": "SUBAGENT_STARTED",
+        "timestamp": 1735689600000,
+        "subagentRunId": "subagent-call-1",
+        "name": "researcher",
+        "parentToolCallId": "call-1"
+      },
+      {
+        "type": "CUSTOM",
+        "timestamp": 1735689600000,
+        "name": "ag_ui.subagent",
+        "value": {
+          "delegationId": "call-1",
+          "agent": "researcher",
+          "phase": "backgrounded",
+          "status": "researcher: moved to the background",
+          "tool": null,
+          "task": {
+            "taskId": "task-5",
+            "reason": "requested"
+          }
+        }
+      },
+      {
+        "type": "TOOL_CALL_RESULT",
+        "timestamp": 1735689600000,
+        "messageId": "message-24",
+        "toolCallId": "call-1",
+        "content": "Task task-5 is running in the background. This is an acceptance receipt, not a result. Do not claim completion or invent findings. A task report will be delivered after it settles.",
+        "role": "tool"
+      },
+      {
+        "type": "SUBAGENT_ERROR",
+        "timestamp": 1735689600000,
+        "subagentRunId": "subagent-call-1",
+        "message": "the sub-agent was still running when the run ended",
+        "code": "unfinished"
+      },
+      {
+        "type": "RUN_ERROR",
+        "timestamp": 1735689600000,
+        "message": "The run failed. The failure has been recorded.",
+        "code": "error"
+      }
+    ]
+  },
+  "retried": {
+    "type": "CUSTOM",
+    "timestamp": 1735689600000,
+    "name": "ag_ui.subagent",
+    "value": {
+      "delegationId": "call-1",
+      "agent": "researcher",
+      "phase": "retried",
+      "status": "researcher: retrying, attempt 2",
+      "tool": null,
+      "task": {
+        "taskId": "task-1",
+        "attempt": 2
+      }
+    }
+  }
+}

@@ -224,16 +224,24 @@ export const SUBAGENT_CUSTOM_NAME = "ag_ui.subagent";
 /**
  * The phases one delegation moves through, as the panel draws them.
  *
- * Exactly one `STARTED` opens a delegation and exactly one `FINISHED` or
- * `FAILED` closes it; the two tool phases repeat in between, once per call the
- * child makes and once per result it gets back.
+ * Exactly one `STARTED` opens a delegation and exactly one `FINISHED`,
+ * `FAILED`, `CANCELLED` or `UNFINISHED` closes it; the two tool phases repeat in
+ * between, once per call the child makes and once per result it gets back.
  *
- * **These are this element's five visual states, and they no longer come off one
- * wire.** `TOOL_CALL` and `TOOL_RESULT` are spelled by the server, on the
- * {@link SUBAGENT_CUSTOM_NAME} payload's `phase` field. The other three are this
- * element's own names for the protocol's `SUBAGENT_STARTED` / `SUBAGENT_FINISHED`
- * / `SUBAGENT_ERROR` events, which carry no phase field of their own because the
- * event type *is* the phase. Keeping one vocabulary is what lets the panel stay
+ * Under the server's task control the six task phases (`BACKGROUNDED` through
+ * `RETRIED`) arrive between them too, on the same `CUSTOM` carrier with `tool:
+ * null` and a `task` record. They report that something happened, never what was
+ * said: the steering message, the question and the answer stay on the server.
+ * `CANCELLED` and `UNFINISHED` are the element's names for a `SUBAGENT_ERROR`
+ * whose `code` is `cancelled` (the parent stopped the task) or `unfinished` (the
+ * run ended while the task was still open); neither is a failure of the child.
+ *
+ * **These are this element's visual states, and they no longer come off one
+ * wire.** The two tool phases and the six task phases are spelled by the
+ * server, on the {@link SUBAGENT_CUSTOM_NAME} payload's `phase` field. The other
+ * five are this element's own names for the protocol's `SUBAGENT_STARTED` /
+ * `SUBAGENT_FINISHED` / `SUBAGENT_ERROR` events, which carry no phase field of
+ * their own because the event type (and an error's `code`) *is* the phase. Keeping one vocabulary is what lets the panel stay
  * a single state machine with one `data-phase` attribute for a host to style.
  *
  * `FAILED` carries **no exception text** from us — the protocol's error event
@@ -249,7 +257,26 @@ export const SUBAGENT_PHASE = {
   TOOL_RESULT: "tool_result",
   FINISHED: "finished",
   FAILED: "failed",
+  BACKGROUNDED: "backgrounded",
+  STEERED: "steered",
+  QUESTION: "question",
+  ANSWERED: "answered",
+  CANCEL_REQUESTED: "cancel_requested",
+  RETRIED: "retried",
+  CANCELLED: "cancelled",
+  UNFINISHED: "unfinished",
 } as const;
+
+/**
+ * The `SUBAGENT_ERROR` codes that close a delegation without the child failing,
+ * mapped to the phase the panel draws for each. Any other code, or none, is
+ * {@link SUBAGENT_PHASE}`.FAILED`. A map rather than an object, so a code that
+ * names an `Object.prototype` key reads as unknown.
+ */
+export const SUBAGENT_ERROR_CODE_PHASE: ReadonlyMap<string, "cancelled" | "unfinished"> = new Map([
+  ["cancelled", SUBAGENT_PHASE.CANCELLED],
+  ["unfinished", SUBAGENT_PHASE.UNFINISHED],
+]);
 
 /** Roles a chat message can take. */
 export const MESSAGE_ROLE = {

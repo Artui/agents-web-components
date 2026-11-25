@@ -18,6 +18,7 @@ import { SubAgentPanel, type SubAgentUpdate } from "../src/ui/progress/subagent_
 import { subAgentUpdate } from "../src/ui/progress/subagent_update.js";
 import { DEFAULT_UI_STRINGS, mergeUiStrings } from "../src/ui/ui_strings.js";
 import { subAgentValue } from "./helpers/subagent_fixture.js";
+import { RETRIED_STEP, taskStep } from "./helpers/task_control_fixture.js";
 
 /** A recorded payload, narrowed. Throws rather than returning a partial shape. */
 function update(predicate: Parameters<typeof subAgentValue>[0]): SubAgentUpdate {
@@ -44,6 +45,7 @@ const OPENING: SubAgentUpdate = {
   phase: SUBAGENT_PHASE.STARTED,
   status: DEFAULT_UI_STRINGS.subAgentDelegatedTo.replace("{agent}", "researcher"),
   tool: null,
+  task: null,
 };
 const FINISHED: SubAgentUpdate = {
   delegationId: "call-1",
@@ -51,6 +53,7 @@ const FINISHED: SubAgentUpdate = {
   phase: SUBAGENT_PHASE.FINISHED,
   status: DEFAULT_UI_STRINGS.subAgentFinished.replace("{agent}", "researcher"),
   tool: null,
+  task: null,
 };
 
 const CALLING = update((v) => v.phase === "tool_call" && v.tool?.toolCallId === "sub-1");
@@ -188,5 +191,113 @@ describe("a delegation panel", () => {
 
     panel.report(CALLING);
     expect(row(panel).disabled).toBe(false);
+  });
+});
+
+describe("a task-controlled delegation panel", () => {
+  function narrowed(run: Parameters<typeof taskStep>[0], phase: string): SubAgentUpdate {
+    const value = subAgentUpdate(taskStep(run, phase));
+    if (value === null) {
+      throw new Error("the fixture's own task step did not narrow, which is a contract finding");
+    }
+    return value;
+  }
+
+  function closed(phase: SubAgentUpdate["phase"]): SubAgentUpdate {
+    return { ...FINISHED, phase, status: "settled" };
+  }
+
+  it("draws the background, the open question and its answer as they happen", () => {
+    const panel = new SubAgentPanel();
+    panel.report(OPENING);
+    panel.report(narrowed("question", "question"));
+
+    expect(panel.element.getAttribute("data-phase")).toBe("question");
+    expect(panel.element.hasAttribute("data-awaiting-answer")).toBe(true);
+    expect(panel.element.getAttribute("data-task-id")).toMatch(/^task-/);
+    expect(row(panel).textContent).toBe(taskStep("question", "question")["status"]);
+
+    panel.report(narrowed("question", "backgrounded"));
+    expect(panel.element.hasAttribute("data-background")).toBe(true);
+    expect(panel.element.hasAttribute("data-awaiting-answer")).toBe(true);
+
+    panel.report(narrowed("question", "answered"));
+    expect(panel.element.hasAttribute("data-awaiting-answer")).toBe(false);
+    expect(panel.element.hasAttribute("data-background")).toBe(true);
+  });
+
+  it("marks the background with the server's reason, or bare without one", () => {
+    const panel = new SubAgentPanel();
+    const moved = narrowed("steered", "backgrounded");
+    panel.report(moved);
+    expect(panel.element.getAttribute("data-background")).toBe("requested");
+
+    const unexplained = new SubAgentPanel();
+    unexplained.report({
+      ...moved,
+      task: moved.task === null ? null : { ...moved.task, reason: null },
+    });
+    expect(unexplained.element.getAttribute("data-background")).toBe("");
+  });
+
+  it("keeps a steer as the phase until the next step lands", () => {
+    const panel = new SubAgentPanel();
+    panel.report(narrowed("steered", "steered"));
+
+    expect(panel.element.getAttribute("data-phase")).toBe("steered");
+    expect(row(panel).textContent).toBe("researcher: steered");
+  });
+
+  it("marks a requested cancellation, forced or not, until the task settles", () => {
+    const panel = new SubAgentPanel();
+    const forced = narrowed("cancelled", "cancel_requested");
+    panel.report(forced);
+    expect(panel.element.getAttribute("data-cancel")).toBe("forced");
+
+    const plain = {
+      ...forced,
+      task: forced.task === null ? null : { ...forced.task, forced: false },
+    };
+    panel.report(plain);
+    expect(panel.element.getAttribute("data-cancel")).toBe("requested");
+  });
+
+  it("stamps a retried task's attempt", () => {
+    const panel = new SubAgentPanel();
+    const retried = subAgentUpdate(RETRIED_STEP);
+    if (retried === null) {
+      throw new Error("the encoder's retried step did not narrow");
+    }
+    panel.report(retried);
+
+    expect(panel.element.getAttribute("data-phase")).toBe("retried");
+    expect(panel.element.getAttribute("data-attempt")).toBe("2");
+  });
+
+  it("drops a question still open when the task settles, whichever way", () => {
+    for (const phase of [
+      SUBAGENT_PHASE.FINISHED,
+      SUBAGENT_PHASE.FAILED,
+      SUBAGENT_PHASE.CANCELLED,
+      SUBAGENT_PHASE.UNFINISHED,
+    ]) {
+      const panel = new SubAgentPanel();
+      panel.report(narrowed("question", "question"));
+      panel.report(closed(phase));
+
+      expect(panel.element.hasAttribute("data-awaiting-answer")).toBe(false);
+      expect(panel.element.getAttribute("data-phase")).toBe(phase);
+    }
+  });
+
+  it("stamps nothing about a task on a delegation that is not one", () => {
+    const panel = new SubAgentPanel();
+    panel.report(OPENING);
+    panel.report(CALLING);
+    panel.report(FINISHED);
+
+    for (const name of ["data-task-id", "data-background", "data-awaiting-answer", "data-cancel"]) {
+      expect(panel.element.hasAttribute(name)).toBe(false);
+    }
   });
 });

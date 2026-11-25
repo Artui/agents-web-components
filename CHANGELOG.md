@@ -21,6 +21,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   raw `metadata.citations`. Nothing to opt in to: an answer without citations is unchanged.
   See [Sources an answer cites](https://artui.github.io/agents-web-components/messages/#sources-an-answer-cites).
 
+- **The sub-agent row draws a delegated task's life.** Under django-ag-ui 0.90.0's task
+  control, the six new `ag_ui.subagent` phases (`backgrounded`, `steered`, `question`,
+  `answered`, `cancel_requested`, `retried`) used to be dropped. The row now shows them on
+  the server's status line, and the `subagent` part gets `data-task-id`, `data-background`
+  (the reason), `data-awaiting-answer` (from a question until its answer),
+  `data-cancel` (`requested` or `forced`) and `data-attempt`. `SUBAGENT_ERROR`'s `code`
+  is carried too: `cancelled` and `unfinished` settle the row as `data-phase="cancelled"` or
+  `"unfinished"`, worded by the new strings `subAgentCancelled` and `subAgentUnfinished`,
+  instead of as a failure. A resumed task draws on the card of the call that resumed it.
+  `AgUiClientHandlers.onSubAgentError` takes a third argument, the event's `code` (or
+  `null`). Nothing is stored, so a restored thread draws no task progress. No controls:
+  steering, answering and cancelling from the chat are not included. Nothing to opt in to:
+  a delegation without task control is unchanged. See
+  [Task control](https://artui.github.io/agents-web-components/tool-calls/#task-control).
+
 ### Fixed
 
 - **A `pageMapFrom` handle number is never given out twice in a document.** Once an element left

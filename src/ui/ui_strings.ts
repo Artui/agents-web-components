@@ -273,6 +273,10 @@ export interface UiStrings {
   subAgentDelegatedTo: string;
   /** The row's line once a delegation completed. Token: `{agent}`. */
   subAgentFinished: string;
+  /** The row's line once the parent cancelled a delegated task. Token: `{agent}`. */
+  subAgentCancelled: string;
+  /** The row's line for a task still open when the run ended. Token: `{agent}`. */
+  subAgentUnfinished: string;
   /**
    * The row's line for a delegation that failed and named no agent.
    *
@@ -706,6 +710,8 @@ export const DEFAULT_UI_STRINGS: UiStrings = {
   subAgentWorking: "Working…",
   subAgentDelegatedTo: "Delegated to {agent}",
   subAgentFinished: "{agent} finished",
+  subAgentCancelled: "{agent} was cancelled",
+  subAgentUnfinished: "{agent} was still running when the run ended",
   subAgentFailed: "The sub-agent failed",
   subAgentSteps: "Steps the sub-agent took",
   childSessionOpen: "Open the {agent} task",

@@ -24,6 +24,7 @@ import { describe, expect, it } from "vitest";
 import { SUBAGENT_PHASE } from "../src/constants.js";
 import { subAgentUpdate } from "../src/ui/progress/subagent_update.js";
 import { subAgentValue, subAgentValues } from "./helpers/subagent_fixture.js";
+import { RETRIED_STEP, taskStep, taskSteps } from "./helpers/task_control_fixture.js";
 
 /** Two real payloads: a call in flight, and a result that landed. */
 const A_STEP = subAgentValue((v) => v.phase === "tool_call" && v.tool?.toolCallId === "sub-1");
@@ -112,5 +113,61 @@ describe("narrowing a sub-agent announcement", () => {
     expect(
       subAgentUpdate(spoiled(WITH_TOOL, { tool: { ...WITH_TOOL.tool, ok: false } }))?.tool?.ok,
     ).toBe(false);
+  });
+});
+
+describe("narrowing a task-control step", () => {
+  const BACKGROUNDED = taskStep("steered", "backgrounded");
+  const QUESTION = taskStep("question", "question");
+  const CANCEL = taskStep("cancelled", "cancel_requested");
+
+  it("accepts every task step the recorded runs carried, with tool null", () => {
+    const runs = ["steered", "question", "cancelled", "resumed", "unfinished"] as const;
+    const values = [...runs.flatMap((run) => taskSteps(run)), RETRIED_STEP];
+    const phases = values.map((value) => subAgentUpdate(value)?.phase);
+
+    expect(phases).toEqual(values.map((value) => value["phase"]));
+    expect(new Set(phases)).toEqual(
+      new Set([
+        "tool_call",
+        "tool_result",
+        "backgrounded",
+        "steered",
+        "question",
+        "answered",
+        "cancel_requested",
+        "retried",
+      ]),
+    );
+    expect(subAgentUpdate(QUESTION)?.tool).toBeNull();
+  });
+
+  it("carries the task record each phase adds", () => {
+    expect(subAgentUpdate(BACKGROUNDED)?.task).toEqual({
+      ...(BACKGROUNDED["task"] as object),
+      questionId: null,
+      forced: null,
+      attempt: null,
+    });
+    expect(subAgentUpdate(QUESTION)?.task?.questionId).toBe(
+      (QUESTION["task"] as Record<string, unknown>)["questionId"],
+    );
+    expect(subAgentUpdate(CANCEL)?.task?.forced).toBe(true);
+    expect(subAgentUpdate(RETRIED_STEP)?.task?.attempt).toBe(2);
+    expect(subAgentUpdate(A_STEP)?.task).toBeNull();
+  });
+
+  it("drops a task record with no task id, and degrades its other keys", () => {
+    for (const task of [null, "task-1", [], { reason: "auto" }, { taskId: "" }, { taskId: 7 }]) {
+      expect(subAgentUpdate(spoiled(BACKGROUNDED, { task }))?.task).toBeNull();
+    }
+    const odd = { taskId: "t", reason: 3, questionId: "", forced: "yes", attempt: 1.5 };
+    expect(subAgentUpdate(spoiled(BACKGROUNDED, { task: odd }))?.task).toEqual({
+      taskId: "t",
+      reason: null,
+      questionId: null,
+      forced: null,
+      attempt: null,
+    });
   });
 });

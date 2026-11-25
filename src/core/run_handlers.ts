@@ -389,8 +389,8 @@ export class RunHandlers {
       onSubAgentFinished: (subagentRunId) => {
         this.#host.subagents.finish(subagentRunId);
       },
-      onSubAgentError: (subagentRunId, message) => {
-        this.#host.subagents.fail(subagentRunId, message);
+      onSubAgentError: (subagentRunId, message, code) => {
+        this.#host.subagents.fail(subagentRunId, message, code);
       },
       onMessagesSnapshot: (messages, authoritative) => {
         // A reattach opens on the conversation as it stands, and nothing of the

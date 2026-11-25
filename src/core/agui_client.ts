@@ -231,14 +231,16 @@ export interface AgUiClientHandlers {
   /** The delegation named by `subagentRunId` completed. */
   onSubAgentFinished(subagentRunId: string): void;
   /**
-   * The delegation named by `subagentRunId` failed.
+   * The delegation named by `subagentRunId` closed on `SUBAGENT_ERROR`.
    *
    * `message` is server text and required by the protocol, but it is not an
    * exception's words: `django-ag-ui` sends only which sub-agent failed, on the
    * same reasoning that redacts a `RUN_ERROR`. Render it as text, never as
-   * markup.
+   * markup. `code` is the event's optional code, `null` when absent: under task
+   * control `cancelled` (the parent stopped the task) and `unfinished` (the run
+   * ended while it was open) close a delegation whose child did not fail.
    */
-  onSubAgentError(subagentRunId: string, message: string): void;
+  onSubAgentError(subagentRunId: string, message: string, code: string | null): void;
   /**
    * The run failed. `runError` is present when the failure was a `RUN_ERROR`
    * event, carrying its `code` if the server sent one, and when a non-2xx run
@@ -1216,7 +1218,7 @@ export class AgUiClient {
         h.onSubAgentFinished(event.subagentRunId);
       },
       onSubagentErrorEvent({ event }) {
-        h.onSubAgentError(event.subagentRunId, event.message);
+        h.onSubAgentError(event.subagentRunId, event.message, event.code ?? null);
       },
       onMessagesSnapshotEvent({ event }) {
         // A queued start's stream is its run log's replay, which opens on the

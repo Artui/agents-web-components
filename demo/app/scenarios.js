@@ -218,6 +218,15 @@ export const SCENARIOS = [
       "A delegate_task card grows a live row for the child agent's work; open it for the child's own calls. The second delegation fails.",
     prompts: [["Delegate", "delegate this"]],
   },
+  {
+    slug: "task-control",
+    group: "Tools and approvals",
+    title: "Delegated tasks",
+    since: "0.16.0",
+    summary:
+      "Three background tasks: one steered and asked a question, one retried then cancelled, one still running when the run ends.",
+    prompts: [["Manage tasks", "manage a task"]],
+  },
   // Server-drawn content
   {
     slug: "charts",
