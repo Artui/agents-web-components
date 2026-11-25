@@ -586,6 +586,10 @@ export interface UiStrings {
 
   /** Line under an answer a fallback model gave, naming it. Token: `{model}`. */
   answeredByModel: string;
+  /** Title of a child session's report in its parent's transcript. Token: `{agent}`. */
+  childReport: string;
+  /** Title of a question a child session asks its parent. Token: `{agent}`. */
+  childQuestion: string;
 }
 
 /** The built-in English strings — the fallback every override merges over. */
@@ -861,6 +865,8 @@ export const DEFAULT_UI_STRINGS: UiStrings = {
   routineMinute: "Minute",
 
   answeredByModel: "Answered by {model}",
+  childReport: "Report from {agent}",
+  childQuestion: "Question from {agent}",
 };
 
 /**

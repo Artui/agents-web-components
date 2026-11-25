@@ -20,6 +20,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Nothing to opt in to.
   See [The model a fallback answer came from](https://artui.github.io/agents-web-components/messages/#the-model-a-fallback-answer-came-from).
 
+- **A child's report draws as a card from the child, and the wake line is hidden.** When
+  a child's report woke its parent, the transcript drew the wake line and the raw
+  `<task_output ...>` frame as user bubbles. django-spec-agents 0.28.0 and django-ag-ui
+  0.91.0 mark them with `metadata.origin`; the component now hides a `wake` line and draws a
+  `task_output` report or a `task_question` question as a card naming the child, holding
+  the plain `task.body`, with a link to the child's thread that dispatches
+  `ag-ui-open-thread` like a card's child link. Live (inside the enqueued-messages activity)
+  and after a reload (the stored activity, or server-held history). The activity's
+  "Added during the run" caption now shows only when a user line was taken in. New parts
+  `child-report` (with `data-origin`, `data-outcome`) and `child-report-link`, new strings
+  `childReport` and `childQuestion`. Nothing to opt in to.
+  See [Child sessions](https://artui.github.io/agents-web-components/tool-calls/#child-sessions).
+
 ## [0.16.0] — 2026-11-25
 
 ### Added

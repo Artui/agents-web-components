@@ -18,6 +18,12 @@ import { toolStatusFromOutcome } from "../../core/tool_outcome.js";
 import { answerUnansweredCalls, metadataOrTopLevel, mintThread } from "../../core/utils.js";
 import type { MaybeAsync } from "../../core/when_ready.js";
 import type { ToolCatalog } from "../../tools/tool_catalog.js";
+import {
+  childSessionMessage,
+  messageOrigin,
+  renderChildSessionMessage,
+  WAKE_ORIGIN,
+} from "../progress/child_session_report.js";
 import type { ChildSessions } from "../progress/child_sessions.js";
 import type { AnswerActions } from "../transcript/answer_actions.js";
 import { renderAnsweredByModel } from "../transcript/answered_by_model.js";
@@ -1038,6 +1044,18 @@ export class ConversationHistory {
     }
     const text = typeof message.content === "string" ? message.content : "";
     if (message.role === MESSAGE_ROLE.USER) {
+      // A wake line is no user's words, and a child's report draws as the child's card.
+      const metadata = (message as { metadata?: unknown }).metadata;
+      const child = childSessionMessage(metadata);
+      if (child !== null) {
+        const group = this.#host.transcript.ensureGroup();
+        group.append(renderChildSessionMessage(child, this.#host.strings()));
+        this.#host.transcript.afterGrew();
+        return;
+      }
+      if (messageOrigin(metadata) === WAKE_ORIGIN) {
+        return;
+      }
       const attachments = messageAttachments(message);
       if (text !== "" || attachments.length > 0) {
         const bubble = this.#host.appendMessage(MESSAGE_ROLE.USER, text);

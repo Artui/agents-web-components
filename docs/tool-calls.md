@@ -319,8 +319,18 @@ reload.** A refusal, or any other result, draws no link.
   inside a `drawer-children` group), in the parent's date group whatever the
   child's own date. A child whose parent is not listed, or that a filter matched
   without its parent, stands at the top level.
+- **A child's report and question.** When a child's report wakes its parent,
+  django-spec-agents 0.28.0 and django-ag-ui 0.91.0 mark what no user wrote with
+  `metadata.origin`. The wake's own line (`wake`) is not drawn. A report
+  (`task_output`) is drawn as a card titled `childReport` ("Report from helper") holding
+  the plain `task.body`, never the `<task_output>` frame the model saw, and a question
+  (`task_question`) as one titled `childQuestion` ("Question from helper"). The card's
+  link reads `childSessionOpen` and opens `task.threadId` the way the card link does.
+  Both arrive inside the run's enqueued-messages activity live, and as marked user
+  messages in server-held history; each draws the same. A failed report carries
+  `data-outcome="failed"`; style both through `child-report` and `child-report-link`.
 
-**Opening a thread asks first.** A link or the breadcrumb dispatches
+**Opening a thread asks first.** A link, a report's link or the breadcrumb dispatches
 **`ag-ui-open-thread`** (`OPEN_THREAD_EVENT`, detail `{ agentId, threadId }`,
 typed `OpenThreadDetail`), bubbling, composed and cancelable. `agentId` is the
 receipt's `agent_id`, or the parent's store `scope` (`null` when unscoped). The

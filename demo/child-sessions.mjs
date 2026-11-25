@@ -64,6 +64,19 @@ const threads = new Map([
         { id: "p-r1", role: "tool", toolCallId: "p-call-1", content: receipt("researcher", "children-invoices") },
         { id: "p-r2", role: "tool", toolCallId: "p-call-2", content: receipt("supplier-check", "children-suppliers") },
         { id: "p-a2", role: "assistant", content: "Two child sessions are on it; each has its own thread." },
+        // A child's report woke this thread: the wake line and the framed report are marked
+        // by origin, as django-ag-ui 0.91.0 replays them, and draw as no bubble and a card.
+        { id: "p-u2", role: "user", content: "Messages are waiting for you.", metadata: { origin: "wake" } },
+        {
+          id: "p-u3",
+          role: "user",
+          content: '<task_output task_id="children-suppliers" agent_name="supplier-check">\nAll four suppliers are registered.\n</task_output>',
+          metadata: {
+            origin: "task_output",
+            task: { taskId: "children-suppliers", threadId: "children-suppliers", agentName: "supplier-check", outcome: "ok", body: "All four suppliers are registered." },
+          },
+        },
+        { id: "p-a3", role: "assistant", content: "The supplier check is back: all four are registered." },
       ],
     },
   ],

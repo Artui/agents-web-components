@@ -9,6 +9,12 @@ import { describe, expect, it } from "vitest";
 
 import { renderEnqueuedMessages } from "../src/ui/transcript/enqueued_messages.js";
 
+const STRINGS = {
+  childReport: "Report from {agent}",
+  childQuestion: "Question from {agent}",
+  childSessionOpen: "Open the {agent} task",
+};
+
 function bubbles(node: Node): string[] {
   const holder = document.createElement("div");
   holder.append(node);
@@ -24,6 +30,7 @@ describe("renderEnqueuedMessages", () => {
     const node = renderEnqueuedMessages(
       { messages: [{ id: "u1", role: "user", content: "Compare with last week" }] },
       "Added during the run",
+      STRINGS,
     ) as HTMLElement;
 
     expect(node.className).toBe("enqueued-messages");
@@ -55,6 +62,7 @@ describe("renderEnqueuedMessages", () => {
         ],
       },
       "caption",
+      STRINGS,
     );
 
     expect(bubbles(node)).toEqual(["First line\nSecond line"]);
@@ -72,9 +80,33 @@ describe("renderEnqueuedMessages", () => {
         ],
       },
       "caption",
+      STRINGS,
     );
 
     expect(bubbles(node)).toEqual(["one", "two"]);
+  });
+
+  it("draws a child's report as its card, with no caption when no user line came in", () => {
+    const node = renderEnqueuedMessages(
+      {
+        messages: [
+          {
+            role: "user",
+            content: "<task_output>done</task_output>",
+            metadata: {
+              origin: "task_output",
+              task: { threadId: "c1", agentName: "a", body: "done" },
+            },
+          },
+        ],
+      },
+      "caption",
+      STRINGS,
+    ) as HTMLElement;
+
+    expect(bubbles(node)).toEqual([]);
+    expect(node.querySelector(".child-report-body")?.textContent).toBe("done");
+    expect(node.querySelector(".enqueued-messages-note")).toBeNull();
   });
 
   it("draws nothing, by design, when no user message has any text", () => {
@@ -89,7 +121,7 @@ describe("renderEnqueuedMessages", () => {
       null,
       "text",
     ]) {
-      expect(drawsNothing(renderEnqueuedMessages(content, "caption"))).toBe(true);
+      expect(drawsNothing(renderEnqueuedMessages(content, "caption", STRINGS))).toBe(true);
     }
   });
 });

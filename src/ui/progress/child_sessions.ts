@@ -44,6 +44,7 @@ export class ChildSessions {
   constructor(host: ChildSessionsHost) {
     this.#host = host;
     this.#breadcrumb = new ParentBreadcrumb((parent) => this.#open(parent.scope, parent.threadId));
+    host.element.addEventListener("click", (event) => this.#openReported(event));
   }
 
   /** The breadcrumb's root, for the chat to place in its column. */
@@ -110,6 +111,18 @@ export class ChildSessions {
   #word(link: ChildSessionLink): void {
     const row = this.#threads.find((meta) => meta.threadId === link.receipt.threadId);
     link.update(this.#host.strings(), row?.status ?? null);
+  }
+
+  /** A click on a child's report card's link, delegated: the card is drawn by a renderer. */
+  #openReported(event: Event): void {
+    const target = event.composedPath()[0];
+    const link = target instanceof Element ? target.closest(".child-report-link") : null;
+    if (link !== null) {
+      this.#open(
+        link.getAttribute("data-agent-id") || null,
+        String(link.getAttribute("data-thread-id")),
+      );
+    }
   }
 
   #open(agentId: string | null, threadId: string): void {

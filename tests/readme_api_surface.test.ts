@@ -179,6 +179,9 @@ const INTERNAL_ATTRIBUTES = new Set([
   "data-has-result",
   "data-open",
   "data-agent",
+  // Stamped on a child report's link by its card, read back when the link is clicked.
+  "data-thread-id",
+  "data-agent-id",
   // On the nodes of rendered markdown, while sanitising them.
   "href",
   "class",
