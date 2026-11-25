@@ -75,6 +75,9 @@ const DIGITS = /^\d+$/;
 
 const SECTIONING = "article, aside, main, nav, section";
 
+/** On the document, so a number is not reissued, by this copy of the walker or another. */
+const NEXT_HANDLE = Symbol.for("agents-web-components.page-map.next-handle");
+
 /**
  * A page map read from the live DOM: headings, landmarks, tabs, form fields,
  * buttons, links, table headers and open dialogs, each with a `handle` the
@@ -89,7 +92,8 @@ const SECTIONING = "article, aside, main, nav, section";
  * `data-agent-ignore`, and of anything hidden, `inert` or `aria-hidden`.
  *
  * Each listed element is stamped with `data-agent-handle`; a handle is kept
- * across reads while its element is listed. Each kind is capped (see
+ * across reads while its element is listed, and its number is not given out
+ * again while the document lives. Each kind is capped (see
  * `PAGE_MAP_LIMITS`, overridable per call), and `truncated` counts what a cap
  * left out.
  */
@@ -403,7 +407,7 @@ function pathOf(href: string): string {
  */
 function stamp(found: readonly Found[]): { readonly item: Found; readonly handle: string }[] {
   const select = (value: string): string => `[${PAGE_MAP_HANDLE_ATTRIBUTE}="${value}"]`;
-  let next = 0;
+  let next = (Reflect.get(document, NEXT_HANDLE) as number | undefined) ?? 0;
   for (const el of [
     ...document.querySelectorAll(`[${PAGE_MAP_HANDLE_ATTRIBUTE}]`),
     ...found.map(({ element }) => element),
@@ -413,7 +417,7 @@ function stamp(found: readonly Found[]): { readonly item: Found; readonly handle
       next = Math.max(next, Number(value) + 1);
     }
   }
-  return found.map((item) => {
+  const stamped = found.map((item) => {
     const { element } = item;
     const value = element.getAttribute(PAGE_MAP_HANDLE_ATTRIBUTE) ?? "";
     const scope = element.getRootNode() as Document | ShadowRoot;
@@ -425,4 +429,6 @@ function stamp(found: readonly Found[]): { readonly item: Found; readonly handle
     element.setAttribute(PAGE_MAP_HANDLE_ATTRIBUTE, kept);
     return { item, handle: select(kept) };
   });
+  Reflect.set(document, NEXT_HANDLE, next);
+  return stamped;
 }
