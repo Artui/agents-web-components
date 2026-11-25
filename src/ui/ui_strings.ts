@@ -583,6 +583,12 @@ export interface UiStrings {
   routineHour: string;
   /** The accessible name of the routine time's minute select. */
   routineMinute: string;
+
+  /**
+   * Note on the folded group's row: steps a reviewer model or a routine
+   * approved with no one asked. Token: `{count}`.
+   */
+  toolGroupPreApproved: string;
 }
 
 /** The built-in English strings — the fallback every override merges over. */
@@ -856,6 +862,8 @@ export const DEFAULT_UI_STRINGS: UiStrings = {
 
   routineHour: "Hour",
   routineMinute: "Minute",
+
+  toolGroupPreApproved: "{count} pre-approved",
 };
 
 /**

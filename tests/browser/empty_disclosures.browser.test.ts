@@ -280,7 +280,7 @@ describe("a tool call with arguments and a blank result", () => {
 });
 
 describe("a lone grouped call with no arguments that has something else to show", () => {
-  it("keeps its row open over an approval prompt, and folds it once answered", async () => {
+  it("keeps its row open over an approval prompt, and on the decision once answered", async () => {
     const el = mount((emit, params) => {
       emit.runStart();
       if (params.resume === undefined) {
@@ -307,10 +307,9 @@ describe("a lone grouped call with no arguments that has something else to show"
     await tick();
     await tick();
     expect(find(group, ".tool-call").getAttribute("data-status")).toBe("done");
-    expect(head.disabled).toBe(true);
-    expect(head.hasAttribute("aria-expanded")).toBe(false);
-    expect(group.getAttribute("data-open")).toBe("false");
-    expect(focusable(el, group)).toEqual([]);
+    expect(head.disabled).toBe(false);
+    expect(group.getAttribute("data-open")).toBe("true");
+    expect(find(group, ".tool-call-decision").checkVisibility()).toBe(true);
   });
 
   it("becomes a disclosure when the call delegates to a sub-agent", async () => {

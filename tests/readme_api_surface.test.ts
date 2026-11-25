@@ -171,12 +171,14 @@ const INTERNAL_ATTRIBUTES = new Set([
   "aria-pressed",
   // Read by a step group off the nodes it holds: a card's status, whether a
   // question or confirmation is open on it, whether it has arguments or a
-  // result to show, the group's own disclosure state, and the name a sub-agent
-  // panel stamps on itself.
+  // result to show, the record of who let it through, the group's own
+  // disclosure state, and the name a sub-agent panel stamps on itself.
   "data-status",
   "data-asking",
   "data-has-args",
   "data-has-result",
+  "data-decision",
+  "data-answered-by",
   "data-open",
   "data-agent",
   // On the nodes of rendered markdown, while sanitising them.

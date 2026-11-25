@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A folded tool group's row says how many of its calls were pre-approved.** When a reviewer
+  model or a routine approved calls in the group with no one asked, the folded row gains "· 1
+  pre-approved" (new strings key `toolGroupPreApproved`, with `{count}`). The opened group is
+  unchanged. No opt-in.
+
+### Fixed
+
+- **A lone call's record of who let it through can always be reached.** In a one-step group, a
+  call a reviewer model or a routine approved could not be opened under
+  `data-tool-group-display="minimal"`, or when it had no arguments and a blank result, and a call a
+  person approved or declined lost its "approved by you" / "declined by you" line with the card's
+  head. The row now opens in each case, onto that note, so an approval answered on a call with no
+  arguments and a blank result leaves the row open instead of folding it. No opt-in.
+
 ## [0.16.0] — 2026-11-25
 
 ### Added

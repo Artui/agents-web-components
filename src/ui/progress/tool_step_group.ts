@@ -38,15 +38,18 @@ interface Step {
 /**
  * The attributes the row is drawn from: each card's `data-status`, its
  * `data-asking` while a question or a confirmation is open on it, its
- * `data-has-result` once a result with text arrived, and the `data-phase` and
- * `data-agent` a sub-agent panel stamps on itself inside the card that
- * delegated to it. Watched rather than told, so a step settled, asked about or
+ * `data-has-result` once a result with text arrived, `data-decision` or
+ * `data-answered-by` once the card records who let the call through, and the
+ * `data-phase` and `data-agent` a sub-agent panel stamps on itself inside the
+ * card that delegated to it. Watched rather than told, so a step settled, asked about or
  * delegated by any path updates the row without the group being called.
  */
 const WATCHED_ATTRIBUTES: readonly string[] = [
   "data-status",
   "data-asking",
   "data-has-result",
+  "data-decision",
+  "data-answered-by",
   "data-phase",
   "data-agent",
 ];
@@ -54,9 +57,12 @@ const WATCHED_ATTRIBUTES: readonly string[] = [
 /**
  * Whether a lone step's card has anything to show under the row, which hides
  * the card's own head: arguments, a result with text, an approval prompt (drawn
- * while the call is deferred) or a sub-agent's progress. Which of the first two
- * the inner display draws decides which count: inline draws no arguments, and
- * minimal draws neither, so a call is not offered over what it would not show.
+ * while the call is deferred), the record of who let it through (a person's
+ * decision, or a reviewer's or routine's approval) or a sub-agent's progress.
+ * Which of the first two the inner display draws decides which count: inline
+ * draws no arguments, and minimal draws neither, so a call is not offered over
+ * what it would not show. The record is in the card's head, which every
+ * display draws.
  */
 function hasDetails(card: HTMLElement, display: ToolGroupDisplayMode): boolean {
   const minimal = display === TOOL_GROUP_DISPLAY.MINIMAL;
@@ -65,6 +71,8 @@ function hasDetails(card: HTMLElement, display: ToolGroupDisplayMode): boolean {
     (args && card.hasAttribute("data-has-args")) ||
     (!minimal && card.hasAttribute("data-has-result")) ||
     card.getAttribute("data-status") === TOOL_CALL_STATUS.DEFERRED ||
+    card.hasAttribute("data-decision") ||
+    card.hasAttribute("data-answered-by") ||
     card.querySelector(".tool-call-subagent > *") !== null
   );
 }
@@ -233,6 +241,14 @@ export class ToolStepGroup {
     return null;
   }
 
+  /** One note on the row, opened by the CSS with a middle dot. */
+  #note(text: string): HTMLSpanElement {
+    const note = document.createElement("span");
+    note.className = "tool-group-note";
+    note.textContent = text;
+    return note;
+  }
+
   /** Redraw the row from the cards, for a change the cards do not announce. */
   refresh(): void {
     const strings = this.#strings;
@@ -304,14 +320,18 @@ export class ToolStepGroup {
     if (declined > 0) {
       notes.push(fillUiString(strings.toolGroupDeclined, { count: declined }));
     }
-    this.#meta.replaceChildren(
-      ...notes.map((text) => {
-        const note = document.createElement("span");
-        note.className = "tool-group-note";
-        note.textContent = text;
-        return note;
-      }),
-    );
-    this.#meta.hidden = notes.length === 0;
+    const elements = notes.map((text) => this.#note(text));
+    // A suffix of the folded row alone: an opened group shows the note on each
+    // card, so the CSS drops this one while the group is open.
+    const preApproved = steps.filter((step) =>
+      step.element.hasAttribute("data-answered-by"),
+    ).length;
+    if (preApproved > 0) {
+      const note = this.#note(fillUiString(strings.toolGroupPreApproved, { count: preApproved }));
+      note.classList.add("tool-group-note--pre-approved");
+      elements.push(note);
+    }
+    this.#meta.replaceChildren(...elements);
+    this.#meta.hidden = elements.length === 0;
   }
 }
