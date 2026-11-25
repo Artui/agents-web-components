@@ -249,3 +249,49 @@ describe("server-resolved skills", () => {
     expect(fake.messages.at(-1)?.content).toBe("Summarize this.");
   });
 });
+
+describe("the typed trigger after a pick", () => {
+  beforeAll(() => {
+    defineChat();
+  });
+
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    sessionStorage.clear();
+  });
+
+  const STORED: Skill = { name: "stored", title: "Stored", chip: true };
+  const LOCAL: Skill = { name: "local", title: "Local", prompt: "Do it." };
+
+  function mountSending(skill: Skill, attr: string) {
+    const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+    el.setAttribute("endpoint", "/agent/");
+    el.setAttribute(attr, "true");
+    el.setAttribute("data-skills", embed([skill]));
+    const fake = makeFakeAgent({ script: () => {} });
+    el.agentFactory = () => fake.agent;
+    document.body.appendChild(el);
+    return { el, fake };
+  }
+
+  it.each([
+    ["server-resolved", STORED, "/stored"],
+    ["prompt-carrying", LOCAL, "Do it."],
+  ])("leaves an empty composer after sending a %s skill", async (_kind, skill, sent) => {
+    const { el, fake } = mountSending(skill, "data-slash-commands");
+    typeQuery(el, "/");
+    shadow(el).querySelector<HTMLButtonElement>(".skill-item")?.click();
+    await flush();
+    expect(fake.messages.at(-1)?.content).toBe(sent);
+    expect(input(el).value).toBe("");
+  });
+
+  it("keeps a draft when a server-resolved chip is clicked", async () => {
+    const { el, fake } = mountSending(STORED, "data-prompt-chips");
+    typeQuery(el, "hello");
+    shadow(el).querySelector<HTMLButtonElement>(".skill-chip")?.click();
+    await flush();
+    expect(fake.messages.at(-1)?.content).toBe("/stored");
+    expect(input(el).value).toBe("hello");
+  });
+});

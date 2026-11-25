@@ -127,6 +127,11 @@ export class SkillCatalog {
     const { input, hint } = this.#host;
     if (skill.prompt === undefined) {
       hint.hidden = true;
+      // The typed "/" query is spent; any other text is a draft (a chip click) and stays.
+      if (input.value.startsWith("/")) {
+        input.value = "";
+        this.#host.autoGrow();
+      }
       this.#host.send(`/${skill.name}`);
       return;
     }
