@@ -147,8 +147,11 @@ export const SCENARIOS = [
     title: "Message actions and ratings",
     since: "0.1.0",
     summary:
-      "Copy, retry and the rating pair under an answer, and what a rating names: the message, its thread and the run that streamed it.",
-    prompts: [["Echo hello", "echo hello"]],
+      "Copy, retry and the rating pair under an answer, what a rating names: the message, its thread and the run that streamed it, and the sources a cited answer lists under it (0.16.0).",
+    prompts: [
+      ["Echo hello", "echo hello"],
+      ["Cited answer", "cite your sources"],
+    ],
     attrs: { "data-message-actions": "copy,retry,feedback" },
   },
   {

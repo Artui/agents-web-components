@@ -14,6 +14,7 @@ from django.conf import settings
 from pydantic_ai import Agent, BinaryContent
 from pydantic_ai.messages import (
     Citation,
+    CompactionPart,
     ContentCitationAnchor,
     DocumentCitationSource,
     FilePart,
@@ -58,6 +59,13 @@ RUNS: dict[str, list[Any]] = {
         FilePart(content=BinaryContent(data=b"png", media_type="image/png")),
         _cited("C too", "too", DOC),
     ],
+    "compactionSplit": [
+        _cited("before it", "it"),
+        CompactionPart(
+            provider_name="openai", provider_details={"encrypted_content": "x"}
+        ),
+        TextPart(content="after"),
+    ],
     "reasoningSplit": [
         _cited("first part", "part"),
         ThinkingPart(content="pondering"),
@@ -75,7 +83,7 @@ def _whole_parts() -> None:
 
     async def _iterator(self: Any) -> Any:
         async for item in self._iter:
-            if isinstance(item, TextPart | FilePart | ThinkingPart):
+            if isinstance(item, TextPart | FilePart | ThinkingPart | CompactionPart):
                 yield self._parts_manager.handle_part(vendor_part_id=None, part=item)
             else:
                 self._iter = _one(item)

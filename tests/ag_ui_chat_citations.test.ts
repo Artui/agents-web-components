@@ -193,18 +193,23 @@ describe("an answer split around a file part", () => {
   });
 });
 
-describe("an answer split around reasoning", () => {
+describe.each([
+  ["reasoning", "reasoningSplit", "part"],
+  ["a provider compaction", "compactionSplit", "it"],
+] as const)("an answer split around %s", (_name, run, quote) => {
   it("is rated under the ids it streamed under, live and after a reload", async () => {
-    const liveEl = await live("reasoningSplit");
+    const liveEl = await live(run);
     const liveIds = ratingIds(liveEl);
+    const liveAnswers = answers(liveEl);
     document.body.innerHTML = "";
-    const restored = await reloaded("reasoningSplit");
+    const restored = await reloaded(run);
 
     expect(liveIds).toEqual(["m0", "m2"]);
     expect(ratingIds(restored)).toEqual(liveIds);
-    expect(answers(restored)).toEqual([
-      { quotes: ["part"], sources: ["Sky"] },
+    expect(liveAnswers).toEqual([
+      { quotes: [quote], sources: ["Sky"] },
       { quotes: [], sources: [] },
     ]);
+    expect(answers(restored)).toEqual(liveAnswers);
   });
 });

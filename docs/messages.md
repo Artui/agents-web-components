@@ -250,7 +250,7 @@ as two messages, each with its own citations, and is stored as one message
 joined by a newline under a fresh id, its citations indexing the joined text. So
 the answer draws as two bubbles live and one after a reload, each list read
 against its own text. A rating given live names the streamed ids; after a
-reload, the stored one. A split around reasoning is stored
+reload, the stored one. A split around reasoning or a provider compaction is stored
 under the ids it streamed, so it draws and rates the same either way.
 
 Copy and a rating's `content` leave the list out. Style it through the

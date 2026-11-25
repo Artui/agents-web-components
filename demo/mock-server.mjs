@@ -786,6 +786,21 @@ async function handleAgent(res, body) {
       "The browser only ever sent the token — ",
       "the prompt behind it lives here.",
     ]);
+  } else if (/\bcite\b/i.test(prompt)) {
+    // An answer citing its sources, as django-ag-ui 0.90.0 sends them on
+    // TEXT_MESSAGE_END: offsets in UTF-16 units into this message's own text.
+    const messageId = id("msg");
+    const text = "The sky is blue [1], and grass is green.";
+    emit(res, { type: "TEXT_MESSAGE_START", messageId, role: "assistant" });
+    emit(res, { type: "TEXT_MESSAGE_CONTENT", messageId, delta: text });
+    const sky = { kind: "web", url: "https://example.com/sky", title: "Why the sky is blue", excerpts: ["Shorter wavelengths scatter more."] };
+    const notes = { kind: "document", document_id: "field-notes", title: "Field notes", excerpts: [] };
+    const citations = [
+      { sources: [sky], anchor: { kind: "content", start: 4, end: 15 } },
+      { sources: [notes], anchor: { kind: "marker", start: 16, end: 19 } },
+      { sources: [sky, notes], anchor: null },
+    ];
+    emit(res, { type: "TEXT_MESSAGE_END", messageId, metadata: { citations } });
   } else if (/\bbuilt-in activit/i.test(prompt)) {
     // The bookkeeping activity types the element draws without a renderer, in
     // the shapes they arrive in on the wire. Four are records for the model and draw nothing; the
