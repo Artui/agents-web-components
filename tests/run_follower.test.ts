@@ -71,17 +71,16 @@ describe("RunFollower", () => {
     expect(join).not.toHaveBeenCalled();
   });
 
-  it("offers a parked run, but not one a restore offered, until the chat runs again", async () => {
+  it("offers a parked run, but not the one a restore found", async () => {
     const page = { runId: "r3", status: "waiting" };
     const { follow, join } = follower({
       runs: () => ({ probe: () => Promise.resolve(page) }) as unknown as DetachedRuns,
     });
-    follow.offered("t1");
+    follow.ran("t1", "r3");
     follow.listed([row("waiting")]);
     await flush();
     expect(join).not.toHaveBeenCalled();
 
-    follow.ran("t1", "r4");
     page.runId = "r5";
     follow.listed([row("waiting")]);
     await flush();

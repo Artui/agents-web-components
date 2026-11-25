@@ -1340,6 +1340,22 @@ describe("a run the server starts on the thread on screen, under data-thread-sta
     expect(loads()).toBe(loaded);
   });
 
+  it("keeps what the person sent within one ArrowUp when it restores a parked thread", async () => {
+    const { el, server } = mount({ "data-detach-runs": "", "data-thread-status": "stream" });
+    await el.switchThread("t4");
+    server.starts.push(() => sse(finishedRun("r1", "partial answer and the rest", "t4")));
+    composerSend(el, "First question");
+    await settle();
+    const row = parkOnApproval(server);
+    listRow(server, row, "e1");
+    await settle();
+    expect(approveButton(el)).toBeInstanceOf(HTMLButtonElement);
+    const input = shadow(el).querySelector<HTMLTextAreaElement>(".input");
+    input?.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }));
+
+    expect(input?.value).toBe("First question");
+  });
+
   it("is not joined when the person sent while the server was asked", async () => {
     const { el, server } = mount({ "data-detach-runs": "", "data-thread-status": "stream" });
     await openThenWake(el, server);
@@ -1446,6 +1462,25 @@ describe("data-poll-runs", () => {
     expect(server.to("events/").length).toBe(asked + 1);
     expect(replays(server)).toEqual([]);
     expect(el.running).toBe(false);
+  });
+
+  it("does not restore again a thread it opened parked on what it cannot offer", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { el, server } = mount({ "data-detach-runs": "", "data-poll-runs": "" });
+    const question = listedRows.listed.body.threads.find((row) => row.thread_id === "t-question");
+    server.listing = [{ ...question, thread_id: "t4" }];
+    server.running.add("t4");
+    server.pages.set("t4", { ...recorded.probeParked.body, thread_id: "t4", run_id: "r4" });
+    server.stored.set("t4", [{ id: "u-r4", role: "user", content: "Please ask me" }]);
+    await el.switchThread("t4");
+    await settle();
+    const loads = (): number => server.calls.filter((call) => call.url === `${THREADS}t4/`).length;
+    const loaded = loads();
+    await vi.advanceTimersByTimeAsync(5000);
+    await settle();
+
+    expect(server.to("events/").length).toBe(2);
+    expect(loads()).toBe(loaded);
   });
 
   it("asks nothing of a thread nothing was sent in", async () => {

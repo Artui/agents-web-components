@@ -17,7 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   id its stream declared in `RUN_STARTED`, not by asking the run log as its run ends, so that
   request is gone); and a thread whose run the server parked (`waiting`) is restored, drawing
   what the run stored and offering the approvals it waits on, as opening the thread does. A
-  parked run a restore offered is not offered again after a Stop. Nothing to opt in to beyond
+  parked run a restore found (offered, or parked on what the chat cannot offer) is the chat's
+  own and is not restored again, after a Stop included. Nothing to opt in to beyond
   the attributes that already turn the join on.
 
 ## [0.16.0] — 2026-11-25

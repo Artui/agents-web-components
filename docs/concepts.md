@@ -176,8 +176,8 @@ mount with `run_store=` and `RUN_TIMEOUT_SECONDS` set, served over **ASGI**, to 
   waits on, as opening the thread would. A chat never joins a run it drove or already joined:
   the probe names the run, and the chat compares it with the run its own stream last declared
   in `RUN_STARTED`, since a list read a moment after a run's end can still say `running`. A
-  parked run a restore offered is the chat's own too, so a Stop on its approval does not offer
-  it again.
+  parked run a restore found is the chat's own too, so the thread is not restored again for it,
+  whether the restore offered its approvals or had nothing it could offer.
 - **Stop asks the server.** Stop, Escape and deleting the thread on screen post
   `<url><id>/cancel/` with the element's headers and credentials, then abort as before. The run
   acts on it at its next lease renewal, about ten seconds on; a `404` means it had already ended

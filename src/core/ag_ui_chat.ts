@@ -1386,7 +1386,18 @@ export class AgUiChat extends HTMLElement {
       },
       cancelRun: () => this.#cancelRun(),
       stopRun: () => this.#stopRun(),
-      runningOnServer: (threadId) => this.#detachedRuns()?.running(threadId) ?? null,
+      runningOnServer: (threadId) => {
+        const probe = this.#detachedRuns()?.probe(threadId);
+        // A run the restore finds parked is drawn and offered by it, so it is this chat's own.
+        return (
+          probe?.then((page) => {
+            if (page?.status === "waiting") {
+              this.#follower.ran(threadId, page.runId);
+            }
+            return page?.status === "running";
+          }) ?? null
+        );
+      },
       reattach: () => {
         const client = this.#ensureClient();
         if (client.canReattach) {
@@ -1400,7 +1411,6 @@ export class AgUiChat extends HTMLElement {
         }
       },
       answerParked: (approvals) => {
-        this.#follower.offered(this.#history.threadId);
         // As a reattach: running from now, and a host's send waiting on the
         // restore goes after the resumed run.
         const waited = this.#sending !== this.#restoreHold?.hold;
@@ -2319,7 +2329,7 @@ export class AgUiChat extends HTMLElement {
    */
   #joinServerRun(status: FollowedStatus): void {
     if (status === "waiting") {
-      this.#resetState();
+      this.#resetConversation();
       void this.#history.rehydrate(null);
       return;
     }
@@ -4370,7 +4380,6 @@ export class AgUiChat extends HTMLElement {
     // For a host's CSS, as `data-empty` is: the same state, on the element.
     this.toggleAttribute("data-running", running);
     if (settled) {
-      this.#follower.idled();
       this.#flushQueued();
     }
   }
@@ -4379,7 +4388,6 @@ export class AgUiChat extends HTMLElement {
   #releaseHold(hold: object): void {
     if (this.#sending === hold) {
       this.#sending = null;
-      this.#follower.idled();
       this.#flushQueued();
     }
   }
@@ -4407,6 +4415,8 @@ export class AgUiChat extends HTMLElement {
     if (this.#running || this.#joined !== null || this.#history.continuation !== null) {
       return;
     }
+    // Every way the chat goes idle comes through here, so a list it was busy for is asked again.
+    this.#follower.idled();
     const next = this.#queued.shift();
     this.#renderQueued();
     if (next !== undefined) {
