@@ -183,7 +183,7 @@ function startRun(res, body, queued = false, answer = ANSWER) {
       ...(cancelled ? {} : { outcome: { type: "success" } }),
     });
     end(run, row);
-    if (!cancelled && /report back/i.test(asked?.content ?? "")) {
+    if (!cancelled && answer !== REPORT && /report back/i.test(asked?.content ?? "")) {
       setTimeout(() => {
         const woken = { threadId, messages: row.messages, forwardedProps: { detach: true } };
         startRun(null, woken, true, REPORT);
