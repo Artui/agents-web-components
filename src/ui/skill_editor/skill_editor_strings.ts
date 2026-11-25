@@ -34,6 +34,7 @@ export type SkillEditorStrings = Pick<
   | "turnOff"
   | "turnOn"
   | "writeSkill"
+  | `skillScope:${string}`
 >;
 
 /**
@@ -75,4 +76,6 @@ export const DEFAULT_SKILL_EDITOR_STRINGS: SkillEditorStrings = {
   turnOff: "Turn off",
   turnOn: "Turn on",
   writeSkill: "Write it yourself",
+  "skillScope:personal": "Personal",
+  "skillScope:shared": "Company",
 };

@@ -76,3 +76,58 @@ describe("the skill editor's full-panel view (real browser)", () => {
     el.remove();
   });
 });
+
+describe("the scope badge after a skill's name (real browser)", () => {
+  const original = globalThis.fetch;
+  const skill = {
+    id: "1",
+    name: "a-skill-name-long-enough-to-need-the-whole-line-and-then-some",
+    description: "Summarise the week.",
+    body: "Collect the tickets.",
+    userInvocable: true,
+    modelInvocable: false,
+    enabled: false,
+    scope: "shared",
+  };
+
+  beforeAll(() => {
+    defineChat();
+    globalThis.fetch = async (input) =>
+      String(input).includes("/editor/") ? json({ skills: [skill] }) : json([]);
+  });
+
+  afterAll(() => {
+    globalThis.fetch = original;
+  });
+
+  it.each(["380px", "240px"])(
+    "stays inside its row's button, beside the name and clear of Turn on, at %s",
+    async (width) => {
+      const el = document.createElement(ELEMENT_TAG) as AgUiChat;
+      el.setAttribute("placement", "floating");
+      el.setAttribute("data-start-open", "");
+      el.setAttribute("data-skill-editor-url", "/agent/skills/editor/");
+      el.style.setProperty("--ag-ui-width", width);
+      document.body.append(el);
+      await settle();
+      el.openSkillEditor();
+      await settle();
+      await settle();
+      const root = el.shadowRoot as ShadowRoot;
+      const open = (root.querySelector(".skill-row-open") as HTMLElement).getBoundingClientRect();
+      const turnOn = (
+        root.querySelector(".skill-row > .skill-editor-btn") as HTMLElement
+      ).getBoundingClientRect();
+      const name = (root.querySelector(".skill-row-name") as HTMLElement).getBoundingClientRect();
+      const badge = root.querySelector("[part='skill-scope']") as HTMLElement;
+      const box = badge.getBoundingClientRect();
+      expect(badge.textContent).toBe("Company");
+      expect(box.width).toBeGreaterThan(0);
+      expect(box.left).toBeGreaterThanOrEqual(name.right - 1);
+      expect(box.right).toBeLessThanOrEqual(open.right + 0.5);
+      expect(box.right).toBeLessThanOrEqual(turnOn.left + 0.5);
+      expect(box.top).toBeLessThan(name.bottom);
+      el.remove();
+    },
+  );
+});

@@ -32,7 +32,7 @@ const DRAFT = {
 describe("SkillEditorClient over django-ag-ui's recorded answers", () => {
   it("was recorded from the released view", () => {
     expect(recorded.recordedBy).toBe("record_skill_editor_fixture.py");
-    expect(recorded.djangoAgUi).toBe("0.83.0");
+    expect(recorded.djangoAgUi).toBe("0.91.0");
   });
 
   it("lists the skills the server serves", async () => {
@@ -101,17 +101,20 @@ describe("SkillEditorClient over django-ag-ui's recorded answers", () => {
     ["limit", 409],
     ["unsupportedMediaType", 415],
     ["unauthenticated", 401],
-  ])("carries the %s refusal's status and message, naming no field", async (name, status) => {
-    const request = vi.fn(async () => respond(name));
-    const result = await new SkillEditorClient("/e/", request).create(DRAFT);
+  ])(
+    "carries the %s refusal's status, message and the field it names, if any",
+    async (name, status) => {
+      const request = vi.fn(async () => respond(name));
+      const result = await new SkillEditorClient("/e/", request).create(DRAFT);
 
-    expect(result).toEqual({
-      ok: false,
-      status,
-      message: (answer(name).body as { error: string }).error,
-      field: null,
-    });
-  });
+      expect(result).toEqual({
+        ok: false,
+        status,
+        message: (answer(name).body as { error: string }).error,
+        field: (answer(name).body as { field?: string }).field ?? null,
+      });
+    },
+  );
 
   it("carries a field the answer names", async () => {
     const body = { error: "A skill needs a description.", field: "description" };

@@ -100,12 +100,14 @@ const id = (prefix) => `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 
 // The stored skills behind the skill editor scenario, shaped as django-ag-ui's
 // SkillEditorView answers them. A write without a CSRF header is refused as
-// Django's middleware refuses it, so the page has to send the live header.
+// Django's middleware refuses it, so the page has to send the live header. The
+// policy scopes them as django-ag-ui 0.91.0 does: a skill the user writes is
+// "personal", the one the agent drafts "shared", so the list shows both badges.
 const EDITOR_SKILLS = [];
 let editorNextId = 1;
 
-function editorSkill(draft) {
-  const skill = { ...draft, id: String(editorNextId), enabled: true };
+function editorSkill(draft, scope = "personal") {
+  const skill = { ...draft, id: String(editorNextId), enabled: true, scope };
   editorNextId += 1;
   EDITOR_SKILLS.push(skill);
   return skill;
@@ -844,13 +846,16 @@ async function handleAgent(res, body) {
     // The agent drafting a skill: it saves one and says so with the CUSTOM event
     // django-ag-ui sends, which makes the element refetch its catalog.
     if (!EDITOR_SKILLS.some((skill) => skill.name === "standup-notes")) {
-      editorSkill({
-        name: "standup-notes",
-        description: "Turn yesterday's tickets into three standup lines.",
-        body: "List what closed yesterday, what is open today, and anything blocked.",
-        userInvocable: true,
-        modelInvocable: true,
-      });
+      editorSkill(
+        {
+          name: "standup-notes",
+          description: "Turn yesterday's tickets into three standup lines.",
+          body: "List what closed yesterday, what is open today, and anything blocked.",
+          userInvocable: true,
+          modelInvocable: true,
+        },
+        "shared",
+      );
     }
     await streamText(res, id("msg"), [
       "Saved a skill, **/standup-notes**. ",
