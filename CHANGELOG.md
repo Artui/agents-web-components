@@ -45,6 +45,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   without `scope` draws as before. See
   [Whose skill it is](https://artui.github.io/agents-web-components/skills/#whose-skill-it-is).
 
+- **Steer, answer and cancel a delegated task from its row.** With `data-threads-url` set, a
+  live task's sub-agent row offers **Steer** (a field whose text is sent to the task),
+  **Answer** (while the task waits on a question, shown beside the question's text) and
+  **Cancel**, which asks the task to stop before its next model request and, once that
+  request is on the stream, reads **Stop now** and stops it at once. Each is one `POST` to
+  django-ag-ui 0.91.0's `threads/<id>/tasks/<task_id>/steer/` (`{"message"}`), `answer/`
+  (`{"question_id", "answer"}`) or `cancel/` (`{"force"}`), with the element's headers and
+  cookie policy, sent once and never retried. The server answers `202`, and the row changes
+  only when the step for the act arrives on the stream, never on the click. A refusal is
+  worded under the controls from its `reason` code. The task steps' new `message`,
+  `question`, `answer`, `truncated` and `source` keys are read, and the `subagent` part gets
+  `data-source` (`user` or `model`). New parts `subagent-controls`, `subagent-question`,
+  `subagent-actions`, `subagent-steer`, `subagent-answer`, `subagent-cancel`,
+  `subagent-reply`, `subagent-reply-input`, `subagent-reply-send` and
+  `subagent-control-error`; new strings `subAgentControls`, `subAgentSteer`,
+  `subAgentAnswer`, `subAgentCancelTask`, `subAgentForceCancel`, `subAgentSend`,
+  `subAgentSteerPlaceholder`, `subAgentAnswerPlaceholder`, `subAgentControlFailed`,
+  `subAgentControlFinished`, `subAgentControlNotWaiting` and `subAgentControlUnavailable`.
+  **No new attribute to opt in to, but the controls appear wherever `data-threads-url` is
+  set and a task step arrives:** a host on django-ag-ui 0.90.0, or without a `run_store`,
+  shows them and every press is refused as "can't be controlled from here". Hide the
+  `subagent-controls` part there, or upgrade the server to 0.91.0 with a `run_store`. See
+  [Steer, answer and cancel](https://artui.github.io/agents-web-components/tool-calls/#steer-answer-and-cancel).
+
 ### Changed
 
 - **`pageMapFrom` lists SVG links.** An `<a>` inside an `<svg>` with an `href` or `xlink:href`

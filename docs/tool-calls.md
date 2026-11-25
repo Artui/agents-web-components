@@ -256,7 +256,7 @@ server's text.
 
 ### Task control
 
-Under django-ag-ui's task control (0.90.0, `SubAgents(task_control=TaskControl())`) a
+Under django-ag-ui's task control (0.90.0+, `SubAgents(task_control=TaskControl())`) a
 delegation is a task the parent's model manages, and the row draws what happens to it. The
 task's moments arrive on the same `ag_ui.subagent` event with `tool: null`, a server `status`
 line and a `task` record:
@@ -264,14 +264,16 @@ line and a `task` record:
 | `phase` | When | `task` carries |
 | --- | --- | --- |
 | `backgrounded` | the task moved to the background | `taskId`, `reason` (`requested`, `auto`, `question`) |
-| `steered` | the parent sent the running task a message | `taskId` |
-| `question` | the task asked the parent a question | `taskId`, `questionId` |
-| `answered` | the parent answered it | `taskId`, `questionId` |
-| `cancel_requested` | the parent asked the task to stop | `taskId`, `forced` |
+| `steered` | the task was sent a message | `taskId`, `message`, `source` |
+| `question` | the task asked the parent a question | `taskId`, `questionId`, `question` |
+| `answered` | the question was answered | `taskId`, `questionId`, `answer`, `source` |
+| `cancel_requested` | the task was asked to stop | `taskId`, `forced`, `source` |
 | `retried` | a remote task's worker is running it again | `taskId`, `attempt` |
 
-The steering message, the question and the answer are not on the wire, so the row says that
-something happened, never what was said. The panel's `data-phase` is the latest moment. What
+From django-ag-ui 0.91.0 the steps carry what was said, cut at 8000 characters with
+`truncated` beside it, and `source` says who acted: `user` for the controls below, `model` for
+the run itself. The row shows the server's `status` line ("researcher: steered by you"); the
+open question's text is drawn beside the Answer control, so only where the controls are. The panel's `data-phase` is the latest moment. What
 outlasts a moment is stamped on the `subagent` part for a host to style:
 
 | Attribute | Set |
@@ -281,6 +283,7 @@ outlasts a moment is stamped on the `subagent` part for a host to style:
 | `data-awaiting-answer` | from `question` until `answered`, or until the task settles |
 | `data-cancel` | `requested` or `forced`, once a cancellation was asked for |
 | `data-attempt` | a remote task's retry count, on `retried` |
+| `data-source` | `user` or `model`: who acted on the latest steer, answer or cancel |
 
 A task closes on the protocol's events as before, and two `SUBAGENT_ERROR` codes are not the
 child failing: `code: "cancelled"` settles the row as `data-phase="cancelled"` ("researcher was
@@ -294,8 +297,42 @@ The glyph follows: a cancelled task draws the card's `--ag-ui-tool-icon-declined
 unfinished one its `--ag-ui-tool-icon-interrupted`, both muted, and an open question stops the
 spinner for a still ring in the accent colour.
 
-The row offers no control over the task. Steering, answering and cancelling from the chat are
-not part of this release.
+#### Steer, answer and cancel
+
+With `data-threads-url` set, a live task's row offers three controls beside it, in the
+`subagent-controls` part:
+
+- **Steer** opens a field (`subagent-reply`) whose text is sent to the task.
+- **Answer** appears while the task waits on a question, beside the question's text
+  (`subagent-question`), and sends the answer to that question.
+- **Cancel** asks the task to stop before its next model request. Once that request is on the
+  stream (`data-cancel="requested"`) the button reads **Stop now** and stops the task at once.
+
+Each control is one `POST` to the route django-ag-ui (0.91.0, with a `run_store`) serves beside
+the thread, with the element's headers and cookie policy:
+
+| Control | Route | Body |
+| --- | --- | --- |
+| Steer | `<threads-url><thread>/tasks/<taskId>/steer/` | `{"message"}` |
+| Answer | `<threads-url><thread>/tasks/<taskId>/answer/` | `{"question_id", "answer"}` |
+| Cancel | `<threads-url><thread>/tasks/<taskId>/cancel/` | `{"force"}` |
+
+The server acknowledges with `202`, and the row does not change until the step for the act
+arrives on the stream: a control never sets a state itself. A request is sent once and never
+retried, a `401` included, since a steer sent twice is two messages. A refusal is worded from
+its `reason` code under the controls (`subagent-control-error`): `not_running`, `no_task` and
+`no_run` as `subAgentControlFinished`, `not_waiting` as `subAgentControlNotWaiting`,
+`not_live_here`, `remote` and a server without the routes as `subAgentControlUnavailable`, and
+anything else as `subAgentControlFailed`. The controls are withdrawn when the task settles.
+
+The parts are `subagent-controls` (the region), `subagent-question`, `subagent-actions` (the
+three buttons' row), `subagent-steer`, `subagent-answer`, `subagent-cancel`, `subagent-reply`,
+`subagent-reply-input`, `subagent-reply-send` and `subagent-control-error`. Their text comes
+from `subAgentControls` (the group's label), `subAgentSteer`,
+`subAgentAnswer`, `subAgentCancelTask`, `subAgentForceCancel`, `subAgentSend`,
+`subAgentSteerPlaceholder` and `subAgentAnswerPlaceholder`. The routes reach only a run live
+in the process serving the request and only top-level tasks; anything else is refused and
+worded as above.
 
 ### Child sessions
 

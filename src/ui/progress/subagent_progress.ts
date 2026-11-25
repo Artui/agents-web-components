@@ -1,7 +1,13 @@
 import { SUBAGENT_ERROR_CODE_PHASE, SUBAGENT_PHASE } from "../../constants.js";
+import type { TaskControls } from "../../core/task_controls.js";
 import { fillUiString } from "../fill_ui_string.js";
 import type { UiStrings } from "../ui_strings.js";
-import { SubAgentPanel, type SubAgentPhase, type SubAgentUpdate } from "./subagent_panel.js";
+import {
+  SubAgentPanel,
+  type SubAgentPhase,
+  type SubAgentUpdate,
+  type TaskControlPort,
+} from "./subagent_panel.js";
 import { subAgentUpdate } from "./subagent_update.js";
 import type { ToolCallCard } from "./tool_call_card.js";
 
@@ -13,6 +19,10 @@ export interface SubAgentProgressHost {
   readonly strings: () => UiStrings;
   /** Keep the transcript at its foot, if the reader is there. */
   readonly follow: () => void;
+  /** The task routes beside `data-threads-url`, or `null` without one. */
+  readonly controls: () => TaskControls | null;
+  /** The thread on screen, which a run streaming here belongs to. */
+  readonly threadId: () => string;
 }
 
 /**
@@ -190,6 +200,24 @@ export class SubAgentProgress {
   }
 
   /**
+   * How a new panel sends its task's controls: to the thread the delegation
+   * streamed in, captured now, since a later switch draws another transcript.
+   */
+  #port(): TaskControlPort {
+    const threadId = this.#host.threadId();
+    return {
+      available: () => this.#host.controls() !== null,
+      send: async (taskId, action) => {
+        const controls = this.#host.controls();
+        if (controls === null) {
+          return { ok: false, status: 0, reason: null };
+        }
+        return controls.send(threadId, taskId, action);
+      },
+    };
+  }
+
+  /**
    * Fold one already-narrowed update into the delegation's panel.
    *
    * The join point of the two carriers, and the reason it is separate from
@@ -209,7 +237,7 @@ export class SubAgentProgress {
       // The contract says exactly one opens a delegation, and a client that
       // insisted on it would answer a server that dropped one frame by showing
       // nothing at all for the rest of the run.
-      panel = new SubAgentPanel(this.#host.strings());
+      panel = new SubAgentPanel(this.#host.strings(), this.#port());
       this.#subagentPanels.set(update.delegationId, panel);
       card.subagentSlot.appendChild(panel.element);
     }

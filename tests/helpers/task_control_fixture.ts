@@ -47,3 +47,12 @@ export function taskLifecycle(name: TaskRun): readonly TaskEvent[] {
 
 /** A `retried` step, from the producer's encoder. */
 export const RETRIED_STEP: Record<string, unknown> = fixture.retried.value;
+
+/** The steps a task route reports, from the producer's encoder: `source` is `"user"`. */
+export const USER_STEP: Readonly<
+  Record<"steered" | "answered" | "cancel_requested", Record<string, unknown>>
+> = {
+  steered: fixture.byUser.steered.value,
+  answered: fixture.byUser.answered.value,
+  cancel_requested: fixture.byUser.cancel_requested.value,
+};

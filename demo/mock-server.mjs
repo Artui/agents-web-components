@@ -21,6 +21,7 @@ import { fileURLToPath } from "node:url";
 import { childSessionsRoute } from "./child-sessions.mjs";
 import { agentsHomeRoute } from "./agents-home.mjs";
 import { detachedRoute } from "./detached-runs.mjs";
+import { taskControlsRoute } from "./task-controls.mjs";
 import { statusRoute } from "./thread-status.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -1529,6 +1530,7 @@ const server = createServer((req, res) => {
     detachedRoute(req, res, path) ||
     statusRoute(req, res, path) ||
     childSessionsRoute(req, res, path) ||
+    taskControlsRoute(req, res, path) ||
     agentsHomeRoute(req, res, path) ||
     routinesRoute(req, res, path)
   ) {
