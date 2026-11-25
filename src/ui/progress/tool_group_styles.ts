@@ -277,8 +277,12 @@ ${inner("inline")}[data-status="deferred"] .tool-call-section--args:not([hidden]
 /* A one-step group already names its call in the row, so the card's own head
    is not drawn inside it. Under the minimal inner mode a card is only its head,
    so the row has nothing to open onto and draws no chevron. Grouped-only, so a
-   card mode keeps the head. data-count is rewritten live as a run grows. */
-${GROUPED} .tool-group[data-count="1"] .tool-call-head {
+   card mode keeps the head. data-count is rewritten live as a run grows.
+
+   A call a reviewer model or a routine approved keeps its head for the note
+   alone: no person was asked, so the note is the only record of that. */
+${GROUPED} .tool-group[data-count="1"] .tool-call:not([data-answered-by]) .tool-call-head,
+${GROUPED} .tool-group[data-count="1"] .tool-call[data-answered-by] .tool-call-head > :not(.tool-call-answered-by) {
   display: none;
 }
 
