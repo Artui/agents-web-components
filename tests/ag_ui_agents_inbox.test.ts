@@ -106,7 +106,7 @@ describe("<ag-ui-agents> inbox by polling", () => {
         updatedAt: Date.parse(waiting.updated_at),
         preview: "approve?",
         status: "waiting",
-        unread: false,
+        unread: true,
         interrupts: waiting.interrupts,
       },
       {
@@ -135,6 +135,22 @@ describe("<ag-ui-agents> inbox by polling", () => {
 
     expect(fetchMock).toHaveBeenLastCalledWith(INBOX, { headers: { "If-None-Match": '"i1"' } });
     expect(got).toHaveLength(1);
+  });
+
+  it("reads a row never read as unread, but not one still running", async () => {
+    const neverRead = { ...failed, thread_id: "n", status: "idle", last_read_at: null };
+    const { last_read_at: _mark, ...unmarked } = { ...neverRead, thread_id: "u" };
+    const stillRunning = { ...running, last_read_at: null };
+    fetchMock.mockResolvedValue(inbox([neverRead, unmarked, stillRunning]));
+    const home = provider();
+    document.body.append(home);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(home.inbox.map((row) => [row.threadId, row.unread])).toEqual([
+      ["n", true],
+      ["u", false],
+      ["r", false],
+    ]);
   });
 
   it("carries a reason only on a failed row and interrupts only on a waiting one", async () => {

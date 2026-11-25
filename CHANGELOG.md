@@ -36,6 +36,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a delegation without task control is unchanged. See
   [Task control](https://artui.github.io/agents-web-components/tool-calls/#task-control).
 
+### Changed
+
+- **A thread never read now shows as unread.** A `last_read_at` of `null` reads as unread in
+  the thread list (`<ag-ui-chat>`'s drawer and `<ag-ui-threads>`) and in the inbox rows of
+  `<ag-ui-agents>`, so a thread a routine started is listed as new. A running thread still is
+  not unread. After upgrading, threads stored before the server kept read marks light up once,
+  and count toward the launcher's unread badge, until each is opened. A read made before the first thread list is held and sent with
+  it; a page reloaded before any list loses that read. No opt-in.
+
 ### Fixed
 
 - **A `pageMapFrom` handle number is never given out twice in a document.** Once an element left

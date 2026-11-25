@@ -44,7 +44,8 @@ cap, so a client cannot ask for more than the server allows.
 ### Thread status keys
 
 Only beside a run store. A row carries `status` (`idle`, `running`, `waiting` or `failed`) and
-`last_read_at` (ISO 8601 or `null`); `reason` (string or `null`) only when `failed`;
+`last_read_at` (ISO 8601, or `null` for a thread never read, which the component shows unread
+unless it is running); `reason` (string or `null`) only when `failed`;
 `interrupts` only when `waiting`, each an AG-UI `Interrupt` in camelCase.
 
 A waiting approval, as recorded:
