@@ -116,6 +116,8 @@ class Server {
   readonly pages = new Map<string, unknown>();
   /** The thread list's SSE stream, once a `data-thread-status="stream"` watch asked for it. */
   threadList: Live | null = null;
+  /** The rows the thread list's JSON page answers with. */
+  listing: unknown[] = [];
 
   handle = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const url = String(input);
@@ -132,7 +134,7 @@ class Server {
         this.threadList = live(init, "");
         return this.threadList.response;
       }
-      return json(200, { threads: [] });
+      return json(200, { threads: this.listing });
     }
     const match = /^\/(?:agent|late)\/threads\/([^/]+)\/(events\/|cancel\/)?(\?.*)?$/.exec(url);
     if (match === null) {
@@ -1120,6 +1122,32 @@ async function openThenWake(el: AgUiChat, server: Server): Promise<void> {
   server.replays.push(() => sse(recorded.secondTurnReplay));
 }
 
+/** The recorded row of a thread parked on an approval, as `threadId`. */
+function parkedRow(threadId: string): Record<string, unknown> {
+  const row = listedRows.listed.body.threads.find((listed) => listed.thread_id === "t-approve");
+  return { ...row, thread_id: threadId };
+}
+
+/** Park `t4` on an approval: its row, its run log page and the turn its store now holds. */
+function parkOnApproval(server: Server): Record<string, unknown> {
+  const row = parkedRow("t4");
+  server.listing = [row];
+  server.running.add("t4");
+  server.pages.set("t4", { ...recorded.probeParked.body, thread_id: "t4", run_id: "r3" });
+  server.stored.set("t4", [...(server.stored.get("t4") ?? []), ...listedRows.approvalHistory]);
+  return row;
+}
+
+function listRow(server: Server, row: unknown, etag: string): void {
+  server.threadList?.push(`id: "${etag}"\ndata: ${JSON.stringify({ threads: [row] })}\n\n`);
+}
+
+function approveButton(el: AgUiChat): HTMLButtonElement | null {
+  return shadow(el).querySelector<HTMLButtonElement>(
+    '[data-tool-name="delete_invoice"] .approval-btn--approve',
+  );
+}
+
 function answers(el: AgUiChat): number {
   return transcriptText(el).split("partial answer and the rest").length - 1;
 }
@@ -1233,6 +1261,83 @@ describe("a run the server starts on the thread on screen, under data-thread-sta
     expect(replays(server).map((call) => call.url)).toEqual(["/agent/threads/t4/events/?after=0"]);
     expect(answers(el)).toBe(2);
     expect(el.running).toBe(false);
+  });
+
+  it("is joined once the chat is idle, when the watch listed it running while the chat was busy", async () => {
+    const { el, server } = mount({ "data-detach-runs": "", "data-thread-status": "stream" });
+    await el.switchThread("t4");
+    await settle();
+    const finished = finishedRun("r1", "partial answer and the rest", "t4");
+    const cut = finished.indexOf('data: {"type":"RUN_FINISHED');
+    let stream: Live | undefined;
+    server.starts.push((init) => {
+      server.running.add("t4");
+      stream = live(init, finished.slice(0, cut));
+      return stream.response;
+    });
+    void el.sendMessage("First question");
+    await settle();
+    expect(el.running).toBe(true);
+    server.pages.set("t4", SERVER_RUN_PAGE);
+    server.replays.push(() => sse(recorded.secondTurnReplay));
+    listRunning(server, "t4", "e1");
+    await settle();
+    expect(replays(server)).toEqual([]);
+    stream?.push(finished.slice(cut));
+    stream?.end();
+    await settle();
+
+    expect(replays(server).map((call) => call.url)).toEqual(["/agent/threads/t4/events/?after=0"]);
+    expect(el.running).toBe(false);
+  });
+
+  it("is joined when the server's run is already going by the time the chat's own has ended", async () => {
+    const { el, server } = mount({ "data-detach-runs": "", "data-thread-status": "stream" });
+    await el.switchThread("t4");
+    server.running.add("t4");
+    server.pages.set("t4", SERVER_RUN_PAGE);
+    server.starts.push(() => sse(finishedRun("r1", "partial answer and the rest", "t4")));
+    await el.sendMessage("First question");
+    await settle();
+    expect(el.running).toBe(false);
+    server.replays.push(() => sse(recorded.secondTurnReplay));
+    listRunning(server, "t4", "e1");
+    await settle();
+
+    expect(replays(server).map((call) => call.url)).toEqual(["/agent/threads/t4/events/?after=0"]);
+    expect(answers(el)).toBe(2);
+  });
+
+  it("is restored when the watch lists the thread waiting, offering the approval it parked on", async () => {
+    const { el, server } = mount({ "data-detach-runs": "", "data-thread-status": "stream" });
+    await openThenWake(el, server);
+    const row = parkOnApproval(server);
+    listRow(server, row, "e1");
+    await settle();
+
+    expect(approveButton(el)).toBeInstanceOf(HTMLButtonElement);
+    expect(transcriptText(el)).toContain("partial answer and the rest");
+    expect(replays(server)).toEqual([]);
+    expect(el.running).toBe(true);
+  });
+
+  it("is not restored again when a later list still says waiting, nor once the person stopped the offer", async () => {
+    const { el, server } = mount({ "data-detach-runs": "", "data-thread-status": "stream" });
+    await openThenWake(el, server);
+    const row = parkOnApproval(server);
+    listRow(server, row, "e1");
+    await settle();
+    const loads = (): number => server.calls.filter((call) => call.url === `${THREADS}t4/`).length;
+    const loaded = loads();
+    shadow(el)
+      .querySelector(".input")
+      ?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await settle();
+    expect(el.running).toBe(false);
+    listRow(server, row, "e2");
+    await settle();
+
+    expect(loads()).toBe(loaded);
   });
 
   it("is not joined when the person sent while the server was asked", async () => {
