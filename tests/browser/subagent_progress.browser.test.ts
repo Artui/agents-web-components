@@ -257,6 +257,7 @@ describe("a delegation, from recorded bytes (real browser)", () => {
       phase: "tool_call",
       status: `researcher: calling ${"long_tool_name_".repeat(12)}`,
       tool: null,
+      task: null,
     });
     const card = new ToolCallCard("delegate_task", { agent_name: "researcher" });
     card.subagentSlot.appendChild(panel.element);

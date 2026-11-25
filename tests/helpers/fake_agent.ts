@@ -81,8 +81,8 @@ export interface Emit {
   subAgentStarted(subagentRunId: string, name: string, parentToolCallId?: string): void;
   /** Emit `SUBAGENT_FINISHED`, which carries the child's run id and nothing else. */
   subAgentFinished(subagentRunId: string): void;
-  /** Emit `SUBAGENT_ERROR`, whose `message` the protocol requires. */
-  subAgentError(subagentRunId: string, message: string): void;
+  /** Emit `SUBAGENT_ERROR`, whose `message` the protocol requires; `code` is optional. */
+  subAgentError(subagentRunId: string, message: string, code?: string): void;
   /**
    * Apply an AG-UI `MESSAGES_SNAPSHOT`.
    *
@@ -289,9 +289,14 @@ function emitter(s: AgentSubscriber, state: EmitState, agent: FakeAgentInternals
         event: { type: EventType.SUBAGENT_FINISHED, subagentRunId },
       });
     },
-    subAgentError: (subagentRunId, message) => {
+    subAgentError: (subagentRunId, message, code) => {
       dispatch(s, "onSubagentErrorEvent", {
-        event: { type: EventType.SUBAGENT_ERROR, subagentRunId, message },
+        event: {
+          type: EventType.SUBAGENT_ERROR,
+          subagentRunId,
+          message,
+          ...(code === undefined ? {} : { code }),
+        },
       });
     },
     messagesSnapshot: (next) => {

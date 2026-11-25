@@ -63,6 +63,11 @@ export function copyPayload(root: Element): CopyPayload {
   for (const control of Array.from(clone.querySelectorAll("button"))) {
     control.remove();
   }
+  // The sources list under a cited answer is drawn by the element too, beside
+  // the markdown rather than inside it.
+  for (const sources of Array.from(clone.querySelectorAll(":scope > .citations"))) {
+    sources.remove();
+  }
   return { text: normalise(serialise(clone)), html: clone.innerHTML };
 }
 

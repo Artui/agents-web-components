@@ -692,6 +692,86 @@ async function handleAgent(res, body) {
       "The handbook mentions settlement three times; ",
       "the ledger check did not run.",
     ]);
+  } else if (/\bmanage a task\b/i.test(prompt)) {
+    // Task control, worded as django-ag-ui 0.90.0 words it. Three background
+    // tasks: one steered and asked a question, one retried then force-cancelled
+    // (a SUBAGENT_ERROR with code cancelled), and one still open when the run
+    // ends (code unfinished, sent before RUN_FINISHED, as the server does).
+    await streamText(res, id("msg"), ["Running three tasks in the background."]);
+    const step = (call, agent, phase, status, task, tool = null) =>
+      emit(res, {
+        type: "CUSTOM",
+        name: "ag_ui.subagent",
+        value: { delegationId: call, agent, phase, status, tool, task },
+      });
+    const task = async (agent, work) => {
+      const call = id("call");
+      const taskId = id("task");
+      emitToolCall(res, call, "delegate_task", { agent_name: agent, task: work, background: true });
+      emit(res, {
+        type: "SUBAGENT_STARTED",
+        subagentRunId: `subagent-${call}`,
+        name: agent,
+        parentToolCallId: call,
+      });
+      step(call, agent, "backgrounded", `${agent}: moved to the background`, {
+        taskId,
+        reason: "requested",
+      });
+      emitToolResult(res, call, `Task ${taskId} is running in the background.`);
+      await sleep(500);
+      step(call, agent, "tool_call", `${agent}: calling read_handbook`, null, {
+        toolCallId: `${call}-sub-1`,
+        name: "read_handbook",
+        ok: null,
+      });
+      return { call, taskId };
+    };
+    const researcher = await task("researcher", "Find the settlement passages.");
+    const auditor = await task("auditor", "Check them against the ledger.");
+    const archivist = await task("archivist", "Index every passage.");
+    await sleep(900);
+    step(researcher.call, "researcher", "steered", "researcher: steered", {
+      taskId: researcher.taskId,
+    });
+    step(auditor.call, "auditor", "retried", "auditor: retrying, attempt 2", {
+      taskId: auditor.taskId,
+      attempt: 2,
+    });
+    await sleep(900);
+    step(researcher.call, "researcher", "question", "researcher: asked a question", {
+      taskId: researcher.taskId,
+      questionId: "q-1",
+    });
+    step(auditor.call, "auditor", "cancel_requested", "auditor: cancellation requested", {
+      taskId: auditor.taskId,
+      forced: true,
+    });
+    await sleep(1800);
+    emit(res, {
+      type: "SUBAGENT_ERROR",
+      subagentRunId: `subagent-${auditor.call}`,
+      message: "auditor was cancelled",
+      code: "cancelled",
+    });
+    step(researcher.call, "researcher", "answered", "researcher: question answered", {
+      taskId: researcher.taskId,
+      questionId: "q-1",
+    });
+    await sleep(900);
+    step(researcher.call, "researcher", "tool_result", "researcher: read_handbook returned", null, {
+      toolCallId: `${researcher.call}-sub-1`,
+      name: "read_handbook",
+      ok: true,
+    });
+    emit(res, { type: "SUBAGENT_FINISHED", subagentRunId: `subagent-${researcher.call}` });
+    await streamText(res, id("msg"), ["The researcher is done; the archivist is still indexing."]);
+    emit(res, {
+      type: "SUBAGENT_ERROR",
+      subagentRunId: `subagent-${archivist.call}`,
+      message: "the sub-agent was still running when the run ended",
+      code: "unfinished",
+    });
   } else if (/\bchart\b/i.test(prompt) && !isFollowUp) {
     // Both routes and every kind, driven from one prompt so they can be
     // compared on the page rather than in the abstract.
@@ -786,6 +866,21 @@ async function handleAgent(res, body) {
       "The browser only ever sent the token — ",
       "the prompt behind it lives here.",
     ]);
+  } else if (/\bcite\b/i.test(prompt)) {
+    // An answer citing its sources, as django-ag-ui 0.90.0 sends them on
+    // TEXT_MESSAGE_END: offsets in UTF-16 units into this message's own text.
+    const messageId = id("msg");
+    const text = "The sky is blue [1], and grass is green.";
+    emit(res, { type: "TEXT_MESSAGE_START", messageId, role: "assistant" });
+    emit(res, { type: "TEXT_MESSAGE_CONTENT", messageId, delta: text });
+    const sky = { kind: "web", url: "https://example.com/sky", title: "Why the sky is blue", excerpts: ["Shorter wavelengths scatter more."] };
+    const notes = { kind: "document", document_id: "field-notes", title: "Field notes", excerpts: [] };
+    const citations = [
+      { sources: [sky], anchor: { kind: "content", start: 4, end: 15 } },
+      { sources: [notes], anchor: { kind: "marker", start: 16, end: 19 } },
+      { sources: [sky, notes], anchor: null },
+    ];
+    emit(res, { type: "TEXT_MESSAGE_END", messageId, metadata: { citations } });
   } else if (/\bbuilt-in activit/i.test(prompt)) {
     // The bookkeeping activity types the element draws without a renderer, in
     // the shapes they arrive in on the wire. Four are records for the model and draw nothing; the

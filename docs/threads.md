@@ -72,12 +72,14 @@ them onto `ThreadMeta` as `status`, `reason` and `interrupts`, and works out `un
 server, or a mount without a run store, lists none of them and nothing below happens.
 
 - **Unread** is a thread that changed after it was last read, by the server's clock on both
-  sides, and is not running now. A thread never read reads as not unread: the server keeps no
-  mark until a thread is read once, so a first turn left before its answer came is counted in
-  that page only, not after a reload.
+  sides, or was never read (`last_read_at` is `null`), and is not running now. The server keeps
+  no mark until a thread is read once, so a thread a routine started shows as unread until it
+  is opened, and so does every thread stored before the server kept read marks.
 - **Read.** When the element reads a thread (`markRead`), the store posts
   `POST <threads-url><id>/read/`, and only once a list carried `status`, since the route is
   mounted only beside a run store. The thread then reads as read here until it changes again.
+  A read made before such a list is held and sent with the first one; a page reloaded before
+  any list loses it, and the thread shows unread until opened again.
 - **Keeping it fresh is the host's choice, and opt-in.** `data-thread-status="poll"` asks the
   list again every five seconds with its ETag (a `304` costs nothing); `"stream"` follows the
   same URL as Server-Sent Events, read with `fetch` so the headers and cookie policy apply,

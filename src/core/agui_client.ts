@@ -124,9 +124,11 @@ export interface AgUiClientHandlers {
   onTextDelta(buffer: string): void;
   /**
    * Fired when the assistant message completes; `buffer` is the final text,
-   * and `message` names it as the stream did.
+   * and `message` names it as the stream did. `citations` is the end event's
+   * `metadata.citations` as it arrived (django-ag-ui 0.90.0 and later), unread:
+   * the transcript narrows it against `buffer`, which its offsets index.
    */
-  onTextEnd(buffer: string, message: AgUiMessageIds): void;
+  onTextEnd(buffer: string, message: AgUiMessageIds, citations?: unknown): void;
   /** Fired when the agent finishes calling a tool (server- or frontend-side). */
   onToolCall(call: AgUiToolCall): void;
   /**
@@ -229,14 +231,16 @@ export interface AgUiClientHandlers {
   /** The delegation named by `subagentRunId` completed. */
   onSubAgentFinished(subagentRunId: string): void;
   /**
-   * The delegation named by `subagentRunId` failed.
+   * The delegation named by `subagentRunId` closed on `SUBAGENT_ERROR`.
    *
    * `message` is server text and required by the protocol, but it is not an
    * exception's words: `django-ag-ui` sends only which sub-agent failed, on the
    * same reasoning that redacts a `RUN_ERROR`. Render it as text, never as
-   * markup.
+   * markup. `code` is the event's optional code, `null` when absent: under task
+   * control `cancelled` (the parent stopped the task) and `unfinished` (the run
+   * ended while it was open) close a delegation whose child did not fail.
    */
-  onSubAgentError(subagentRunId: string, message: string): void;
+  onSubAgentError(subagentRunId: string, message: string, code: string | null): void;
   /**
    * The run failed. `runError` is present when the failure was a `RUN_ERROR`
    * event, carrying its `code` if the server sent one, and when a non-2xx run
@@ -1132,10 +1136,11 @@ export class AgUiClient {
       },
       onTextMessageEndEvent({ event, textMessageBuffer }) {
         closed.add(event.messageId);
-        h.onTextEnd(textMessageBuffer, {
-          messageId: event.messageId,
-          ...(runId === undefined ? {} : { runId }),
-        });
+        h.onTextEnd(
+          textMessageBuffer,
+          { messageId: event.messageId, ...(runId === undefined ? {} : { runId }) },
+          event.metadata?.["citations"],
+        );
       },
       onToolCallEndEvent({ event, toolCallName, toolCallArgs }) {
         // A sub-agent's call, tagged by the delegation it ran in: the panel follows it from
@@ -1213,7 +1218,7 @@ export class AgUiClient {
         h.onSubAgentFinished(event.subagentRunId);
       },
       onSubagentErrorEvent({ event }) {
-        h.onSubAgentError(event.subagentRunId, event.message);
+        h.onSubAgentError(event.subagentRunId, event.message, event.code ?? null);
       },
       onMessagesSnapshotEvent({ event }) {
         // A queued start's stream is its run log's replay, which opens on the

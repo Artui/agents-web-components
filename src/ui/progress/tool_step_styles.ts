@@ -410,8 +410,12 @@ export const TOOL_STEP_STYLES: string = `
 
 /* Anything that is not a terminal phase is the child still working. Selected by
    what it is not, so a phase this client has not heard of still spins rather
-   than rendering as a blank. */
-.subagent[data-phase]:not([data-phase="finished"]):not([data-phase="failed"]) .subagent-icon {
+   than rendering as a blank. A task waiting on an answer is not working, so it
+   is left out too and drawn below. */
+.subagent[data-phase]:not([data-phase="finished"]):not([data-phase="failed"]):not(
+    [data-phase="cancelled"]
+  ):not([data-phase="unfinished"]):not([data-awaiting-answer])
+  .subagent-icon {
   border: 2px solid var(--_muted);
   border-top-color: transparent;
   border-radius: 50%;
@@ -426,6 +430,25 @@ export const TOOL_STEP_STYLES: string = `
 .subagent[data-phase="failed"] .subagent-icon::before {
   content: var(--_tool-icon-error);
   color: var(--_danger);
+}
+
+/* A task the parent cancelled, or one still open when the run ended: nothing
+   failed, so muted, on the card's own declined and interrupted glyphs. */
+.subagent[data-phase="cancelled"] .subagent-icon::before {
+  content: var(--_tool-icon-declined);
+  color: var(--_muted);
+}
+
+.subagent[data-phase="unfinished"] .subagent-icon::before {
+  content: var(--_tool-icon-interrupted);
+  color: var(--_muted);
+}
+
+/* An open question: the task waits on the parent, so a still ring in the accent
+   colour instead of the spinner. Cleared on the answer or the close. */
+.subagent[data-awaiting-answer] .subagent-icon {
+  border: 2px solid var(--_accent);
+  border-radius: 50%;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,5 +1,13 @@
-import type { SUBAGENT_PHASE } from "../../constants.js";
+import { SUBAGENT_PHASE } from "../../constants.js";
 import { DEFAULT_UI_STRINGS, type UiStrings } from "../ui_strings.js";
+
+/** The phases that close a delegation; nothing about it is still pending after one. */
+const SETTLED: ReadonlySet<string> = new Set([
+  SUBAGENT_PHASE.FINISHED,
+  SUBAGENT_PHASE.FAILED,
+  SUBAGENT_PHASE.CANCELLED,
+  SUBAGENT_PHASE.UNFINISHED,
+]);
 
 /** One phase of a delegation's life, as the server spells it. */
 export type SubAgentPhase = (typeof SUBAGENT_PHASE)[keyof typeof SUBAGENT_PHASE];
@@ -16,6 +24,22 @@ export interface SubAgentTool {
   readonly toolCallId: string;
   readonly name: string;
   readonly ok: boolean | null;
+}
+
+/**
+ * The task a task-control step names, and what that step adds to it.
+ *
+ * `taskId` is on every task step; each other key is `null` unless its phase
+ * carries it: `reason` on `backgrounded` (`requested`, `auto`, `question`),
+ * `questionId` on `question` and `answered`, `forced` on `cancel_requested`,
+ * `attempt` on `retried`.
+ */
+export interface SubAgentTask {
+  readonly taskId: string;
+  readonly reason: string | null;
+  readonly questionId: string | null;
+  readonly forced: boolean | null;
+  readonly attempt: number | null;
 }
 
 /**
@@ -36,6 +60,8 @@ export interface SubAgentUpdate {
   readonly status: string | null;
   /** Present on the two tool phases only. */
   readonly tool: SubAgentTool | null;
+  /** Present on the task-control phases only. */
+  readonly task: SubAgentTask | null;
 }
 
 /**
@@ -70,6 +96,17 @@ export interface SubAgentUpdate {
  * detail arrives on the ordinary `TOOL_CALL_RESULT` and lands in the same card's
  * result region, a few pixels below. Anything invented here would be this
  * component guessing at words the server declined to send.
+ *
+ * ## A task's state
+ *
+ * `data-phase` is the latest moment, and a task step is a moment: a `steered`
+ * gives way to the next `tool_call`. What outlasts its moment is stamped on its
+ * own, for a host to style: `data-task-id` (the task the steps name),
+ * `data-background` (the task left the foreground; its value is the server's
+ * reason), `data-awaiting-answer` (a question is open, from `question` to
+ * `answered` or the close), `data-cancel` (`requested` or `forced`), and
+ * `data-attempt` (a remote task's retry). It offers no control over the task:
+ * steering, answering and cancelling are not drawn here.
  *
  * Nothing here is persisted: the events ride the imperative carrier, so a thread
  * restore rebuilds the tool card and not the delegation under it.
@@ -172,6 +209,28 @@ export class SubAgentPanel {
     }
     if (update.tool !== null) {
       this.#recordStep(update.tool);
+    }
+    if (update.task !== null) {
+      this.#recordTask(update.phase, update.task);
+    }
+    if (SETTLED.has(update.phase)) {
+      this.element.removeAttribute("data-awaiting-answer");
+    }
+  }
+
+  /** Stamp what a task step leaves standing after its moment has passed. */
+  #recordTask(phase: SubAgentPhase, task: SubAgentTask): void {
+    this.element.setAttribute("data-task-id", task.taskId);
+    if (phase === SUBAGENT_PHASE.BACKGROUNDED) {
+      this.element.setAttribute("data-background", task.reason ?? "");
+    } else if (phase === SUBAGENT_PHASE.QUESTION) {
+      this.element.setAttribute("data-awaiting-answer", "");
+    } else if (phase === SUBAGENT_PHASE.ANSWERED) {
+      this.element.removeAttribute("data-awaiting-answer");
+    } else if (phase === SUBAGENT_PHASE.CANCEL_REQUESTED) {
+      this.element.setAttribute("data-cancel", task.forced === true ? "forced" : "requested");
+    } else if (phase === SUBAGENT_PHASE.RETRIED && task.attempt !== null) {
+      this.element.setAttribute("data-attempt", String(task.attempt));
     }
   }
 

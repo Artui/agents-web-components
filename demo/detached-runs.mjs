@@ -18,7 +18,10 @@
 // the thread's log on a timer, and a request only tails the log. So a client
 // that leaves (a thread switch, New chat, a reload) leaves the run going, and
 // one that comes back replays the log from its start and follows it to the
-// end. A cancel lands about three seconds after it is asked for, standing in
+// end. A turn that asks to be reported back to is answered, and a few
+// seconds after that run ends the server starts another run on the thread by
+// itself, as a child's report wakes its parent: the "A run the server starts"
+// scenarios join it in the chat already showing the thread. A cancel lands about three seconds after it is asked for, standing in
 // for the server's lease renewal, which is what lets Stop and then an
 // immediate Send meet the 409.
 import { randomUUID } from "node:crypto";
@@ -45,6 +48,13 @@ const ANSWER = [
   "so the element joins this run again ",
   "and sends your turn once it has finished. ",
   "That is the whole answer.",
+];
+
+const WAKE_MS = 4000;
+const REPORT = [
+  "A child reported back, ",
+  "so the server started this run on the thread by itself, ",
+  "and the chat already showing the thread joined it.",
 ];
 
 /** Thread id to its title, messages, last update and the run it holds, if any. */
@@ -118,10 +128,14 @@ function tail(run, res, from) {
   });
 }
 
-function startRun(res, body, queued = false) {
+/** Start a run; `res` is `null` for one the server starts by itself, which nobody streams. */
+function startRun(res, body, queued = false, answer = ANSWER) {
   const threadId = body.threadId;
   const row = thread(threadId);
   if (row.run !== null && !row.run.done) {
+    if (res === null) {
+      return;
+    }
     json(res, 409, {
       error: "the thread has a run in progress",
       thread_id: threadId,
@@ -155,9 +169,9 @@ function startRun(res, body, queued = false) {
   let next = 0;
   run.timer = setInterval(() => {
     const cancelled = run.cancelAt !== null && Date.now() >= run.cancelAt;
-    if (!cancelled && next < ANSWER.length) {
-      run.text += ANSWER[next];
-      append(run, { type: "TEXT_MESSAGE_CONTENT", messageId: run.messageId, delta: ANSWER[next] });
+    if (!cancelled && next < answer.length) {
+      run.text += answer[next];
+      append(run, { type: "TEXT_MESSAGE_CONTENT", messageId: run.messageId, delta: answer[next] });
       next += 1;
       return;
     }
@@ -169,10 +183,18 @@ function startRun(res, body, queued = false) {
       ...(cancelled ? {} : { outcome: { type: "success" } }),
     });
     end(run, row);
+    if (!cancelled && answer !== REPORT && /report back/i.test(asked?.content ?? "")) {
+      setTimeout(() => {
+        const woken = { threadId, messages: row.messages, forwardedProps: { detach: true } };
+        startRun(null, woken, true, REPORT);
+      }, WAKE_MS);
+    }
   }, CHUNK_MS);
   if (queued) {
     // A worker has the run now; the element follows it through events/?after=0.
-    json(res, 200, { thread_id: threadId, run_id: run.runId });
+    if (res !== null) {
+      json(res, 200, { thread_id: threadId, run_id: run.runId });
+    }
     return;
   }
   openStream(res);
@@ -255,6 +277,7 @@ export function detachedRoute(req, res, path) {
         title: listed.title,
         updated_at: new Date(listed.updatedAt).toISOString(),
         preview: "",
+        status: listed.run !== null && !listed.run.done ? "running" : "idle",
       }));
     json(res, 200, { threads: rows });
   } else if (route === "events/" && req.method === "GET") {

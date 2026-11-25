@@ -1,0 +1,212 @@
+{
+  "generator": "scripts/record_citations_fixture.py",
+  "djangoAgUi": "0.90.0",
+  "pydanticAi": "2.74.0",
+  "agUiProtocol": "1.0.0",
+  "canonicalized": [
+    "messageId",
+    "id",
+    "timestamp"
+  ],
+  "runs": {
+    "cited": {
+      "sse": "data: {\"type\":\"RUN_STARTED\",\"threadId\":\"t1\",\"runId\":\"r1\",\"protocolVersion\":\"1.0\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_START\",\"messageId\":\"m0\",\"role\":\"assistant\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"messageId\":\"m0\",\"delta\":\"𝐀 sky: \"}\n\ndata: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"messageId\":\"m0\",\"delta\":\"it is blue [1]\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_END\",\"metadata\":{\"citations\":[{\"sources\":[{\"url\":\"https://example.com/sky\",\"title\":\"Sky\",\"excerpts\":[\"The sky is blue.\"],\"kind\":\"web\"}],\"anchor\":{\"start\":14,\"end\":18,\"kind\":\"content\"}},{\"sources\":[{\"document_id\":\"doc-7\",\"title\":\"Field notes\",\"excerpts\":[],\"kind\":\"document\"}],\"anchor\":{\"start\":19,\"end\":22,\"kind\":\"marker\"}},{\"sources\":[{\"url\":\"https://example.com/sky\",\"title\":\"Sky\",\"excerpts\":[\"The sky is blue.\"],\"kind\":\"web\"},{\"document_id\":\"doc-7\",\"title\":\"Field notes\",\"excerpts\":[],\"kind\":\"document\"}],\"anchor\":null}]},\"messageId\":\"m0\"}\n\ndata: {\"type\":\"RUN_FINISHED\",\"threadId\":\"t1\",\"runId\":\"r1\",\"outcome\":{\"type\":\"success\"}}\n\n",
+      "stored": [
+        {
+          "id": "m0",
+          "role": "assistant",
+          "metadata": {
+            "citations": [
+              {
+                "sources": [
+                  {
+                    "url": "https://example.com/sky",
+                    "title": "Sky",
+                    "excerpts": [
+                      "The sky is blue."
+                    ],
+                    "kind": "web"
+                  }
+                ],
+                "anchor": {
+                  "start": 14,
+                  "end": 18,
+                  "kind": "content"
+                }
+              },
+              {
+                "sources": [
+                  {
+                    "document_id": "doc-7",
+                    "title": "Field notes",
+                    "excerpts": [],
+                    "kind": "document"
+                  }
+                ],
+                "anchor": {
+                  "start": 19,
+                  "end": 22,
+                  "kind": "marker"
+                }
+              },
+              {
+                "sources": [
+                  {
+                    "url": "https://example.com/sky",
+                    "title": "Sky",
+                    "excerpts": [
+                      "The sky is blue."
+                    ],
+                    "kind": "web"
+                  },
+                  {
+                    "document_id": "doc-7",
+                    "title": "Field notes",
+                    "excerpts": [],
+                    "kind": "document"
+                  }
+                ],
+                "anchor": null
+              }
+            ]
+          },
+          "content": "𝐀 sky: it is blue [1]"
+        }
+      ]
+    },
+    "fileSplit": {
+      "sse": "data: {\"type\":\"RUN_STARTED\",\"threadId\":\"t1\",\"runId\":\"r1\",\"protocolVersion\":\"1.0\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_START\",\"messageId\":\"m0\",\"role\":\"assistant\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"messageId\":\"m0\",\"delta\":\"B is\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_END\",\"metadata\":{\"citations\":[{\"sources\":[{\"url\":\"https://example.com/sky\",\"title\":\"Sky\",\"excerpts\":[\"The sky is blue.\"],\"kind\":\"web\"}],\"anchor\":{\"start\":2,\"end\":4,\"kind\":\"content\"}}]},\"messageId\":\"m0\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_START\",\"messageId\":\"m1\",\"role\":\"assistant\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"messageId\":\"m1\",\"delta\":\"C too\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_END\",\"metadata\":{\"citations\":[{\"sources\":[{\"document_id\":\"doc-7\",\"title\":\"Field notes\",\"excerpts\":[],\"kind\":\"document\"}],\"anchor\":{\"start\":2,\"end\":5,\"kind\":\"content\"}}]},\"messageId\":\"m1\"}\n\ndata: {\"type\":\"RUN_FINISHED\",\"threadId\":\"t1\",\"runId\":\"r1\",\"outcome\":{\"type\":\"success\"}}\n\n",
+      "stored": [
+        {
+          "id": "m2",
+          "role": "assistant",
+          "metadata": {
+            "citations": [
+              {
+                "sources": [
+                  {
+                    "url": "https://example.com/sky",
+                    "title": "Sky",
+                    "excerpts": [
+                      "The sky is blue."
+                    ],
+                    "kind": "web"
+                  }
+                ],
+                "anchor": {
+                  "start": 2,
+                  "end": 4,
+                  "kind": "content"
+                }
+              },
+              {
+                "sources": [
+                  {
+                    "document_id": "doc-7",
+                    "title": "Field notes",
+                    "excerpts": [],
+                    "kind": "document"
+                  }
+                ],
+                "anchor": {
+                  "start": 7,
+                  "end": 10,
+                  "kind": "content"
+                }
+              }
+            ]
+          },
+          "content": "B is\nC too"
+        }
+      ]
+    },
+    "compactionSplit": {
+      "sse": "data: {\"type\":\"RUN_STARTED\",\"threadId\":\"t1\",\"runId\":\"r1\",\"protocolVersion\":\"1.0\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_START\",\"messageId\":\"m0\",\"role\":\"assistant\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"messageId\":\"m0\",\"delta\":\"before it\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_END\",\"metadata\":{\"citations\":[{\"sources\":[{\"url\":\"https://example.com/sky\",\"title\":\"Sky\",\"excerpts\":[\"The sky is blue.\"],\"kind\":\"web\"}],\"anchor\":{\"start\":7,\"end\":9,\"kind\":\"content\"}}]},\"messageId\":\"m0\"}\n\ndata: {\"type\":\"ACTIVITY_SNAPSHOT\",\"messageId\":\"m1\",\"activityType\":\"pydantic_ai_compaction\",\"content\":{\"provider_name\":\"openai\",\"provider_details\":{\"encrypted_content\":\"x\"}}}\n\ndata: {\"type\":\"TEXT_MESSAGE_START\",\"messageId\":\"m2\",\"role\":\"assistant\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"messageId\":\"m2\",\"delta\":\"after\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_END\",\"messageId\":\"m2\"}\n\ndata: {\"type\":\"RUN_FINISHED\",\"threadId\":\"t1\",\"runId\":\"r1\",\"outcome\":{\"type\":\"success\"}}\n\n",
+      "stored": [
+        {
+          "id": "m0",
+          "role": "assistant",
+          "metadata": {
+            "citations": [
+              {
+                "sources": [
+                  {
+                    "url": "https://example.com/sky",
+                    "title": "Sky",
+                    "excerpts": [
+                      "The sky is blue."
+                    ],
+                    "kind": "web"
+                  }
+                ],
+                "anchor": {
+                  "start": 7,
+                  "end": 9,
+                  "kind": "content"
+                }
+              }
+            ]
+          },
+          "content": "before it"
+        },
+        {
+          "id": "m1",
+          "role": "activity",
+          "activityType": "pydantic_ai_compaction",
+          "content": {
+            "provider_name": "openai",
+            "provider_details": {
+              "encrypted_content": "x"
+            }
+          }
+        },
+        {
+          "id": "m2",
+          "role": "assistant",
+          "content": "after"
+        }
+      ]
+    },
+    "reasoningSplit": {
+      "sse": "data: {\"type\":\"RUN_STARTED\",\"threadId\":\"t1\",\"runId\":\"r1\",\"protocolVersion\":\"1.0\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_START\",\"messageId\":\"m0\",\"role\":\"assistant\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"messageId\":\"m0\",\"delta\":\"first part\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_END\",\"metadata\":{\"citations\":[{\"sources\":[{\"url\":\"https://example.com/sky\",\"title\":\"Sky\",\"excerpts\":[\"The sky is blue.\"],\"kind\":\"web\"}],\"anchor\":{\"start\":6,\"end\":10,\"kind\":\"content\"}}]},\"messageId\":\"m0\"}\n\ndata: {\"type\":\"REASONING_START\",\"messageId\":\"m1\"}\n\ndata: {\"type\":\"REASONING_MESSAGE_START\",\"messageId\":\"m1\",\"role\":\"reasoning\"}\n\ndata: {\"type\":\"REASONING_MESSAGE_CONTENT\",\"messageId\":\"m1\",\"delta\":\"pondering\"}\n\ndata: {\"type\":\"REASONING_MESSAGE_END\",\"messageId\":\"m1\"}\n\ndata: {\"type\":\"REASONING_END\",\"messageId\":\"m1\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_START\",\"messageId\":\"m2\",\"role\":\"assistant\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"messageId\":\"m2\",\"delta\":\"second\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_END\",\"messageId\":\"m2\"}\n\ndata: {\"type\":\"RUN_FINISHED\",\"threadId\":\"t1\",\"runId\":\"r1\",\"outcome\":{\"type\":\"success\"}}\n\n",
+      "stored": [
+        {
+          "id": "m0",
+          "role": "assistant",
+          "metadata": {
+            "citations": [
+              {
+                "sources": [
+                  {
+                    "url": "https://example.com/sky",
+                    "title": "Sky",
+                    "excerpts": [
+                      "The sky is blue."
+                    ],
+                    "kind": "web"
+                  }
+                ],
+                "anchor": {
+                  "start": 6,
+                  "end": 10,
+                  "kind": "content"
+                }
+              }
+            ]
+          },
+          "content": "first part"
+        },
+        {
+          "id": "m1",
+          "role": "reasoning",
+          "content": "pondering"
+        },
+        {
+          "id": "m2",
+          "role": "assistant",
+          "content": "second"
+        }
+      ]
+    }
+  }
+}

@@ -1,4 +1,4 @@
-import { SUBAGENT_PHASE } from "../../constants.js";
+import { SUBAGENT_ERROR_CODE_PHASE, SUBAGENT_PHASE } from "../../constants.js";
 import { fillUiString } from "../fill_ui_string.js";
 import type { UiStrings } from "../ui_strings.js";
 import { SubAgentPanel, type SubAgentPhase, type SubAgentUpdate } from "./subagent_panel.js";
@@ -92,6 +92,7 @@ export class SubAgentProgress {
       phase: SUBAGENT_PHASE.STARTED,
       status: fillUiString(this.#host.strings().subAgentDelegatedTo, { agent }),
       tool: null,
+      task: null,
     });
   }
 
@@ -100,8 +101,13 @@ export class SubAgentProgress {
     this.#close(subagentRunId, SUBAGENT_PHASE.FINISHED, null);
   }
 
-  /** Settle a delegation that failed, on `SUBAGENT_ERROR`. */
-  fail(subagentRunId: string, message: string): void {
+  /**
+   * Settle a delegation on `SUBAGENT_ERROR`. A `code` of `cancelled` or
+   * `unfinished` is not the child failing, so it settles to that phase on the
+   * element's own words; any other code, or none, is a failure.
+   */
+  fail(subagentRunId: string, message: string, code: string | null = null): void {
+    const closed = code === null ? undefined : SUBAGENT_ERROR_CODE_PHASE.get(code);
     // The server's own words, which the contract keeps to the sub-agent's
     // name. Passed through as the status line and set with textContent
     // downstream, never parsed as markup.
@@ -112,11 +118,12 @@ export class SubAgentProgress {
     // written and documented in UiStrings and never wired up, so until now
     // the only reader who knew it existed was the one reading the string
     // table.
-    this.#close(
-      subagentRunId,
-      SUBAGENT_PHASE.FAILED,
-      message === "" ? this.#host.strings().subAgentFailed : message,
-    );
+    const said = message === "" ? this.#host.strings().subAgentFailed : message;
+    if (closed === undefined) {
+      this.#close(subagentRunId, SUBAGENT_PHASE.FAILED, said);
+      return;
+    }
+    this.#close(subagentRunId, closed, null, said);
   }
 
   /**
@@ -133,8 +140,9 @@ export class SubAgentProgress {
   /**
    * Settle the delegation a closing lifecycle event names.
    *
-   * `status` is the server's text on a failure and `null` on a success, where
-   * the wording is this element's own -- the protocol's finish event carries no
+   * `status` is the server's text on a failure and `null` on a close the
+   * element words itself (`unnamed` is the line for one whose agent is not
+   * known), where the wording is this element's own -- the protocol's finish event carries no
    * message, which is the better shape for a localised UI and the reason
    * {@link UiStrings.subAgentFinished} exists.
    *
@@ -143,7 +151,12 @@ export class SubAgentProgress {
    * panels, and forgetting the id here would only make a duplicate close draw
    * nothing instead of drawing the same settled row again.
    */
-  #close(subagentRunId: string, phase: SubAgentPhase, status: string | null): void {
+  #close(
+    subagentRunId: string,
+    phase: SubAgentPhase,
+    status: string | null,
+    unnamed: string | null = null,
+  ): void {
     const delegationId = this.#subagentRunDelegations.get(subagentRunId);
     if (delegationId === undefined) {
       // A close naming a delegation this never saw open -- the same refusal a
@@ -155,17 +168,25 @@ export class SubAgentProgress {
       delegationId,
       agent,
       phase,
-      status: status === null ? this.#finishedLine(agent) : status,
+      status: status ?? this.#closedLine(phase, agent, unnamed),
       tool: null,
+      task: null,
     });
   }
 
-  /** The row's line for a delegation that completed, named if its name is known. */
-  #finishedLine(agent: string | null): string {
+  /** The element's own line for a close, named if its name is known. */
+  #closedLine(phase: SubAgentPhase, agent: string | null, unnamed: string | null): string {
     const strings = this.#host.strings();
-    return agent === null
-      ? strings.subAgentWorking
-      : fillUiString(strings.subAgentFinished, { agent });
+    if (agent === null) {
+      return unnamed ?? strings.subAgentWorking;
+    }
+    const line =
+      phase === SUBAGENT_PHASE.CANCELLED
+        ? strings.subAgentCancelled
+        : phase === SUBAGENT_PHASE.UNFINISHED
+          ? strings.subAgentUnfinished
+          : strings.subAgentFinished;
+    return fillUiString(line, { agent });
   }
 
   /**

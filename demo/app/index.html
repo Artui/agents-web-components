@@ -524,6 +524,11 @@
               that streamed it. Reload the tab and rate the first again: same message, same thread,
               and <em>no run</em>, since a stored message carries none.
             </li>
+            <li>
+              <strong>Sources.</strong> <em>Cited answer</em> ends with a collapsed
+              <em>Sources (3)</em> list: open it for the quoted range, the marker, a linked web
+              source and a document named as text. Copy leaves the list out; a reload draws it again.
+            </li>
           </ul>
         </div>
       </section>
@@ -718,6 +723,27 @@
             <li>
               <strong>Inside.</strong> Open one for the child's own tool calls, including the one
               that came back to it. The second delegation fails: the row says so and nothing more.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section data-scenario="task-control" hidden>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>Background.</strong> Each <code>delegate_task</code> card settles on its
+              receipt while the task's row keeps running underneath.
+            </li>
+            <li>
+              <strong>Moments.</strong> The researcher is steered, asks a question (the row waits
+              until it is answered) and finishes. The auditor retries, is force-cancelled and
+              settles as cancelled, not failed.
+            </li>
+            <li>
+              <strong>The run ends first.</strong> The archivist is still open when the run ends,
+              so it settles as unfinished.
             </li>
           </ul>
         </div>

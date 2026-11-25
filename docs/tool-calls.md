@@ -196,9 +196,10 @@ AG-UI `CUSTOM` event named `ag_ui.subagent`, carrying:
 | --- | --- |
 | `delegationId` | the **parent's own `delegate_task` tool-call id** — not the child's run id |
 | `agent` | the child agent's name |
-| `phase` | one of `started`, `tool_call`, `tool_result`, `finished`, `failed` |
+| `phase` | one of `started`, `tool_call`, `tool_result`, `finished`, `failed`, or a [task phase](#task-control) |
 | `status` | a pre-rendered line, ready to show |
 | `tool` | `toolCallId`, `name` and `ok`, on the two tool phases only |
+| `task` | the task a [task phase](#task-control) names, on those phases only |
 
 Exactly one `started` opens a delegation and exactly one `finished` or `failed`
 closes it. `ok` is a tri-state: `null` while the child's call runs, `true` on a
@@ -252,6 +253,49 @@ properties and its spinner speed, so re-theming the cards re-themes these. The
 row's own chrome comes from `subAgentWorking` and `subAgentSteps` in
 [`UiStrings`](i18n.md#internationalization-i18n); everything else on the row is the
 server's text.
+
+### Task control
+
+Under django-ag-ui's task control (0.90.0, `SubAgents(task_control=TaskControl())`) a
+delegation is a task the parent's model manages, and the row draws what happens to it. The
+task's moments arrive on the same `ag_ui.subagent` event with `tool: null`, a server `status`
+line and a `task` record:
+
+| `phase` | When | `task` carries |
+| --- | --- | --- |
+| `backgrounded` | the task moved to the background | `taskId`, `reason` (`requested`, `auto`, `question`) |
+| `steered` | the parent sent the running task a message | `taskId` |
+| `question` | the task asked the parent a question | `taskId`, `questionId` |
+| `answered` | the parent answered it | `taskId`, `questionId` |
+| `cancel_requested` | the parent asked the task to stop | `taskId`, `forced` |
+| `retried` | a remote task's worker is running it again | `taskId`, `attempt` |
+
+The steering message, the question and the answer are not on the wire, so the row says that
+something happened, never what was said. The panel's `data-phase` is the latest moment. What
+outlasts a moment is stamped on the `subagent` part for a host to style:
+
+| Attribute | Set |
+| --- | --- |
+| `data-task-id` | the task the steps name |
+| `data-background` | once the task left the foreground; the value is the server's `reason` |
+| `data-awaiting-answer` | from `question` until `answered`, or until the task settles |
+| `data-cancel` | `requested` or `forced`, once a cancellation was asked for |
+| `data-attempt` | a remote task's retry count, on `retried` |
+
+A task closes on the protocol's events as before, and two `SUBAGENT_ERROR` codes are not the
+child failing: `code: "cancelled"` settles the row as `data-phase="cancelled"` ("researcher was
+cancelled", `subAgentCancelled`), and `code: "unfinished"`, sent when the run ends while a
+background task is still open, as `data-phase="unfinished"` (`subAgentUnfinished`). Any other
+code, or none, is `failed`, on the server's words. A resumed task opens a new delegation, with a
+fresh `subagentRunId`, on the `delegate_task` call that resumed it, so it draws on that call's
+card. None of it is stored, as above: a restored thread shows the cards and no task progress.
+
+The glyph follows: a cancelled task draws the card's `--ag-ui-tool-icon-declined` and an
+unfinished one its `--ag-ui-tool-icon-interrupted`, both muted, and an open question stops the
+spinner for a still ring in the accent colour.
+
+The row offers no control over the task. Steering, answering and cancelling from the chat are
+not part of this release.
 
 ### Child sessions
 

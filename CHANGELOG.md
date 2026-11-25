@@ -7,6 +7,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0] — 2026-11-25
+
+### Added
+
+- **An answer shows the sources it cites.** django-ag-ui 0.90.0 carries pydantic-ai's
+  citations at `metadata.citations` on `TEXT_MESSAGE_END` and on the stored assistant
+  message; the component now draws them as a collapsed **Sources (n)** list under the
+  answer, live and after a reload. A `content` anchor's range is quoted, a `marker` anchor
+  shown as code, and each source is a link (`http`/`https` only) or a document title, with
+  its excerpts. Offsets are UTF-16 code units into each copy's own text, so a file-split
+  answer (two messages live, one joined message stored) cites correctly in both. Copy and a
+  rating's `content` leave the list out. New part `citations`, new strings `citations` and
+  `citationDocument`. `AgUiClientHandlers.onTextEnd` takes a third argument, the end event's
+  raw `metadata.citations`. Nothing to opt in to: an answer without citations is unchanged.
+  See [Sources an answer cites](https://artui.github.io/agents-web-components/messages/#sources-an-answer-cites).
+
+- **The sub-agent row draws a delegated task's life.** Under django-ag-ui 0.90.0's task
+  control, the six new `ag_ui.subagent` phases (`backgrounded`, `steered`, `question`,
+  `answered`, `cancel_requested`, `retried`) used to be dropped. The row now shows them on
+  the server's status line, and the `subagent` part gets `data-task-id`, `data-background`
+  (the reason), `data-awaiting-answer` (from a question until its answer),
+  `data-cancel` (`requested` or `forced`) and `data-attempt`. `SUBAGENT_ERROR`'s `code`
+  is carried too: `cancelled` and `unfinished` settle the row as `data-phase="cancelled"` or
+  `"unfinished"`, worded by the new strings `subAgentCancelled` and `subAgentUnfinished`,
+  instead of as a failure. A resumed task draws on the card of the call that resumed it.
+  `AgUiClientHandlers.onSubAgentError` takes a third argument, the event's `code` (or
+  `null`). Nothing is stored, so a restored thread draws no task progress. No controls:
+  steering, answering and cancelling from the chat are not included. Nothing to opt in to:
+  a delegation without task control is unchanged. See
+  [Task control](https://artui.github.io/agents-web-components/tool-calls/#task-control).
+
+- **A chat follows a run the server starts on the thread it shows.** When a server starts a run
+  on a thread by itself (a child session's report waking its parent thread, say), a chat already
+  showing that thread used to draw nothing until the thread was opened again. Two opt-ins now
+  join it, both needing `data-detach-runs` and `data-threads-url` (django-ag-ui 0.82.0+): under
+  `data-thread-status` (`poll` or `stream`), a list naming the open thread `running` while the
+  chat is idle joins its run; the new `data-poll-runs` attribute does the same with no thread
+  watch, by asking the thread's `events/?after=0&limit=1` every five seconds while idle. The
+  probe names the run, so a chat never joins a run it drove or already joined, and it is asked
+  once more as each of the chat's own runs ends. A host that already sets both
+  `data-thread-status` and `data-detach-runs` gets the join with no change; any other host opts
+  in with those or with `data-poll-runs`, and a chat with neither requests nothing new. See
+  [Runs that outlive their connection](https://artui.github.io/agents-web-components/concepts/#runs-that-outlive-their-connection).
+
+### Changed
+
+- **A thread never read now shows as unread.** A `last_read_at` of `null` reads as unread in
+  the thread list (`<ag-ui-chat>`'s drawer and `<ag-ui-threads>`) and in the inbox rows of
+  `<ag-ui-agents>`, so a thread a routine started is listed as new. A running thread still is
+  not unread. After upgrading, threads stored before the server kept read marks light up once,
+  and count toward the launcher's unread badge, until each is opened. A read made before the first thread list is held and sent with
+  it; a page reloaded before any list loses that read. No opt-in.
+
+### Fixed
+
+- **A `pageMapFrom` handle number is never given out twice in a document.** Once an element left
+  the map, its number could go to a new element, so a model holding the old handle acted on the
+  wrong one. Numbers now only grow, until the page loads again. No opt-in: a host using
+  `pageMapFrom` gets it, and a host that does not is unaffected.
+
+- **A lone call's "Approved by a routine" or "Approved by a reviewer model" note is drawn.**
+  In the grouped tool display, a one-step group hid the card's whole head, the note with it, so
+  opening the row showed no record that nobody had been asked. The head of such a card now draws
+  the note and nothing else. The folded row itself is unchanged. Nothing to opt in to.
+
+- **Picking a skill without a `prompt` from the slash palette leaves the composer empty.** The
+  `/name` token was sent but the typed `/` query stayed in the box. A draft that does not start
+  with `/` is still kept when a skill chip is clicked. No host change is needed.
+
 ## [0.15.0] — 2026-11-24
 
 ### Added
@@ -875,7 +944,8 @@ move page walks a host over. Each entry below says whether a host opts in.
   kept offering the moon under `theme="dark"`. Only the toggle's own click redrew it before. A host
   opts in to nothing.
 
-[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/Artui/agents-web-components/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/Artui/agents-web-components/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/Artui/agents-web-components/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/Artui/agents-web-components/compare/v0.12.0...v0.13.0

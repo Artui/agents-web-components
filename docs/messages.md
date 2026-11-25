@@ -221,6 +221,42 @@ chat.addEventListener("ag-ui-feedback", (e) => {
     rating made after a reload name the same answer by two different ids. Live,
     the id is always the one on the wire.
 
+## Sources an answer cites
+
+When the model says which sources back its answer (pydantic-ai's
+`TextPart.citations`, carried by django-ag-ui 0.90.0 and later), the answer gets a
+collapsed **Sources (n)** list under its text, above the action row. Nothing to
+opt in to: an answer with no citations looks as before.
+
+The list reads the assistant message's `metadata.citations`: live from the
+`TEXT_MESSAGE_END` that closes it (which `@ag-ui/client` 1.0 also folds onto the
+message it saves), and after a reload from the stored message the thread
+endpoint returns. Each entry is pydantic-ai's `Citation` in its JSON form:
+
+| Key | Drawn as |
+| --- | --- |
+| `sources` | One line per source. A `web` source is a link to its `url` (only `http` and `https` become links; anything else is shown as text), named by its `title` or else the URL. A `document` source is its `title`, else its `document_id`, else the string `citationDocument`. Each of `excerpts` is quoted under it. |
+| `anchor` | `{kind: "content", start, end}`: the cited range of the answer, quoted. `{kind: "marker", ...}`: the model's own marker such as `[1]`, shown as code. `null`: sources only. |
+
+`start` and `end` count UTF-16 code units into the message's own `content`, so
+`content.slice(start, end)` is the range. The range is quoted rather than
+highlighted in the bubble, because the offsets index the markdown source and the
+rendered text is shifted by its syntax. An anchor that does not fit the text is
+dropped and its sources kept; a citation with no usable source is dropped.
+Titles, URLs and excerpts go in as text, never as HTML.
+
+**Live and reloaded copies can differ.** Text on both sides of a file part streams
+as two messages, each with its own citations, and is stored as one message
+joined by a newline under a fresh id, its citations indexing the joined text. So
+the answer draws as two bubbles live and one after a reload, each list read
+against its own text. A rating given live names the streamed ids; after a
+reload, the stored one. A split around reasoning or a provider compaction is stored
+under the ids it streamed, so it draws and rates the same either way.
+
+Copy and a rating's `content` leave the list out. Style it through the
+`citations` part, or the strings `citations` (token `{count}`) and
+`citationDocument`.
+
 ## Quoting a selection
 
 Select any text in the transcript and a small **Quote** offer floats beside it.

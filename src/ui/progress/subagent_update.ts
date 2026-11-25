@@ -5,6 +5,10 @@
  * renderer: the panel's job is drawing, and a value that reaches it has already
  * been vouched for.
  *
+ * **The six task phases** (`backgrounded`, `steered`, `question`, `answered`,
+ * `cancel_requested`, `retried`) arrive under the server's task control with
+ * `tool: null` and a `task` record, narrowed by {@link asTask}.
+ *
  * **The three lifecycle phases are still accepted here, deliberately.** A current
  * server sends only `tool_call` and `tool_result` on this carrier -- the
  * delegation's lifetime moved to the protocol's `SUBAGENT_*` events -- but a
@@ -24,7 +28,12 @@
  */
 
 import { SUBAGENT_PHASE } from "../../constants.js";
-import type { SubAgentPhase, SubAgentTool, SubAgentUpdate } from "./subagent_panel.js";
+import type {
+  SubAgentPhase,
+  SubAgentTask,
+  SubAgentTool,
+  SubAgentUpdate,
+} from "./subagent_panel.js";
 
 const PHASES: readonly string[] = Object.values(SUBAGENT_PHASE);
 
@@ -68,6 +77,30 @@ function asTool(value: unknown): SubAgentTool | null {
   return { toolCallId, name, ok };
 }
 
+/**
+ * The `task` record a task-control step carries, or `null` without a task id.
+ *
+ * Only `taskId` is required: it is on every task step, and the panel stamps it.
+ * Each other key belongs to one phase and degrades to `null` alone, so a server
+ * that adds a key, or spells one oddly, still has its step drawn.
+ */
+function asTask(value: unknown): SubAgentTask | null {
+  const record = asRecord(value);
+  const taskId = record === null ? null : asText(record["taskId"]);
+  if (record === null || taskId === null) {
+    return null;
+  }
+  const forced = record["forced"];
+  const attempt = record["attempt"];
+  return {
+    taskId,
+    reason: asText(record["reason"]),
+    questionId: asText(record["questionId"]),
+    forced: typeof forced === "boolean" ? forced : null,
+    attempt: Number.isInteger(attempt) ? (attempt as number) : null,
+  };
+}
+
 /** Narrow an `ag_ui.subagent` `CUSTOM` value, or `null` if it cannot be drawn. */
 export function subAgentUpdate(value: unknown): SubAgentUpdate | null {
   const record = asRecord(value);
@@ -85,5 +118,6 @@ export function subAgentUpdate(value: unknown): SubAgentUpdate | null {
     agent: asText(record["agent"]),
     status: asText(record["status"]),
     tool: asTool(record["tool"]),
+    task: asTask(record["task"]),
   };
 }

@@ -147,8 +147,11 @@ export const SCENARIOS = [
     title: "Message actions and ratings",
     since: "0.1.0",
     summary:
-      "Copy, retry and the rating pair under an answer, and what a rating names: the message, its thread and the run that streamed it.",
-    prompts: [["Echo hello", "echo hello"]],
+      "Copy, retry and the rating pair under an answer, what a rating names: the message, its thread and the run that streamed it, and the sources a cited answer lists under it (0.16.0).",
+    prompts: [
+      ["Echo hello", "echo hello"],
+      ["Cited answer", "cite your sources"],
+    ],
     attrs: { "data-message-actions": "copy,retry,feedback" },
   },
   {
@@ -214,6 +217,15 @@ export const SCENARIOS = [
     summary:
       "A delegate_task card grows a live row for the child agent's work; open it for the child's own calls. The second delegation fails.",
     prompts: [["Delegate", "delegate this"]],
+  },
+  {
+    slug: "task-control",
+    group: "Tools and approvals",
+    title: "Delegated tasks",
+    since: "0.16.0",
+    summary:
+      "Three background tasks: one steered and asked a question, one retried then cancelled, one still running when the run ends.",
+    prompts: [["Manage tasks", "manage a task"]],
   },
   // Server-drawn content
   {
@@ -322,6 +334,36 @@ export const SCENARIOS = [
       endpoint: "/detached/queued/agent/",
       "data-threads-url": "/detached/threads/",
       "data-detach-runs": "",
+    },
+  },
+  {
+    slug: "server-started-runs",
+    group: "Conversation",
+    title: "A run the server starts, joined by the thread watch",
+    since: "0.16.0",
+    summary:
+      "With data-detach-runs and data-thread-status, a chat already showing a thread joins a run the server starts on it, such as a parent a child's report woke, once the list says the thread is running. Ask to be reported back to, then wait: about four seconds after the answer the server starts a second run, which streams in here.",
+    prompts: [["Ask to be reported back to", "Answer, then report back"]],
+    attrs: {
+      endpoint: "/detached/agent/",
+      "data-threads-url": "/detached/threads/",
+      "data-detach-runs": "",
+      "data-thread-status": "poll",
+    },
+  },
+  {
+    slug: "server-started-runs-poll",
+    group: "Conversation",
+    title: "A run the server starts, found by data-poll-runs",
+    since: "0.16.0",
+    summary:
+      "The same server run, with no thread watch: data-poll-runs asks the open thread's run log every five seconds and joins a run it did not start.",
+    prompts: [["Ask to be reported back to", "Answer, then report back"]],
+    attrs: {
+      endpoint: "/detached/agent/",
+      "data-threads-url": "/detached/threads/",
+      "data-detach-runs": "",
+      "data-poll-runs": "",
     },
   },
   {
