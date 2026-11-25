@@ -15,7 +15,8 @@
 // One thread runs for twenty seconds after the server starts and then finishes
 // away from the page, which is what turns it unread: watch its mark go from
 // running to unread, and open it to read it. The waiting one is parked on an
-// approval of a delete: open it and the card asks again.
+// approval of a delete: open it and the card asks again. The routine's digest has never
+// been opened, so it lists unread from the start.
 import { createHash } from "node:crypto";
 
 const THREADS = /^\/status\/threads\/(?:([^/]+)\/(read\/)?)?$/;
@@ -67,6 +68,12 @@ const threads = new Map([
   ["status-running", { title: "Summarise the board minutes", status: "running", updated: 0, read: -240000 }],
   ["status-unread", { title: "Draft the welcome email", status: "idle", updated: -30000, read: -300000 }],
   ["status-read", { title: "Reconcile the March invoices", status: "idle", updated: -400000, read: -10000 }],
+  // A routine's firing: a thread nobody has opened yet, so its last_read_at is null and it
+  // lists unread until it is opened.
+  [
+    "status-never-read",
+    { title: "Morning sales digest", status: "idle", updated: -90000, read: null, routine: { id: "rt-digest", name: "Morning digest" } },
+  ],
 ]);
 
 function rows() {
@@ -86,6 +93,7 @@ function rows() {
       status: row.status,
       last_read_at: row.read === null ? null : at(row.read),
       ...(row.reason === undefined ? {} : { reason: row.reason }),
+      ...(row.routine === undefined ? {} : { routine: row.routine }),
       ...(row.status === "waiting" ? { interrupts: row.interrupts } : {}),
       ...(row.status === "waiting" && row.runId !== undefined ? { run_id: row.runId } : {}),
     }));
