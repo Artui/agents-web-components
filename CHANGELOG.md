@@ -48,6 +48,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   opening the row showed no record that nobody had been asked. The head of such a card now draws
   the note and nothing else. The folded row itself is unchanged. Nothing to opt in to.
 
+- **Picking a skill without a `prompt` from the slash palette leaves the composer empty.** The
+  `/name` token was sent but the typed `/` query stayed in the box. A draft that does not start
+  with `/` is still kept when a skill chip is clicked. No host change is needed.
+
 ## [0.15.0] — 2026-11-24
 
 ### Added
