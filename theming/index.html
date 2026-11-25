@@ -2370,7 +2370,7 @@ component sets, so a new one cannot ship undocumented.</p>
 </tr>
 <tr>
 <td>Answers</td>
-<td><code>answer</code> (the per-turn group), <code>message</code> (plus <code>message-user</code>, <code>message-assistant</code>), <code>code-copy</code>, <code>enqueued-messages</code> and <code>enqueued-messages-note</code> (user messages a run took in mid-turn), <code>citations</code> (the collapsed sources list under an answer that cites them)</td>
+<td><code>answer</code> (the per-turn group), <code>message</code> (plus <code>message-user</code>, <code>message-assistant</code>), <code>code-copy</code>, <code>enqueued-messages</code> and <code>enqueued-messages-note</code> (user messages a run took in mid-turn), <code>citations</code> (the collapsed sources list under an answer that cites them), <code>answered-by-model</code> (the line naming the model a fallback answer came from)</td>
 </tr>
 <tr>
 <td>Reasoning</td>
@@ -2402,11 +2402,11 @@ component sets, so a new one cannot ship undocumented.</p>
 </tr>
 <tr>
 <td>Delegated sub-agents</td>
-<td><code>subagent</code>, <code>subagent-row</code>, <code>subagent-icon</code>, <code>subagent-status</code>, <code>subagent-steps</code>, <code>subagent-step</code>, <code>subagent-step-icon</code>, <code>subagent-step-name</code></td>
+<td><code>subagent</code>, <code>subagent-row</code>, <code>subagent-icon</code>, <code>subagent-status</code>, <code>subagent-steps</code>, <code>subagent-step</code>, <code>subagent-step-icon</code>, <code>subagent-step-name</code>, <code>subagent-controls</code>, <code>subagent-question</code>, <code>subagent-actions</code>, <code>subagent-steer</code>, <code>subagent-answer</code>, <code>subagent-cancel</code>, <code>subagent-reply</code>, <code>subagent-reply-input</code>, <code>subagent-reply-send</code>, <code>subagent-control-error</code></td>
 </tr>
 <tr>
 <td>Child sessions</td>
-<td><code>child-session-link</code>, <code>parent-breadcrumb</code>, <code>parent-breadcrumb-link</code></td>
+<td><code>child-session-link</code>, <code>parent-breadcrumb</code>, <code>parent-breadcrumb-link</code>, <code>child-report</code> (a child's report or question in its parent's transcript, with <code>data-origin</code> and <code>data-outcome</code>), <code>child-report-link</code></td>
 </tr>
 <tr>
 <td>Client-side confirmation</td>
@@ -2446,7 +2446,7 @@ component sets, so a new one cannot ship undocumented.</p>
 </tr>
 <tr>
 <td>Skill editor</td>
-<td><code>skill-rows</code>, <code>skill-row</code>, <code>skill-empty</code>, <code>skill-form</code>, and in the view's bar <code>new-skill-button</code></td>
+<td><code>skill-rows</code>, <code>skill-row</code>, <code>skill-scope</code>, <code>skill-empty</code>, <code>skill-form</code>, and in the view's bar <code>new-skill-button</code></td>
 </tr>
 <tr>
 <td>Routines</td>

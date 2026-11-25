@@ -705,6 +705,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Task control">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#steer-answer-and-cancel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Steer, answer and cancel
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -1475,6 +1492,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Task control">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#steer-answer-and-cancel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Steer, answer and cancel
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -1612,8 +1646,9 @@ mode, as it does in every card mode, and Approve takes focus when the group open
 </tr>
 </tbody>
 </table>
-<p>"N declined" is added as a note whenever a step was declined. <code>data-count</code> carries the number of
-steps and <code>data-open</code> whether the cards are showing; the head is a button with <code>aria-expanded</code>.</p>
+<p>"N declined" is added as a note whenever a step was declined. While the group is folded, "N
+pre-approved" is added when a reviewer model or a routine approved calls in it with no one asked;
+opened, each of those cards says so itself and the row drops the count. <code>data-count</code> carries the number of steps and <code>data-open</code> whether the cards are showing; the head is a button with <code>aria-expanded</code>.</p>
 <ul>
 <li><strong>It opens itself while a step waits on you.</strong> A server-side approval renders inside the gated
   call's own card, so a folded group would hide the question it is asking: the group opens when a
@@ -1628,7 +1663,9 @@ steps and <code>data-open</code> whether the cards are showing; the head is a bu
   card without its own <code>tool-card-head</code> (the row's state mark and notes carry the status). The
   Details toggle and arguments stay, except under <code>data-tool-group-display="minimal"</code>, where the
   card is only its head: there the row draws no chevron, though it still opens for an approval. A
-  card display mode keeps the head. A run that grows to two calls brings both heads back.</li>
+  call that records a decision or a pre-approval keeps that one note from its head, and its row
+  opens onto it with a chevron, under minimal and with no arguments or result too. A card display
+  mode keeps the whole head. A run that grows to two calls brings both heads back.</li>
 <li><strong>A running sub-agent does not open it.</strong> The row keeps its spinner and names the delegation
   instead, "Delegated to researcher" (the <code>subAgentDelegatedTo</code> string).</li>
 <li><strong>Repeated labels are told apart.</strong> Two "Fill field" steps read "Fill field" and "Fill field
@@ -1644,7 +1681,8 @@ steps and <code>data-open</code> whether the cards are showing; the head is a bu
 <code>tool-card-repeat</code> on a repeated step. The focus ring is <code>--ag-ui-ring</code> and the disclosure chevron
 <code>--ag-ui-ico-chevron</code>. Strings (<code>strings</code> / <code>data-strings</code>): <code>toolGroupSteps</code>,
 <code>toolGroupWorking</code>, <code>toolGroupWorked</code> (each with <code>{count}</code>, always 2 or more), <code>toolGroupWaiting</code>,
-<code>toolGroupFailed</code>, <code>toolGroupDeclined</code> (each with <code>{count}</code>) and <code>toolStepRepeat</code> (with <code>{n}</code>).</p>
+<code>toolGroupFailed</code>, <code>toolGroupDeclined</code>, <code>toolGroupPreApproved</code> (each with <code>{count}</code>) and
+<code>toolStepRepeat</code> (with <code>{n}</code>).</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="cm">&lt;!-- Keep per-call cards, as before grouped was the default --&gt;</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span> <span class="na">data-tool-display</span><span class="o">=</span><span class="s">"full"</span><span class="p">&gt;&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
 </code></pre></div>
@@ -1792,7 +1830,7 @@ row's own chrome comes from <code>subAgentWorking</code> and <code>subAgentSteps
 <a href="../i18n/#internationalization-i18n"><code>UiStrings</code></a>; everything else on the row is the
 server's text.</p>
 <h3 id="task-control">Task control<a class="headerlink" href="#task-control" title="Permanent link">&para;</a></h3>
-<p>Under django-ag-ui's task control (0.90.0, <code>SubAgents(task_control=TaskControl())</code>) a
+<p>Under django-ag-ui's task control (0.90.0+, <code>SubAgents(task_control=TaskControl())</code>) a
 delegation is a task the parent's model manages, and the row draws what happens to it. The
 task's moments arrive on the same <code>ag_ui.subagent</code> event with <code>tool: null</code>, a server <code>status</code>
 line and a <code>task</code> record:</p>
@@ -1812,23 +1850,23 @@ line and a <code>task</code> record:</p>
 </tr>
 <tr>
 <td><code>steered</code></td>
-<td>the parent sent the running task a message</td>
-<td><code>taskId</code></td>
+<td>the task was sent a message</td>
+<td><code>taskId</code>, <code>message</code>, <code>source</code></td>
 </tr>
 <tr>
 <td><code>question</code></td>
 <td>the task asked the parent a question</td>
-<td><code>taskId</code>, <code>questionId</code></td>
+<td><code>taskId</code>, <code>questionId</code>, <code>question</code></td>
 </tr>
 <tr>
 <td><code>answered</code></td>
-<td>the parent answered it</td>
-<td><code>taskId</code>, <code>questionId</code></td>
+<td>the question was answered</td>
+<td><code>taskId</code>, <code>questionId</code>, <code>answer</code>, <code>source</code></td>
 </tr>
 <tr>
 <td><code>cancel_requested</code></td>
-<td>the parent asked the task to stop</td>
-<td><code>taskId</code>, <code>forced</code></td>
+<td>the task was asked to stop</td>
+<td><code>taskId</code>, <code>forced</code>, <code>source</code></td>
 </tr>
 <tr>
 <td><code>retried</code></td>
@@ -1837,8 +1875,10 @@ line and a <code>task</code> record:</p>
 </tr>
 </tbody>
 </table>
-<p>The steering message, the question and the answer are not on the wire, so the row says that
-something happened, never what was said. The panel's <code>data-phase</code> is the latest moment. What
+<p>From django-ag-ui 0.91.0 the steps carry what was said, cut at 8000 characters with
+<code>truncated</code> beside it, and <code>source</code> says who acted: <code>user</code> for the controls below, <code>model</code> for
+the run itself. The row shows the server's <code>status</code> line ("researcher: steered by you"); the
+open question's text is drawn beside the Answer control, so only where the controls are. The panel's <code>data-phase</code> is the latest moment. What
 outlasts a moment is stamped on the <code>subagent</code> part for a host to style:</p>
 <table>
 <thead>
@@ -1868,6 +1908,14 @@ outlasts a moment is stamped on the <code>subagent</code> part for a host to sty
 <td><code>data-attempt</code></td>
 <td>a remote task's retry count, on <code>retried</code></td>
 </tr>
+<tr>
+<td><code>data-source</code></td>
+<td><code>user</code> or <code>model</code>: who acted on the latest steer, answer or cancel</td>
+</tr>
+<tr>
+<td><code>data-answerable</code></td>
+<td>the open question's id, only while the controls are live and Answer is offered</td>
+</tr>
 </tbody>
 </table>
 <p>A task closes on the protocol's events as before, and two <code>SUBAGENT_ERROR</code> codes are not the
@@ -1880,8 +1928,65 @@ card. None of it is stored, as above: a restored thread shows the cards and no t
 <p>The glyph follows: a cancelled task draws the card's <code>--ag-ui-tool-icon-declined</code> and an
 unfinished one its <code>--ag-ui-tool-icon-interrupted</code>, both muted, and an open question stops the
 spinner for a still ring in the accent colour.</p>
-<p>The row offers no control over the task. Steering, answering and cancelling from the chat are
-not part of this release.</p>
+<h4 id="steer-answer-and-cancel">Steer, answer and cancel<a class="headerlink" href="#steer-answer-and-cancel" title="Permanent link">&para;</a></h4>
+<p>With <code>data-threads-url</code> set, a live task's row offers three controls beside it, in the
+<code>subagent-controls</code> part:</p>
+<ul>
+<li><strong>Steer</strong> opens a field (<code>subagent-reply</code>) whose text is sent to the task.</li>
+<li><strong>Answer</strong> appears while the task waits on a question, beside the question's text
+  (<code>subagent-question</code>), and sends the answer to that question.</li>
+<li><strong>Cancel</strong> asks the task to stop before its next model request. Once that request is on the
+  stream (<code>data-cancel="requested"</code>) the button reads <strong>Stop now</strong> and stops the task at once.</li>
+</ul>
+<p>Each control is one <code>POST</code> to the route django-ag-ui (0.91.0, with a <code>run_store</code>) serves beside
+the thread, with the element's headers and cookie policy:</p>
+<table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Route</th>
+<th>Body</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Steer</td>
+<td><code>&lt;threads-url&gt;&lt;thread&gt;/tasks/&lt;taskId&gt;/steer/</code></td>
+<td><code>{"message"}</code></td>
+</tr>
+<tr>
+<td>Answer</td>
+<td><code>&lt;threads-url&gt;&lt;thread&gt;/tasks/&lt;taskId&gt;/answer/</code></td>
+<td><code>{"question_id", "answer"}</code></td>
+</tr>
+<tr>
+<td>Cancel</td>
+<td><code>&lt;threads-url&gt;&lt;thread&gt;/tasks/&lt;taskId&gt;/cancel/</code></td>
+<td><code>{"force"}</code></td>
+</tr>
+</tbody>
+</table>
+<p>The server acknowledges with <code>202</code>, and the row does not change until the step for the act
+arrives on the stream: a control never sets a state itself. A request is sent once and never
+retried, a <code>401</code> included, since a steer sent twice is two messages. A refusal is worded from
+its <code>reason</code> code under the controls (<code>subagent-control-error</code>): <code>not_running</code>, <code>no_task</code> and
+<code>no_run</code> as <code>subAgentControlFinished</code>, <code>not_waiting</code> as <code>subAgentControlNotWaiting</code>,
+<code>not_live_here</code>, <code>remote</code> and a server without the routes as <code>subAgentControlUnavailable</code>, and
+anything else as <code>subAgentControlFailed</code>. The controls are withdrawn when the task settles.</p>
+<p>Under the default <code>grouped</code> tool display the controls sit inside the group's folded row: a
+background task's delegating call settles as soon as the task goes to the background, so the
+row reads done. Steer and Cancel are one click down. When the task asks a question, the group
+opens itself, once for each question, so Answer and the question's text are in view; if the
+user folds it again it stays folded until a new question arrives. A question with no question
+id, or one shown with no live controls (no <code>data-threads-url</code>), does not open it.</p>
+<p>The parts are <code>subagent-controls</code> (the region), <code>subagent-question</code>, <code>subagent-actions</code> (the
+three buttons' row), <code>subagent-steer</code>, <code>subagent-answer</code>, <code>subagent-cancel</code>, <code>subagent-reply</code>,
+<code>subagent-reply-input</code>, <code>subagent-reply-send</code> and <code>subagent-control-error</code>. Their text comes
+from <code>subAgentControls</code> (the group's label), <code>subAgentSteer</code>,
+<code>subAgentAnswer</code>, <code>subAgentCancelTask</code>, <code>subAgentForceCancel</code>, <code>subAgentSend</code>,
+<code>subAgentSteerPlaceholder</code> and <code>subAgentAnswerPlaceholder</code>. The routes reach only a run live
+in the process serving the request and only top-level tasks; anything else is refused and
+worded as above.</p>
 <h3 id="child-sessions">Child sessions<a class="headerlink" href="#child-sessions" title="Permanent link">&para;</a></h3>
 <p>A child session (django-spec-agents' <code>start_session</code>) runs headless in a thread
 of its own and sends nothing into the parent's stream. What persists is its
@@ -1903,8 +2008,18 @@ reload.</strong> A refusal, or any other result, draws no link.</p>
   inside a <code>drawer-children</code> group), in the parent's date group whatever the
   child's own date. A child whose parent is not listed, or that a filter matched
   without its parent, stands at the top level.</li>
+<li><strong>A child's report and question.</strong> When a child's report wakes its parent,
+  django-spec-agents 0.28.0 and django-ag-ui 0.91.0 mark what no user wrote with
+  <code>metadata.origin</code>. The wake's own line (<code>wake</code>) is not drawn. A report
+  (<code>task_output</code>) is drawn as a card titled <code>childReport</code> ("Report from helper") holding
+  the plain <code>task.body</code>, never the <code>&lt;task_output&gt;</code> frame the model saw, and a question
+  (<code>task_question</code>) as one titled <code>childQuestion</code> ("Question from helper"). The card's
+  link reads <code>childSessionOpen</code> and opens <code>task.threadId</code> the way the card link does.
+  Both arrive inside the run's enqueued-messages activity live, and as marked user
+  messages in server-held history; each draws the same. A failed report carries
+  <code>data-outcome="failed"</code>; style both through <code>child-report</code> and <code>child-report-link</code>.</li>
 </ul>
-<p><strong>Opening a thread asks first.</strong> A link or the breadcrumb dispatches
+<p><strong>Opening a thread asks first.</strong> A link, a report's link or the breadcrumb dispatches
 <strong><code>ag-ui-open-thread</code></strong> (<code>OPEN_THREAD_EVENT</code>, detail <code>{ agentId, threadId }</code>,
 typed <code>OpenThreadDetail</code>), bubbling, composed and cancelable. <code>agentId</code> is the
 receipt's <code>agent_id</code>, or the parent's store <code>scope</code> (<code>null</code> when unscoped). The

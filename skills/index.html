@@ -722,6 +722,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="The skill editor">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#whose-skill-it-is" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Whose skill it is
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -1403,6 +1420,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="The skill editor">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#whose-skill-it-is" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Whose skill it is
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -1541,12 +1575,30 @@ mount's <code>skills/editor/</code> route:</p>
 may write, off ones included, with "Turn on" on an off row; it creates, edits and turns skills off;
 and "Draft one with the agent" closes it and sends <code>/create-skill</code>, whose draft comes back as an
 approval card. History, Checkpoints and New chat close it first. The server keeps every rule: a
-refused save shows the server's message (<code>{"error"}</code>) above the form, since django-ag-ui 0.83.0
-names no field; an answer that adds <code>"field"</code> shows under that field.</p>
+refused save shows the server's message (<code>{"error"}</code>) under the field its <code>"field"</code> names (django-ag-ui
+0.84.0 and later name the field: <code>name</code>, <code>description</code>, <code>body</code>, <code>userInvocable</code>, <code>modelInvocable</code> or
+<code>enabled</code>), and above the form when it names none.</p>
+<h4 id="whose-skill-it-is">Whose skill it is<a class="headerlink" href="#whose-skill-it-is" title="Permanent link">&para;</a></h4>
+<p>With django-ag-ui 0.91.0 and a skill policy that defines <code>scope(request, skill)</code>, each editor entry
+carries <code>scope</code>, and the row draws a badge after the skill's name: <strong>Personal</strong> for <code>"personal"</code>,
+<strong>Company</strong> for <code>"shared"</code>. An entry without <code>scope</code> (an older server, or a policy without the
+method) draws no badge, as before. The badge is the part <code>skill-scope</code>, with the value in
+<code>data-scope</code>, so a host can style each scope:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">ag-ui-chat</span><span class="p">::</span><span class="nd">part</span><span class="o">(</span><span class="nt">skill-scope</span><span class="o">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">color</span><span class="p">:</span><span class="w"> </span><span class="nf">var</span><span class="p">(</span><span class="nv">--ag-ui-muted</span><span class="p">);</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<p>The words are strings keyed <code>skillScope:&lt;value&gt;</code>. Override the two the component knows, or name a
+label for a scope your own policy returns; a scope with no label draws no badge, since its raw value
+may be an internal name rather than words for a user. The same keys work on <code>&lt;ag-ui-skills&gt;</code>'s
+<code>strings</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">strings</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="s2">"skillScope:shared"</span><span class="o">:</span><span class="w"> </span><span class="s2">"Acme"</span><span class="p">,</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="s2">"skillScope:team"</span><span class="o">:</span><span class="w"> </span><span class="s2">"Team"</span><span class="p">,</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="p">};</span>
+</code></pre></div>
 <p><strong>Writes are CSRF-checked by default</strong> on the server, and each one sends <code>headers</code> and
 <code>getHeaders()</code> as read at that moment, so a <code>getHeaders</code> returning the current CSRF token is all a
 Django host needs:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">getHeaders</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">({</span><span class="w"> </span><span class="s2">"X-CSRFToken"</span><span class="o">:</span><span class="w"> </span><span class="nx">readCookie</span><span class="p">(</span><span class="s2">"csrftoken"</span><span class="p">)</span><span class="w"> </span><span class="p">});</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">getHeaders</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">({</span><span class="w"> </span><span class="s2">"X-CSRFToken"</span><span class="o">:</span><span class="w"> </span><span class="nx">readCookie</span><span class="p">(</span><span class="s2">"csrftoken"</span><span class="p">)</span><span class="w"> </span><span class="p">});</span>
 </code></pre></div>
 <p>The palette catches up without a reload: after each save from the editor, on every change of
 <code>user-key</code>, and whenever a run sends django-ag-ui's <code>ag_ui.skills_changed</code> CUSTOM event (still
@@ -1556,7 +1608,7 @@ what it held, the previous principal's skill bodies included.</p>
 <p>django-ag-ui (0.86.0 on, with <code>routine_model=</code>) serves a caller's routines: prompts the agent
 runs on a schedule. Point <code>data-routines-url</code> at that mount's <code>routines/</code> route and the header
 gains a Routines button that opens them in the full-panel view:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span> <span class="na">data-routines-url</span><span class="o">=</span><span class="s">"/agent/routines/"</span> <span class="na">data-threads-url</span><span class="o">=</span><span class="s">"/agent/threads/"</span><span class="p">&gt;&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span> <span class="na">data-routines-url</span><span class="o">=</span><span class="s">"/agent/routines/"</span> <span class="na">data-threads-url</span><span class="o">=</span><span class="s">"/agent/threads/"</span><span class="p">&gt;&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
 </code></pre></div>
 <p>Each row says its schedule in words (in the routine's own timezone, named when it is not the
 viewer's), its next run (or why it is paused) and its last result, which opens that run's thread.
@@ -1580,14 +1632,14 @@ its exact minute as an option of its own, never rounded. The timezone is a text 
 the browser's IANA zones (<code>Intl.supportedValuesOf("timeZone")</code>), set to the viewer's zone on a
 new routine; an unknown zone is refused by the server, in its words.</p>
 <p>Either field can be replaced by a control of your own, slotted on the element:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span> <span class="na">data-routines-url</span><span class="o">=</span><span class="s">"/agent/routines/"</span><span class="p">&gt;</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>  <span class="p">&lt;</span><span class="nt">select</span> <span class="na">slot</span><span class="o">=</span><span class="s">"routine-time"</span> <span class="na">aria-label</span><span class="o">=</span><span class="s">"Run at"</span><span class="p">&gt;</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="p">&lt;</span><span class="nt">option</span><span class="p">&gt;</span>07:00<span class="p">&lt;/</span><span class="nt">option</span><span class="p">&gt;&lt;</span><span class="nt">option</span><span class="p">&gt;</span>08:00<span class="p">&lt;/</span><span class="nt">option</span><span class="p">&gt;&lt;</span><span class="nt">option</span><span class="p">&gt;</span>18:00<span class="p">&lt;/</span><span class="nt">option</span><span class="p">&gt;</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>  <span class="p">&lt;/</span><span class="nt">select</span><span class="p">&gt;</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>  <span class="p">&lt;</span><span class="nt">select</span> <span class="na">slot</span><span class="o">=</span><span class="s">"routine-timezone"</span> <span class="na">aria-label</span><span class="o">=</span><span class="s">"Timezone"</span><span class="p">&gt;</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="p">&lt;</span><span class="nt">option</span><span class="p">&gt;</span>UTC<span class="p">&lt;/</span><span class="nt">option</span><span class="p">&gt;&lt;</span><span class="nt">option</span><span class="p">&gt;</span>Europe/Paris<span class="p">&lt;/</span><span class="nt">option</span><span class="p">&gt;</span>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>  <span class="p">&lt;/</span><span class="nt">select</span><span class="p">&gt;</span>
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="p">&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span> <span class="na">data-routines-url</span><span class="o">=</span><span class="s">"/agent/routines/"</span><span class="p">&gt;</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>  <span class="p">&lt;</span><span class="nt">select</span> <span class="na">slot</span><span class="o">=</span><span class="s">"routine-time"</span> <span class="na">aria-label</span><span class="o">=</span><span class="s">"Run at"</span><span class="p">&gt;</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    <span class="p">&lt;</span><span class="nt">option</span><span class="p">&gt;</span>07:00<span class="p">&lt;/</span><span class="nt">option</span><span class="p">&gt;&lt;</span><span class="nt">option</span><span class="p">&gt;</span>08:00<span class="p">&lt;/</span><span class="nt">option</span><span class="p">&gt;&lt;</span><span class="nt">option</span><span class="p">&gt;</span>18:00<span class="p">&lt;/</span><span class="nt">option</span><span class="p">&gt;</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>  <span class="p">&lt;/</span><span class="nt">select</span><span class="p">&gt;</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>  <span class="p">&lt;</span><span class="nt">select</span> <span class="na">slot</span><span class="o">=</span><span class="s">"routine-timezone"</span> <span class="na">aria-label</span><span class="o">=</span><span class="s">"Timezone"</span><span class="p">&gt;</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="p">&lt;</span><span class="nt">option</span><span class="p">&gt;</span>UTC<span class="p">&lt;/</span><span class="nt">option</span><span class="p">&gt;&lt;</span><span class="nt">option</span><span class="p">&gt;</span>Europe/Paris<span class="p">&lt;/</span><span class="nt">option</span><span class="p">&gt;</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>  <span class="p">&lt;/</span><span class="nt">select</span><span class="p">&gt;</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="p">&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
 </code></pre></div>
 <table>
 <thead>

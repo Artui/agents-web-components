@@ -1705,8 +1705,13 @@ characters. <code>required</code>, <code>disabled</code> appear only when true.<
 </ul>
 <p>Text the page itself writes is read as it is: a heading or label that prints user data ("Signed in
 as ...") reaches the model like any other text. Mark such a region <code>data-agent-ignore</code>.</p>
-<p>Only HTML elements are listed: nothing inside an <code>&lt;svg&gt;</code> is, its links included, though its text
-counts toward the name of the element around it (never its <code>&lt;script&gt;</code> or <code>&lt;style&gt;</code>).</p>
+<p>Inside an <code>&lt;svg&gt;</code>, only its links are listed: an <code>&lt;a&gt;</code> with an <code>href</code> or <code>xlink:href</code> (or with
+<code>role="link"</code>), under the same rules for <code>href</code> as any link. Its name comes from <code>aria-labelledby</code>,
+<code>aria-label</code>, <code>title</code> or its text, not from a <code>&lt;title&gt;</code> child. Other SVG elements are not listed,
+whatever role they carry, while the HTML in a <code>&lt;foreignObject&gt;</code> is listed as anywhere else. An SVG's
+text counts toward the name of the element around it (never its <code>&lt;script&gt;</code> or <code>&lt;style&gt;</code>). The handle
+of an SVG link resolves to an <code>SVGElement</code>, which has no <code>click()</code>: <code>clickElement</code> and <code>pressButton</code>
+dispatch the click event instead, so a host tool of its own should do the same.</p>
 <p><strong>What it skips.</strong> The subtree of every element of this package (<code>ag-ui-*</code>, so the chat never lists
 itself), of anything marked <code>data-agent-ignore</code>, and of anything hidden (<code>hidden</code>, <code>display: none</code>,
 <code>visibility: hidden</code>), <code>inert</code> or <code>aria-hidden="true"</code>. It walks open shadow roots of your
