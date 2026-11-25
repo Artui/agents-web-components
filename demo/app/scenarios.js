@@ -227,6 +227,19 @@ export const SCENARIOS = [
       "Three background tasks: one steered and asked a question, one retried then cancelled, one still running when the run ends.",
     prompts: [["Manage tasks", "manage a task"]],
   },
+  {
+    slug: "task-controls",
+    group: "Tools and approvals",
+    title: "Task controls",
+    since: "0.17.0",
+    summary:
+      "Steer, answer and cancel a background task from its row: each control POSTs to the task route, and the row changes only when the server's step for the act arrives.",
+    prompts: [["Start a task", "start a task"]],
+    attrs: {
+      endpoint: "/tasks/agent/",
+      "data-threads-url": "/tasks/threads/",
+    },
+  },
   // Server-drawn content
   {
     slug: "charts",

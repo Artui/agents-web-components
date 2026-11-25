@@ -139,6 +139,7 @@ import { RemoteConversationStore } from "./remote_conversation_store.js";
 import { RunFollower } from "./run_follower.js";
 import { RunHandlers } from "./run_handlers.js";
 import { StorageScope } from "./storage_scope.js";
+import { TaskControls } from "./task_controls.js";
 import { type ThreadTab, ThreadTabs } from "./thread_tabs.js";
 // biome-ignore lint/style/useImportType: the emitted declaration file copies this form
 import { type TranscribeHandler } from "./transcribe_audio.js";
@@ -631,6 +632,13 @@ export class AgUiChat extends HTMLElement {
     card: (callId) => this.#transcript.card(callId),
     strings: () => this.#strings,
     follow: () => this.#transcript.follow(),
+    controls: () =>
+      TaskControls.from(
+        this.getAttribute("data-threads-url"),
+        (url) => this.#headersFor(url),
+        () => this.#requestCredentials(),
+      ),
+    threadId: () => this.#history.threadId,
   });
   /** Child sessions: the link in a card that started one, the breadcrumb back to a parent. */
   readonly #childSessions = new ChildSessions({

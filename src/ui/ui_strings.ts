@@ -287,6 +287,30 @@ export interface UiStrings {
   subAgentFailed: string;
   /** `aria-label` of the region holding the sub-agent's own tool calls. */
   subAgentSteps: string;
+  /** `aria-label` of the group holding a running task's controls. */
+  subAgentControls: string;
+  /** The control that opens a field to send a running task a message. */
+  subAgentSteer: string;
+  /** The control that opens a field to answer the task's open question. */
+  subAgentAnswer: string;
+  /** The control that asks a task to stop before its next model request. */
+  subAgentCancelTask: string;
+  /** The same control once that request is on the stream: stop the task at once. */
+  subAgentForceCancel: string;
+  /** The submit button of the steer or answer field. */
+  subAgentSend: string;
+  /** Placeholder and label of the steer field. */
+  subAgentSteerPlaceholder: string;
+  /** Placeholder and label of the answer field. */
+  subAgentAnswerPlaceholder: string;
+  /** A control that failed for a reason the user cannot act on, or a fault. */
+  subAgentControlFailed: string;
+  /** A control refused because the task, or its run, has already finished. */
+  subAgentControlFinished: string;
+  /** An answer refused because the task is no longer waiting on that question. */
+  subAgentControlNotWaiting: string;
+  /** A control this server cannot deliver: another process, a remote worker, or no routes. */
+  subAgentControlUnavailable: string;
   /** The link from a card to the child session it started. Token: `{agent}`. */
   childSessionOpen: string;
   /** The same link while the child waits on the user. Token: `{agent}`. */
@@ -714,6 +738,18 @@ export const DEFAULT_UI_STRINGS: UiStrings = {
   subAgentUnfinished: "{agent} was still running when the run ended",
   subAgentFailed: "The sub-agent failed",
   subAgentSteps: "Steps the sub-agent took",
+  subAgentControls: "Task controls",
+  subAgentSteer: "Steer",
+  subAgentAnswer: "Answer",
+  subAgentCancelTask: "Cancel",
+  subAgentForceCancel: "Stop now",
+  subAgentSend: "Send",
+  subAgentSteerPlaceholder: "Tell the task what to change",
+  subAgentAnswerPlaceholder: "Your answer",
+  subAgentControlFailed: "Couldn't reach the task. Try again.",
+  subAgentControlFinished: "The task has already finished.",
+  subAgentControlNotWaiting: "The task is no longer waiting on that question.",
+  subAgentControlUnavailable: "This task can't be controlled from here.",
   childSessionOpen: "Open the {agent} task",
   childSessionNeedsYou: "The {agent} task needs you",
   parentThread: "From {title}",

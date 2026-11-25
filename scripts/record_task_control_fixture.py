@@ -13,7 +13,7 @@ from typing import Any
 import django
 from django.conf import settings
 
-RUN = "uv run --no-project --with 'django-ag-ui[harness]==0.90.0' python scripts/record_task_control_fixture.py"  # noqa: E501
+RUN = "uv run --no-project --with 'django-ag-ui[harness]==0.91.0' python scripts/record_task_control_fixture.py"  # noqa: E501
 
 settings.configure(
     SECRET_KEY="record",
@@ -172,6 +172,27 @@ def _retried() -> dict[str, Any]:
     return json.loads(event.model_dump_json(by_alias=True, exclude_none=True))
 
 
+def _by_user() -> dict[str, Any]:
+    # The steps a task route reports, built as django-ag-ui's LiveTasks._report builds them.
+    steps = {
+        "steered": ("steered by you", {"message": "Only 2024."}),
+        "answered": ("answered by you", {"questionId": "q-1", "answer": "2024"}),
+        "cancel_requested": ("cancellation requested by you", {"forced": False}),
+    }
+    return {
+        phase: json.loads(
+            subagent_progress(
+                delegation_id="call-1",
+                agent="researcher",
+                phase=phase,
+                status=f"researcher: {said}",
+                task={"taskId": "task-1", **task, "source": "user"},
+            ).model_dump_json(by_alias=True, exclude_none=True)
+        )
+        for phase, (said, task) in steps.items()
+    }
+
+
 def _normalise(text: str) -> str:
     text = re.sub(r'"timestamp": \d+', '"timestamp": 1735689600000', text)
     uuid = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
@@ -194,6 +215,7 @@ def record() -> dict[str, Any]:
         "canonicalized": ["timestamp", "uuid ids", "task ids"],
         "runs": asyncio.run(_runs()),
         "retried": _retried(),
+        "byUser": _by_user(),
     }
 
 

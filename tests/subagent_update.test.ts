@@ -24,7 +24,7 @@ import { describe, expect, it } from "vitest";
 import { SUBAGENT_PHASE } from "../src/constants.js";
 import { subAgentUpdate } from "../src/ui/progress/subagent_update.js";
 import { subAgentValue, subAgentValues } from "./helpers/subagent_fixture.js";
-import { RETRIED_STEP, taskStep, taskSteps } from "./helpers/task_control_fixture.js";
+import { RETRIED_STEP, taskStep, taskSteps, USER_STEP } from "./helpers/task_control_fixture.js";
 
 /** Two real payloads: a call in flight, and a result that landed. */
 const A_STEP = subAgentValue((v) => v.phase === "tool_call" && v.tool?.toolCallId === "sub-1");
@@ -148,6 +148,11 @@ describe("narrowing a task-control step", () => {
       questionId: null,
       forced: null,
       attempt: null,
+      message: null,
+      question: null,
+      answer: null,
+      source: null,
+      truncated: false,
     });
     expect(subAgentUpdate(QUESTION)?.task?.questionId).toBe(
       (QUESTION["task"] as Record<string, unknown>)["questionId"],
@@ -161,13 +166,50 @@ describe("narrowing a task-control step", () => {
     for (const task of [null, "task-1", [], { reason: "auto" }, { taskId: "" }, { taskId: 7 }]) {
       expect(subAgentUpdate(spoiled(BACKGROUNDED, { task }))?.task).toBeNull();
     }
-    const odd = { taskId: "t", reason: 3, questionId: "", forced: "yes", attempt: 1.5 };
+    const odd = {
+      taskId: "t",
+      reason: 3,
+      questionId: "",
+      forced: "yes",
+      attempt: 1.5,
+      message: 4,
+      question: [],
+      answer: "",
+      source: "someone",
+      truncated: "yes",
+    };
     expect(subAgentUpdate(spoiled(BACKGROUNDED, { task: odd }))?.task).toEqual({
       taskId: "t",
       reason: null,
       questionId: null,
       forced: null,
       attempt: null,
+      message: null,
+      question: null,
+      answer: null,
+      source: null,
+      truncated: false,
     });
+  });
+
+  it("carries what was said, and who said it, from 0.91.0", () => {
+    const steered = subAgentUpdate(taskStep("steered", "steered"))?.task;
+    expect(steered?.message).toBe("Only 2024.");
+    expect(steered?.source).toBe("model");
+    expect(subAgentUpdate(QUESTION)?.task?.question).toBe("Which year?");
+    const answered = subAgentUpdate(taskStep("question", "answered"))?.task;
+    expect(answered?.answer).toBe("2024");
+    expect(answered?.source).toBe("model");
+    expect(subAgentUpdate(CANCEL)?.task?.source).toBe("model");
+    for (const step of Object.values(USER_STEP)) {
+      expect(subAgentUpdate(step)?.task?.source).toBe("user");
+    }
+    expect(subAgentUpdate(USER_STEP.steered)?.task?.message).toBe("Only 2024.");
+    expect(subAgentUpdate(USER_STEP.answered)?.task?.answer).toBe("2024");
+  });
+
+  it("marks text the server cut", () => {
+    const cut = { taskId: "t", questionId: "q", question: "Which", truncated: true };
+    expect(subAgentUpdate(spoiled(QUESTION, { task: cut }))?.task?.truncated).toBe(true);
   });
 });

@@ -272,7 +272,11 @@ describe("a delegated sub-agent's progress", () => {
     const panel = panelFor(el, "call-2") as HTMLElement;
     const card = panel.closest(".tool-call") as HTMLElement;
 
-    expect(panel.textContent).toBe(AUDITOR_LAST.message);
+    // The task controls' labels sit in a region that stays hidden off task control.
+    const drawn = panel.cloneNode(true) as HTMLElement;
+    drawn.querySelector(".subagent-controls")?.remove();
+    expect(drawn.textContent).toBe(AUDITOR_LAST.message);
+    expect((panel.querySelector(".subagent-controls") as HTMLElement).hidden).toBe(true);
     expect(card.querySelector(".tool-call-result")?.textContent).toContain(
       "the auditor model went away",
     );

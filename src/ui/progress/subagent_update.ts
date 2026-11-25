@@ -92,12 +92,18 @@ function asTask(value: unknown): SubAgentTask | null {
   }
   const forced = record["forced"];
   const attempt = record["attempt"];
+  const source = record["source"];
   return {
     taskId,
     reason: asText(record["reason"]),
     questionId: asText(record["questionId"]),
     forced: typeof forced === "boolean" ? forced : null,
     attempt: Number.isInteger(attempt) ? (attempt as number) : null,
+    message: asText(record["message"]),
+    question: asText(record["question"]),
+    answer: asText(record["answer"]),
+    source: source === "user" || source === "model" ? source : null,
+    truncated: record["truncated"] === true,
   };
 }
 
