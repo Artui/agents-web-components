@@ -20,6 +20,7 @@ import type { MaybeAsync } from "../../core/when_ready.js";
 import type { ToolCatalog } from "../../tools/tool_catalog.js";
 import type { ChildSessions } from "../progress/child_sessions.js";
 import type { AnswerActions } from "../transcript/answer_actions.js";
+import { renderAnsweredByModel } from "../transcript/answered_by_model.js";
 import { renderAttachmentChips } from "../transcript/attachment_chips.js";
 import { renderCitations } from "../transcript/render_citations.js";
 import type { Transcript } from "../transcript/transcript.js";
@@ -1055,6 +1056,10 @@ export class ConversationHistory {
         // wrap words.
         const restoredBubble = this.#host.appendMessage(MESSAGE_ROLE.ASSISTANT, text);
         restoredBubble.classList.add("message--restored");
+        const model = renderAnsweredByModel(message.metadata, this.#host.strings());
+        if (model !== null) {
+          restoredBubble.append(model);
+        }
         // The stored copy's citations index the stored text, which can join
         // two streamed messages into one: read them against this text only.
         const sources = renderCitations(

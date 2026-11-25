@@ -881,6 +881,13 @@ async function handleAgent(res, body) {
       { sources: [sky, notes], anchor: null },
     ];
     emit(res, { type: "TEXT_MESSAGE_END", messageId, metadata: { citations } });
+  } else if (/\bfallback model\b/i.test(prompt)) {
+    // The first model failed and a fallback answered: django-ag-ui 0.91.0 names it on
+    // TEXT_MESSAGE_END, with model_fallback set only when it was not the first model.
+    const messageId = id("msg");
+    emit(res, { type: "TEXT_MESSAGE_START", messageId, role: "assistant" });
+    emit(res, { type: "TEXT_MESSAGE_CONTENT", messageId, delta: "The primary model was down, so the spare answered." });
+    emit(res, { type: "TEXT_MESSAGE_END", messageId, metadata: { model_id: "anthropic:claude-sonnet-4-5", model_fallback: true } });
   } else if (/\bbuilt-in activit/i.test(prompt)) {
     // The bookkeeping activity types the element draws without a renderer, in
     // the shapes they arrive in on the wire. Four are records for the model and draw nothing; the

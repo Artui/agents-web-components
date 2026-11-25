@@ -257,6 +257,22 @@ Copy and a rating's `content` leave the list out. Style it through the
 `citations` part, or the strings `citations` (token `{count}`) and
 `citationDocument`.
 
+## The model a fallback answer came from
+
+When a run's first model fails and a fallback model answers (pydantic-ai's
+`ModelFallback`, or django-spec-agents' `build_model_fallback`), the answer gets a
+muted **Answered by openai:gpt-5** line under its text, above its sources. Nothing to
+opt in to: an answer the request's first model gave shows no line.
+
+The line reads the assistant message's `metadata`, as django-ag-ui 0.91.0 and later
+writes it: live from `TEXT_MESSAGE_END`, and after a reload from the stored message.
+It is drawn only when `model_fallback` is `true` and `model_id` is a non-empty string,
+and it names `model_id` as the server sent it (the id the model was configured by).
+
+Copy and a rating's `content` leave the line out. Style it through the
+`answered-by-model` part, or reword it with the string `answeredByModel` (token
+`{model}`).
+
 ## Quoting a selection
 
 Select any text in the transcript and a small **Quote** offer floats beside it.

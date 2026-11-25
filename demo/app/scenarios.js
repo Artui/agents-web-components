@@ -147,10 +147,11 @@ export const SCENARIOS = [
     title: "Message actions and ratings",
     since: "0.1.0",
     summary:
-      "Copy, retry and the rating pair under an answer, what a rating names: the message, its thread and the run that streamed it, and the sources a cited answer lists under it (0.16.0).",
+      "Copy, retry and the rating pair under an answer, what a rating names: the message, its thread and the run that streamed it, the sources a cited answer lists under it (0.16.0), and the model a fallback answer came from (0.17.0).",
     prompts: [
       ["Echo hello", "echo hello"],
       ["Cited answer", "cite your sources"],
+      ["Fallback model answers", "answer from the fallback model"],
     ],
     attrs: { "data-message-actions": "copy,retry,feedback" },
   },

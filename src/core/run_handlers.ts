@@ -15,6 +15,7 @@ import type { RunAnnouncer } from "../ui/progress/run_announcer.js";
 import type { SubAgentProgress } from "../ui/progress/subagent_progress.js";
 import type { AnswerActions } from "../ui/transcript/answer_actions.js";
 import type { AnswerStream } from "../ui/transcript/answer_stream.js";
+import { renderAnsweredByModel } from "../ui/transcript/answered_by_model.js";
 import { renderCitations } from "../ui/transcript/render_citations.js";
 import type { Transcript } from "../ui/transcript/transcript.js";
 import { type UsageTotals, usageLineText } from "../ui/transcript/usage_line_text.js";
@@ -294,7 +295,7 @@ export class RunHandlers {
         this.#host.stream.queue(buffer);
         this.#host.stream.countDelta();
       },
-      onTextEnd: (buffer, message, citations) => {
+      onTextEnd: (buffer, message, citations, metadata) => {
         // A text message that carried no content is a declaration, not an
         // answer, and drawing one puts an empty bubble above every tool call.
         //
@@ -325,6 +326,10 @@ export class RunHandlers {
         attachCopyButtons(bubble, this.#host.strings());
         // Read against this message's own text: its offsets index what this
         // message streamed, not the copy the server may store joined to another.
+        const model = renderAnsweredByModel(metadata, this.#host.strings());
+        if (model !== null) {
+          bubble.append(model);
+        }
         const sources = renderCitations(citations, buffer, this.#host.strings());
         if (sources !== null) {
           bubble.append(sources);

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **An answer a fallback model gave names that model.** django-ag-ui 0.91.0 carries
+  `metadata.model_id` and, only when a model other than the request's first answered,
+  `model_fallback: true`, on `TEXT_MESSAGE_END` and on the stored assistant message. Such an
+  answer now shows a muted **Answered by `<model_id>`** line under its text, above its
+  sources, live and after a reload (from the thread endpoint or the browser's own store). An
+  answer the first model gave shows nothing. Copy and a rating's `content` leave the line
+  out. New part `answered-by-model`, new string `answeredByModel` (token `{model}`).
+  `AgUiClientHandlers.onTextEnd` takes a fourth argument, the end event's raw `metadata`.
+  Nothing to opt in to.
+  See [The model a fallback answer came from](https://artui.github.io/agents-web-components/messages/#the-model-a-fallback-answer-came-from).
+
 ## [0.16.0] — 2026-11-25
 
 ### Added

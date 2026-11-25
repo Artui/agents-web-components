@@ -54,6 +54,7 @@ import { QUIET_STYLES } from "./themes/quiet_styles.js";
 import { SCHEME_STYLES } from "./themes/scheme_styles.js";
 import { SOFT_STYLES } from "./themes/soft_styles.js";
 import { SOFT_TOKENS } from "./themes/soft_tokens.js";
+import { ANSWERED_BY_MODEL_STYLES } from "./transcript/answered_by_model_styles.js";
 import { ATTACHMENT_CHIP_STYLES } from "./transcript/attachment_chip_styles.js";
 import { CITATION_STYLES } from "./transcript/citation_styles.js";
 import { GREETING_STYLES } from "./transcript/greeting_styles.js";
@@ -105,6 +106,7 @@ export const STYLES: string = [
   PANEL_VIEW_STYLES,
   SKILL_EDITOR_STYLES,
   ROUTINES_STYLES,
+  ANSWERED_BY_MODEL_STYLES,
   CITATION_STYLES,
   // The step group restates, inside a group, card rules the modules above set
   // at rest; it outweighs them rather than relying on order, and sits ahead

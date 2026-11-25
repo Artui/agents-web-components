@@ -583,6 +583,9 @@ export interface UiStrings {
   routineHour: string;
   /** The accessible name of the routine time's minute select. */
   routineMinute: string;
+
+  /** Line under an answer a fallback model gave, naming it. Token: `{model}`. */
+  answeredByModel: string;
 }
 
 /** The built-in English strings — the fallback every override merges over. */
@@ -856,6 +859,8 @@ export const DEFAULT_UI_STRINGS: UiStrings = {
 
   routineHour: "Hour",
   routineMinute: "Minute",
+
+  answeredByModel: "Answered by {model}",
 };
 
 /**
