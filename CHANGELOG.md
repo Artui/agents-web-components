@@ -33,6 +33,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `childReport` and `childQuestion`. Nothing to opt in to.
   See [Child sessions](https://artui.github.io/agents-web-components/tool-calls/#child-sessions).
 
+### Fixed
+
+- **Following a run the server starts on the thread on screen misses fewer of them.** Under
+  `data-thread-status` or `data-poll-runs` with `data-detach-runs`: a list naming the thread
+  `running` while the chat was busy is now asked again once the chat is idle, rather than
+  dropped until the list changes; a server run that started in the moment the chat's own run
+  ended is joined, rather than taken for the chat's own (the chat now knows its own run by the
+  id its stream declared in `RUN_STARTED`, not by asking the run log as its run ends, so that
+  request is gone); and a thread whose run the server parked (`waiting`) is restored, drawing
+  what the run stored and offering the approvals it waits on, as opening the thread does. A
+  parked run a restore found (offered, or parked on what the chat cannot offer) is the chat's
+  own and is not restored again, after a Stop included. Nothing to opt in to beyond
+  the attributes that already turn the join on.
+
 ## [0.16.0] — 2026-11-25
 
 ### Added
