@@ -115,6 +115,35 @@ describe("highlightThenClick", () => {
   });
 });
 
+describe("clicking an element without click()", () => {
+  const link = (): { el: HTMLElement; events: Event[] } => {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    const el = document.createElementNS("http://www.w3.org/2000/svg", "a");
+    // happy-dom gives SVG elements no click(), as a browser does not.
+    svg.append(el);
+    document.body.append(svg);
+    const events: Event[] = [];
+    svg.addEventListener("click", (event) => events.push(event));
+    return { el: el as unknown as HTMLElement, events };
+  };
+
+  it.each([
+    ["highlightThenClick", (el: HTMLElement) => highlightThenClick(el, { highlightMs: 0 })],
+    ["pressThenClick", (el: HTMLElement) => pressThenClick(el, { pressMs: 0 })],
+  ])("%s dispatches a click event", async (_name, act) => {
+    const { el, events } = link();
+    expect("click" in el).toBe(false);
+    await act(el);
+    expect(events).toHaveLength(1);
+    expect(events[0]).toBeInstanceOf(MouseEvent);
+    expect([events[0]?.bubbles, events[0]?.cancelable, events[0]?.composed]).toEqual([
+      true,
+      true,
+      true,
+    ]);
+  });
+});
+
 describe("scrollIntoCenterView", () => {
   it("calls scrollIntoView centered and resolves once the scroll ends", async () => {
     const el = input();

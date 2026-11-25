@@ -317,8 +317,13 @@ characters. `required`, `disabled` appear only when true.
 Text the page itself writes is read as it is: a heading or label that prints user data ("Signed in
 as ...") reaches the model like any other text. Mark such a region `data-agent-ignore`.
 
-Only HTML elements are listed: nothing inside an `<svg>` is, its links included, though its text
-counts toward the name of the element around it (never its `<script>` or `<style>`).
+Inside an `<svg>`, only its links are listed: an `<a>` with an `href` or `xlink:href` (or with
+`role="link"`), under the same rules for `href` as any link. Its name comes from `aria-labelledby`,
+`aria-label`, `title` or its text, not from a `<title>` child. Other SVG elements are not listed,
+whatever role they carry, while the HTML in a `<foreignObject>` is listed as anywhere else. An SVG's
+text counts toward the name of the element around it (never its `<script>` or `<style>`). The handle
+of an SVG link resolves to an `SVGElement`, which has no `click()`: `clickElement` and `pressButton`
+dispatch the click event instead, so a host tool of its own should do the same.
 
 **What it skips.** The subtree of every element of this package (`ag-ui-*`, so the chat never lists
 itself), of anything marked `data-agent-ignore`, and of anything hidden (`hidden`, `display: none`,

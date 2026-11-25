@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`pageMapFrom` lists SVG links.** An `<a>` inside an `<svg>` with an `href` or `xlink:href`
+  (or `role="link"`) is now a `links` entry, with the same path-only `href`, and the HTML inside a
+  `<foreignObject>` is listed too. `clickElement`, `pressButton`, `highlightThenClick` and
+  `pressThenClick` dispatch a click event on an element with no `click()` instead of throwing.
+  Nothing to opt in to for a host already using the walker; a host tool of its own that calls
+  `.click()` on a resolved handle should allow for an SVG element.
+
 ## [0.16.0] — 2026-11-25
 
 ### Added
