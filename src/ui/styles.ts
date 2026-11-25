@@ -32,8 +32,10 @@ import { PRESET_STYLES } from "./placement/preset_styles.js";
 import { RESIZE_STYLES } from "./placement/resize_styles.js";
 import { SIDEBAR_STYLES } from "./placement/sidebar_styles.js";
 import { SMALL_VIEWPORT_STYLES } from "./placement/small_viewport_styles.js";
+import { CHILD_SESSION_REPORT_STYLES } from "./progress/child_session_report_styles.js";
 import { MCP_APP_VIEW_STYLES } from "./progress/mcp_app_view_styles.js";
 import { RUN_NOTICE_STYLES } from "./progress/run_notice_styles.js";
+import { SUBAGENT_CONTROL_STYLES } from "./progress/subagent_control_styles.js";
 import { THOUGHTS_STYLES } from "./progress/thoughts_styles.js";
 import { TOOL_GROUP_STYLES } from "./progress/tool_group_styles.js";
 import { TOOL_STEP_STYLES } from "./progress/tool_step_styles.js";
@@ -54,6 +56,7 @@ import { QUIET_STYLES } from "./themes/quiet_styles.js";
 import { SCHEME_STYLES } from "./themes/scheme_styles.js";
 import { SOFT_STYLES } from "./themes/soft_styles.js";
 import { SOFT_TOKENS } from "./themes/soft_tokens.js";
+import { ANSWERED_BY_MODEL_STYLES } from "./transcript/answered_by_model_styles.js";
 import { ATTACHMENT_CHIP_STYLES } from "./transcript/attachment_chip_styles.js";
 import { CITATION_STYLES } from "./transcript/citation_styles.js";
 import { GREETING_STYLES } from "./transcript/greeting_styles.js";
@@ -87,6 +90,7 @@ export const STYLES: string = [
   MESSAGE_STYLES,
   THOUGHTS_STYLES,
   TOOL_STEP_STYLES,
+  SUBAGENT_CONTROL_STYLES,
   RESIZE_STYLES,
   COMPOSER_STYLES,
   PLACE_STYLES,
@@ -105,6 +109,8 @@ export const STYLES: string = [
   PANEL_VIEW_STYLES,
   SKILL_EDITOR_STYLES,
   ROUTINES_STYLES,
+  ANSWERED_BY_MODEL_STYLES,
+  CHILD_SESSION_REPORT_STYLES,
   CITATION_STYLES,
   // The step group restates, inside a group, card rules the modules above set
   // at rest; it outweighs them rather than relying on order, and sits ahead

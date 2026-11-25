@@ -108,6 +108,13 @@ ${GROUPED} .tool-group-note::before {
   margin: 0 6px 0 2px;
 }
 
+/* The pre-approved count belongs to the folded row: opened, each card says it.
+   A meta holding nothing else goes with it, or its gap would stay. */
+${GROUPED} .tool-group[data-open="true"] .tool-group-note--pre-approved,
+${GROUPED} .tool-group[data-open="true"] .tool-group-meta:has(> .tool-group-note--pre-approved:only-child) {
+  display: none;
+}
+
 ${GROUPED} .tool-group[data-state="error"] .tool-group-meta {
   color: var(--_danger);
 }
@@ -279,14 +286,15 @@ ${inner("inline")}[data-status="deferred"] .tool-call-section--args:not([hidden]
    so the row has nothing to open onto and draws no chevron. Grouped-only, so a
    card mode keeps the head. data-count is rewritten live as a run grows.
 
-   A call a reviewer model or a routine approved keeps its head for the note
-   alone: no person was asked, so the note is the only record of that. */
-${GROUPED} .tool-group[data-count="1"] .tool-call:not([data-answered-by]) .tool-call-head,
-${GROUPED} .tool-group[data-count="1"] .tool-call[data-answered-by] .tool-call-head > :not(.tool-call-answered-by) {
+   A call that records who let it through, a person's decision or a reviewer's
+   or routine's approval, keeps its head for that note alone, and keeps the
+   chevron under minimal so the note can be reached. */
+${GROUPED} .tool-group[data-count="1"] .tool-call:not([data-answered-by], [data-decision]) .tool-call-head,
+${GROUPED} .tool-group[data-count="1"] .tool-call:is([data-answered-by], [data-decision]) .tool-call-head > :not(.tool-call-answered-by, .tool-call-decision) {
   display: none;
 }
 
-:host(:where(:not(${CARD_MODES}))[data-tool-group-display="minimal"]) .tool-group[data-count="1"] .tool-group-chevron {
+:host(:where(:not(${CARD_MODES}))[data-tool-group-display="minimal"]) .tool-group[data-count="1"]:not(:has(.tool-call:is([data-answered-by], [data-decision]))) .tool-group-chevron {
   display: none;
 }
 

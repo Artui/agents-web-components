@@ -1,0 +1,40 @@
+{
+  "generator": "scripts/record_model_fallback_fixture.py",
+  "djangoAgUi": "0.91.1",
+  "pydanticAi": "2.74.0",
+  "agUiProtocol": "1.0.0",
+  "canonicalized": [
+    "messageId",
+    "id",
+    "timestamp"
+  ],
+  "runs": {
+    "primary": {
+      "sse": "data: {\"type\":\"RUN_STARTED\",\"threadId\":\"t1\",\"runId\":\"r1\",\"protocolVersion\":\"1.0\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_START\",\"messageId\":\"m0\",\"role\":\"assistant\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"messageId\":\"m0\",\"delta\":\"from the primary\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_END\",\"metadata\":{\"model_id\":\"function:function::primary\"},\"messageId\":\"m0\"}\n\ndata: {\"type\":\"RUN_FINISHED\",\"threadId\":\"t1\",\"runId\":\"r1\",\"outcome\":{\"type\":\"success\"}}\n\n",
+      "stored": [
+        {
+          "id": "m0",
+          "role": "assistant",
+          "metadata": {
+            "model_id": "function:function::primary"
+          },
+          "content": "from the primary"
+        }
+      ]
+    },
+    "fallback": {
+      "sse": "data: {\"type\":\"RUN_STARTED\",\"threadId\":\"t1\",\"runId\":\"r1\",\"protocolVersion\":\"1.0\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_START\",\"messageId\":\"m0\",\"role\":\"assistant\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"messageId\":\"m0\",\"delta\":\"from the spare\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_END\",\"metadata\":{\"model_id\":\"function:function::spare\",\"model_fallback\":true},\"messageId\":\"m0\"}\n\ndata: {\"type\":\"RUN_FINISHED\",\"threadId\":\"t1\",\"runId\":\"r1\",\"outcome\":{\"type\":\"success\"}}\n\n",
+      "stored": [
+        {
+          "id": "m0",
+          "role": "assistant",
+          "metadata": {
+            "model_id": "function:function::spare",
+            "model_fallback": true
+          },
+          "content": "from the spare"
+        }
+      ]
+    }
+  }
+}

@@ -23,6 +23,11 @@ function runs(credentials?: RequestCredentials): DetachedRuns {
   );
 }
 
+/** Whether the probe finds a run going, as the restore asks it. */
+async function running(routes: DetachedRuns): Promise<boolean> {
+  return (await routes.probe("t1"))?.status === "running";
+}
+
 describe("DetachedRuns", () => {
   it("derives each thread's routes from the threads URL", () => {
     expect(runs().eventsUrl("a b")).toBe("/agent/threads/a%20b/events/");
@@ -34,14 +39,14 @@ describe("DetachedRuns", () => {
       vi.fn(async () => json(500, recorded.probeRunning.body)),
     );
 
-    expect(await runs().running("t1")).toBe(false);
+    expect(await running(runs())).toBe(false);
   });
 
   it("reads a running run from one JSON page of its log", async () => {
     const fetch = vi.fn(async () => json(200, recorded.probeRunning.body));
     vi.stubGlobal("fetch", fetch);
 
-    expect(await runs("include").running("t1")).toBe(true);
+    expect(await running(runs("include"))).toBe(true);
     const [url, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("/agent/threads/t1/events/?after=0&limit=1");
     expect(init.headers).toEqual({ "X-For": url, Accept: "application/json" });
@@ -59,7 +64,7 @@ describe("DetachedRuns", () => {
       vi.fn(async () => answer()),
     );
 
-    expect(await runs().running("t1")).toBe(false);
+    expect(await running(runs())).toBe(false);
   });
 
   it("answers no when the request fails", async () => {
@@ -68,7 +73,7 @@ describe("DetachedRuns", () => {
       vi.fn(async () => Promise.reject(new TypeError("offline"))),
     );
 
-    expect(await runs().running("t1")).toBe(false);
+    expect(await running(runs())).toBe(false);
   });
 
   it("posts a cancel, and says nothing whether it lands, finds no run, or fails", async () => {
@@ -98,7 +103,7 @@ describe("DetachedRuns with an async header source", () => {
       async () => ({ Authorization: "Bearer t" }),
       () => undefined,
     );
-    await routes.running("t1");
+    await running(routes);
     await routes.cancel("t1");
     const sent = spy.mock.calls.map((call) =>
       new Headers((call as unknown as [string, RequestInit])[1].headers).get("Authorization"),
@@ -114,7 +119,7 @@ describe("DetachedRuns with an async header source", () => {
       () => Promise.reject(new Error("refresh failed")),
       () => undefined,
     );
-    expect(await routes.running("t1")).toBe(false);
+    expect(await running(routes)).toBe(false);
     await routes.cancel("t1");
     expect(spy).not.toHaveBeenCalled();
   });

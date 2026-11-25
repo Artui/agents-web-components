@@ -97,8 +97,33 @@ The editor opens in place of the conversation, below the header, from a "Manage 
 may write, off ones included, with "Turn on" on an off row; it creates, edits and turns skills off;
 and "Draft one with the agent" closes it and sends `/create-skill`, whose draft comes back as an
 approval card. History, Checkpoints and New chat close it first. The server keeps every rule: a
-refused save shows the server's message (`{"error"}`) above the form, since django-ag-ui 0.83.0
-names no field; an answer that adds `"field"` shows under that field.
+refused save shows the server's message (`{"error"}`) under the field its `"field"` names (django-ag-ui
+0.84.0 and later name the field: `name`, `description`, `body`, `userInvocable`, `modelInvocable` or
+`enabled`), and above the form when it names none.
+
+#### Whose skill it is
+
+With django-ag-ui 0.91.0 and a skill policy that defines `scope(request, skill)`, each editor entry
+carries `scope`, and the row draws a badge after the skill's name: **Personal** for `"personal"`,
+**Company** for `"shared"`. An entry without `scope` (an older server, or a policy without the
+method) draws no badge, as before. The badge is the part `skill-scope`, with the value in
+`data-scope`, so a host can style each scope:
+
+```css
+ag-ui-chat::part(skill-scope) { color: var(--ag-ui-muted); }
+```
+
+The words are strings keyed `skillScope:<value>`. Override the two the component knows, or name a
+label for a scope your own policy returns; a scope with no label draws no badge, since its raw value
+may be an internal name rather than words for a user. The same keys work on `<ag-ui-skills>`'s
+`strings`:
+
+```js
+chat.strings = {
+  "skillScope:shared": "Acme",
+  "skillScope:team": "Team",
+};
+```
 
 **Writes are CSRF-checked by default** on the server, and each one sends `headers` and
 `getHeaders()` as read at that moment, so a `getHeaders` returning the current CSRF token is all a

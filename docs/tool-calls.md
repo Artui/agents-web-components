@@ -72,8 +72,9 @@ Under `grouped` the row reads, by state:
 | `done` | "Worked through 3 steps" | check |
 | `error` | "Worked through 3 steps", with "1 failed" in the danger colour | error mark |
 
-"N declined" is added as a note whenever a step was declined. `data-count` carries the number of
-steps and `data-open` whether the cards are showing; the head is a button with `aria-expanded`.
+"N declined" is added as a note whenever a step was declined. While the group is folded, "N
+pre-approved" is added when a reviewer model or a routine approved calls in it with no one asked;
+opened, each of those cards says so itself and the row drops the count. `data-count` carries the number of steps and `data-open` whether the cards are showing; the head is a button with `aria-expanded`.
 
 - **It opens itself while a step waits on you.** A server-side approval renders inside the gated
   call's own card, so a folded group would hide the question it is asking: the group opens when a
@@ -88,7 +89,9 @@ steps and `data-open` whether the cards are showing; the head is a button with `
   card without its own `tool-card-head` (the row's state mark and notes carry the status). The
   Details toggle and arguments stay, except under `data-tool-group-display="minimal"`, where the
   card is only its head: there the row draws no chevron, though it still opens for an approval. A
-  card display mode keeps the head. A run that grows to two calls brings both heads back.
+  call that records a decision or a pre-approval keeps that one note from its head, and its row
+  opens onto it with a chevron, under minimal and with no arguments or result too. A card display
+  mode keeps the whole head. A run that grows to two calls brings both heads back.
 - **A running sub-agent does not open it.** The row keeps its spinner and names the delegation
   instead, "Delegated to researcher" (the `subAgentDelegatedTo` string).
 - **Repeated labels are told apart.** Two "Fill field" steps read "Fill field" and "Fill field
@@ -104,7 +107,8 @@ Parts: `tool-group` (with the state beside it as `tool-group-waiting`, `tool-gro
 `tool-card-repeat` on a repeated step. The focus ring is `--ag-ui-ring` and the disclosure chevron
 `--ag-ui-ico-chevron`. Strings (`strings` / `data-strings`): `toolGroupSteps`,
 `toolGroupWorking`, `toolGroupWorked` (each with `{count}`, always 2 or more), `toolGroupWaiting`,
-`toolGroupFailed`, `toolGroupDeclined` (each with `{count}`) and `toolStepRepeat` (with `{n}`).
+`toolGroupFailed`, `toolGroupDeclined`, `toolGroupPreApproved` (each with `{count}`) and
+`toolStepRepeat` (with `{n}`).
 
 ```html
 <!-- Keep per-call cards, as before grouped was the default -->
@@ -256,7 +260,7 @@ server's text.
 
 ### Task control
 
-Under django-ag-ui's task control (0.90.0, `SubAgents(task_control=TaskControl())`) a
+Under django-ag-ui's task control (0.90.0+, `SubAgents(task_control=TaskControl())`) a
 delegation is a task the parent's model manages, and the row draws what happens to it. The
 task's moments arrive on the same `ag_ui.subagent` event with `tool: null`, a server `status`
 line and a `task` record:
@@ -264,14 +268,16 @@ line and a `task` record:
 | `phase` | When | `task` carries |
 | --- | --- | --- |
 | `backgrounded` | the task moved to the background | `taskId`, `reason` (`requested`, `auto`, `question`) |
-| `steered` | the parent sent the running task a message | `taskId` |
-| `question` | the task asked the parent a question | `taskId`, `questionId` |
-| `answered` | the parent answered it | `taskId`, `questionId` |
-| `cancel_requested` | the parent asked the task to stop | `taskId`, `forced` |
+| `steered` | the task was sent a message | `taskId`, `message`, `source` |
+| `question` | the task asked the parent a question | `taskId`, `questionId`, `question` |
+| `answered` | the question was answered | `taskId`, `questionId`, `answer`, `source` |
+| `cancel_requested` | the task was asked to stop | `taskId`, `forced`, `source` |
 | `retried` | a remote task's worker is running it again | `taskId`, `attempt` |
 
-The steering message, the question and the answer are not on the wire, so the row says that
-something happened, never what was said. The panel's `data-phase` is the latest moment. What
+From django-ag-ui 0.91.0 the steps carry what was said, cut at 8000 characters with
+`truncated` beside it, and `source` says who acted: `user` for the controls below, `model` for
+the run itself. The row shows the server's `status` line ("researcher: steered by you"); the
+open question's text is drawn beside the Answer control, so only where the controls are. The panel's `data-phase` is the latest moment. What
 outlasts a moment is stamped on the `subagent` part for a host to style:
 
 | Attribute | Set |
@@ -281,6 +287,8 @@ outlasts a moment is stamped on the `subagent` part for a host to style:
 | `data-awaiting-answer` | from `question` until `answered`, or until the task settles |
 | `data-cancel` | `requested` or `forced`, once a cancellation was asked for |
 | `data-attempt` | a remote task's retry count, on `retried` |
+| `data-source` | `user` or `model`: who acted on the latest steer, answer or cancel |
+| `data-answerable` | the open question's id, only while the controls are live and Answer is offered |
 
 A task closes on the protocol's events as before, and two `SUBAGENT_ERROR` codes are not the
 child failing: `code: "cancelled"` settles the row as `data-phase="cancelled"` ("researcher was
@@ -294,8 +302,49 @@ The glyph follows: a cancelled task draws the card's `--ag-ui-tool-icon-declined
 unfinished one its `--ag-ui-tool-icon-interrupted`, both muted, and an open question stops the
 spinner for a still ring in the accent colour.
 
-The row offers no control over the task. Steering, answering and cancelling from the chat are
-not part of this release.
+#### Steer, answer and cancel
+
+With `data-threads-url` set, a live task's row offers three controls beside it, in the
+`subagent-controls` part:
+
+- **Steer** opens a field (`subagent-reply`) whose text is sent to the task.
+- **Answer** appears while the task waits on a question, beside the question's text
+  (`subagent-question`), and sends the answer to that question.
+- **Cancel** asks the task to stop before its next model request. Once that request is on the
+  stream (`data-cancel="requested"`) the button reads **Stop now** and stops the task at once.
+
+Each control is one `POST` to the route django-ag-ui (0.91.0, with a `run_store`) serves beside
+the thread, with the element's headers and cookie policy:
+
+| Control | Route | Body |
+| --- | --- | --- |
+| Steer | `<threads-url><thread>/tasks/<taskId>/steer/` | `{"message"}` |
+| Answer | `<threads-url><thread>/tasks/<taskId>/answer/` | `{"question_id", "answer"}` |
+| Cancel | `<threads-url><thread>/tasks/<taskId>/cancel/` | `{"force"}` |
+
+The server acknowledges with `202`, and the row does not change until the step for the act
+arrives on the stream: a control never sets a state itself. A request is sent once and never
+retried, a `401` included, since a steer sent twice is two messages. A refusal is worded from
+its `reason` code under the controls (`subagent-control-error`): `not_running`, `no_task` and
+`no_run` as `subAgentControlFinished`, `not_waiting` as `subAgentControlNotWaiting`,
+`not_live_here`, `remote` and a server without the routes as `subAgentControlUnavailable`, and
+anything else as `subAgentControlFailed`. The controls are withdrawn when the task settles.
+
+Under the default `grouped` tool display the controls sit inside the group's folded row: a
+background task's delegating call settles as soon as the task goes to the background, so the
+row reads done. Steer and Cancel are one click down. When the task asks a question, the group
+opens itself, once for each question, so Answer and the question's text are in view; if the
+user folds it again it stays folded until a new question arrives. A question with no question
+id, or one shown with no live controls (no `data-threads-url`), does not open it.
+
+The parts are `subagent-controls` (the region), `subagent-question`, `subagent-actions` (the
+three buttons' row), `subagent-steer`, `subagent-answer`, `subagent-cancel`, `subagent-reply`,
+`subagent-reply-input`, `subagent-reply-send` and `subagent-control-error`. Their text comes
+from `subAgentControls` (the group's label), `subAgentSteer`,
+`subAgentAnswer`, `subAgentCancelTask`, `subAgentForceCancel`, `subAgentSend`,
+`subAgentSteerPlaceholder` and `subAgentAnswerPlaceholder`. The routes reach only a run live
+in the process serving the request and only top-level tasks; anything else is refused and
+worded as above.
 
 ### Child sessions
 
@@ -319,8 +368,18 @@ reload.** A refusal, or any other result, draws no link.
   inside a `drawer-children` group), in the parent's date group whatever the
   child's own date. A child whose parent is not listed, or that a filter matched
   without its parent, stands at the top level.
+- **A child's report and question.** When a child's report wakes its parent,
+  django-spec-agents 0.28.0 and django-ag-ui 0.91.0 mark what no user wrote with
+  `metadata.origin`. The wake's own line (`wake`) is not drawn. A report
+  (`task_output`) is drawn as a card titled `childReport` ("Report from helper") holding
+  the plain `task.body`, never the `<task_output>` frame the model saw, and a question
+  (`task_question`) as one titled `childQuestion` ("Question from helper"). The card's
+  link reads `childSessionOpen` and opens `task.threadId` the way the card link does.
+  Both arrive inside the run's enqueued-messages activity live, and as marked user
+  messages in server-held history; each draws the same. A failed report carries
+  `data-outcome="failed"`; style both through `child-report` and `child-report-link`.
 
-**Opening a thread asks first.** A link or the breadcrumb dispatches
+**Opening a thread asks first.** A link, a report's link or the breadcrumb dispatches
 **`ag-ui-open-thread`** (`OPEN_THREAD_EVENT`, detail `{ agentId, threadId }`,
 typed `OpenThreadDetail`), bubbling, composed and cancelable. `agentId` is the
 receipt's `agent_id`, or the parent's store `scope` (`null` when unscoped). The

@@ -147,10 +147,11 @@ export const SCENARIOS = [
     title: "Message actions and ratings",
     since: "0.1.0",
     summary:
-      "Copy, retry and the rating pair under an answer, what a rating names: the message, its thread and the run that streamed it, and the sources a cited answer lists under it (0.16.0).",
+      "Copy, retry and the rating pair under an answer, what a rating names: the message, its thread and the run that streamed it, the sources a cited answer lists under it (0.16.0), and the model a fallback answer came from (0.17.0).",
     prompts: [
       ["Echo hello", "echo hello"],
       ["Cited answer", "cite your sources"],
+      ["Fallback model answers", "answer from the fallback model"],
     ],
     attrs: { "data-message-actions": "copy,retry,feedback" },
   },
@@ -207,6 +208,7 @@ export const SCENARIOS = [
       ["Three approvals", "import three rows"],
       ["A question", "ask me something"],
       ["Approved without asking", "approved without asking"],
+      ["One pre-approved call", "one pre-approved call"],
     ],
   },
   {
@@ -226,6 +228,19 @@ export const SCENARIOS = [
     summary:
       "Three background tasks: one steered and asked a question, one retried then cancelled, one still running when the run ends.",
     prompts: [["Manage tasks", "manage a task"]],
+  },
+  {
+    slug: "task-controls",
+    group: "Tools and approvals",
+    title: "Task controls",
+    since: "0.17.0",
+    summary:
+      "Steer, answer and cancel a background task from its row: each control POSTs to the task route, and the row changes only when the server's step for the act arrives.",
+    prompts: [["Start a task", "start a task"]],
+    attrs: {
+      endpoint: "/tasks/agent/",
+      "data-threads-url": "/tasks/threads/",
+    },
   },
   // Server-drawn content
   {

@@ -1,0 +1,138 @@
+{
+  "generator": "scripts/record_report_frame_fixture.py",
+  "djangoAgUi": "0.91.1",
+  "djangoSpecAgents": "0.28.0",
+  "pydanticAi": "2.74.0",
+  "canonicalized": [
+    "messageId",
+    "id",
+    "timestamp"
+  ],
+  "delivered": {
+    "sse": "data: {\"type\":\"RUN_STARTED\",\"threadId\":\"t1\",\"runId\":\"r1\",\"protocolVersion\":\"1.0\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_START\",\"messageId\":\"m0\",\"role\":\"assistant\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_END\",\"messageId\":\"m0\"}\n\ndata: {\"type\":\"TOOL_CALL_START\",\"toolCallId\":\"m7\",\"toolCallName\":\"nudge\",\"parentMessageId\":\"m0\"}\n\ndata: {\"type\":\"TOOL_CALL_ARGS\",\"toolCallId\":\"m7\",\"delta\":\"{}\"}\n\ndata: {\"type\":\"TOOL_CALL_END\",\"toolCallId\":\"m7\"}\n\ndata: {\"type\":\"TOOL_CALL_RESULT\",\"messageId\":\"m1\",\"toolCallId\":\"m7\",\"content\":\"ok\",\"role\":\"tool\"}\n\ndata: {\"type\":\"ACTIVITY_SNAPSHOT\",\"messageId\":\"m2\",\"activityType\":\"pydantic_ai_enqueued_messages\",\"content\":{\"messages\":[{\"id\":\"m3\",\"role\":\"user\",\"content\":\"<task_output task_id=\\\"child-1\\\" agent_name=\\\"helper\\\">\\nall done\\n</task_output>\",\"metadata\":{\"origin\":\"task_output\",\"task\":{\"taskId\":\"child-1\",\"threadId\":\"child-1\",\"agentName\":\"helper\",\"outcome\":\"ok\",\"body\":\"all done\"}}},{\"id\":\"m4\",\"role\":\"user\",\"content\":\"<task_question>which one?</task_question>\",\"metadata\":{\"origin\":\"task_question\",\"task\":{\"taskId\":\"child-1\",\"threadId\":\"child-1\",\"agentName\":\"helper\",\"questionId\":\"q1\",\"body\":\"which one?\"}}},{\"id\":\"m5\",\"role\":\"user\",\"content\":\"the user's own words\"}]}}\n\ndata: {\"type\":\"TEXT_MESSAGE_START\",\"messageId\":\"m6\",\"role\":\"assistant\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"messageId\":\"m6\",\"delta\":\"noted\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_END\",\"metadata\":{\"model_id\":\"function:function::stream_fn\"},\"messageId\":\"m6\"}\n\ndata: {\"type\":\"RUN_FINISHED\",\"threadId\":\"t1\",\"runId\":\"r1\",\"outcome\":{\"type\":\"success\"}}\n\n",
+    "stored": [
+      {
+        "id": "m0",
+        "role": "assistant",
+        "toolCalls": [
+          {
+            "id": "m7",
+            "type": "function",
+            "function": {
+              "name": "nudge",
+              "arguments": "{}"
+            }
+          }
+        ]
+      },
+      {
+        "id": "m1",
+        "role": "tool",
+        "content": "ok",
+        "toolCallId": "m7"
+      },
+      {
+        "id": "m2",
+        "role": "activity",
+        "activityType": "pydantic_ai_enqueued_messages",
+        "content": {
+          "messages": [
+            {
+              "id": "m3",
+              "role": "user",
+              "content": "<task_output task_id=\"child-1\" agent_name=\"helper\">\nall done\n</task_output>",
+              "metadata": {
+                "origin": "task_output",
+                "task": {
+                  "taskId": "child-1",
+                  "threadId": "child-1",
+                  "agentName": "helper",
+                  "outcome": "ok",
+                  "body": "all done"
+                }
+              }
+            },
+            {
+              "id": "m4",
+              "role": "user",
+              "content": "<task_question>which one?</task_question>",
+              "metadata": {
+                "origin": "task_question",
+                "task": {
+                  "taskId": "child-1",
+                  "threadId": "child-1",
+                  "agentName": "helper",
+                  "questionId": "q1",
+                  "body": "which one?"
+                }
+              }
+            },
+            {
+              "id": "m5",
+              "role": "user",
+              "content": "the user's own words"
+            }
+          ]
+        }
+      },
+      {
+        "id": "m6",
+        "role": "assistant",
+        "metadata": {
+          "model_id": "function:function::stream_fn"
+        },
+        "content": "noted"
+      }
+    ]
+  },
+  "replayed": [
+    {
+      "id": "m0",
+      "role": "user",
+      "metadata": {
+        "origin": "wake"
+      },
+      "content": "messages are waiting"
+    },
+    {
+      "id": "m1",
+      "role": "assistant",
+      "content": "checking in"
+    },
+    {
+      "id": "m2",
+      "role": "user",
+      "metadata": {
+        "origin": "task_output",
+        "task": {
+          "taskId": "child-1",
+          "threadId": "child-1",
+          "agentName": "helper",
+          "outcome": "ok",
+          "body": "all done"
+        }
+      },
+      "content": "<task_output task_id=\"child-1\" agent_name=\"helper\">\nall done\n</task_output>"
+    },
+    {
+      "id": "m3",
+      "role": "user",
+      "metadata": {
+        "origin": "task_question",
+        "task": {
+          "taskId": "child-1",
+          "threadId": "child-1",
+          "agentName": "helper",
+          "questionId": "q1",
+          "body": "which one?"
+        }
+      },
+      "content": "<task_question>which one?</task_question>"
+    },
+    {
+      "id": "m4",
+      "role": "assistant",
+      "content": "the helper is done"
+    }
+  ]
+}

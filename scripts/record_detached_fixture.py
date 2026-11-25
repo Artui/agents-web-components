@@ -11,7 +11,7 @@ A run outlives its request only under ASGI, so everything is driven through
 ``AsyncRequestFactory`` on one event loop, the way django-ag-ui's own
 ``test_events_view.py`` drives it. Run it with the released server::
 
-    uv run --no-project --with 'django-ag-ui==0.83.0' python scripts/record_detached_fixture.py
+    uv run -q --no-project --python 3.12 --with 'django-ag-ui[harness]==0.91.0' python scripts/record_detached_fixture.py
 
 Ids the server mints (message ids, tool call ids it names itself) and
 timestamps are replaced by stable placeholders, so a regeneration diffs clean.

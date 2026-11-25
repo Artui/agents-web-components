@@ -136,9 +136,10 @@ import { readFlag } from "./read_flag.js";
 import { readJsonAttribute } from "./read_json_attribute.js";
 import { readMaxToolRounds } from "./read_max_tool_rounds.js";
 import { RemoteConversationStore } from "./remote_conversation_store.js";
-import { RunFollower } from "./run_follower.js";
+import { type FollowedStatus, RunFollower } from "./run_follower.js";
 import { RunHandlers } from "./run_handlers.js";
 import { StorageScope } from "./storage_scope.js";
+import { TaskControls } from "./task_controls.js";
 import { type ThreadTab, ThreadTabs } from "./thread_tabs.js";
 // biome-ignore lint/style/useImportType: the emitted declaration file copies this form
 import { type TranscribeHandler } from "./transcribe_audio.js";
@@ -631,6 +632,13 @@ export class AgUiChat extends HTMLElement {
     card: (callId) => this.#transcript.card(callId),
     strings: () => this.#strings,
     follow: () => this.#transcript.follow(),
+    controls: () =>
+      TaskControls.from(
+        this.getAttribute("data-threads-url"),
+        (url) => this.#headersFor(url),
+        () => this.#requestCredentials(),
+      ),
+    threadId: () => this.#history.threadId,
   });
   /** Child sessions: the link in a card that started one, the breadcrumb back to a parent. */
   readonly #childSessions = new ChildSessions({
@@ -898,7 +906,7 @@ export class AgUiChat extends HTMLElement {
     },
     runs: () => this.#detachedRuns(),
     idle: () => !this.#busy() && this.#joined === null,
-    join: () => this.#joinServerRun(),
+    join: (status) => this.#joinServerRun(status),
   });
   /** A {@link newChat} asked for before the element connected, to start at connect. */
   #newChatOnConnect = false;
@@ -1386,7 +1394,18 @@ export class AgUiChat extends HTMLElement {
       },
       cancelRun: () => this.#cancelRun(),
       stopRun: () => this.#stopRun(),
-      runningOnServer: (threadId) => this.#detachedRuns()?.running(threadId) ?? null,
+      runningOnServer: (threadId) => {
+        const probe = this.#detachedRuns()?.probe(threadId);
+        // A run the restore finds parked is drawn and offered by it, so it is this chat's own.
+        return (
+          probe?.then((page) => {
+            if (page?.status === "waiting") {
+              this.#follower.ran(threadId, page.runId);
+            }
+            return page?.status === "running";
+          }) ?? null
+        );
+      },
       reattach: () => {
         const client = this.#ensureClient();
         if (client.canReattach) {
@@ -2312,9 +2331,16 @@ export class AgUiChat extends HTMLElement {
    * Join the run the server started on the thread on screen, which
    * {@link RunFollower} found: running from now, as a restore's join is, but
    * with no host send waiting on it, so a turn typed meanwhile parks as during
-   * any run.
+   * any run. A run already parked has no stream left to follow, so the thread
+   * is restored instead, which draws what the run stored and offers the
+   * approvals it waits on, as opening the thread would.
    */
-  #joinServerRun(): void {
+  #joinServerRun(status: FollowedStatus): void {
+    if (status === "waiting") {
+      this.#resetConversation();
+      void this.#history.rehydrate(null);
+      return;
+    }
     const client = this.#ensureClient();
     if (client.canReattach) {
       this.#setRunning(true);
@@ -4362,10 +4388,6 @@ export class AgUiChat extends HTMLElement {
     // For a host's CSS, as `data-empty` is: the same state, on the element.
     this.toggleAttribute("data-running", running);
     if (settled) {
-      // Only while a seam follows server runs: the probe is a request of its own.
-      if (this.#unwatch !== null || this.#unpoll !== null) {
-        this.#follower.settled();
-      }
       this.#flushQueued();
     }
   }
@@ -4401,6 +4423,8 @@ export class AgUiChat extends HTMLElement {
     if (this.#running || this.#joined !== null || this.#history.continuation !== null) {
       return;
     }
+    // Every way the chat goes idle comes through here, so a list it was busy for is asked again.
+    this.#follower.idled();
     const next = this.#queued.shift();
     this.#renderQueued();
     if (next !== undefined) {
@@ -4798,6 +4822,12 @@ export class AgUiChat extends HTMLElement {
       ...(runRoutes === null ? {} : { eventsUrl: runRoutes.eventsUrl(threadId) }),
       // Read per reattach, so a data-threads-url set after this build is followed.
       getEventsUrl: () => this.#runRoutes()?.eventsUrl(threadId),
+    });
+    // The run each round's stream declares is the chat's own, which the follower never joins.
+    agent.subscribe({
+      onRunStartedEvent: ({ event }) => {
+        this.#follower.ran(threadId, event.runId);
+      },
     });
     return new AgUiClient({
       agent,

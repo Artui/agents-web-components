@@ -20,7 +20,7 @@ type CredentialsProvider = () => RequestCredentials | undefined;
  * `data-runs-url`:
  *
  * - `GET <url><id>/events/` is the run log, which a reattach replays and
- *   {@link running} probes as a JSON page;
+ *   {@link probe} asks as a JSON page;
  * - `POST <url><id>/cancel/` records a cancel the run acts on at its next
  *   lease renewal.
  *
@@ -44,20 +44,11 @@ export class DetachedRuns {
   }
 
   /**
-   * Whether the thread has a run in flight now, by {@link probe}.
-   *
-   * Asked of the server rather than remembered, so it holds across an element
-   * a tab host unmounted while the run went on. A `404` (the thread never ran),
-   * any other status (`idle`, a parked `waiting`, `failed`) and any fault mean
-   * no: the thread is then restored from its store, as it always was.
-   */
-  async running(threadId: string): Promise<boolean> {
-    return (await this.probe(threadId))?.status === "running";
-  }
-
-  /**
    * The thread's current or last run, from one JSON page of its log: its
    * `run_id` and `status`, or `null` for a `404`, any other failure or fault.
+   *
+   * Asked of the server rather than remembered, so it holds across an element
+   * a tab host unmounted while the run went on.
    */
   async probe(threadId: string): Promise<RunProbe | null> {
     const url = `${this.eventsUrl(threadId)}?after=0&limit=1`;

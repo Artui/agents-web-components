@@ -178,3 +178,52 @@ describe("ToolStepGroup", () => {
     });
   });
 });
+
+describe("ToolStepGroup's record of who let a call through", () => {
+  it.each(["data-decision", "data-answered-by"])(
+    "offers a lone step's row once its card gains %s",
+    async (attribute) => {
+      const group = new ToolStepGroup(DEFAULT_UI_STRINGS, () => "minimal");
+      const card = step("done");
+      group.add(card, "Send digest");
+      const head = group.element.querySelector("button") as HTMLButtonElement;
+      expect(head.disabled).toBe(true);
+
+      card.setAttribute(attribute, "routine");
+      await observed();
+
+      expect(head.disabled).toBe(false);
+    },
+  );
+
+  it("folds a lone step's open row once its card has nothing left behind it", async () => {
+    const group = new ToolStepGroup(DEFAULT_UI_STRINGS, () => "full");
+    const card = step("deferred");
+    group.add(card, "Clear board");
+    expect(open(group)).toBe("true");
+
+    card.setAttribute("data-status", "done");
+    await observed();
+
+    expect(open(group)).toBe("false");
+    expect(group.element.querySelector("button")?.hasAttribute("aria-expanded")).toBe(false);
+  });
+
+  it("counts the calls nobody was asked about, and not the ones a person decided", async () => {
+    const group = new ToolStepGroup(
+      { ...DEFAULT_UI_STRINGS, toolGroupPreApproved: "{count} vorab genehmigt" },
+      () => "full",
+    );
+    const asked = step("done");
+    asked.setAttribute("data-decision", "approved");
+    const unasked = step("done");
+    group.add(asked, "Create event");
+    group.add(unasked, "Send digest");
+    expect(text(group, ".tool-group-meta")).toBe("");
+
+    unasked.setAttribute("data-answered-by", "routine");
+    await observed();
+
+    expect(text(group, ".tool-group-meta")).toBe("1 vorab genehmigt");
+  });
+});

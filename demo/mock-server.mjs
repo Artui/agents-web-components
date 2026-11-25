@@ -21,6 +21,7 @@ import { fileURLToPath } from "node:url";
 import { childSessionsRoute } from "./child-sessions.mjs";
 import { agentsHomeRoute } from "./agents-home.mjs";
 import { detachedRoute } from "./detached-runs.mjs";
+import { taskControlsRoute } from "./task-controls.mjs";
 import { statusRoute } from "./thread-status.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -100,12 +101,14 @@ const id = (prefix) => `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 
 // The stored skills behind the skill editor scenario, shaped as django-ag-ui's
 // SkillEditorView answers them. A write without a CSRF header is refused as
-// Django's middleware refuses it, so the page has to send the live header.
+// Django's middleware refuses it, so the page has to send the live header. The
+// policy scopes them as django-ag-ui 0.91.0 does: a skill the user writes is
+// "personal", the one the agent drafts "shared", so the list shows both badges.
 const EDITOR_SKILLS = [];
 let editorNextId = 1;
 
-function editorSkill(draft) {
-  const skill = { ...draft, id: String(editorNextId), enabled: true };
+function editorSkill(draft, scope = "personal") {
+  const skill = { ...draft, id: String(editorNextId), enabled: true, scope };
   editorNextId += 1;
   EDITOR_SKILLS.push(skill);
   return skill;
@@ -343,6 +346,27 @@ async function handleAgent(res, body) {
         metadata: { answered_by: answeredBy },
       });
     }
+    await streamText(res, id("msg"), ["Done."]);
+    emit(res, { type: "RUN_FINISHED", threadId, runId });
+    res.end();
+    return;
+  }
+
+  // One call a routine approved, with no arguments and a blank result: the note
+  // is the only thing behind a lone step's row.
+  if (/\bone pre-approved call\b/i.test(prompt)) {
+    const parent = id("msg");
+    await streamText(res, parent, ["Sending the digest. "]);
+    const call = id("call");
+    emitToolCall(res, call, "send_digest", {}, parent);
+    await sleep(400);
+    emit(res, {
+      type: "TOOL_CALL_RESULT",
+      toolCallId: call,
+      messageId: id("m"),
+      content: "",
+      metadata: { answered_by: "routine:42" },
+    });
     await streamText(res, id("msg"), ["Done."]);
     emit(res, { type: "RUN_FINISHED", threadId, runId });
     res.end();
@@ -844,13 +868,16 @@ async function handleAgent(res, body) {
     // The agent drafting a skill: it saves one and says so with the CUSTOM event
     // django-ag-ui sends, which makes the element refetch its catalog.
     if (!EDITOR_SKILLS.some((skill) => skill.name === "standup-notes")) {
-      editorSkill({
-        name: "standup-notes",
-        description: "Turn yesterday's tickets into three standup lines.",
-        body: "List what closed yesterday, what is open today, and anything blocked.",
-        userInvocable: true,
-        modelInvocable: true,
-      });
+      editorSkill(
+        {
+          name: "standup-notes",
+          description: "Turn yesterday's tickets into three standup lines.",
+          body: "List what closed yesterday, what is open today, and anything blocked.",
+          userInvocable: true,
+          modelInvocable: true,
+        },
+        "shared",
+      );
     }
     await streamText(res, id("msg"), [
       "Saved a skill, **/standup-notes**. ",
@@ -881,6 +908,13 @@ async function handleAgent(res, body) {
       { sources: [sky, notes], anchor: null },
     ];
     emit(res, { type: "TEXT_MESSAGE_END", messageId, metadata: { citations } });
+  } else if (/\bfallback model\b/i.test(prompt)) {
+    // The first model failed and a fallback answered: django-ag-ui 0.91.0 names it on
+    // TEXT_MESSAGE_END, with model_fallback set only when it was not the first model.
+    const messageId = id("msg");
+    emit(res, { type: "TEXT_MESSAGE_START", messageId, role: "assistant" });
+    emit(res, { type: "TEXT_MESSAGE_CONTENT", messageId, delta: "The primary model was down, so the spare answered." });
+    emit(res, { type: "TEXT_MESSAGE_END", messageId, metadata: { model_id: "anthropic:claude-sonnet-4-5", model_fallback: true } });
   } else if (/\bbuilt-in activit/i.test(prompt)) {
     // The bookkeeping activity types the element draws without a renderer, in
     // the shapes they arrive in on the wire. Four are records for the model and draw nothing; the
@@ -1517,6 +1551,7 @@ const server = createServer((req, res) => {
     detachedRoute(req, res, path) ||
     statusRoute(req, res, path) ||
     childSessionsRoute(req, res, path) ||
+    taskControlsRoute(req, res, path) ||
     agentsHomeRoute(req, res, path) ||
     routinesRoute(req, res, path)
   ) {

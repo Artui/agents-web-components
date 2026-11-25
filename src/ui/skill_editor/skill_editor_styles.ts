@@ -37,6 +37,33 @@ export const SKILL_EDITOR_STYLES: string = `
   font-weight: 600;
 }
 
+/* The name and its scope badge share a line; a long name wraps rather than
+   pushing the badge out of the row. */
+.skill-row-line {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.skill-row-line[hidden] {
+  display: none;
+}
+
+.skill-row-line > .skill-row-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.skill-row-scope {
+  flex: 0 0 auto;
+  padding: 0 6px;
+  border: 1px solid var(--_border);
+  border-radius: 999px;
+  color: var(--_muted);
+  font-size: var(--_text-xs);
+}
+
 .skill-row-desc {
   color: var(--_muted);
   font-size: var(--_text-sm);

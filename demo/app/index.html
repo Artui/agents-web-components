@@ -708,6 +708,12 @@
               a third, stamped with a prefix the chat does not know, shows no mark. Reload the page:
               the marks come back from the stored thread.
             </li>
+            <li>
+              <strong>One pre-approved call.</strong> The call has no arguments and a blank result.
+              Its folded row reads <em>1 pre-approved</em> and still opens, onto the routine's note;
+              opened, the count is gone. <em>Approved without asking</em> folds three calls into
+              <em>2 pre-approved</em>. Set the tool group display to minimal: both still hold.
+            </li>
           </ul>
         </div>
       </section>
@@ -744,6 +750,31 @@
             <li>
               <strong>The run ends first.</strong> The archivist is still open when the run ends,
               so it settles as unfinished.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section data-scenario="task-controls" hidden>
+        <div class="notes">
+          <h2>What to look at</h2>
+          <ul>
+            <li>
+              <strong>Controls.</strong> The researcher's row offers Steer and Cancel (inside the
+              grouped row, one click down); when it asks a question the group opens itself, once,
+              and Answer appears beside the question's text. Fold the group: it stays folded.
+            </li>
+            <li>
+              <strong>The stream decides.</strong> Each press is answered 202 and the row changes
+              a moment later, when the server's step lands ("steered by you").
+            </li>
+            <li>
+              <strong>Cancel, then Stop now.</strong> Cancel asks the task to stop; once that is on
+              the stream the button reads Stop now, which stops it at once.
+            </li>
+            <li>
+              <strong>A refusal.</strong> Steer with a message containing "refuse" to see a refusal
+              worded under the controls.
             </li>
           </ul>
         </div>
@@ -956,6 +987,7 @@
               <tbody><tr><td>INV-1</td><td>12.00</td></tr></tbody>
             </table>
             <div data-agent-ignore><button type="button">Never listed (data-agent-ignore)</button></div>
+            <svg width="160" height="24"><a href="#pm-chart"><text y="17" fill="currentColor" text-decoration="underline">Revenue chart</text></a></svg>
           </div>
         </div>
         <div class="panel">
@@ -982,6 +1014,10 @@
               <strong>Shadow roots.</strong> The second button lives in an open shadow root: it is
               listed, and <em>Point at the shadow button</em> scrolls to it through the same default
               resolver, with no host override.
+            </li>
+            <li>
+              <strong>SVG links.</strong> <em>Revenue chart</em> is an <code>a</code> inside an
+              <code>svg</code>: it is listed under <code>links</code>.
             </li>
           </ul>
         </div>

@@ -18,7 +18,7 @@ export function adapterActivities(strings: () => UiStrings): readonly ActivityRe
   return [
     {
       type: PYDANTIC_AI_ACTIVITY_TYPE.ENQUEUED_MESSAGES,
-      render: (content) => renderEnqueuedMessages(content, strings().enqueuedMessages),
+      render: (content) => renderEnqueuedMessages(content, strings().enqueuedMessages, strings()),
     },
     {
       type: PYDANTIC_AI_ACTIVITY_TYPE.MCP_APPS,

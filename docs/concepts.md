@@ -163,16 +163,21 @@ mount with `run_store=` and `RUN_TIMEOUT_SECONDS` set, served over **ASGI**, to 
   thread, for example. Two opt-ins let a chat already showing that thread follow it, each needing
   `data-detach-runs` and `data-threads-url`:
     - with [`data-thread-status`](threads.md#thread-status), a list that names the thread on
-      screen `running` while the chat is idle makes it ask the run log which run that is (the
-      same `limit=1` probe) and join it;
+      screen `running` or `waiting` makes the chat ask the run log which run that is (the same
+      `limit=1` probe) and join it; a list that arrives while the chat is busy is asked again
+      once it is idle, since the watch hands on a list only when it changes;
     - with `data-poll-runs`, the chat asks that probe itself every five seconds while idle, with
-      no thread watch, and joins a run it finds `running`.
+      no thread watch, and joins a run it finds `running` or `waiting`.
 
-  Either way the join is the one a restore makes: the replay's snapshot redraws the transcript
-  and the answer streams in, and a turn typed meanwhile waits in the composer's queue. A chat
-  never joins a run it drove or already joined: the probe names the run, and when the chat's
-  own run ends it asks once which run that was, since a list read a moment after a run's end
-  can still say `running`. A run the server parks (`waiting`) is not joined this way.
+  Either way the join is the one a restore makes. A run still going is replayed: the replay's
+  snapshot redraws the transcript and the answer streams in, and a turn typed meanwhile waits
+  in the composer's queue. A run the server parked (`waiting`) has no stream left, so the
+  thread is restored instead, which draws what the run stored and offers the approvals it
+  waits on, as opening the thread would. A chat never joins a run it drove or already joined:
+  the probe names the run, and the chat compares it with the run its own stream last declared
+  in `RUN_STARTED`, since a list read a moment after a run's end can still say `running`. A
+  parked run a restore found is the chat's own too, so the thread is not restored again for it,
+  whether the restore offered its approvals or had nothing it could offer.
 - **Stop asks the server.** Stop, Escape and deleting the thread on screen post
   `<url><id>/cancel/` with the element's headers and credentials, then abort as before. The run
   acts on it at its next lease renewal, about ten seconds on; a `404` means it had already ended

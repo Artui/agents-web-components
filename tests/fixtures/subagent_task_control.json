@@ -1,6 +1,6 @@
 {
   "generator": "scripts/record_task_control_fixture.py",
-  "djangoAgUi": "0.90.0",
+  "djangoAgUi": "0.91.0",
   "pydanticAiHarness": "0.74.0",
   "agUiProtocol": "1.0.0",
   "canonicalized": [
@@ -153,7 +153,9 @@
           "status": "researcher: steered",
           "tool": null,
           "task": {
-            "taskId": "task-1"
+            "taskId": "task-1",
+            "message": "Only 2024.",
+            "source": "model"
           }
         }
       },
@@ -180,6 +182,9 @@
       {
         "type": "TEXT_MESSAGE_END",
         "timestamp": 1735689600000,
+        "metadata": {
+          "model_id": "function:function::stream"
+        },
         "messageId": "message-5"
       },
       {
@@ -227,6 +232,9 @@
       {
         "type": "TEXT_MESSAGE_END",
         "timestamp": 1735689600000,
+        "metadata": {
+          "model_id": "function:function::stream"
+        },
         "messageId": "message-6"
       },
       {
@@ -331,7 +339,8 @@
           "tool": null,
           "task": {
             "taskId": "task-2",
-            "questionId": "q-1"
+            "questionId": "q-1",
+            "question": "Which year?"
           }
         }
       },
@@ -400,7 +409,9 @@
           "tool": null,
           "task": {
             "taskId": "task-2",
-            "questionId": "q-1"
+            "questionId": "q-1",
+            "answer": "2024",
+            "source": "model"
           }
         }
       },
@@ -452,6 +463,9 @@
       {
         "type": "TEXT_MESSAGE_END",
         "timestamp": 1735689600000,
+        "metadata": {
+          "model_id": "function:function::stream"
+        },
         "messageId": "message-11"
       },
       {
@@ -474,6 +488,9 @@
       {
         "type": "TEXT_MESSAGE_END",
         "timestamp": 1735689600000,
+        "metadata": {
+          "model_id": "function:function::stream"
+        },
         "messageId": "message-12"
       },
       {
@@ -631,7 +648,8 @@
           "tool": null,
           "task": {
             "taskId": "task-3",
-            "forced": true
+            "forced": true,
+            "source": "model"
           }
         }
       },
@@ -665,6 +683,9 @@
       {
         "type": "TEXT_MESSAGE_END",
         "timestamp": 1735689600000,
+        "metadata": {
+          "model_id": "function:function::stream"
+        },
         "messageId": "message-17"
       },
       {
@@ -859,6 +880,9 @@
       {
         "type": "TEXT_MESSAGE_END",
         "timestamp": 1735689600000,
+        "metadata": {
+          "model_id": "function:function::stream"
+        },
         "messageId": "message-22"
       },
       {
@@ -967,6 +991,60 @@
       "task": {
         "taskId": "task-1",
         "attempt": 2
+      }
+    }
+  },
+  "byUser": {
+    "steered": {
+      "type": "CUSTOM",
+      "timestamp": 1735689600000,
+      "name": "ag_ui.subagent",
+      "value": {
+        "delegationId": "call-1",
+        "agent": "researcher",
+        "phase": "steered",
+        "status": "researcher: steered by you",
+        "tool": null,
+        "task": {
+          "taskId": "task-1",
+          "message": "Only 2024.",
+          "source": "user"
+        }
+      }
+    },
+    "answered": {
+      "type": "CUSTOM",
+      "timestamp": 1735689600000,
+      "name": "ag_ui.subagent",
+      "value": {
+        "delegationId": "call-1",
+        "agent": "researcher",
+        "phase": "answered",
+        "status": "researcher: answered by you",
+        "tool": null,
+        "task": {
+          "taskId": "task-1",
+          "questionId": "q-1",
+          "answer": "2024",
+          "source": "user"
+        }
+      }
+    },
+    "cancel_requested": {
+      "type": "CUSTOM",
+      "timestamp": 1735689600000,
+      "name": "ag_ui.subagent",
+      "value": {
+        "delegationId": "call-1",
+        "agent": "researcher",
+        "phase": "cancel_requested",
+        "status": "researcher: cancellation requested by you",
+        "tool": null,
+        "task": {
+          "taskId": "task-1",
+          "forced": false,
+          "source": "user"
+        }
       }
     }
   }

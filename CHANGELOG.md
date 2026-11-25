@@ -7,6 +7,111 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0] — 2026-11-25
+
+### Added
+
+- **An answer a fallback model gave names that model.** django-ag-ui 0.91.0 carries
+  `metadata.model_id` and, only when a model other than the request's first answered,
+  `model_fallback: true`, on `TEXT_MESSAGE_END` and on the stored assistant message. Such an
+  answer now shows a muted **Answered by `<model_id>`** line under its text, above its
+  sources, live and after a reload (from the thread endpoint or the browser's own store). An
+  answer the first model gave shows nothing. Copy and a rating's `content` leave the line
+  out. New part `answered-by-model`, new string `answeredByModel` (token `{model}`).
+  `AgUiClientHandlers.onTextEnd` takes a fourth argument, the end event's raw `metadata`.
+  Nothing to opt in to.
+  See [The model a fallback answer came from](https://artui.github.io/agents-web-components/messages/#the-model-a-fallback-answer-came-from).
+
+- **A child's report draws as a card from the child, and the wake line is hidden.** When
+  a child's report woke its parent, the transcript drew the wake line and the raw
+  `<task_output ...>` frame as user bubbles. django-spec-agents 0.28.0 and django-ag-ui
+  0.91.0 mark them with `metadata.origin`; the component now hides a `wake` line and draws a
+  `task_output` report or a `task_question` question as a card naming the child, holding
+  the plain `task.body`, with a link to the child's thread that dispatches
+  `ag-ui-open-thread` like a card's child link. Live (inside the enqueued-messages activity)
+  and after a reload (the stored activity, or server-held history). The activity's
+  "Added during the run" caption now shows only when a user line was taken in. New parts
+  `child-report` (with `data-origin`, `data-outcome`) and `child-report-link`, new strings
+  `childReport` and `childQuestion`. Nothing to opt in to.
+  See [Child sessions](https://artui.github.io/agents-web-components/tool-calls/#child-sessions).
+
+- **A skill editor row says whose skill it is.** django-ag-ui 0.91.0 adds `scope`
+  (`"personal"` or `"shared"`) to each `skills/editor/` entry when the skill policy defines
+  `scope(request, skill)`. The row now draws a badge after the skill's name, **Personal** or
+  **Company**, as the part `skill-scope` with the value in `data-scope`. The words are the new
+  strings `skillScope:personal` and `skillScope:shared`. A host names a label for a scope of
+  its own with a `skillScope:<value>` key in `strings` or `data-strings` (on `<ag-ui-chat>` and
+  `<ag-ui-skills>`), and `UiStrings` types that key. A scope with no label draws no badge,
+  since its raw value may be an internal name. `EditorSkill` gains the optional `scope`;
+  `EditorSkillDraft` leaves it out, so a save never sends it. Nothing to opt in to: an entry
+  without `scope` draws as before. See
+  [Whose skill it is](https://artui.github.io/agents-web-components/skills/#whose-skill-it-is).
+
+- **Steer, answer and cancel a delegated task from its row.** With `data-threads-url` set, a
+  live task's sub-agent row offers **Steer** (a field whose text is sent to the task),
+  **Answer** (while the task waits on a question, shown beside the question's text) and
+  **Cancel**, which asks the task to stop before its next model request and, once that
+  request is on the stream, reads **Stop now** and stops it at once. Each is one `POST` to
+  django-ag-ui 0.91.0's `threads/<id>/tasks/<task_id>/steer/` (`{"message"}`), `answer/`
+  (`{"question_id", "answer"}`) or `cancel/` (`{"force"}`), with the element's headers and
+  cookie policy, sent once and never retried. The server answers `202`, and the row changes
+  only when the step for the act arrives on the stream, never on the click. A refusal is
+  worded under the controls from its `reason` code. Under the default grouped tool display the
+  delegating call settles as the task goes to the background, so its row reads done and folded:
+  Steer and Cancel are inside that row, and the group opens itself, once for each open
+  question, when the task asks one, so Answer is in view (fold it again and it stays folded
+  until a new question arrives; a question with no id, or one shown with no live controls,
+  opens nothing). The task steps' new `message`,
+  `question`, `answer`, `truncated` and `source` keys are read, and the `subagent` part gets
+  `data-source` (`user` or `model`) and `data-answerable` (the open question's id, while Answer
+  is offered). New parts `subagent-controls`, `subagent-question`,
+  `subagent-actions`, `subagent-steer`, `subagent-answer`, `subagent-cancel`,
+  `subagent-reply`, `subagent-reply-input`, `subagent-reply-send` and
+  `subagent-control-error`; new strings `subAgentControls`, `subAgentSteer`,
+  `subAgentAnswer`, `subAgentCancelTask`, `subAgentForceCancel`, `subAgentSend`,
+  `subAgentSteerPlaceholder`, `subAgentAnswerPlaceholder`, `subAgentControlFailed`,
+  `subAgentControlFinished`, `subAgentControlNotWaiting` and `subAgentControlUnavailable`.
+  **No new attribute to opt in to, but the controls appear wherever `data-threads-url` is
+  set and a task step arrives:** a host on django-ag-ui 0.90.0, or without a `run_store`,
+  shows them and every press is refused as "can't be controlled from here". Hide the
+  `subagent-controls` part there, or upgrade the server to 0.91.0 with a `run_store`. See
+  [Steer, answer and cancel](https://artui.github.io/agents-web-components/tool-calls/#steer-answer-and-cancel).
+
+- **A folded tool group's row says how many of its calls were pre-approved.** When a reviewer
+  model or a routine approved calls in the group with no one asked, the folded row gains "· 1
+  pre-approved" (new strings key `toolGroupPreApproved`, with `{count}`). The opened group is
+  unchanged. No opt-in.
+
+### Changed
+
+- **`pageMapFrom` lists SVG links.** An `<a>` inside an `<svg>` with an `href` or `xlink:href`
+  (or `role="link"`) is now a `links` entry, with the same path-only `href`, and the HTML inside a
+  `<foreignObject>` is listed too. `clickElement`, `pressButton`, `highlightThenClick` and
+  `pressThenClick` dispatch a click event on an element with no `click()` instead of throwing.
+  Nothing to opt in to for a host already using the walker; a host tool of its own that calls
+  `.click()` on a resolved handle should allow for an SVG element.
+
+### Fixed
+
+- **Following a run the server starts on the thread on screen misses fewer of them.** Under
+  `data-thread-status` or `data-poll-runs` with `data-detach-runs`: a list naming the thread
+  `running` while the chat was busy is now asked again once the chat is idle, rather than
+  dropped until the list changes; a server run that started in the moment the chat's own run
+  ended is joined, rather than taken for the chat's own (the chat now knows its own run by the
+  id its stream declared in `RUN_STARTED`, not by asking the run log as its run ends, so that
+  request is gone); and a thread whose run the server parked (`waiting`) is restored, drawing
+  what the run stored and offering the approvals it waits on, as opening the thread does. A
+  parked run a restore found (offered, or parked on what the chat cannot offer) is the chat's
+  own and is not restored again, after a Stop included. Nothing to opt in to beyond
+  the attributes that already turn the join on.
+
+- **A lone call's record of who let it through can always be reached.** In a one-step group, a
+  call a reviewer model or a routine approved could not be opened under
+  `data-tool-group-display="minimal"`, or when it had no arguments and a blank result, and a call a
+  person approved or declined lost its "approved by you" / "declined by you" line with the card's
+  head. The row now opens in each case, onto that note, so an approval answered on a call with no
+  arguments and a blank result leaves the row open instead of folding it. No opt-in.
+
 ## [0.16.0] — 2026-11-25
 
 ### Added
@@ -944,7 +1049,8 @@ move page walks a host over. Each entry below says whether a host opts in.
   kept offering the moon under `theme="dark"`. Only the toggle's own click redrew it before. A host
   opts in to nothing.
 
-[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.17.0...HEAD
+[0.17.0]: https://github.com/Artui/agents-web-components/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/Artui/agents-web-components/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/Artui/agents-web-components/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/Artui/agents-web-components/compare/v0.13.0...v0.14.0

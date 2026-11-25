@@ -4,7 +4,7 @@
 Every body is written by the released ``SkillEditorView`` over a real model, and the
 skills-changed event by ``skills_changed``. Run it from the repository root::
 
-    uv run --no-project --with 'django-ag-ui==0.83.0' python scripts/record_skill_editor_fixture.py
+    uv run --no-project --with 'django-ag-ui==0.91.0' python scripts/record_skill_editor_fixture.py
 """
 
 from __future__ import annotations
@@ -53,6 +53,11 @@ class Policy:
 
     def new_skill(self, request):
         return Skill()
+
+
+class ScopedPolicy(Policy):
+    def scope(self, request, skill):
+        return {"weekly-report": "personal", "team-handbook": "shared"}.get(skill.name)
 
 
 def main() -> None:
@@ -106,6 +111,10 @@ def main() -> None:
     for index in range(MAX_VISIBLE_SKILLS):
         Skill.objects.create(name=f"filler-{index}", description="d", body="b")
     answers["limit"] = answer("post", {**draft, "name": "one-too-many"})
+    Skill.objects.filter(name__startswith="filler-").delete()
+    view = SkillEditorView(ScopedPolicy(), csrf_exempt=True)
+    answers["scopedCreated"] = answer("post", {**draft, "name": "team-handbook"})
+    answers["scopedList"] = answer("get")
     event = skills_changed("weekly-report").model_dump(mode="json", by_alias=True)
     event = {key: value for key, value in event.items() if value is not None}
     event.pop("timestamp")
