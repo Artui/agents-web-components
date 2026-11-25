@@ -124,9 +124,11 @@ export interface AgUiClientHandlers {
   onTextDelta(buffer: string): void;
   /**
    * Fired when the assistant message completes; `buffer` is the final text,
-   * and `message` names it as the stream did.
+   * and `message` names it as the stream did. `citations` is the end event's
+   * `metadata.citations` as it arrived (django-ag-ui 0.90.0 and later), unread:
+   * the transcript narrows it against `buffer`, which its offsets index.
    */
-  onTextEnd(buffer: string, message: AgUiMessageIds): void;
+  onTextEnd(buffer: string, message: AgUiMessageIds, citations?: unknown): void;
   /** Fired when the agent finishes calling a tool (server- or frontend-side). */
   onToolCall(call: AgUiToolCall): void;
   /**
@@ -1132,10 +1134,11 @@ export class AgUiClient {
       },
       onTextMessageEndEvent({ event, textMessageBuffer }) {
         closed.add(event.messageId);
-        h.onTextEnd(textMessageBuffer, {
-          messageId: event.messageId,
-          ...(runId === undefined ? {} : { runId }),
-        });
+        h.onTextEnd(
+          textMessageBuffer,
+          { messageId: event.messageId, ...(runId === undefined ? {} : { runId }) },
+          event.metadata?.["citations"],
+        );
       },
       onToolCallEndEvent({ event, toolCallName, toolCallArgs }) {
         // A sub-agent's call, tagged by the delegation it ran in: the panel follows it from

@@ -8,6 +8,7 @@ import {
 } from "../src/core/agui_client.js";
 import { createHttpAgent } from "../src/core/create_http_agent.js";
 import answeredBy from "./fixtures/answered_by.json";
+import citations from "./fixtures/citations.json";
 import { makeFakeAgent } from "./helpers/fake_agent.js";
 
 function recordingHandlers(): AgUiClientHandlers & { calls: string[] } {
@@ -1256,6 +1257,52 @@ describe("over the real HttpAgent", () => {
     // And the save carries the same id, which is why a conversation restored
     // from the browser's own store names a message as it was named live.
     expect(saved.filter((m) => m.role === "assistant").map((m) => m.id)).toEqual(["srv-m1"]);
+  });
+
+  it("hands each answer the citations its end event carried, as the server recorded them", async () => {
+    // Recorded from django-ag-ui's own session: a text, a file part the stream
+    // sends no event for, and a text, so two messages each citing into its own.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(citations.runs.fileSplit.sse, {
+            status: 200,
+            headers: { "Content-Type": "text/event-stream" },
+          }),
+        ),
+      ),
+    );
+    const warnings = enforceWarnings();
+    const ended: unknown[] = [];
+    const handlers = recordingHandlers();
+    handlers.onTextEnd = (buffer, message, cited) => {
+      ended.push([buffer, message.messageId, cited]);
+    };
+    let saved: readonly Message[] = [];
+
+    await new AgUiClient({
+      agent: createHttpAgent({ endpoint: "/agent/" }),
+      handlers,
+      onPersist: (messages) => {
+        saved = messages;
+      },
+    }).send("hi");
+
+    const frames = citations.runs.fileSplit.sse
+      .split("\n\n")
+      .filter((frame) => frame.includes('"TEXT_MESSAGE_END"'))
+      .map((frame) => JSON.parse(frame.slice("data: ".length)).metadata.citations);
+    expect(ended).toEqual([
+      ["B is", "m0", frames[0]],
+      ["C too", "m1", frames[1]],
+    ]);
+    // And the client folds the same value onto the message it saves, which is
+    // what a reload from the browser's own store reads back.
+    expect(
+      saved.filter((m) => m.role === "assistant").map((m) => m.metadata?.["citations"]),
+    ).toEqual(frames);
+    expect(warnings()).toEqual([]);
   });
 
   /** Every `onTextEnd` as `[buffer, message]`, on otherwise recording handlers. */

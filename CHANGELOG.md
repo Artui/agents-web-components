@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **An answer shows the sources it cites.** django-ag-ui 0.90.0 carries pydantic-ai's
+  citations at `metadata.citations` on `TEXT_MESSAGE_END` and on the stored assistant
+  message; the component now draws them as a collapsed **Sources (n)** list under the
+  answer, live and after a reload. A `content` anchor's range is quoted, a `marker` anchor
+  shown as code, and each source is a link (`http`/`https` only) or a document title, with
+  its excerpts. Offsets are UTF-16 code units into each copy's own text, so a file-split
+  answer (two messages live, one joined message stored) cites correctly in both. Copy and a
+  rating's `content` leave the list out. New part `citations`, new strings `citations` and
+  `citationDocument`. `AgUiClientHandlers.onTextEnd` takes a third argument, the end event's
+  raw `metadata.citations`. Nothing to opt in to: an answer without citations is unchanged.
+  See [Sources an answer cites](https://artui.github.io/agents-web-components/messages/#sources-an-answer-cites).
+
 ## [0.15.0] — 2026-11-24
 
 ### Added

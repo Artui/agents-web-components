@@ -21,6 +21,7 @@ import type { ToolCatalog } from "../../tools/tool_catalog.js";
 import type { ChildSessions } from "../progress/child_sessions.js";
 import type { AnswerActions } from "../transcript/answer_actions.js";
 import { renderAttachmentChips } from "../transcript/attachment_chips.js";
+import { renderCitations } from "../transcript/render_citations.js";
 import type { Transcript } from "../transcript/transcript.js";
 import type { UiStrings } from "../ui_strings.js";
 import type { CheckpointMenu, CheckpointVerb } from "./checkpoint_menu.js";
@@ -1054,6 +1055,16 @@ export class ConversationHistory {
         // wrap words.
         const restoredBubble = this.#host.appendMessage(MESSAGE_ROLE.ASSISTANT, text);
         restoredBubble.classList.add("message--restored");
+        // The stored copy's citations index the stored text, which can join
+        // two streamed messages into one: read them against this text only.
+        const sources = renderCitations(
+          message.metadata?.["citations"],
+          text,
+          this.#host.strings(),
+        );
+        if (sources !== null) {
+          restoredBubble.append(sources);
+        }
         // The stored id, which is the streamed one wherever the store kept
         // it. A Retry re-renders the turns it keeps through here too, so a
         // kept answer stays the message it was. No run id: a stored message

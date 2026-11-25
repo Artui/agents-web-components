@@ -130,6 +130,10 @@ export interface UiStrings {
   usingSkill: string;
   /** Caption under user messages delivered into a run while it was working. */
   enqueuedMessages: string;
+  /** Summary of the sources list under an answer that cites them. Token: `{count}`. */
+  citations: string;
+  /** Names a cited document that has neither a title nor an id. */
+  citationDocument: string;
   /** Notice in place of an MCP App's view, which this element cannot show. Token: `{uri}`. */
   mcpAppUnsupported: string;
   /** Label of the control that returns a fullscreen MCP App view inline. */
@@ -641,6 +645,8 @@ export const DEFAULT_UI_STRINGS: UiStrings = {
   historyCompacted: "Earlier turns condensed to fit the context window ({count} removed)",
   usingSkill: "Using skill {name}",
   enqueuedMessages: "Added during the run",
+  citations: "Sources ({count})",
+  citationDocument: "Document",
   mcpAppUnsupported: "An app view can't be shown here: {uri}",
   mcpAppExitFullscreen: "Exit full screen",
   mcpAppConfirmMessage: "This app wants to send this message for you:",
