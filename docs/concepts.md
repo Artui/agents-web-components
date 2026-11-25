@@ -151,14 +151,28 @@ mount with `run_store=` and `RUN_TIMEOUT_SECONDS` set, served over **ASGI**, to 
   element being inserted again) asks the server once whether it has a run going: a JSON
   `GET <url><id>/events/?after=0&limit=1`, reattaching when its `status` is `"running"`. A `404`
   or any other status restores the thread from its store as before. It is asked rather than
-  remembered so it holds across an element a tab host unmounted; there is no status on the thread
-  list yet. Joining replays the run from its start (`events/?after=0` as an AG-UI stream), so the
+  remembered so it holds across an element a tab host unmounted. Joining replays the run from its start (`events/?after=0` as an AG-UI stream), so the
   transcript is redrawn from the replay's opening `MESSAGES_SNAPSHOT` and the answer streams in
   as a live one does. `running` (and `data-running`) is true from the moment the run is joined
   until it ends, so a host that defers a switch until a run is over can key on its removal. A
   host's `sendMessage()` made while that restore is in flight waits for the joined run to end and
   then goes out, ahead of any turn the composer parked; a Stop during the joined run drops it
   (`false`).
+- **A run the server starts on the thread on screen is joined too, when the host asks.** A
+  server can start a run on a thread by itself: a child session's report wakes its parent
+  thread, for example. Two opt-ins let a chat already showing that thread follow it, each needing
+  `data-detach-runs` and `data-threads-url`:
+    - with [`data-thread-status`](threads.md#thread-status), a list that names the thread on
+      screen `running` while the chat is idle makes it ask the run log which run that is (the
+      same `limit=1` probe) and join it;
+    - with `data-poll-runs`, the chat asks that probe itself every five seconds while idle, with
+      no thread watch, and joins a run it finds `running`.
+
+  Either way the join is the one a restore makes: the replay's snapshot redraws the transcript
+  and the answer streams in, and a turn typed meanwhile waits in the composer's queue. A chat
+  never joins a run it drove or already joined: the probe names the run, and when the chat's
+  own run ends it asks once which run that was, since a list read a moment after a run's end
+  can still say `running`. A run the server parks (`waiting`) is not joined this way.
 - **Stop asks the server.** Stop, Escape and deleting the thread on screen post
   `<url><id>/cancel/` with the element's headers and credentials, then abort as before. The run
   acts on it at its next lease renewal, about ten seconds on; a `404` means it had already ended
