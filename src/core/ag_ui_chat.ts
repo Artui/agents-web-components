@@ -136,6 +136,7 @@ import { readFlag } from "./read_flag.js";
 import { readJsonAttribute } from "./read_json_attribute.js";
 import { readMaxToolRounds } from "./read_max_tool_rounds.js";
 import { RemoteConversationStore } from "./remote_conversation_store.js";
+import { RunFollower } from "./run_follower.js";
 import { RunHandlers } from "./run_handlers.js";
 import { StorageScope } from "./storage_scope.js";
 import { type ThreadTab, ThreadTabs } from "./thread_tabs.js";
@@ -887,6 +888,18 @@ export class AgUiChat extends HTMLElement {
   #connected = false;
   /** Stops the thread list watch `data-thread-status` started, while one runs. */
   #unwatch: (() => void) | null = null;
+  /** Stops the run log poll `data-poll-runs` started, while one runs. */
+  #unpoll: (() => void) | null = null;
+  /** Joins a run the server starts on the thread on screen; see {@link RunFollower}. */
+  readonly #follower = new RunFollower({
+    threadId: () => {
+      const threadId = this.#history.threadId;
+      return this.conversationStore.isUnsent?.(threadId) === true ? null : threadId;
+    },
+    runs: () => this.#detachedRuns(),
+    idle: () => !this.#busy() && this.#joined === null,
+    join: () => this.#joinServerRun(),
+  });
   /** A {@link newChat} asked for before the element connected, to start at connect. */
   #newChatOnConnect = false;
   /**
@@ -1423,6 +1436,7 @@ export class AgUiChat extends HTMLElement {
       "data-small-viewport",
       "data-threads-search",
       "data-thread-status",
+      "data-poll-runs",
       "credentials",
       "user-key",
       "user-name",
@@ -1452,7 +1466,7 @@ export class AgUiChat extends HTMLElement {
       this.#transcript.refreshStepGroups();
       return;
     }
-    if (name === "data-thread-status") {
+    if (name === "data-thread-status" || name === "data-poll-runs") {
       this.#watchThreads();
       return;
     }
@@ -2266,9 +2280,15 @@ export class AgUiChat extends HTMLElement {
    */
   #watchThreads(): void {
     this.#stopWatch();
+    if (!this.isConnected) {
+      return;
+    }
+    if (this.hasAttribute("data-poll-runs")) {
+      this.#unpoll = this.#follower.start();
+    }
     const transport = this.getAttribute("data-thread-status");
     const store = this.conversationStore;
-    if (!this.isConnected || (transport !== "poll" && transport !== "stream")) {
+    if (transport !== "poll" && transport !== "stream") {
       return;
     }
     this.#unwatch =
@@ -2276,6 +2296,7 @@ export class AgUiChat extends HTMLElement {
         this.#takeListedUnread(threads);
         this.#childSessions.listed(threads);
         this.#titleTabsFrom(threads);
+        this.#follower.listed(threads);
         this.#emit<ThreadsChangeDetail>(THREADS_CHANGE_EVENT, { threads });
       }, transport) ?? null;
   }
@@ -2283,6 +2304,22 @@ export class AgUiChat extends HTMLElement {
   #stopWatch(): void {
     this.#unwatch?.();
     this.#unwatch = null;
+    this.#unpoll?.();
+    this.#unpoll = null;
+  }
+
+  /**
+   * Join the run the server started on the thread on screen, which
+   * {@link RunFollower} found: running from now, as a restore's join is, but
+   * with no host send waiting on it, so a turn typed meanwhile parks as during
+   * any run.
+   */
+  #joinServerRun(): void {
+    const client = this.#ensureClient();
+    if (client.canReattach) {
+      this.#setRunning(true);
+      void client.reattach();
+    }
   }
 
   /**
@@ -4325,6 +4362,10 @@ export class AgUiChat extends HTMLElement {
     // For a host's CSS, as `data-empty` is: the same state, on the element.
     this.toggleAttribute("data-running", running);
     if (settled) {
+      // Only while a seam follows server runs: the probe is a request of its own.
+      if (this.#unwatch !== null || this.#unpoll !== null) {
+        this.#follower.settled();
+      }
       this.#flushQueued();
     }
   }

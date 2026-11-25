@@ -21,6 +21,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   raw `metadata.citations`. Nothing to opt in to: an answer without citations is unchanged.
   See [Sources an answer cites](https://artui.github.io/agents-web-components/messages/#sources-an-answer-cites).
 
+- **A chat follows a run the server starts on the thread it shows.** When a server starts a run
+  on a thread by itself (a child session's report waking its parent thread, say), a chat already
+  showing that thread used to draw nothing until the thread was opened again. Two opt-ins now
+  join it, both needing `data-detach-runs` and `data-threads-url` (django-ag-ui 0.82.0+): under
+  `data-thread-status` (`poll` or `stream`), a list naming the open thread `running` while the
+  chat is idle joins its run; the new `data-poll-runs` attribute does the same with no thread
+  watch, by asking the thread's `events/?after=0&limit=1` every five seconds while idle. The
+  probe names the run, so a chat never joins a run it drove or already joined, and it is asked
+  once more as each of the chat's own runs ends. A host that already sets both
+  `data-thread-status` and `data-detach-runs` gets the join with no change; any other host opts
+  in with those or with `data-poll-runs`, and a chat with neither requests nothing new. See
+  [Runs that outlive their connection](https://artui.github.io/agents-web-components/concepts/#runs-that-outlive-their-connection).
+
 ### Fixed
 
 - **A `pageMapFrom` handle number is never given out twice in a document.** Once an element left

@@ -17,6 +17,7 @@ import { defineChat } from "../src/core/define_chat.js";
 import { DetachedHttpAgent } from "../src/core/detached_http_agent.js";
 import recorded from "./fixtures/detached_runs.json";
 import queued from "./fixtures/queued_start.json";
+import listedRows from "./fixtures/thread_status.json";
 
 const THREADS = "/agent/threads/";
 
@@ -111,6 +112,10 @@ class Server {
   readonly replays: ((init: RequestInit | undefined) => Response)[] = [];
   probeHold: Promise<void> | null = null;
   cancelStatus = 202;
+  /** A thread's probe page, where it is not the recorded `r1` one. */
+  readonly pages = new Map<string, unknown>();
+  /** The thread list's SSE stream, once a `data-thread-status="stream"` watch asked for it. */
+  threadList: Live | null = null;
 
   handle = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const url = String(input);
@@ -123,6 +128,10 @@ class Server {
       return next(init);
     }
     if (url === THREADS) {
+      if (new Headers(init?.headers).get("accept") === "text/event-stream") {
+        this.threadList = live(init, "");
+        return this.threadList.response;
+      }
       return json(200, { threads: [] });
     }
     const match = /^\/(?:agent|late)\/threads\/([^/]+)\/(events\/|cancel\/)?(\?.*)?$/.exec(url);
@@ -140,7 +149,7 @@ class Server {
       if (!this.running.has(thread)) {
         return json(404, recorded.probeNeverRan.body);
       }
-      return json(200, recorded.probeRunning.body);
+      return json(200, this.pages.get(thread) ?? recorded.probeRunning.body);
     }
     if (route === "events/") {
       const next = this.replays.shift();
@@ -1086,5 +1095,195 @@ describe("without data-detach-runs", () => {
     expect(el.hasAttribute("data-detach-runs")).toBe(true);
     el.detachRuns = false;
     expect(el.hasAttribute("data-detach-runs")).toBe(false);
+  });
+});
+
+/** The second run's probe page: the recorded shape, naming the run `secondTurnReplay` replays. */
+const SERVER_RUN_PAGE = { ...recorded.probeRunning.body, thread_id: "t4", run_id: "r7" };
+
+/** A thread list frame naming `threadId` running, as the recorded row while a run works. */
+function listRunning(server: Server, threadId: string, etag: string): void {
+  const row = { ...listedRows.rowWhileRunning, thread_id: threadId };
+  server.threadList?.push(`id: "${etag}"\ndata: ${JSON.stringify({ threads: [row] })}\n\n`);
+}
+
+/** Open `t4` idle on its first turn, then have the server start the run a report woke on it. */
+async function openThenWake(el: AgUiChat, server: Server): Promise<void> {
+  server.stored.set("t4", [
+    { id: "u-r6", role: "user", content: "First question" },
+    { id: "id-3", role: "assistant", content: "partial answer and the rest" },
+  ]);
+  await el.switchThread("t4");
+  await settle();
+  server.running.add("t4");
+  server.pages.set("t4", SERVER_RUN_PAGE);
+  server.replays.push(() => sse(recorded.secondTurnReplay));
+}
+
+function answers(el: AgUiChat): number {
+  return transcriptText(el).split("partial answer and the rest").length - 1;
+}
+
+describe("a run the server starts on the thread on screen, under data-thread-status", () => {
+  it("is joined when the watch lists the thread running, and drawn to its end", async () => {
+    const { el, server } = mount({ "data-detach-runs": "", "data-thread-status": "stream" });
+    await openThenWake(el, server);
+    listRunning(server, "t4", "e1");
+    await settle();
+
+    expect(replays(server).map((call) => call.url)).toEqual(["/agent/threads/t4/events/?after=0"]);
+    expect(answers(el)).toBe(2);
+    expect(el.running).toBe(false);
+  });
+
+  it("is not joined while the chat drives its own run, nor once that run ended and still lists running", async () => {
+    const { el, server } = mount({ "data-detach-runs": "", "data-thread-status": "stream" });
+    await el.switchThread("t1");
+    const stream = await startLiveRun(el, server);
+    const asked = server.to("events/").length;
+    listRunning(server, "t1", "e1");
+    await settle();
+    expect(server.to("events/").length).toBe(asked);
+
+    stream.push(replayHalves()[1]);
+    stream.end();
+    await settle();
+    expect(el.running).toBe(false);
+    listRunning(server, "t1", "e2");
+    await settle();
+
+    expect(server.to("events/").length).toBe(asked + 2);
+    expect(replays(server)).toEqual([]);
+    expect(el.running).toBe(false);
+  });
+
+  it("sends a turn typed during the joined run once that run has ended", async () => {
+    const { el, server } = mount({ "data-detach-runs": "", "data-thread-status": "stream" });
+    await openThenWake(el, server);
+    const full = recorded.secondTurnReplay;
+    const cut = full.lastIndexOf("\n\n", full.indexOf("RUN_FINISHED")) + 2;
+    let replay: Live | undefined;
+    server.replays.splice(0, 1, (init) => {
+      replay = live(init, full.slice(0, cut));
+      return replay.response;
+    });
+    listRunning(server, "t4", "e1");
+    await settle();
+    expect(el.running).toBe(true);
+    const input = shadow(el).querySelector<HTMLTextAreaElement>(".input");
+    if (input === null) {
+      throw new Error("no composer");
+    }
+    input.value = "And another";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    server.starts.push(() => sse(finishedRun("r8", "the next answer")));
+    server.running.delete("t4");
+    replay?.push(full.slice(cut));
+    replay?.end();
+    await settle();
+
+    expect(server.starts_().length).toBe(1);
+    expect(transcriptText(el)).toContain("the next answer");
+  });
+
+  it("is joined once, not again when a later list still says running", async () => {
+    const { el, server } = mount({ "data-detach-runs": "", "data-thread-status": "stream" });
+    await openThenWake(el, server);
+    listRunning(server, "t4", "e1");
+    await settle();
+    listRunning(server, "t4", "e2");
+    await settle();
+
+    expect(replays(server).length).toBe(1);
+  });
+
+  it("is not joined once the person moved on while the server was asked", async () => {
+    const { el, server } = mount({ "data-detach-runs": "", "data-thread-status": "stream" });
+    await openThenWake(el, server);
+    let answer!: () => void;
+    server.probeHold = new Promise((resolve) => {
+      answer = resolve;
+    });
+    listRunning(server, "t4", "e1");
+    await settle();
+    el.newChat();
+    answer();
+    await settle();
+
+    expect(replays(server)).toEqual([]);
+    expect(el.running).toBe(false);
+  });
+
+  it("is not looked for when another thread lists running, or the log says it has ended", async () => {
+    const { el, server } = mount({ "data-detach-runs": "", "data-thread-status": "stream" });
+    await openThenWake(el, server);
+    listRunning(server, "t9", "e1");
+    await settle();
+    expect(server.to("events/").length).toBe(1);
+
+    server.pages.set("t4", recorded.probeIdle.body);
+    listRunning(server, "t4", "e2");
+    await settle();
+
+    expect(server.to("events/").length).toBe(2);
+    expect(replays(server)).toEqual([]);
+  });
+
+  it("is not looked for without data-detach-runs", async () => {
+    const { el, server } = mount({ "data-thread-status": "stream" });
+    await openThenWake(el, server);
+    listRunning(server, "t4", "e1");
+    await settle();
+
+    expect(server.to("events/")).toEqual([]);
+  });
+
+  it("is not joined by an agent that cannot connect", async () => {
+    const { el, server } = mount({ "data-detach-runs": "", "data-thread-status": "stream" });
+    el.agentFactory = (options) =>
+      new HttpAgent({
+        url: options.endpoint,
+        threadId: "t4",
+        fetch: (url, init) => fetch(url, init),
+      });
+    await openThenWake(el, server);
+    listRunning(server, "t4", "e1");
+    await settle();
+
+    expect(replays(server)).toEqual([]);
+    expect(el.running).toBe(false);
+  });
+});
+
+describe("data-poll-runs", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("joins a run the server started on the thread on screen, with no thread watch", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { el, server } = mount({ "data-detach-runs": "", "data-poll-runs": "" });
+    await openThenWake(el, server);
+    await vi.advanceTimersByTimeAsync(5000);
+    await settle();
+
+    expect(server.threadList).toBeNull();
+    expect(replays(server).map((call) => call.url)).toEqual(["/agent/threads/t4/events/?after=0"]);
+    expect(answers(el)).toBe(2);
+  });
+
+  it("stops when the attribute is removed or the element leaves the page", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { el, server } = mount({ "data-detach-runs": "", "data-poll-runs": "" });
+    await openThenWake(el, server);
+    el.removeAttribute("data-poll-runs");
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(server.to("events/").length).toBe(1);
+
+    el.setAttribute("data-poll-runs", "");
+    el.remove();
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(server.to("events/").length).toBe(1);
   });
 });

@@ -95,6 +95,7 @@ another origin, add `credentials="include"` too; see
 | `user-name` | `userName` | The signed-in user's display name, for the [greeting](theming.md#the-greeting-on-an-empty-page) an empty conversation shows under `placement="page"`. Presentation only: unlike `user-key` it scopes nothing and is never sent. Absent or blank gives the nameless greeting. Live. |
 | `data-threads-url` | — | URL of a server thread index (django-ag-ui's `ThreadsView`, or any server that keeps to [the threads contract](threads-contract.md)); enables durable, cross-device chat history. |
 | `data-detach-runs` | — | Opt-in, read at each request. With `data-threads-url`, a run outlives its connection: a thread switch, New chat or the element leaving the page lets go of it instead of stopping it, opening a thread whose run is still going joins it, and Stop posts the thread's `cancel/`. Needs a django-ag-ui 0.82.0+ mount; see [Runs that outlive their connection](concepts.md#runs-that-outlive-their-connection). Without `data-threads-url` it does nothing. |
+| `data-poll-runs` | — | Opt-in, live. With `data-detach-runs` and `data-threads-url`, the chat asks the open thread's run log every five seconds while idle and joins a run the server started there by itself (a child's report waking its parent, say), with no thread watch. Under `data-thread-status` the watch already does this; see [Runs that outlive their connection](concepts.md#runs-that-outlive-their-connection). |
 | `data-threads-cache` | — | **On by default.** `="false"` stops mirroring message bodies into `sessionStorage` when `data-threads-url` is set, for a deployment that put history on the server so transcripts stay off the client. Only meaningful alongside `data-threads-url`. |
 | `data-runs-url` | — | URL of a server run index (django-ag-ui's `RunsView`); reveals the header's *Continue a run* panel. See [Resuming a run](durability.md#resuming-a-run). |
 | `data-attachments-url` | — | URL of the file-upload endpoint (django-ag-ui's `AttachmentsView`); reveals the composer's paperclip picker, drag-and-drop, and paste. |
@@ -176,7 +177,7 @@ neither camp is `data-launcher-icon-url`: it is read while the element connects,
 below, but is not observed, so a late write is inert and says nothing.
 
 **Live attributes.** Written at any time, before or after the element connects, and acted on
-either way: `title-text`, `placement`, `collapse-to`, `anchor`, `anchor-side`, `maximized`, `data-side`, `data-small-viewport`, `data-threads-search`, `data-thread-status`, `credentials`, `user-key`,
+either way: `title-text`, `placement`, `collapse-to`, `anchor`, `anchor-side`, `maximized`, `data-side`, `data-small-viewport`, `data-threads-search`, `data-thread-status`, `data-poll-runs`, `credentials`, `user-key`,
 `user-name`, `data-tool-group-display`, `data-collapse-icon`, `theme`.
 
 **Connect-time attributes.** Read once, while the element connects, to decide what chrome exists at

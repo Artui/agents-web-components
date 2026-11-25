@@ -328,6 +328,36 @@ export const SCENARIOS = [
     },
   },
   {
+    slug: "server-started-runs",
+    group: "Conversation",
+    title: "A run the server starts, joined by the thread watch",
+    since: "0.16.0",
+    summary:
+      "With data-detach-runs and data-thread-status, a chat already showing a thread joins a run the server starts on it, such as a parent a child's report woke, once the list says the thread is running. Ask to be reported back to, then wait: about four seconds after the answer the server starts a second run, which streams in here.",
+    prompts: [["Ask to be reported back to", "Answer, then report back"]],
+    attrs: {
+      endpoint: "/detached/agent/",
+      "data-threads-url": "/detached/threads/",
+      "data-detach-runs": "",
+      "data-thread-status": "poll",
+    },
+  },
+  {
+    slug: "server-started-runs-poll",
+    group: "Conversation",
+    title: "A run the server starts, found by data-poll-runs",
+    since: "0.16.0",
+    summary:
+      "The same server run, with no thread watch: data-poll-runs asks the open thread's run log every five seconds and joins a run it did not start.",
+    prompts: [["Ask to be reported back to", "Answer, then report back"]],
+    attrs: {
+      endpoint: "/detached/agent/",
+      "data-threads-url": "/detached/threads/",
+      "data-detach-runs": "",
+      "data-poll-runs": "",
+    },
+  },
+  {
     slug: "child-sessions",
     group: "Conversation",
     title: "Child sessions",

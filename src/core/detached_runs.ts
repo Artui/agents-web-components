@@ -4,6 +4,12 @@ import { type MaybeAsync, whenReady } from "./when_ready.js";
 /** Headers for a request to `url`, read per request so rotated tokens and CSRF go with it. */
 type HeadersFor = (url: string) => MaybeAsync<Record<string, string>>;
 
+/** A thread's current or last run, as its run log's JSON page names it. */
+export interface RunProbe {
+  readonly runId: string;
+  readonly status: string;
+}
+
 /** Live cookie policy, read per request; see `RemoteConversationStore`'s note. */
 type CredentialsProvider = () => RequestCredentials | undefined;
 
@@ -38,8 +44,7 @@ export class DetachedRuns {
   }
 
   /**
-   * Whether the thread has a run in flight now: one JSON page of its log, read
-   * for its `status`.
+   * Whether the thread has a run in flight now, by {@link probe}.
    *
    * Asked of the server rather than remembered, so it holds across an element
    * a tab host unmounted while the run went on. A `404` (the thread never ran),
@@ -47,6 +52,14 @@ export class DetachedRuns {
    * no: the thread is then restored from its store, as it always was.
    */
   async running(threadId: string): Promise<boolean> {
+    return (await this.probe(threadId))?.status === "running";
+  }
+
+  /**
+   * The thread's current or last run, from one JSON page of its log: its
+   * `run_id` and `status`, or `null` for a `404`, any other failure or fault.
+   */
+  async probe(threadId: string): Promise<RunProbe | null> {
     const url = `${this.eventsUrl(threadId)}?after=0&limit=1`;
     try {
       const response = await whenReady(this.#headers(url), (headers) =>
@@ -59,12 +72,12 @@ export class DetachedRuns {
         ),
       );
       if (!response.ok) {
-        return false;
+        return null;
       }
-      const page = (await response.json()) as { status?: unknown };
-      return page.status === "running";
+      const page = (await response.json()) as { run_id?: unknown; status?: unknown };
+      return { runId: String(page.run_id), status: String(page.status) };
     } catch {
-      return false;
+      return null;
     }
   }
 
