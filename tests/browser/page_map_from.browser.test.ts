@@ -177,6 +177,35 @@ describe("pageMapFrom", () => {
     expect(new Set(again.map((b) => b.handle)).size).toBe(2);
   });
 
+  it("never gives a removed element's number to a new one", () => {
+    const root = stage(`<button id="a">A</button><button id="gone">Gone</button>`);
+    const host = root.appendChild(document.createElement("div"));
+    host.attachShadow({ mode: "open" }).innerHTML = "<button>Deep</button>";
+    const numbers = (): Map<unknown, number> =>
+      new Map(
+        entries(pageMapFrom(), "buttons").map((b) => [
+          b["name"],
+          Number(/"(\d+)"/.exec(b.handle)?.[1]),
+        ]),
+      );
+    const first = numbers();
+    host.remove();
+    root.querySelector("#gone")?.remove();
+    root.querySelector("#a")?.setAttribute("hidden", "");
+    expect(numbers().size).toBe(0);
+    root.querySelector("#a")?.removeAttribute("hidden");
+    root.insertAdjacentHTML("beforeend", "<button>New</button>");
+    const after = numbers();
+    expect(after.get("A")).toBe(first.get("A"));
+    expect(after.get("New")).toBeGreaterThan(Math.max(...first.values()));
+  });
+
+  it("numbers past a stamp the page wrote on an element it does not list", () => {
+    stage(`<div data-agent-handle="900"></div><button>A</button>`);
+    const handle = entries(pageMapFrom(), "buttons")[0]?.handle;
+    expect(Number(/"(\d+)"/.exec(handle ?? "")?.[1])).toBeGreaterThan(900);
+  });
+
   it("skips the chat's own subtree and opted-out or hidden elements", () => {
     stage(`
       <button>Visible</button>
@@ -459,6 +488,48 @@ describe("pageMapFrom privacy probes", () => {
     const map = pageMapFrom();
     expect(leaks(map)).toEqual([]);
     expect(entries(map, "buttons").map((b) => b["name"])).toEqual(["Pay", "Go", "Total"]);
+  });
+
+  // Each case is text the visibility check alone would read.
+  it.each([
+    ["script", `<script type="text/plain" style="display:block">script-leak</script>`],
+    ["style", `<style style="display:block">.style-leak {}</style>`],
+    ["noscript", `<noscript style="display:contents">noscript-leak</noscript>`],
+    ["select", `<select multiple><option>select-leak</option></select>`],
+    ["input", `<input>`],
+    ["template", `<template style="display:block"></template>`],
+  ])("never reads %s text", (tag, html) => {
+    const root = stage(`<button>Go ${html}</button>`);
+    // The parser gives these two no text child; a script can.
+    if (tag === "input" || tag === "template") {
+      root.querySelector(tag)?.append(`${tag}-leak`);
+    }
+    const map = pageMapFrom();
+    expect(leaks(map)).toEqual([]);
+    expect(entries(map, "buttons")[0]?.["name"]).toBe("Go");
+  });
+
+  it("never reads unstyled script or style text, an SVG's included", () => {
+    stage(`
+      <h2>Docs <script type="text/plain">script-leak</script><style>.style-leak {}</style></h2>
+      <button>Draw <svg width="9" height="9"><style>.svg-style-leak {}</style><script type="text/plain">svg-script-leak</script></svg></button>
+    `);
+    const map = pageMapFrom();
+    expect(leaks(map)).toEqual([]);
+    expect(entries(map, "headings")[0]?.["text"]).toBe("Docs");
+    expect(entries(map, "buttons")[0]?.["name"]).toBe("Draw");
+  });
+
+  it("lists no SVG link, so none of its href reaches the map", () => {
+    stage(`
+      <svg width="100" height="50">
+        <a href="/chart?token=query-leak"><text y="20">Chart</text></a>
+        <a href="mailto:svg-leak@example.com"><text y="40">Mail</text></a>
+      </svg>
+    `);
+    const map = pageMapFrom();
+    expect(leaks(map)).toEqual([]);
+    expect(map["links"]).toBeUndefined();
   });
 
   it("gives a link to another scheme as its scheme alone, and clips an href", () => {

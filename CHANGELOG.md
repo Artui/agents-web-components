@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A `pageMapFrom` handle number is never given out twice in a document.** Once an element left
+  the map, its number could go to a new element, so a model holding the old handle acted on the
+  wrong one. Numbers now only grow, until the page loads again. No opt-in: a host using
+  `pageMapFrom` gets it, and a host that does not is unaffected.
+
 ## [0.15.0] — 2026-11-24
 
 ### Added

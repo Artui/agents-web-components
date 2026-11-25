@@ -317,6 +317,9 @@ characters. `required`, `disabled` appear only when true.
 Text the page itself writes is read as it is: a heading or label that prints user data ("Signed in
 as ...") reaches the model like any other text. Mark such a region `data-agent-ignore`.
 
+Only HTML elements are listed: nothing inside an `<svg>` is, its links included, though its text
+counts toward the name of the element around it (never its `<script>` or `<style>`).
+
 **What it skips.** The subtree of every element of this package (`ag-ui-*`, so the chat never lists
 itself), of anything marked `data-agent-ignore`, and of anything hidden (`hidden`, `display: none`,
 `visibility: hidden`), `inert` or `aria-hidden="true"`. It walks open shadow roots of your
@@ -325,9 +328,11 @@ components; a closed one is unreachable by design.
 **Handles.** Each listed element is stamped `data-agent-handle="n"`, and its entry carries the
 selector for it, `[data-agent-handle="n"]`, which the default `resolvePageTarget` resolves, so
 `scroll_to` and `drag_and_drop` act on it with no host code. A handle is kept across reads while its
-element is listed, and a clone that carries the same stamp gets a new one. Numbers are not reserved
-for good: a new element may be given the number of one that was removed, or of one in a shadow root
-the read did not list, so treat a handle as valid for the read that returned it.
+element is listed, and a clone that carries the same stamp gets a new one. Numbers only grow while
+the document lives: the number of an element that was removed, hidden or not listed is never given
+to another, so a handle kept from an earlier read does not come to name a new element. A page load
+starts again from the stamps it finds, and a copy of an element carries its stamp until the next
+read.
 
 The default resolver is `resolvePageMapHandle`: `document.querySelector` first, and only when that
 misses and the target is exactly a handle of this form, a search of the open shadow roots under the
