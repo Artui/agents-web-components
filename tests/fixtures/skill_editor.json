@@ -1,6 +1,6 @@
 {
   "recordedBy": "record_skill_editor_fixture.py",
-  "djangoAgUi": "0.83.0",
+  "djangoAgUi": "0.91.0",
   "answers": {
     "listEmpty": {
       "status": 200,
@@ -75,13 +75,15 @@
     "invalidName": {
       "status": 400,
       "body": {
-        "error": "Skill name 'Late Delivery' must be kebab-case: lowercase ASCII letters and digits in words joined by single hyphens, at most 64 characters."
+        "error": "Skill name 'Late Delivery' must be kebab-case: lowercase ASCII letters and digits in words joined by single hyphens, at most 64 characters.",
+        "field": "name"
       }
     },
     "missingDescription": {
       "status": 400,
       "body": {
-        "error": "A skill needs a description."
+        "error": "A skill needs a description.",
+        "field": "description"
       }
     },
     "notFound": {
@@ -112,6 +114,46 @@
       "status": 409,
       "body": {
         "error": "A caller sees at most 100 enabled skills."
+      }
+    },
+    "scopedCreated": {
+      "status": 201,
+      "body": {
+        "id": "102",
+        "name": "team-handbook",
+        "description": "Summarise the week.",
+        "body": "Collect the tickets.",
+        "userInvocable": true,
+        "modelInvocable": false,
+        "enabled": true,
+        "scope": "shared"
+      }
+    },
+    "scopedList": {
+      "status": 200,
+      "body": {
+        "skills": [
+          {
+            "id": "1",
+            "name": "weekly-report",
+            "description": "Summarise the week per team.",
+            "body": "Collect the tickets.",
+            "userInvocable": true,
+            "modelInvocable": false,
+            "enabled": true,
+            "scope": "personal"
+          },
+          {
+            "id": "102",
+            "name": "team-handbook",
+            "description": "Summarise the week.",
+            "body": "Collect the tickets.",
+            "userInvocable": true,
+            "modelInvocable": false,
+            "enabled": true,
+            "scope": "shared"
+          }
+        ]
       }
     }
   },

@@ -583,6 +583,14 @@ export interface UiStrings {
   routineHour: string;
   /** The accessible name of the routine time's minute select. */
   routineMinute: string;
+
+  // ── Skill scope ─────────────────────────────────────────────────────────────
+  /** The skill editor row's badge for a skill whose `scope` is `"personal"`. */
+  "skillScope:personal": string;
+  /** The badge for `scope: "shared"`. */
+  "skillScope:shared": string;
+  /** The badge for any other scope value a host labels; an unlabelled one draws no badge. */
+  [scope: `skillScope:${string}`]: string | undefined;
 }
 
 /** The built-in English strings — the fallback every override merges over. */
@@ -856,6 +864,9 @@ export const DEFAULT_UI_STRINGS: UiStrings = {
 
   routineHour: "Hour",
   routineMinute: "Minute",
+
+  "skillScope:personal": "Personal",
+  "skillScope:shared": "Company",
 };
 
 /**

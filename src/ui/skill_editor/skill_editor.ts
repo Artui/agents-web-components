@@ -20,6 +20,21 @@ export interface SkillEditorHost {
   readonly onClose: () => void;
 }
 
+/** The badge after a skill's name, or none for no scope or a scope the strings give no words. */
+function scopeBadge(skill: EditorSkill, strings: SkillEditorStrings): HTMLElement[] {
+  const { scope } = skill;
+  const label = scope === undefined ? undefined : strings[`skillScope:${scope}`];
+  if (scope === undefined || typeof label !== "string") {
+    return [];
+  }
+  const badge = document.createElement("span");
+  badge.className = "skill-row-scope";
+  badge.setAttribute("part", "skill-scope");
+  badge.dataset["scope"] = scope;
+  badge.textContent = label;
+  return [badge];
+}
+
 const BLANK: EditorSkillDraft = {
   name: "",
   description: "",
@@ -152,6 +167,9 @@ export class SkillEditor {
     const description = document.createElement("span");
     description.className = "skill-row-desc";
     description.textContent = skill.description;
+    const line = document.createElement("span");
+    line.className = "skill-row-line";
+    line.append(name, ...scopeBadge(skill, strings));
     const meta = document.createElement("span");
     meta.className = "skill-row-meta";
     const reach = [
@@ -166,7 +184,7 @@ export class SkillEditor {
         meta.append(tag);
       }
     }
-    open.append(name, description, meta);
+    open.append(line, description, meta);
     open.addEventListener("click", () => this.#edit(skill));
     row.append(open);
     if (!skill.enabled) {

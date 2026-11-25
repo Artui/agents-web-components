@@ -23,3 +23,29 @@ describe("parseEditorSkill", () => {
     },
   );
 });
+
+describe("parseEditorSkill on a scoped server", () => {
+  const [personal, shared] = recorded.answers.scopedList.body.skills;
+
+  it("keeps the scope each entry carries", () => {
+    expect(parseEditorSkill(personal)).toStrictEqual(personal);
+    expect(parseEditorSkill(shared)?.scope).toBe("shared");
+  });
+
+  it("passes a scope value it does not know through", () => {
+    expect(parseEditorSkill({ ...personal, scope: "team" })?.scope).toBe("team");
+  });
+
+  it("adds no scope key when the server sends none", () => {
+    expect(parseEditorSkill(CREATED)).not.toHaveProperty("scope");
+  });
+
+  it.each([[null], [3], [""], [{ name: "x" }]])(
+    "keeps the skill and drops a scope of %j",
+    (scope) => {
+      const skill = parseEditorSkill({ ...personal, scope });
+      expect(skill?.name).toBe("weekly-report");
+      expect(skill).not.toHaveProperty("scope");
+    },
+  );
+});

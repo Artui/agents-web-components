@@ -18,7 +18,12 @@ export interface EditorSkill {
   readonly modelInvocable: boolean;
   /** Off skills stay listed in the editor and nowhere else. */
   readonly enabled: boolean;
+  /**
+   * Whose skill it is: `"personal"`, `"shared"` or a consumer's own value;
+   * absent when the server does not say.
+   */
+  readonly scope?: string;
 }
 
-/** What a create or a replace sends: an {@link EditorSkill} less `id` and `enabled`. */
-export type EditorSkillDraft = Omit<EditorSkill, "id" | "enabled">;
+/** What a create or a replace sends: an {@link EditorSkill} less `id`, `enabled` and `scope`. */
+export type EditorSkillDraft = Omit<EditorSkill, "id" | "enabled" | "scope">;

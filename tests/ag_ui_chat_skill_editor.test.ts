@@ -346,7 +346,7 @@ describe("the skill editor in <ag-ui-chat>", () => {
   });
 
   it("shows a refused save's message above the form when the answer names no field", async () => {
-    server.refuse = recorded.answers.invalidName;
+    server.refuse = recorded.answers.refused;
     const el = mount();
     await flush();
     el.openSkillEditor();
@@ -358,11 +358,11 @@ describe("the skill editor in <ag-ui-chat>", () => {
 
     const error = q<HTMLElement>(el, ".skill-form-error");
     expect(error.hidden).toBe(false);
-    expect(error.textContent).toBe(recorded.answers.invalidName.body.error);
+    expect(error.textContent).toBe(recorded.answers.refused.body.error);
     expect(q<HTMLElement>(el, ".panel-view-title").textContent).toBe("New skill");
   });
 
-  it("shows the recorded missing-description refusal above the form, as it names no field", async () => {
+  it("shows the recorded missing-description refusal under the field it names", async () => {
     server.refuse = recorded.answers.missingDescription;
     const el = mount();
     await flush();
@@ -372,10 +372,11 @@ describe("the skill editor in <ag-ui-chat>", () => {
     buttonNamed(el, "Create").click();
     await flush();
 
-    expect(q<HTMLElement>(el, ".skill-form-error").textContent).toBe(
+    const field = q<HTMLElement>(el, '.skill-field[data-field="description"]');
+    expect(field.classList.contains("skill-field--bad")).toBe(true);
+    expect(field.querySelector(".skill-field-error")?.textContent).toBe(
       recorded.answers.missingDescription.body.error,
     );
-    expect(shadow(el).querySelector(".skill-field--bad")).toBeNull();
   });
 
   it("shows a refusal under the field a later server names", async () => {

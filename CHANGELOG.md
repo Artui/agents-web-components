@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A skill editor row says whose skill it is.** django-ag-ui 0.91.0 adds `scope`
+  (`"personal"` or `"shared"`) to each `skills/editor/` entry when the skill policy defines
+  `scope(request, skill)`. The row now draws a badge after the skill's name, **Personal** or
+  **Company**, as the part `skill-scope` with the value in `data-scope`. The words are the new
+  strings `skillScope:personal` and `skillScope:shared`. A host names a label for a scope of
+  its own with a `skillScope:<value>` key in `strings` or `data-strings` (on `<ag-ui-chat>` and
+  `<ag-ui-skills>`), and `UiStrings` types that key. A scope with no label draws no badge,
+  since its raw value may be an internal name. `EditorSkill` gains the optional `scope`;
+  `EditorSkillDraft` leaves it out, so a save never sends it. Nothing to opt in to: an entry
+  without `scope` draws as before. See
+  [Whose skill it is](https://artui.github.io/agents-web-components/skills/#whose-skill-it-is).
+
 ## [0.16.0] — 2026-11-25
 
 ### Added
