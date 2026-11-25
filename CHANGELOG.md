@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A lone call's "Approved by a routine" or "Approved by a reviewer model" note is drawn.**
+  In the grouped tool display, a one-step group hid the card's whole head, the note with it, so
+  opening the row showed no record that nobody had been asked. The head of such a card now draws
+  the note and nothing else. The folded row itself is unchanged. Nothing to opt in to.
+
 ## [0.15.0] — 2026-11-24
 
 ### Added
