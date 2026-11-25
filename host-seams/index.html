@@ -1705,6 +1705,8 @@ characters. <code>required</code>, <code>disabled</code> appear only when true.<
 </ul>
 <p>Text the page itself writes is read as it is: a heading or label that prints user data ("Signed in
 as ...") reaches the model like any other text. Mark such a region <code>data-agent-ignore</code>.</p>
+<p>Only HTML elements are listed: nothing inside an <code>&lt;svg&gt;</code> is, its links included, though its text
+counts toward the name of the element around it (never its <code>&lt;script&gt;</code> or <code>&lt;style&gt;</code>).</p>
 <p><strong>What it skips.</strong> The subtree of every element of this package (<code>ag-ui-*</code>, so the chat never lists
 itself), of anything marked <code>data-agent-ignore</code>, and of anything hidden (<code>hidden</code>, <code>display: none</code>,
 <code>visibility: hidden</code>), <code>inert</code> or <code>aria-hidden="true"</code>. It walks open shadow roots of your
@@ -1712,9 +1714,11 @@ components; a closed one is unreachable by design.</p>
 <p><strong>Handles.</strong> Each listed element is stamped <code>data-agent-handle="n"</code>, and its entry carries the
 selector for it, <code>[data-agent-handle="n"]</code>, which the default <code>resolvePageTarget</code> resolves, so
 <code>scroll_to</code> and <code>drag_and_drop</code> act on it with no host code. A handle is kept across reads while its
-element is listed, and a clone that carries the same stamp gets a new one. Numbers are not reserved
-for good: a new element may be given the number of one that was removed, or of one in a shadow root
-the read did not list, so treat a handle as valid for the read that returned it.</p>
+element is listed, and a clone that carries the same stamp gets a new one. Numbers only grow while
+the document lives: the number of an element that was removed, hidden or not listed is never given
+to another, so a handle kept from an earlier read does not come to name a new element. A page load
+starts again from the stamps it finds, and a copy of an element carries its stamp until the next
+read.</p>
 <p>The default resolver is <code>resolvePageMapHandle</code>: <code>document.querySelector</code> first, and only when that
 misses and the target is exactly a handle of this form, a search of the open shadow roots under the
 document (skipping this package's own elements), so a handle the walker stamped inside a component

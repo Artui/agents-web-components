@@ -1709,7 +1709,8 @@ cap, so a client cannot ask for more than the server allows.</p>
 </table>
 <h3 id="thread-status-keys">Thread status keys<a class="headerlink" href="#thread-status-keys" title="Permanent link">&para;</a></h3>
 <p>Only beside a run store. A row carries <code>status</code> (<code>idle</code>, <code>running</code>, <code>waiting</code> or <code>failed</code>) and
-<code>last_read_at</code> (ISO 8601 or <code>null</code>); <code>reason</code> (string or <code>null</code>) only when <code>failed</code>;
+<code>last_read_at</code> (ISO 8601, or <code>null</code> for a thread never read, which the component shows unread
+unless it is running); <code>reason</code> (string or <code>null</code>) only when <code>failed</code>;
 <code>interrupts</code> only when <code>waiting</code>, each an AG-UI <code>Interrupt</code> in camelCase.</p>
 <p>A waiting approval, as recorded:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>

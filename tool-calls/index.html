@@ -697,6 +697,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#task-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task control
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#child-sessions" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1456,6 +1467,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#task-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task control
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#child-sessions" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1709,7 +1731,7 @@ AG-UI <code>CUSTOM</code> event named <code>ag_ui.subagent</code>, carrying:</p>
 </tr>
 <tr>
 <td><code>phase</code></td>
-<td>one of <code>started</code>, <code>tool_call</code>, <code>tool_result</code>, <code>finished</code>, <code>failed</code></td>
+<td>one of <code>started</code>, <code>tool_call</code>, <code>tool_result</code>, <code>finished</code>, <code>failed</code>, or a <a href="#task-control">task phase</a></td>
 </tr>
 <tr>
 <td><code>status</code></td>
@@ -1718,6 +1740,10 @@ AG-UI <code>CUSTOM</code> event named <code>ag_ui.subagent</code>, carrying:</p>
 <tr>
 <td><code>tool</code></td>
 <td><code>toolCallId</code>, <code>name</code> and <code>ok</code>, on the two tool phases only</td>
+</tr>
+<tr>
+<td><code>task</code></td>
+<td>the task a <a href="#task-control">task phase</a> names, on those phases only</td>
 </tr>
 </tbody>
 </table>
@@ -1765,6 +1791,97 @@ properties and its spinner speed, so re-theming the cards re-themes these. The
 row's own chrome comes from <code>subAgentWorking</code> and <code>subAgentSteps</code> in
 <a href="../i18n/#internationalization-i18n"><code>UiStrings</code></a>; everything else on the row is the
 server's text.</p>
+<h3 id="task-control">Task control<a class="headerlink" href="#task-control" title="Permanent link">&para;</a></h3>
+<p>Under django-ag-ui's task control (0.90.0, <code>SubAgents(task_control=TaskControl())</code>) a
+delegation is a task the parent's model manages, and the row draws what happens to it. The
+task's moments arrive on the same <code>ag_ui.subagent</code> event with <code>tool: null</code>, a server <code>status</code>
+line and a <code>task</code> record:</p>
+<table>
+<thead>
+<tr>
+<th><code>phase</code></th>
+<th>When</th>
+<th><code>task</code> carries</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>backgrounded</code></td>
+<td>the task moved to the background</td>
+<td><code>taskId</code>, <code>reason</code> (<code>requested</code>, <code>auto</code>, <code>question</code>)</td>
+</tr>
+<tr>
+<td><code>steered</code></td>
+<td>the parent sent the running task a message</td>
+<td><code>taskId</code></td>
+</tr>
+<tr>
+<td><code>question</code></td>
+<td>the task asked the parent a question</td>
+<td><code>taskId</code>, <code>questionId</code></td>
+</tr>
+<tr>
+<td><code>answered</code></td>
+<td>the parent answered it</td>
+<td><code>taskId</code>, <code>questionId</code></td>
+</tr>
+<tr>
+<td><code>cancel_requested</code></td>
+<td>the parent asked the task to stop</td>
+<td><code>taskId</code>, <code>forced</code></td>
+</tr>
+<tr>
+<td><code>retried</code></td>
+<td>a remote task's worker is running it again</td>
+<td><code>taskId</code>, <code>attempt</code></td>
+</tr>
+</tbody>
+</table>
+<p>The steering message, the question and the answer are not on the wire, so the row says that
+something happened, never what was said. The panel's <code>data-phase</code> is the latest moment. What
+outlasts a moment is stamped on the <code>subagent</code> part for a host to style:</p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Set</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>data-task-id</code></td>
+<td>the task the steps name</td>
+</tr>
+<tr>
+<td><code>data-background</code></td>
+<td>once the task left the foreground; the value is the server's <code>reason</code></td>
+</tr>
+<tr>
+<td><code>data-awaiting-answer</code></td>
+<td>from <code>question</code> until <code>answered</code>, or until the task settles</td>
+</tr>
+<tr>
+<td><code>data-cancel</code></td>
+<td><code>requested</code> or <code>forced</code>, once a cancellation was asked for</td>
+</tr>
+<tr>
+<td><code>data-attempt</code></td>
+<td>a remote task's retry count, on <code>retried</code></td>
+</tr>
+</tbody>
+</table>
+<p>A task closes on the protocol's events as before, and two <code>SUBAGENT_ERROR</code> codes are not the
+child failing: <code>code: "cancelled"</code> settles the row as <code>data-phase="cancelled"</code> ("researcher was
+cancelled", <code>subAgentCancelled</code>), and <code>code: "unfinished"</code>, sent when the run ends while a
+background task is still open, as <code>data-phase="unfinished"</code> (<code>subAgentUnfinished</code>). Any other
+code, or none, is <code>failed</code>, on the server's words. A resumed task opens a new delegation, with a
+fresh <code>subagentRunId</code>, on the <code>delegate_task</code> call that resumed it, so it draws on that call's
+card. None of it is stored, as above: a restored thread shows the cards and no task progress.</p>
+<p>The glyph follows: a cancelled task draws the card's <code>--ag-ui-tool-icon-declined</code> and an
+unfinished one its <code>--ag-ui-tool-icon-interrupted</code>, both muted, and an open question stops the
+spinner for a still ring in the accent colour.</p>
+<p>The row offers no control over the task. Steering, answering and cancelling from the chat are
+not part of this release.</p>
 <h3 id="child-sessions">Child sessions<a class="headerlink" href="#child-sessions" title="Permanent link">&para;</a></h3>
 <p>A child session (django-spec-agents' <code>start_session</code>) runs headless in a thread
 of its own and sends nothing into the parent's stream. What persists is its

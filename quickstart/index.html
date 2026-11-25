@@ -1627,6 +1627,11 @@ another origin, add <code>credentials="include"</code> too; see
 <td>Opt-in, read at each request. With <code>data-threads-url</code>, a run outlives its connection: a thread switch, New chat or the element leaving the page lets go of it instead of stopping it, opening a thread whose run is still going joins it, and Stop posts the thread's <code>cancel/</code>. Needs a django-ag-ui 0.82.0+ mount; see <a href="../concepts/#runs-that-outlive-their-connection">Runs that outlive their connection</a>. Without <code>data-threads-url</code> it does nothing.</td>
 </tr>
 <tr>
+<td><code>data-poll-runs</code></td>
+<td>—</td>
+<td>Opt-in, live. With <code>data-detach-runs</code> and <code>data-threads-url</code>, the chat asks the open thread's run log every five seconds while idle and joins a run the server started there by itself (a child's report waking its parent, say), with no thread watch. Under <code>data-thread-status</code> the watch already does this; see <a href="../concepts/#runs-that-outlive-their-connection">Runs that outlive their connection</a>.</td>
+</tr>
+<tr>
 <td><code>data-threads-cache</code></td>
 <td>—</td>
 <td><strong>On by default.</strong> <code>="false"</code> stops mirroring message bodies into <code>sessionStorage</code> when <code>data-threads-url</code> is set, for a deployment that put history on the server so transcripts stay off the client. Only meaningful alongside <code>data-threads-url</code>.</td>
@@ -1856,7 +1861,7 @@ Nothing outside those groups is observed: a CSS-only attribute (<code>theme</cod
 neither camp is <code>data-launcher-icon-url</code>: it is read while the element connects, like the group
 below, but is not observed, so a late write is inert and says nothing.</p>
 <p><strong>Live attributes.</strong> Written at any time, before or after the element connects, and acted on
-either way: <code>title-text</code>, <code>placement</code>, <code>collapse-to</code>, <code>anchor</code>, <code>anchor-side</code>, <code>maximized</code>, <code>data-side</code>, <code>data-small-viewport</code>, <code>data-threads-search</code>, <code>data-thread-status</code>, <code>credentials</code>, <code>user-key</code>,
+either way: <code>title-text</code>, <code>placement</code>, <code>collapse-to</code>, <code>anchor</code>, <code>anchor-side</code>, <code>maximized</code>, <code>data-side</code>, <code>data-small-viewport</code>, <code>data-threads-search</code>, <code>data-thread-status</code>, <code>data-poll-runs</code>, <code>credentials</code>, <code>user-key</code>,
 <code>user-name</code>, <code>data-tool-group-display</code>, <code>data-collapse-icon</code>, <code>theme</code>.</p>
 <p><strong>Connect-time attributes.</strong> Read once, while the element connects, to decide what chrome exists at
 all — the tray, the mic, the skills menu, the header mark. Writing one afterwards has <strong>no effect</strong>;

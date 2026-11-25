@@ -707,6 +707,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#sources-an-answer-cites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sources an answer cites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#quoting-a-selection" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1533,6 +1544,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#sources-an-answer-cites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sources an answer cites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#quoting-a-selection" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1788,6 +1810,49 @@ one that stores the conversation under fresh ids makes a rating made live and a
 rating made after a reload name the same answer by two different ids. Live,
 the id is always the one on the wire.</p>
 </div>
+<h2 id="sources-an-answer-cites">Sources an answer cites<a class="headerlink" href="#sources-an-answer-cites" title="Permanent link">&para;</a></h2>
+<p>When the model says which sources back its answer (pydantic-ai's
+<code>TextPart.citations</code>, carried by django-ag-ui 0.90.0 and later), the answer gets a
+collapsed <strong>Sources (n)</strong> list under its text, above the action row. Nothing to
+opt in to: an answer with no citations looks as before.</p>
+<p>The list reads the assistant message's <code>metadata.citations</code>: live from the
+<code>TEXT_MESSAGE_END</code> that closes it (which <code>@ag-ui/client</code> 1.0 also folds onto the
+message it saves), and after a reload from the stored message the thread
+endpoint returns. Each entry is pydantic-ai's <code>Citation</code> in its JSON form:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Drawn as</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sources</code></td>
+<td>One line per source. A <code>web</code> source is a link to its <code>url</code> (only <code>http</code> and <code>https</code> become links; anything else is shown as text), named by its <code>title</code> or else the URL. A <code>document</code> source is its <code>title</code>, else its <code>document_id</code>, else the string <code>citationDocument</code>. Each of <code>excerpts</code> is quoted under it.</td>
+</tr>
+<tr>
+<td><code>anchor</code></td>
+<td><code>{kind: "content", start, end}</code>: the cited range of the answer, quoted. <code>{kind: "marker", ...}</code>: the model's own marker such as <code>[1]</code>, shown as code. <code>null</code>: sources only.</td>
+</tr>
+</tbody>
+</table>
+<p><code>start</code> and <code>end</code> count UTF-16 code units into the message's own <code>content</code>, so
+<code>content.slice(start, end)</code> is the range. The range is quoted rather than
+highlighted in the bubble, because the offsets index the markdown source and the
+rendered text is shifted by its syntax. An anchor that does not fit the text is
+dropped and its sources kept; a citation with no usable source is dropped.
+Titles, URLs and excerpts go in as text, never as HTML.</p>
+<p><strong>Live and reloaded copies can differ.</strong> Text on both sides of a file part streams
+as two messages, each with its own citations, and is stored as one message
+joined by a newline under a fresh id, its citations indexing the joined text. So
+the answer draws as two bubbles live and one after a reload, each list read
+against its own text. A rating given live names the streamed ids; after a
+reload, the stored one. A split around reasoning or a provider compaction is stored
+under the ids it streamed, so it draws and rates the same either way.</p>
+<p>Copy and a rating's <code>content</code> leave the list out. Style it through the
+<code>citations</code> part, or the strings <code>citations</code> (token <code>{count}</code>) and
+<code>citationDocument</code>.</p>
 <h2 id="quoting-a-selection">Quoting a selection<a class="headerlink" href="#quoting-a-selection" title="Permanent link">&para;</a></h2>
 <p>Select any text in the transcript and a small <strong>Quote</strong> offer floats beside it.
 Taking it drops the selection into the composer as a markdown blockquote and

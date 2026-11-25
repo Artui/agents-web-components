@@ -1835,34 +1835,49 @@ mount with <code>run_store=</code> and <code>RUN_TIMEOUT_SECONDS</code> set, ser
   element being inserted again) asks the server once whether it has a run going: a JSON
   <code>GET &lt;url&gt;&lt;id&gt;/events/?after=0&amp;limit=1</code>, reattaching when its <code>status</code> is <code>"running"</code>. A <code>404</code>
   or any other status restores the thread from its store as before. It is asked rather than
-  remembered so it holds across an element a tab host unmounted; there is no status on the thread
-  list yet. Joining replays the run from its start (<code>events/?after=0</code> as an AG-UI stream), so the
+  remembered so it holds across an element a tab host unmounted. Joining replays the run from its start (<code>events/?after=0</code> as an AG-UI stream), so the
   transcript is redrawn from the replay's opening <code>MESSAGES_SNAPSHOT</code> and the answer streams in
   as a live one does. <code>running</code> (and <code>data-running</code>) is true from the moment the run is joined
   until it ends, so a host that defers a switch until a run is over can key on its removal. A
   host's <code>sendMessage()</code> made while that restore is in flight waits for the joined run to end and
   then goes out, ahead of any turn the composer parked; a Stop during the joined run drops it
   (<code>false</code>).</li>
-<li><strong>Stop asks the server.</strong> Stop, Escape and deleting the thread on screen post
+<li><strong>A run the server starts on the thread on screen is joined too, when the host asks.</strong> A
+  server can start a run on a thread by itself: a child session's report wakes its parent
+  thread, for example. Two opt-ins let a chat already showing that thread follow it, each needing
+  <code>data-detach-runs</code> and <code>data-threads-url</code>:<ul>
+<li>with <a href="../threads/#thread-status"><code>data-thread-status</code></a>, a list that names the thread on
+  screen <code>running</code> while the chat is idle makes it ask the run log which run that is (the
+  same <code>limit=1</code> probe) and join it;</li>
+<li>with <code>data-poll-runs</code>, the chat asks that probe itself every five seconds while idle, with
+  no thread watch, and joins a run it finds <code>running</code>.</li>
+</ul>
+</li>
+</ul>
+<p>Either way the join is the one a restore makes: the replay's snapshot redraws the transcript
+  and the answer streams in, and a turn typed meanwhile waits in the composer's queue. A chat
+  never joins a run it drove or already joined: the probe names the run, and when the chat's
+  own run ends it asks once which run that was, since a list read a moment after a run's end
+  can still say <code>running</code>. A run the server parks (<code>waiting</code>) is not joined this way.
+- <strong>Stop asks the server.</strong> Stop, Escape and deleting the thread on screen post
   <code>&lt;url&gt;&lt;id&gt;/cancel/</code> with the element's headers and credentials, then abort as before. The run
   acts on it at its next lease renewal, about ten seconds on; a <code>404</code> means it had already ended
-  and is not reported.</li>
-<li><strong>A start on a busy thread joins the busy run.</strong> A send the server refuses with <code>409</code> because
+  and is not reported.
+- <strong>A start on a busy thread joins the busy run.</strong> A send the server refuses with <code>409</code> because
   another run holds the thread (a Stop's cancel has not landed yet, or a second tab) joins that run
   instead, and the turn waits in the composer's queue, attachments included, sent once that run
   has ended (a turn that is only files is shown by their names); a refused <code>run()</code> action is not
   sent again. The server logs a run's end a moment before it lets go of the thread, so a turn
   refused by the very run it just waited out is asked once more, a quarter second later, and a
-  second refusal is shown as the error.</li>
-<li><strong>A queued mount's start is followed.</strong> A mount with a <code>firing_queue=</code> (django-ag-ui 0.82.0+)
+  second refusal is shown as the error.
+- <strong>A queued mount's start is followed.</strong> A mount with a <code>firing_queue=</code> (django-ag-ui 0.82.0+)
   answers a detached start with <code>200 {"thread_id", "run_id"}</code> and leaves the run to a worker; the
   element then reads that run through <code>events/?after=0</code> and streams it as it would have streamed
   the start, each frontend-tool round alike. The replay's opening snapshot is the stored
-  conversation, without the turn just sent, so it is not applied.</li>
-<li><strong>The run routes follow <code>data-threads-url</code>.</strong> A replay and a cancel read the attribute when they
+  conversation, without the turn just sent, so it is not applied.
+- <strong>The run routes follow <code>data-threads-url</code>.</strong> A replay and a cancel read the attribute when they
   are made, so a host that sets or changes it after the element connected sends the next of each
-  to the new URL; the thread list and its store still read it while connecting.</li>
-</ul>
+  to the new URL; the thread list and its store still read it while connecting.</p>
 <p>Reattaching needs an agent that can connect: the default <code>agentFactory</code> builds one. A factory
 returning an agent that does not override <code>connect</code> gets the store-only restore. A factory that
 wraps <code>createHttpAgent</code> passes <code>getEventsUrl</code> on with the rest of the options, which is how the
