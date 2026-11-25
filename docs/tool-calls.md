@@ -72,8 +72,9 @@ Under `grouped` the row reads, by state:
 | `done` | "Worked through 3 steps" | check |
 | `error` | "Worked through 3 steps", with "1 failed" in the danger colour | error mark |
 
-"N declined" is added as a note whenever a step was declined. `data-count` carries the number of
-steps and `data-open` whether the cards are showing; the head is a button with `aria-expanded`.
+"N declined" is added as a note whenever a step was declined. While the group is folded, "N
+pre-approved" is added when a reviewer model or a routine approved calls in it with no one asked;
+opened, each of those cards says so itself and the row drops the count. `data-count` carries the number of steps and `data-open` whether the cards are showing; the head is a button with `aria-expanded`.
 
 - **It opens itself while a step waits on you.** A server-side approval renders inside the gated
   call's own card, so a folded group would hide the question it is asking: the group opens when a
@@ -88,7 +89,9 @@ steps and `data-open` whether the cards are showing; the head is a button with `
   card without its own `tool-card-head` (the row's state mark and notes carry the status). The
   Details toggle and arguments stay, except under `data-tool-group-display="minimal"`, where the
   card is only its head: there the row draws no chevron, though it still opens for an approval. A
-  card display mode keeps the head. A run that grows to two calls brings both heads back.
+  call that records a decision or a pre-approval keeps that one note from its head, and its row
+  opens onto it with a chevron, under minimal and with no arguments or result too. A card display
+  mode keeps the whole head. A run that grows to two calls brings both heads back.
 - **A running sub-agent does not open it.** The row keeps its spinner and names the delegation
   instead, "Delegated to researcher" (the `subAgentDelegatedTo` string).
 - **Repeated labels are told apart.** Two "Fill field" steps read "Fill field" and "Fill field
@@ -104,7 +107,8 @@ Parts: `tool-group` (with the state beside it as `tool-group-waiting`, `tool-gro
 `tool-card-repeat` on a repeated step. The focus ring is `--ag-ui-ring` and the disclosure chevron
 `--ag-ui-ico-chevron`. Strings (`strings` / `data-strings`): `toolGroupSteps`,
 `toolGroupWorking`, `toolGroupWorked` (each with `{count}`, always 2 or more), `toolGroupWaiting`,
-`toolGroupFailed`, `toolGroupDeclined` (each with `{count}`) and `toolStepRepeat` (with `{n}`).
+`toolGroupFailed`, `toolGroupDeclined`, `toolGroupPreApproved` (each with `{count}`) and
+`toolStepRepeat` (with `{n}`).
 
 ```html
 <!-- Keep per-call cards, as before grouped was the default -->

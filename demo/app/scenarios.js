@@ -208,6 +208,7 @@ export const SCENARIOS = [
       ["Three approvals", "import three rows"],
       ["A question", "ask me something"],
       ["Approved without asking", "approved without asking"],
+      ["One pre-approved call", "one pre-approved call"],
     ],
   },
   {

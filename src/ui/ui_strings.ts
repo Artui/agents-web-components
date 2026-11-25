@@ -608,6 +608,11 @@ export interface UiStrings {
   /** The accessible name of the routine time's minute select. */
   routineMinute: string;
 
+  /**
+   * Note on the folded group's row: steps a reviewer model or a routine
+   * approved with no one asked. Token: `{count}`.
+   */
+  toolGroupPreApproved: string;
   /** Line under an answer a fallback model gave, naming it. Token: `{model}`. */
   answeredByModel: string;
   /** Title of a child session's report in its parent's transcript. Token: `{agent}`. */
@@ -907,6 +912,7 @@ export const DEFAULT_UI_STRINGS: UiStrings = {
   routineHour: "Hour",
   routineMinute: "Minute",
 
+  toolGroupPreApproved: "{count} pre-approved",
   answeredByModel: "Answered by {model}",
   childReport: "Report from {agent}",
   childQuestion: "Question from {agent}",

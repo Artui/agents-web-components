@@ -352,6 +352,27 @@ async function handleAgent(res, body) {
     return;
   }
 
+  // One call a routine approved, with no arguments and a blank result: the note
+  // is the only thing behind a lone step's row.
+  if (/\bone pre-approved call\b/i.test(prompt)) {
+    const parent = id("msg");
+    await streamText(res, parent, ["Sending the digest. "]);
+    const call = id("call");
+    emitToolCall(res, call, "send_digest", {}, parent);
+    await sleep(400);
+    emit(res, {
+      type: "TOOL_CALL_RESULT",
+      toolCallId: call,
+      messageId: id("m"),
+      content: "",
+      metadata: { answered_by: "routine:42" },
+    });
+    await streamText(res, id("msg"), ["Done."]);
+    emit(res, { type: "RUN_FINISHED", threadId, runId });
+    res.end();
+    return;
+  }
+
   // Two activities: one a host renderer answers with an empty fragment (nothing
   // to draw, by design), one nobody registered, which unhandledActivityTypes names.
   if (/\bnothing to draw\b/i.test(prompt)) {

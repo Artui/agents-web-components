@@ -69,6 +69,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `subagent-controls` part there, or upgrade the server to 0.91.0 with a `run_store`. See
   [Steer, answer and cancel](https://artui.github.io/agents-web-components/tool-calls/#steer-answer-and-cancel).
 
+- **A folded tool group's row says how many of its calls were pre-approved.** When a reviewer
+  model or a routine approved calls in the group with no one asked, the folded row gains "· 1
+  pre-approved" (new strings key `toolGroupPreApproved`, with `{count}`). The opened group is
+  unchanged. No opt-in.
+
 ### Changed
 
 - **`pageMapFrom` lists SVG links.** An `<a>` inside an `<svg>` with an `href` or `xlink:href`
@@ -91,6 +96,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   parked run a restore found (offered, or parked on what the chat cannot offer) is the chat's
   own and is not restored again, after a Stop included. Nothing to opt in to beyond
   the attributes that already turn the join on.
+
+- **A lone call's record of who let it through can always be reached.** In a one-step group, a
+  call a reviewer model or a routine approved could not be opened under
+  `data-tool-group-display="minimal"`, or when it had no arguments and a blank result, and a call a
+  person approved or declined lost its "approved by you" / "declined by you" line with the card's
+  head. The row now opens in each case, onto that note, so an approval answered on a call with no
+  arguments and a blank result leaves the row open instead of folding it. No opt-in.
 
 ## [0.16.0] — 2026-11-25
 
