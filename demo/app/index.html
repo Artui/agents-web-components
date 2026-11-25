@@ -956,6 +956,7 @@
               <tbody><tr><td>INV-1</td><td>12.00</td></tr></tbody>
             </table>
             <div data-agent-ignore><button type="button">Never listed (data-agent-ignore)</button></div>
+            <svg width="160" height="24"><a href="#pm-chart"><text y="17" fill="currentColor" text-decoration="underline">Revenue chart</text></a></svg>
           </div>
         </div>
         <div class="panel">
@@ -982,6 +983,10 @@
               <strong>Shadow roots.</strong> The second button lives in an open shadow root: it is
               listed, and <em>Point at the shadow button</em> scrolls to it through the same default
               resolver, with no host override.
+            </li>
+            <li>
+              <strong>SVG links.</strong> <em>Revenue chart</em> is an <code>a</code> inside an
+              <code>svg</code>: it is listed under <code>links</code>.
             </li>
           </ul>
         </div>

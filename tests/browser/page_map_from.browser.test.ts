@@ -2,6 +2,7 @@ import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { ELEMENT_TAG } from "../../src/constants.js";
 import type { AgUiChat } from "../../src/core/ag_ui_chat.js";
 import { defineChat } from "../../src/core/define_chat.js";
+import { clickElement, pressButton } from "../../src/dom/dom_driver.js";
 import { pageMapFrom } from "../../src/tools/page_map_from.js";
 import { resolvePageMapHandle } from "../../src/tools/resolve_page_map_handle.js";
 
@@ -520,16 +521,93 @@ describe("pageMapFrom privacy probes", () => {
     expect(entries(map, "buttons")[0]?.["name"]).toBe("Draw");
   });
 
-  it("lists no SVG link, so none of its href reaches the map", () => {
+  it("lists an SVG link with its path alone, and never the query or a scheme's rest", () => {
     stage(`
-      <svg width="100" height="50">
-        <a href="/chart?token=query-leak"><text y="20">Chart</text></a>
+      <svg width="200" height="100">
+        <a href="/chart?token=query-leak#frag"><text y="20">Chart</text></a>
         <a href="mailto:svg-leak@example.com"><text y="40">Mail</text></a>
+        <a xlink:href="/legacy?token=xlink-leak"><text y="60">Legacy</text></a>
+        <g><a href="https://example.org/far?u=origin-leak" aria-label="Far"><rect y="70" width="9" height="9"/></a></g>
+        <a><text y="90">No href</text></a>
       </svg>
     `);
     const map = pageMapFrom();
     expect(leaks(map)).toEqual([]);
-    expect(map["links"]).toBeUndefined();
+    expect(entries(map, "links").map((l) => [l["name"], l["href"]])).toEqual([
+      ["Chart", "/chart"],
+      ["Mail", "mailto:"],
+      ["Legacy", "/legacy"],
+      ["Far", "https://example.org/far"],
+    ]);
+    for (const link of entries(map, "links")) {
+      expect(resolvePageMapHandle(link.handle)?.namespaceURI).toBe("http://www.w3.org/2000/svg");
+    }
+  });
+
+  it("lists an SVG link with an unparsable href by its name alone", () => {
+    stage(`<svg width="99" height="30"><a href="http://["><text y="20">Broken</text></a></svg>`);
+    const [link] = entries(pageMapFrom(), "links");
+    expect(link).toEqual({ handle: link?.handle, name: "Broken" });
+  });
+
+  it("skips hidden, ignored and unrendered SVG links, and lists nothing else drawn", () => {
+    stage(`
+      <svg width="200" height="100">
+        <defs><a href="/in-defs"><text y="10">Defs</text></a></defs>
+        <symbol id="s"><a href="/in-symbol"><text y="10">Symbol</text></a></symbol>
+        <g aria-hidden="true"><a href="/aria"><text y="20">Aria</text></a></g>
+        <g data-agent-ignore><a href="/ignored"><text y="30">Ignored</text></a></g>
+        <g style="display:none"><a href="/none"><text y="40">None</text></a></g>
+        <a href="/invisible" style="visibility:hidden"><text y="50">Invisible</text></a>
+        <a href="/role" role="img"><text y="60">Img</text></a>
+        <rect role="button" aria-label="Drawn button" width="9" height="9"/>
+        <a href="/kept" role="link"><text y="80">Kept</text></a>
+      </svg>
+    `);
+    const map = pageMapFrom();
+    expect(allEntries(map).map((e) => e["name"])).toEqual(["Kept"]);
+  });
+
+  it("never names anything from SVG text that is not drawn", () => {
+    stage(`
+      <button>Draw <svg width="99" height="30"><defs><text>defs-leak</text></defs><symbol><text>symbol-leak</text></symbol><g style="display:none"><text>none-leak</text></g><g style="display:contents"><text y="20">chart</text></g></svg></button>
+    `);
+    const map = pageMapFrom();
+    expect(leaks(map)).toEqual([]);
+    expect(entries(map, "buttons")[0]?.["name"]).toBe("Draw chart");
+  });
+
+  it("lists the HTML a foreignObject holds, never its values", () => {
+    const root = stage(`
+      <svg width="300" height="80">
+        <foreignObject width="300" height="80">
+          <button>Zoom</button><input aria-label="Label text">
+        </foreignObject>
+      </svg>
+    `);
+    const input = root.querySelector("input");
+    if (input !== null) {
+      input.value = TYPED;
+    }
+    const map = pageMapFrom();
+    expect(leaks(map)).toEqual([]);
+    expect(entries(map, "buttons")[0]?.["name"]).toBe("Zoom");
+    expect(entries(map, "fields")[0]?.["label"]).toBe("Label text");
+  });
+
+  it("clicks a listed SVG link, which follows it", async () => {
+    stage(`<svg width="99" height="30"><a href="#svg-followed"><text y="20">Go</text></a></svg>`);
+    const [link] = entries(pageMapFrom(), "links");
+    const el = resolvePageMapHandle(link?.handle ?? "") as HTMLElement;
+    const events: string[] = [];
+    el.parentElement?.addEventListener("click", (event) => {
+      events.push(`${event.type}:${event.bubbles}:${event.cancelable}:${event.composed}`);
+    });
+    await clickElement(el, { highlightMs: 0 });
+    await expect.poll(() => location.hash).toBe("#svg-followed");
+    await pressButton(el, { pressMs: 0 });
+    expect(events).toEqual(["click:true:true:true", "click:true:true:true"]);
+    history.replaceState(null, "", location.pathname + location.search);
   });
 
   it("gives a link to another scheme as its scheme alone, and clips an href", () => {

@@ -8,6 +8,9 @@ const HANDLE = new RegExp(`^\\[${PAGE_MAP_HANDLE_ATTRIBUTE}="\\d+"\\]$`);
  * stamped (`[data-agent-handle="n"]`), a search of the open shadow roots under
  * the document, skipping this package's own elements. Any other selector
  * resolves in the light DOM alone, as it always has.
+ *
+ * A handle for an SVG link resolves to an `SVGElement`, which has no `click()`;
+ * `clickElement` and `pressButton` act on it all the same.
  */
 export function resolvePageMapHandle(target: string): HTMLElement | null {
   const hit = document.querySelector<HTMLElement>(target);

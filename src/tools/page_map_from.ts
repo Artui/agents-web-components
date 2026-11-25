@@ -21,7 +21,7 @@ type Fields = Record<string, string | number | boolean | readonly string[]>;
 
 interface Found {
   readonly kind: PageMapKind;
-  readonly element: HTMLElement;
+  readonly element: Element;
   readonly fields: Fields;
 }
 
@@ -73,6 +73,8 @@ const SILENT_TAGS = new Set([
 
 const DIGITS = /^\d+$/;
 
+const XLINK_NAMESPACE = "http://www.w3.org/1999/xlink";
+
 const SECTIONING = "article, aside, main, nav, section";
 
 /** On the document, so a number is not reissued, by this copy of the walker or another. */
@@ -89,7 +91,9 @@ const NEXT_HANDLE = Symbol.for("agents-web-components.page-map.next-handle");
  * or hidden input, no slider position, no editable text, no selected option,
  * and no query string of a link. It walks open shadow roots and skips the
  * subtree of every element of this package, of any element marked
- * `data-agent-ignore`, and of anything hidden, `inert` or `aria-hidden`.
+ * `data-agent-ignore`, and of anything hidden, `inert` or `aria-hidden`. Of
+ * the SVG elements only `<a>` links are listed; the HTML in a
+ * `<foreignObject>` is listed as anywhere else.
  *
  * Each listed element is stamped with `data-agent-handle`; a handle is kept
  * across reads while its element is listed, and its number is not given out
@@ -130,20 +134,20 @@ export function pageMapFrom(
 
 function walk(element: Element, add: (item: Found) => void): void {
   if (
-    !(element instanceof HTMLElement) ||
+    !(element instanceof HTMLElement || element instanceof SVGElement) ||
     element.localName.startsWith(ELEMENT_TAG_PREFIX) ||
     element.hasAttribute(PAGE_MAP_IGNORE_ATTRIBUTE) ||
-    element.inert ||
+    (element instanceof HTMLElement && element.inert) ||
     element.getAttribute("aria-hidden") === "true"
   ) {
     return;
   }
-  if (!element.checkVisibility()) {
+  if (!rendered(element)) {
     if (getComputedStyle(element).display !== "contents") {
       return;
     }
   } else if (element.checkVisibility({ visibilityProperty: true })) {
-    const item = classify(element);
+    const item = element instanceof HTMLElement ? classify(element) : classifySvg(element);
     if (item !== null) {
       add(item);
       if (item.kind === "fields") {
@@ -206,7 +210,22 @@ function classify(el: HTMLElement): Found | null {
   return null;
 }
 
-function explicitRole(el: HTMLElement): string | null {
+/** An SVG element is listed only as a link: an `<a>` with a target, or with `role="link"`. */
+function classifySvg(el: SVGElement): Found | null {
+  const target = el.getAttribute("href") ?? el.getAttributeNS(XLINK_NAMESPACE, "href");
+  const role = explicitRole(el);
+  if (el.localName !== "a" || (role === null ? target === null : role !== "link")) {
+    return null;
+  }
+  const href =
+    target !== null && URL.canParse(target, el.baseURI)
+      ? pathOf(new URL(target, el.baseURI).href)
+      : "";
+  const fields = { ...named("name", contentName(el)), ...named("href", href) };
+  return { kind: "links", element: el, fields };
+}
+
+function explicitRole(el: Element): string | null {
   const [role] = (el.getAttribute("role") ?? "").trim().split(/\s+/);
   return role || null;
 }
@@ -270,7 +289,7 @@ function named(key: string, text: string): Fields {
 }
 
 /** The name the page gives an element by reference or attribute, never by its content. */
-function labelName(el: HTMLElement): string {
+function labelName(el: Element): string {
   const ids = el.getAttribute("aria-labelledby");
   if (ids !== null) {
     const scope = el.getRootNode() as Document | ShadowRoot;
@@ -291,7 +310,7 @@ function labelName(el: HTMLElement): string {
   return clip(caption === null ? (el.getAttribute("title") ?? "") : textOf(caption));
 }
 
-function contentName(el: HTMLElement): string {
+function contentName(el: Element): string {
   return labelName(el) || textOf(el);
 }
 
@@ -374,9 +393,17 @@ function silent(el: Element): boolean {
     el.hasAttribute(PAGE_MAP_IGNORE_ATTRIBUTE) ||
     el.getAttribute("aria-hidden") === "true" ||
     (el instanceof HTMLElement && el.isContentEditable) ||
-    (!el.checkVisibility({ visibilityProperty: true }) &&
+    (!(el.checkVisibility({ visibilityProperty: true }) && rendered(el)) &&
       getComputedStyle(el).display !== "contents")
   );
+}
+
+/**
+ * Whether the element is laid out. For SVG `checkVisibility` is not enough: Chromium
+ * answers true under `<defs>`, `<symbol>` and a `display: none` group, which have no box.
+ */
+function rendered(el: Element): boolean {
+  return el.checkVisibility() && (!(el instanceof SVGElement) || el.getClientRects().length > 0);
 }
 
 /** A node's children in the rendered tree: an open shadow root's in place of its own. */

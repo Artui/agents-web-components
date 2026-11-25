@@ -45,6 +45,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   without `scope` draws as before. See
   [Whose skill it is](https://artui.github.io/agents-web-components/skills/#whose-skill-it-is).
 
+### Changed
+
+- **`pageMapFrom` lists SVG links.** An `<a>` inside an `<svg>` with an `href` or `xlink:href`
+  (or `role="link"`) is now a `links` entry, with the same path-only `href`, and the HTML inside a
+  `<foreignObject>` is listed too. `clickElement`, `pressButton`, `highlightThenClick` and
+  `pressThenClick` dispatch a click event on an element with no `click()` instead of throwing.
+  Nothing to opt in to for a host already using the walker; a host tool of its own that calls
+  `.click()` on a resolved handle should allow for an SVG element.
+
 ### Fixed
 
 - **Following a run the server starts on the thread on screen misses fewer of them.** Under

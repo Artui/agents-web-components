@@ -97,6 +97,15 @@ export interface HighlightClickOptions extends RingOwnerOptions {
   highlightMs?: number;
 }
 
+/** `click()` is HTMLElement's alone: an SVG element is sent the click event itself. */
+function activate(el: HTMLElement): void {
+  if (typeof el.click === "function") {
+    el.click();
+    return;
+  }
+  el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, composed: true }));
+}
+
 /** Outline `el`, pause so the user sees it, then click and restore. */
 export async function highlightThenClick(
   el: HTMLElement,
@@ -105,7 +114,7 @@ export async function highlightThenClick(
   const restore = outlineElement(el, options.chat);
   await delay(options.highlightMs ?? 280);
   restore();
-  el.click();
+  activate(el);
 }
 
 export interface ScrollOptions {
@@ -278,7 +287,7 @@ export async function pressThenClick(el: HTMLElement, options: PressOptions = {}
   el.style.transform = previousTransform;
   el.style.transition = previousTransition;
   el.style.boxShadow = previousShadow;
-  el.click();
+  activate(el);
 }
 
 export interface SelectOptions extends RingOwnerOptions {
