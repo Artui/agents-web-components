@@ -387,9 +387,8 @@ function toInboxRow(row: InboxServerRow): InboxRow {
   const lastRead = row.last_read_at;
   const unread =
     row.status !== "running" &&
-    lastRead !== null &&
     lastRead !== undefined &&
-    updatedAt > Date.parse(lastRead);
+    (lastRead === null || updatedAt > Date.parse(lastRead));
   return {
     ...base,
     status: row.status,

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **A thread never read now shows as unread.** A `last_read_at` of `null` reads as unread in
+  the thread list (`<ag-ui-chat>`'s drawer and `<ag-ui-threads>`) and in the inbox rows of
+  `<ag-ui-agents>`, so a thread a routine started is listed as new. A running thread still is
+  not unread. After upgrading, threads stored before the server kept read marks light up once,
+  and count toward the launcher's unread badge, until each is opened. No opt-in.
+
 ## [0.15.0] — 2026-11-24
 
 ### Added

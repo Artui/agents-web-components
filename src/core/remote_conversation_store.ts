@@ -382,21 +382,20 @@ export class RemoteConversationStore implements ClientConversationStore {
   }
 
   /**
-   * Changed since it was last read, by the server's clock on both sides, and
-   * not still being written. A thread never read reads as not unread: the
-   * server sets no mark until a thread is read once, so every thread from
-   * before the mark existed would otherwise read as new.
+   * Never read (a `null` mark) or changed since it was, by the server's clock
+   * on both sides, and neither still being written nor read here since.
    */
   #unread(row: ServerThreadRow, updatedAt: number): boolean {
     const lastRead = row.last_read_at;
-    if (row.status === "running" || lastRead === null || lastRead === undefined) {
+    if (row.status === "running" || lastRead === undefined) {
       return false;
     }
     const readHere = this.#readAt.get(row.thread_id);
-    if (readHere !== undefined && updatedAt <= readHere) {
+    // Negated so an undated row (NaN on both sides) stays read once read here.
+    if (readHere !== undefined && !(updatedAt > readHere)) {
       return false;
     }
-    return updatedAt > Date.parse(lastRead);
+    return lastRead === null || updatedAt > Date.parse(lastRead);
   }
 
   /** GET that resolves to the `Response`, or `null` on a network error. */

@@ -111,13 +111,37 @@ describe("RemoteConversationStore thread status", () => {
     expect(rows["t-seen"]?.unread).toBe(false);
   });
 
-  it("reads a thread never read, and one running, as not unread", async () => {
-    const running = { ...recorded.rowWhileRunning, updated_at: "2026-01-01T00:09:00+00:00" };
+  it("reads a thread never read as unread, but not one still running", async () => {
+    const running = { ...recorded.rowWhileRunning, last_read_at: null };
     fetchMock.mockResolvedValueOnce(list([recorded.firstTurnRowAfterRunAway, running]));
     const rows = byId(await new RemoteConversationStore(URL_).listThreads());
 
-    expect(rows["t-first"]?.unread).toBe(false);
+    expect(rows["t-first"]?.unread).toBe(true);
     expect(rows["t-read"]?.unread).toBe(false);
+  });
+
+  it("reads a status row that carries no read mark key at all as not unread", async () => {
+    const { last_read_at: _mark, ...unmarked } = recorded.firstTurnRowAfterRunAway;
+    fetchMock.mockResolvedValueOnce(list([unmarked]));
+
+    expect((await new RemoteConversationStore(URL_).listThreads())[0]?.unread).toBe(false);
+  });
+
+  it.each([
+    { when: "with a date", updated_at: "2026-01-01T00:00:03+00:00" },
+    { when: "without a date", updated_at: null },
+  ])("reads a never-read thread read here as read, $when", async ({ updated_at }) => {
+    const row = { ...recorded.firstTurnRowAfterRunAway, updated_at };
+    fetchMock
+      .mockResolvedValueOnce(list([row]))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(list([row], '"e-2"'));
+    const store = new RemoteConversationStore(URL_);
+    expect((await store.listThreads())[0]?.unread).toBe(true);
+    store.markRead("t-first");
+    await flush();
+
+    expect((await store.listThreads())[0]?.unread).toBe(false);
   });
 
   it("adds no status keys for a server without a run store", async () => {
