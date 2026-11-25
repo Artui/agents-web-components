@@ -127,38 +127,47 @@ describe("<ag-ui-chat> retryUnauthorized", () => {
     expect(live?.()).toBe(false);
   });
 
-  it("asks the run index again", async () => {
+  it.each([
+    [true, ["Bearer t1", "Bearer t2"]],
+    [false, ["Bearer t1"]],
+  ])("asks the run index again only when opted in (%s)", async (retry, sent) => {
     fetchMock
       .mockResolvedValueOnce(unauthorized())
       .mockResolvedValue(new Response(JSON.stringify({ runs: [] })));
-    const el = chat(true);
+    const el = chat(retry);
     el.setAttribute("data-runs-url", "/agent/runs/");
     el.agentFactory = () => makeFakeAgent({ script: () => undefined }).agent;
     document.body.appendChild(el);
     el.openCheckpoints();
     await settle();
 
-    expect(callsTo("/agent/runs/")).toEqual(["Bearer t1", "Bearer t2"]);
+    expect(callsTo("/agent/runs/")).toEqual(sent);
   });
 
-  it("probes a thread's run log again under data-detach-runs", async () => {
-    fetchMock.mockImplementation(async (url) =>
-      url.includes("/events/")
-        ? unauthorized()
-        : new Response(JSON.stringify({ threads: [], messages: [] })),
-    );
-    const el = chat(true);
-    el.setAttribute("data-threads-url", "/agent/threads/");
-    el.setAttribute("data-detach-runs", "");
-    el.agentFactory = () => makeFakeAgent({ script: () => undefined }).agent;
-    document.body.appendChild(el);
-    await settle();
+  it.each([
+    [true, 2],
+    [false, 1],
+  ])(
+    "probes a thread's run log again under data-detach-runs only when opted in (%s)",
+    async (retry, sent) => {
+      fetchMock.mockImplementation(async (url) =>
+        url.includes("/events/")
+          ? unauthorized()
+          : new Response(JSON.stringify({ threads: [], messages: [] })),
+      );
+      const el = chat(retry);
+      el.setAttribute("data-threads-url", "/agent/threads/");
+      el.setAttribute("data-detach-runs", "");
+      el.agentFactory = () => makeFakeAgent({ script: () => undefined }).agent;
+      document.body.appendChild(el);
+      await settle();
 
-    await el.switchThread("t1");
-    await settle();
+      await el.switchThread("t1");
+      await settle();
 
-    expect(callsTo("/agent/threads/t1/events/?after=0&limit=1")).toHaveLength(2);
-  });
+      expect(callsTo("/agent/threads/t1/events/?after=0&limit=1")).toHaveLength(sent);
+    },
+  );
 
   it("never repeats a write through request()", async () => {
     fetchMock.mockResolvedValue(unauthorized());
@@ -181,6 +190,19 @@ describe("<ag-ui-chat> retryUnauthorized", () => {
     await settle();
 
     expect(callsTo("/agent/tools/")).toEqual(["Bearer t1", "Bearer t2"]);
+  });
+
+  it("asks the skill catalog again", async () => {
+    fetchMock.mockImplementation(async () => new Response("[]"));
+    fetchMock.mockResolvedValueOnce(unauthorized()).mockResolvedValueOnce(new Response("[]"));
+    const el = chat(true);
+    el.setAttribute("data-skills-url", "/agent/skills/");
+    el.setAttribute("data-prompt-chips", "true");
+    el.agentFactory = () => makeFakeAgent({ script: () => undefined }).agent;
+    document.body.appendChild(el);
+    await settle();
+
+    expect(callsTo("/agent/skills/").slice(0, 2)).toEqual(["Bearer t1", "Bearer t2"]);
   });
 
   it("sends the run POST once over the real client", async () => {
@@ -233,6 +255,8 @@ describe("<ag-ui-agents> retryUnauthorized", () => {
     expect(el.hasAttribute("data-retry-unauthorized")).toBe(true);
     el.retryUnauthorized = false;
     expect(el.hasAttribute("data-retry-unauthorized")).toBe(false);
+    el.setAttribute("data-retry-unauthorized", "false");
+    expect(el.retryUnauthorized).toBe(false);
   });
 
   it("lists the directory again with the refreshed header", async () => {
@@ -253,18 +277,29 @@ describe("<ag-ui-agents> retryUnauthorized", () => {
     expect(callsTo("/home/agents/")).toEqual(["Bearer t1"]);
   });
 
-  it("follows the inbox stream again after a 401", async () => {
+  it.each([
+    [true, ["Bearer t2", "Bearer t3"]],
+    [false, ["Bearer t2"]],
+  ])("follows the inbox stream again after a 401 only when opted in (%s)", async (retry, sent) => {
     fetchMock.mockImplementation(async (url) =>
       url === "/home/inbox/" ? unauthorized() : new Response(JSON.stringify({ agents: [] })),
     );
-    const el = provider(true);
+    const el = provider(retry);
     el.setAttribute("data-inbox-url", "/home/inbox/");
     el.setAttribute("data-inbox-transport", "stream");
     document.body.appendChild(el);
     await settle();
     el.remove();
 
-    expect(callsTo("/home/inbox/")).toEqual(["Bearer t2", "Bearer t3"]);
+    expect(callsTo("/home/inbox/")).toEqual(sent);
+  });
+
+  it("sends a GET through request() once without the opt-in", async () => {
+    fetchMock.mockResolvedValue(unauthorized());
+
+    await provider(false).request("/home/skills/");
+
+    expect(callsTo("/home/skills/")).toEqual(["Bearer t1"]);
   });
 
   it("repeats a GET through request() and never a write", async () => {

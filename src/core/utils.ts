@@ -42,9 +42,13 @@ export function retryUnauthorized<H>(
   if (!retry) {
     return first;
   }
-  return first.then((response) =>
-    response.status === 401 ? whenReady(headers(), send) : response,
-  );
+  return first.then((response) => {
+    if (response.status !== 401) {
+      return response;
+    }
+    response.body?.cancel().catch(Boolean);
+    return whenReady(headers(), send);
+  });
 }
 
 /** Whether `init` is a read (`GET` or `HEAD`, the default being `GET`), which a retry may repeat. */

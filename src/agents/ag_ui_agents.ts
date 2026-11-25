@@ -8,6 +8,7 @@ import {
 } from "../constants.js";
 import { type ClientConversationStore, SessionStorageStore } from "../core/conversation_store.js";
 import type { OpenThreadDetail } from "../core/events/open_thread_detail.js";
+import { readFlag } from "../core/read_flag.js";
 import { RemoteConversationStore } from "../core/remote_conversation_store.js";
 import { ThreadsWatch } from "../core/threads_watch.js";
 import { isSafeMethod, retryUnauthorized, withCredentials } from "../core/utils.js";
@@ -125,7 +126,7 @@ export class AgUiAgents extends HTMLElement {
    * `data-retry-unauthorized` and read at each request; off by default.
    */
   get retryUnauthorized(): boolean {
-    return this.hasAttribute("data-retry-unauthorized");
+    return readFlag(this, "data-retry-unauthorized");
   }
 
   set retryUnauthorized(value: boolean) {

@@ -105,6 +105,42 @@ describe("RemoteConversationStore retrying a 401", () => {
     expect(tokens()).toEqual(["Bearer t1", "Bearer t2", "Bearer t3", "Bearer t4"]);
   });
 
+  it("sends a rename, a delete and a read mark once without the opt-in", async () => {
+    const row = recorded.firstTurnRowAfterRunAway;
+    fetchMock.mockResolvedValueOnce(json({ threads: [row] }));
+    const remote = store(false);
+    await remote.listThreads();
+    fetchMock.mockResolvedValue(unauthorized());
+    remote.renameThread("t-first", "Named");
+    remote.markRead("t-first");
+    remote.clear("t-first");
+    await flush();
+
+    expect(fetchMock.mock.calls.slice(1).map(([, init]) => init?.method)).toEqual([
+      "PATCH",
+      "POST",
+      "DELETE",
+    ]);
+  });
+
+  it.each([403, 404, 500])("never repeats a listing answered %i", async (status) => {
+    fetchMock.mockResolvedValue(new Response(null, { status }));
+
+    await store(true).listThreads();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("drops the refused answer's body before the retry", async () => {
+    const refused = unauthorized();
+    const cancel = vi.spyOn(refused.body as ReadableStream<Uint8Array>, "cancel");
+    fetchMock.mockResolvedValueOnce(refused).mockResolvedValueOnce(json({ threads: [] }));
+
+    await store(true).listThreads();
+
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
   it("retries a read mark", async () => {
     const row = recorded.firstTurnRowAfterRunAway;
     fetchMock.mockResolvedValueOnce(json({ threads: [row] }));
@@ -166,6 +202,12 @@ describe("RunIndex retrying a 401", () => {
 });
 
 describe("DetachedRuns retrying a 401", () => {
+  it("probes once without the opt-in", async () => {
+    fetchMock.mockResolvedValue(unauthorized());
+    expect(await new DetachedRuns(THREADS, rotating(), () => undefined).probe("t1")).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("probes again when opted in, and never posts a cancel twice", async () => {
     const runs = new DetachedRuns(
       THREADS,
