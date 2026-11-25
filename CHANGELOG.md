@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A request refused with `401` can go once more, with fresh headers.** Set
+  `data-retry-unauthorized` (or `retryUnauthorized = true`) on `<ag-ui-chat>` or
+  `<ag-ui-agents>`, and a request safe to repeat that the server answers with `401` is sent
+  again after awaiting `getHeaders` again, so a token refreshed there reaches the retry. Off by
+  default, read at each request. The reads retry (catalogs, the thread list and watch, poll and
+  stream, the run index and run log, the directory and inbox watch, a `GET` or `HEAD` through
+  `request()`), and so do a thread's rename, delete and read mark. The agent run, uploads,
+  transcription, Stop's `cancel/`, a task's steer, answer and cancel, and any other write never
+  do. A second `401` is handled as one is today. `RemoteConversationStore` and `RunIndex` take
+  the opt-in as a new last constructor argument and `createHttpAgent` as `retryUnauthorized` in
+  its options.
+
 ## [0.17.0] — 2026-11-25
 
 ### Added

@@ -96,6 +96,7 @@ another origin, add `credentials="include"` too; see
 | `data-threads-url` | — | URL of a server thread index (django-ag-ui's `ThreadsView`, or any server that keeps to [the threads contract](threads-contract.md)); enables durable, cross-device chat history. |
 | `data-detach-runs` | — | Opt-in, read at each request. With `data-threads-url`, a run outlives its connection: a thread switch, New chat or the element leaving the page lets go of it instead of stopping it, opening a thread whose run is still going joins it, and Stop posts the thread's `cancel/`. Needs a django-ag-ui 0.82.0+ mount; see [Runs that outlive their connection](concepts.md#runs-that-outlive-their-connection). Without `data-threads-url` it does nothing. |
 | `data-poll-runs` | — | Opt-in, live. With `data-detach-runs` and `data-threads-url`, the chat asks the open thread's run log every five seconds while idle and joins a run the server started there by itself (a child's report waking its parent, say), or restores the thread when that run parked on an approval, with no thread watch. Under `data-thread-status` the watch already does this; see [Runs that outlive their connection](concepts.md#runs-that-outlive-their-connection). |
+| `data-retry-unauthorized` | `retryUnauthorized` | Opt-in, read at each request. A request safe to repeat (the catalogs, the thread list, watch, rename, delete and read mark, the run index and run log, a `GET` through `request()`) that the server refuses with `401` goes once more after awaiting `getHeaders` again. The agent run, uploads, transcription and task controls are sent once. See [Retrying a 401 once](authentication.md#retrying-a-401-once). |
 | `data-threads-cache` | — | **On by default.** `="false"` stops mirroring message bodies into `sessionStorage` when `data-threads-url` is set, for a deployment that put history on the server so transcripts stay off the client. Only meaningful alongside `data-threads-url`. |
 | `data-runs-url` | — | URL of a server run index (django-ag-ui's `RunsView`); reveals the header's *Continue a run* panel. See [Resuming a run](durability.md#resuming-a-run). |
 | `data-attachments-url` | — | URL of the file-upload endpoint (django-ag-ui's `AttachmentsView`); reveals the composer's paperclip picker, drag-and-drop, and paste. |
@@ -203,7 +204,7 @@ element after the fact.
 `skillContext`, `toolSummaries`, `formatToolPayload`, `formatRelativeTime`, `strings`,
 `resolvePageTarget`, `sharedState`, `anchor` (an element, which wins over the attribute's selector), `extraStyles` ([unstable](theming.md#d-extrastyles-the-last-mile)), plus the read-only `unread`, `unhandledActivityTypes`, `threadId`, `threadTitle`, `tabs`, `running`, `barHeight`, `dockWidth`, `uiStrings`, `colorScheme` and `locale`, and
 the attribute mirrors `endpoint` / `userKey` / `userName` / `toolDisplay` / `toolGroupDisplay` / `collapsed` /
-`maximized` / `credentials` / `detachRuns`.
+`maximized` / `credentials` / `detachRuns` / `retryUnauthorized`.
 
 `headers` and `getHeaders` authenticate **every** request the element makes, not only the agent
 run; `getHeaders` is the one to use for a credential that rotates. See

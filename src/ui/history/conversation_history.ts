@@ -72,6 +72,8 @@ export interface ConversationHistoryHost {
   readonly headersFor: (url: string) => MaybeAsync<Record<string, string>>;
   /** The configured cookie policy as `fetch` spells it. */
   readonly requestCredentials: () => RequestCredentials | undefined;
+  /** The element's `retryUnauthorized`, read per request. */
+  readonly retryUnauthorized: () => boolean;
   /** The element's `appendMessage`, which a restored bubble opens through. */
   readonly appendMessage: (role: MessageRole, content: string) => HTMLDivElement;
   /**
@@ -343,6 +345,7 @@ export class ConversationHistory {
         url,
         () => this.#host.headersFor(url),
         () => this.#host.requestCredentials(),
+        () => this.#host.retryUnauthorized(),
       );
     }
     return this.#runIndex;

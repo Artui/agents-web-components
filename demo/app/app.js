@@ -1028,7 +1028,24 @@ function mount(pathname, restart) {
   }
   if (on("requests")) {
     chat.headers = { "X-Demo-Static": "from chat.headers" };
-    chat.getHeaders = () => ({ "X-Demo-Rotating": `token-${Math.floor(Date.now() / 1000) % 1000}` });
+    let staleNext = false;
+    let reads = 0;
+    chat.getHeaders = () => {
+      reads += 1;
+      const token = staleNext ? "stale" : "fresh";
+      staleNext = false;
+      return { "X-Demo-Rotating": `token-${Math.floor(Date.now() / 1000) % 1000}`, "X-Demo-Token": token };
+    };
+    $("req-retry").addEventListener("change", (event) => {
+      chat.retryUnauthorized = event.target.checked;
+    }, { signal });
+    $("req-expire").addEventListener("click", async () => {
+      staleNext = true;
+      reads = 0;
+      $("req-expire-out").textContent = "...";
+      const response = await chat.request("/expiring/");
+      $("req-expire-out").textContent = `${response.status} after ${reads} getHeaders read${reads === 1 ? "" : "s"}`;
+    }, { signal });
     $("req-send").addEventListener("click", async () => {
       $("req-out").textContent = "...";
       const response = await chat.request("/whoami/", { headers: { "X-Demo-Call": "from init.headers" } });

@@ -1,8 +1,13 @@
 import type { AbstractAgent } from "@ag-ui/client";
 import type { Message } from "@ag-ui/core";
 import { DetachedHttpAgent } from "./detached_http_agent.js";
-import { warnOnCrossOriginCredentials, withCredentials } from "./utils.js";
-import { type MaybeAsync, whenReady } from "./when_ready.js";
+import {
+  isSafeMethod,
+  retryUnauthorized,
+  warnOnCrossOriginCredentials,
+  withCredentials,
+} from "./utils.js";
+import type { MaybeAsync } from "./when_ready.js";
 
 /** Config for {@link createHttpAgent}. */
 export interface HttpAgentOptions {
@@ -25,6 +30,12 @@ export interface HttpAgentOptions {
    * request goes, and its rejection fails the request with that error.
    */
   getHeaders?: () => MaybeAsync<Record<string, string>>;
+  /**
+   * Read per request: whether a read (`GET`, such as the run log a reattach
+   * replays) refused with `401` goes once more, after awaiting
+   * {@link getHeaders} again. The run `POST` is never repeated. Off when unset.
+   */
+  retryUnauthorized?: () => boolean;
   /** Stable conversation id, so the agent's runs share a thread. */
   threadId?: string;
   /** Rehydrated history to seed the agent with (durable conversation). */
@@ -85,23 +96,28 @@ export function createHttpAgent(options: HttpAgentOptions): AbstractAgent {
     // per-request `getHeaders()` overlay and the cookie policy go, the agent's
     // own config having no seam for either.
     fetch: (url, init) =>
-      whenReady(options.getHeaders?.(), (fresh) => {
-        // Only the names the *host* supplied. `HttpAgent` adds `Content-Type` and
-        // `Accept` to every request and neither is a credential, so reporting the
-        // outgoing header set wholesale would cry wolf on every plain request.
-        const credentialNames = [
-          ...new Set([...Object.keys(staticHeaders), ...Object.keys(fresh ?? {})]),
-        ].sort();
-        warnOnCrossOriginCredentials(url, credentialNames, options.trustedOrigins ?? [], warned);
-        if (fresh === undefined) {
-          return fetch(url, withCredentials(init, options.credentials));
-        }
-        const headers = new Headers(init?.headers);
-        for (const [name, value] of Object.entries(fresh)) {
-          headers.set(name, value);
-        }
-        return fetch(url, withCredentials({ ...init, headers }, options.credentials));
-      }),
+      retryUnauthorized(
+        options.getHeaders?.(),
+        () => options.getHeaders?.(),
+        (fresh) => {
+          // Only the names the *host* supplied. `HttpAgent` adds `Content-Type` and
+          // `Accept` to every request and neither is a credential, so reporting the
+          // outgoing header set wholesale would cry wolf on every plain request.
+          const credentialNames = [
+            ...new Set([...Object.keys(staticHeaders), ...Object.keys(fresh ?? {})]),
+          ].sort();
+          warnOnCrossOriginCredentials(url, credentialNames, options.trustedOrigins ?? [], warned);
+          if (fresh === undefined) {
+            return fetch(url, withCredentials(init, options.credentials));
+          }
+          const headers = new Headers(init?.headers);
+          for (const [name, value] of Object.entries(fresh)) {
+            headers.set(name, value);
+          }
+          return fetch(url, withCredentials({ ...init, headers }, options.credentials));
+        },
+        isSafeMethod(init) && options.retryUnauthorized?.() === true,
+      ),
     // Spread conditionally: under `exactOptionalPropertyTypes` an explicit
     // `undefined` is not assignable to an optional field.
     ...(options.threadId !== undefined ? { threadId: options.threadId } : {}),

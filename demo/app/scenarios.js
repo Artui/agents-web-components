@@ -320,7 +320,7 @@ export const SCENARIOS = [
     title: "Requests and run context",
     since: "0.3.0",
     summary:
-      "chat.request sends the element's headers on a host's own fetch (0.5.0); chat.registerContext adds entries to every run (0.3.0).",
+      "chat.request sends the element's headers on a host's own fetch (0.5.0); chat.registerContext adds entries to every run (0.3.0); data-retry-unauthorized sends a read refused with 401 once more with fresh headers (0.18.0).",
     prompts: [["Show the context", "show context"]],
   },
   {
