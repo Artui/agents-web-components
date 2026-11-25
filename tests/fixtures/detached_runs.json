@@ -1,6 +1,6 @@
 {
   "generator": "scripts/record_detached_fixture.py",
-  "djangoAgUi": "0.83.0",
+  "djangoAgUi": "0.91.0",
   "agUiProtocol": "1.0.0",
   "canonicalized": [
     "uuid ids",
@@ -21,7 +21,20 @@
             "timestamp": 0,
             "threadId": "t1",
             "runId": "r1",
-            "protocolVersion": "1.0"
+            "protocolVersion": "1.0",
+            "input": {
+              "threadId": "t1",
+              "runId": "r1",
+              "messages": [
+                {
+                  "id": "u-r1",
+                  "role": "user",
+                  "content": "Tell me the rest"
+                }
+              ],
+              "tools": [],
+              "context": []
+            }
           }
         }
       ],
@@ -43,7 +56,20 @@
             "timestamp": 0,
             "threadId": "t1",
             "runId": "r1",
-            "protocolVersion": "1.0"
+            "protocolVersion": "1.0",
+            "input": {
+              "threadId": "t1",
+              "runId": "r1",
+              "messages": [
+                {
+                  "id": "u-r1",
+                  "role": "user",
+                  "content": "Tell me the rest"
+                }
+              ],
+              "tools": [],
+              "context": []
+            }
           }
         },
         {
@@ -74,7 +100,20 @@
             "timestamp": 0,
             "threadId": "t1",
             "runId": "r1",
-            "protocolVersion": "1.0"
+            "protocolVersion": "1.0",
+            "input": {
+              "threadId": "t1",
+              "runId": "r1",
+              "messages": [
+                {
+                  "id": "u-r1",
+                  "role": "user",
+                  "content": "Tell me the rest"
+                }
+              ],
+              "tools": [],
+              "context": []
+            }
           }
         }
       ],
@@ -97,8 +136,8 @@
       "run_id": "r1"
     }
   },
-  "replayFromStart": "data: {\"type\":\"RUN_STARTED\",\"timestamp\":0,\"threadId\":\"t1\",\"runId\":\"r1\",\"protocolVersion\":\"1.0\"}\n\ndata: {\"type\":\"MESSAGES_SNAPSHOT\",\"messages\":[]}\n\nid: 2\ndata: {\"type\":\"TEXT_MESSAGE_START\",\"timestamp\":0,\"messageId\":\"id-1\",\"role\":\"assistant\"}\n\nid: 3\ndata: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"timestamp\":0,\"messageId\":\"id-1\",\"delta\":\"partial answer and the rest\"}\n\nid: 4\ndata: {\"type\":\"TEXT_MESSAGE_END\",\"timestamp\":0,\"messageId\":\"id-1\"}\n\nid: 5\ndata: {\"type\":\"RUN_FINISHED\",\"timestamp\":0,\"threadId\":\"t1\",\"runId\":\"r1\",\"outcome\":{\"type\":\"success\"}}\n\n",
-  "replayFromMidRun": "data: {\"type\":\"RUN_STARTED\",\"timestamp\":0,\"threadId\":\"t1\",\"runId\":\"r1\",\"protocolVersion\":\"1.0\"}\n\ndata: {\"type\":\"MESSAGES_SNAPSHOT\",\"messages\":[{\"id\":\"id-1\",\"role\":\"assistant\",\"content\":\"\"}]}\n\ndata: {\"type\":\"TEXT_MESSAGE_START\",\"timestamp\":0,\"messageId\":\"id-1\",\"role\":\"assistant\"}\n\nid: 3\ndata: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"timestamp\":0,\"messageId\":\"id-1\",\"delta\":\"partial answer and the rest\"}\n\nid: 4\ndata: {\"type\":\"TEXT_MESSAGE_END\",\"timestamp\":0,\"messageId\":\"id-1\"}\n\nid: 5\ndata: {\"type\":\"RUN_FINISHED\",\"timestamp\":0,\"threadId\":\"t1\",\"runId\":\"r1\",\"outcome\":{\"type\":\"success\"}}\n\n",
+  "replayFromStart": "data: {\"type\":\"RUN_STARTED\",\"timestamp\":0,\"threadId\":\"t1\",\"runId\":\"r1\",\"protocolVersion\":\"1.0\",\"input\":{\"threadId\":\"t1\",\"runId\":\"r1\",\"messages\":[{\"id\":\"u-r1\",\"role\":\"user\",\"content\":\"Tell me the rest\"}],\"tools\":[],\"context\":[]}}\n\ndata: {\"type\":\"MESSAGES_SNAPSHOT\",\"messages\":[{\"id\":\"u-r1\",\"role\":\"user\",\"content\":\"Tell me the rest\"}]}\n\nid: 2\ndata: {\"type\":\"TEXT_MESSAGE_START\",\"timestamp\":0,\"messageId\":\"id-1\",\"role\":\"assistant\"}\n\nid: 3\ndata: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"timestamp\":0,\"messageId\":\"id-1\",\"delta\":\"partial answer and the rest\"}\n\nid: 4\ndata: {\"type\":\"TEXT_MESSAGE_END\",\"timestamp\":0,\"metadata\":{\"model_id\":\"function:function::stream_fn\"},\"messageId\":\"id-1\"}\n\nid: 5\ndata: {\"type\":\"RUN_FINISHED\",\"timestamp\":0,\"threadId\":\"t1\",\"runId\":\"r1\",\"outcome\":{\"type\":\"success\"}}\n\n",
+  "replayFromMidRun": "data: {\"type\":\"RUN_STARTED\",\"timestamp\":0,\"threadId\":\"t1\",\"runId\":\"r1\",\"protocolVersion\":\"1.0\",\"input\":{\"threadId\":\"t1\",\"runId\":\"r1\",\"messages\":[{\"id\":\"u-r1\",\"role\":\"user\",\"content\":\"Tell me the rest\"}],\"tools\":[],\"context\":[]}}\n\ndata: {\"type\":\"MESSAGES_SNAPSHOT\",\"messages\":[{\"id\":\"u-r1\",\"role\":\"user\",\"content\":\"Tell me the rest\"},{\"id\":\"id-1\",\"role\":\"assistant\",\"content\":\"\"}]}\n\ndata: {\"type\":\"TEXT_MESSAGE_START\",\"timestamp\":0,\"messageId\":\"id-1\",\"role\":\"assistant\"}\n\nid: 3\ndata: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"timestamp\":0,\"messageId\":\"id-1\",\"delta\":\"partial answer and the rest\"}\n\nid: 4\ndata: {\"type\":\"TEXT_MESSAGE_END\",\"timestamp\":0,\"metadata\":{\"model_id\":\"function:function::stream_fn\"},\"messageId\":\"id-1\"}\n\nid: 5\ndata: {\"type\":\"RUN_FINISHED\",\"timestamp\":0,\"threadId\":\"t1\",\"runId\":\"r1\",\"outcome\":{\"type\":\"success\"}}\n\n",
   "cancelAccepted": {
     "status": 202,
     "body": {
@@ -106,7 +145,7 @@
       "cancel_requested": true
     }
   },
-  "cancelledReplay": "data: {\"type\":\"RUN_STARTED\",\"timestamp\":0,\"threadId\":\"t2\",\"runId\":\"r3\",\"protocolVersion\":\"1.0\"}\n\ndata: {\"type\":\"MESSAGES_SNAPSHOT\",\"messages\":[]}\n\nid: 2\ndata: {\"type\":\"TEXT_MESSAGE_START\",\"timestamp\":0,\"messageId\":\"id-2\",\"role\":\"assistant\"}\n\nid: 3\ndata: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"timestamp\":0,\"messageId\":\"id-2\",\"delta\":\"partial answer\"}\n\nid: 4\ndata: {\"type\":\"TEXT_MESSAGE_END\",\"messageId\":\"id-2\"}\n\nid: 5\ndata: {\"type\":\"RUN_FINISHED\",\"timestamp\":0,\"threadId\":\"t2\",\"runId\":\"r3\"}\n\n",
+  "cancelledReplay": "data: {\"type\":\"RUN_STARTED\",\"timestamp\":0,\"threadId\":\"t2\",\"runId\":\"r3\",\"protocolVersion\":\"1.0\",\"input\":{\"threadId\":\"t2\",\"runId\":\"r3\",\"messages\":[{\"id\":\"u-r3\",\"role\":\"user\",\"content\":\"Write a long essay\"}],\"tools\":[],\"context\":[]}}\n\ndata: {\"type\":\"MESSAGES_SNAPSHOT\",\"messages\":[{\"id\":\"u-r3\",\"role\":\"user\",\"content\":\"Write a long essay\"}]}\n\nid: 2\ndata: {\"type\":\"TEXT_MESSAGE_START\",\"timestamp\":0,\"messageId\":\"id-2\",\"role\":\"assistant\"}\n\nid: 3\ndata: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"timestamp\":0,\"messageId\":\"id-2\",\"delta\":\"partial answer\"}\n\nid: 4\ndata: {\"type\":\"TEXT_MESSAGE_END\",\"metadata\":{\"model_id\":\"function:function::stream_fn\"},\"messageId\":\"id-2\"}\n\nid: 5\ndata: {\"type\":\"RUN_FINISHED\",\"timestamp\":0,\"threadId\":\"t2\",\"runId\":\"r3\"}\n\n",
   "cancelGone": {
     "status": 404,
     "body": {
@@ -114,7 +153,7 @@
       "thread_id": "t2"
     }
   },
-  "secondTurnReplay": "data: {\"type\":\"RUN_STARTED\",\"timestamp\":0,\"threadId\":\"t4\",\"runId\":\"r7\",\"protocolVersion\":\"1.0\"}\n\ndata: {\"type\":\"MESSAGES_SNAPSHOT\",\"messages\":[{\"id\":\"u-r6\",\"role\":\"user\",\"content\":\"First question\"},{\"id\":\"id-3\",\"role\":\"assistant\",\"content\":\"partial answer and the rest\"}]}\n\nid: 2\ndata: {\"type\":\"TEXT_MESSAGE_START\",\"timestamp\":0,\"messageId\":\"id-4\",\"role\":\"assistant\"}\n\nid: 3\ndata: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"timestamp\":0,\"messageId\":\"id-4\",\"delta\":\"partial answer and the rest\"}\n\nid: 4\ndata: {\"type\":\"TEXT_MESSAGE_END\",\"timestamp\":0,\"messageId\":\"id-4\"}\n\nid: 5\ndata: {\"type\":\"RUN_FINISHED\",\"timestamp\":0,\"threadId\":\"t4\",\"runId\":\"r7\",\"outcome\":{\"type\":\"success\"}}\n\n",
+  "secondTurnReplay": "data: {\"type\":\"RUN_STARTED\",\"timestamp\":0,\"threadId\":\"t4\",\"runId\":\"r7\",\"protocolVersion\":\"1.0\",\"input\":{\"threadId\":\"t4\",\"runId\":\"r7\",\"messages\":[{\"id\":\"u-r7\",\"role\":\"user\",\"content\":\"Second question\"}],\"tools\":[],\"context\":[]}}\n\ndata: {\"type\":\"MESSAGES_SNAPSHOT\",\"messages\":[{\"id\":\"u-r6\",\"role\":\"user\",\"content\":\"First question\"},{\"id\":\"id-3\",\"role\":\"assistant\",\"metadata\":{\"model_id\":\"function:function::stream_fn\"},\"content\":\"partial answer and the rest\"},{\"id\":\"u-r7\",\"role\":\"user\",\"content\":\"Second question\"}]}\n\nid: 2\ndata: {\"type\":\"TEXT_MESSAGE_START\",\"timestamp\":0,\"messageId\":\"id-4\",\"role\":\"assistant\"}\n\nid: 3\ndata: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"timestamp\":0,\"messageId\":\"id-4\",\"delta\":\"partial answer and the rest\"}\n\nid: 4\ndata: {\"type\":\"TEXT_MESSAGE_END\",\"timestamp\":0,\"metadata\":{\"model_id\":\"function:function::stream_fn\"},\"messageId\":\"id-4\"}\n\nid: 5\ndata: {\"type\":\"RUN_FINISHED\",\"timestamp\":0,\"threadId\":\"t4\",\"runId\":\"r7\",\"outcome\":{\"type\":\"success\"}}\n\n",
   "toolRound": "data: {\"type\":\"RUN_STARTED\",\"timestamp\":0,\"threadId\":\"t3\",\"runId\":\"r4\",\"protocolVersion\":\"1.0\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_START\",\"timestamp\":0,\"messageId\":\"id-5\",\"role\":\"assistant\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_END\",\"timestamp\":0,\"messageId\":\"id-5\"}\n\ndata: {\"type\":\"TOOL_CALL_START\",\"timestamp\":0,\"toolCallId\":\"call-1\",\"toolCallName\":\"pick_colour\",\"parentMessageId\":\"id-5\"}\n\ndata: {\"type\":\"TOOL_CALL_ARGS\",\"timestamp\":0,\"toolCallId\":\"call-1\",\"delta\":\"{}\"}\n\ndata: {\"type\":\"TOOL_CALL_END\",\"timestamp\":0,\"toolCallId\":\"call-1\"}\n\ndata: {\"type\":\"RUN_FINISHED\",\"timestamp\":0,\"threadId\":\"t3\",\"runId\":\"r4\",\"outcome\":{\"type\":\"success\"}}\n\n",
   "probeParked": {
     "status": 200,
@@ -130,7 +169,20 @@
             "timestamp": 0,
             "threadId": "t3",
             "runId": "r4",
-            "protocolVersion": "1.0"
+            "protocolVersion": "1.0",
+            "input": {
+              "threadId": "t3",
+              "runId": "r4",
+              "messages": [
+                {
+                  "id": "u-r4",
+                  "role": "user",
+                  "content": "Pick a colour for me"
+                }
+              ],
+              "tools": [],
+              "context": []
+            }
           }
         }
       ],
@@ -140,6 +192,6 @@
   },
   "answerRound": {
     "status": 200,
-    "body": "data: {\"type\":\"RUN_STARTED\",\"timestamp\":0,\"threadId\":\"t3\",\"runId\":\"r5\",\"protocolVersion\":\"1.0\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_START\",\"timestamp\":0,\"messageId\":\"id-6\",\"role\":\"assistant\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"timestamp\":0,\"messageId\":\"id-6\",\"delta\":\"You picked it.\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_END\",\"timestamp\":0,\"messageId\":\"id-6\"}\n\ndata: {\"type\":\"RUN_FINISHED\",\"timestamp\":0,\"threadId\":\"t3\",\"runId\":\"r5\",\"outcome\":{\"type\":\"success\"}}\n\n"
+    "body": "data: {\"type\":\"RUN_STARTED\",\"timestamp\":0,\"threadId\":\"t3\",\"runId\":\"r5\",\"protocolVersion\":\"1.0\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_START\",\"timestamp\":0,\"messageId\":\"id-6\",\"role\":\"assistant\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_CONTENT\",\"timestamp\":0,\"messageId\":\"id-6\",\"delta\":\"You picked it.\"}\n\ndata: {\"type\":\"TEXT_MESSAGE_END\",\"timestamp\":0,\"metadata\":{\"model_id\":\"function:function::stream_fn\"},\"messageId\":\"id-6\"}\n\ndata: {\"type\":\"RUN_FINISHED\",\"timestamp\":0,\"threadId\":\"t3\",\"runId\":\"r5\",\"outcome\":{\"type\":\"success\"}}\n\n"
   }
 }

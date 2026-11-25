@@ -324,12 +324,12 @@ export class RunHandlers {
           this.#host.transcript.revealWords(bubble);
         }
         attachCopyButtons(bubble, this.#host.strings());
-        // Read against this message's own text: its offsets index what this
-        // message streamed, not the copy the server may store joined to another.
         const model = renderAnsweredByModel(metadata, this.#host.strings());
         if (model !== null) {
           bubble.append(model);
         }
+        // Read against this message's own text: its offsets index what this
+        // message streamed, not the copy the server may store joined to another.
         const sources = renderCitations(citations, buffer, this.#host.strings());
         if (sources !== null) {
           bubble.append(sources);

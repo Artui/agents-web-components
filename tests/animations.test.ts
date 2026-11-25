@@ -115,6 +115,20 @@ describe("highlightThenClick", () => {
   });
 });
 
+describe("clicking an HTML element", () => {
+  it.each([
+    ["highlightThenClick", (el: HTMLElement) => highlightThenClick(el, { highlightMs: 0 })],
+    ["pressThenClick", (el: HTMLElement) => pressThenClick(el, { pressMs: 0 })],
+  ])("%s goes through the element's own click()", async (_name, act) => {
+    const button = document.createElement("button");
+    document.body.append(button);
+    const click = vi.spyOn(button, "click");
+    await act(button);
+
+    expect(click).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("clicking an element without click()", () => {
   const link = (): { el: HTMLElement; events: Event[] } => {
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");

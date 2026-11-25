@@ -14,6 +14,10 @@ export const CHILD_SESSION_REPORT_STYLES: string = `
   overflow-wrap: anywhere;
 }
 
+.child-report[hidden] {
+  display: none;
+}
+
 .child-report[data-outcome="failed"] {
   border-left-color: var(--_danger);
 }

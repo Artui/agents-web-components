@@ -217,6 +217,36 @@ describe("the task controls", () => {
     expect(reply(p).hidden).toBe(true);
   });
 
+  it("keeps an open answer form through a child step that is not about the question", () => {
+    const p = new SubAgentPanel(DEFAULT_UI_STRINGS, port());
+    p.report(QUESTION);
+    answer(p).click();
+    p.report({
+      ...QUESTION,
+      phase: "tool_call",
+      status: null,
+      tool: { toolCallId: "child-1", name: "search", ok: null },
+      task: null,
+    });
+
+    expect(reply(p).hidden).toBe(false);
+    expect(reply(p).getAttribute("data-mode")).toBe("answer");
+  });
+
+  it("draws no controls for a step that names no task, even with the routes open", () => {
+    const p = new SubAgentPanel(DEFAULT_UI_STRINGS, port());
+    p.report({ ...BACKGROUNDED, phase: "started", task: null });
+
+    expect(controls(p).hidden).toBe(true);
+  });
+
+  it("stamps no source when the step names none", () => {
+    const p = new SubAgentPanel(DEFAULT_UI_STRINGS, port());
+    p.report(BACKGROUNDED);
+
+    expect(p.element.hasAttribute("data-source")).toBe(false);
+  });
+
   it("cancel asks politely first, then offers to stop at once", async () => {
     const ports = port();
     const p = new SubAgentPanel(DEFAULT_UI_STRINGS, ports);

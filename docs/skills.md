@@ -98,7 +98,8 @@ may write, off ones included, with "Turn on" on an off row; it creates, edits an
 and "Draft one with the agent" closes it and sends `/create-skill`, whose draft comes back as an
 approval card. History, Checkpoints and New chat close it first. The server keeps every rule: a
 refused save shows the server's message (`{"error"}`) under the field its `"field"` names (django-ag-ui
-0.91.0 names `name` and `description`), and above the form when it names none.
+0.84.0 and later name the field: `name`, `description`, `body`, `userInvocable`, `modelInvocable` or
+`enabled`), and above the form when it names none.
 
 #### Whose skill it is
 

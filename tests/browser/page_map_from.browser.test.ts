@@ -562,6 +562,7 @@ describe("pageMapFrom privacy probes", () => {
         <a href="/role" role="img"><text y="60">Img</text></a>
         <rect role="button" aria-label="Drawn button" width="9" height="9"/>
         <a href="/kept" role="link"><text y="80">Kept</text></a>
+        <use href="#i"/><image href="/x.png" width="9" height="9"/>
       </svg>
     `);
     const map = pageMapFrom();

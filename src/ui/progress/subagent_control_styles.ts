@@ -16,6 +16,10 @@ export const SUBAGENT_CONTROL_STYLES: string = `
   display: none;
 }
 
+.subagent-actions[hidden] {
+  display: none;
+}
+
 .subagent-question {
   margin: 0;
   color: var(--_fg);

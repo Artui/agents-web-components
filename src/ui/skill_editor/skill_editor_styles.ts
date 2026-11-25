@@ -46,6 +46,10 @@ export const SKILL_EDITOR_STYLES: string = `
   min-width: 0;
 }
 
+.skill-row-line[hidden] {
+  display: none;
+}
+
 .skill-row-line > .skill-row-name {
   min-width: 0;
   overflow-wrap: anywhere;
