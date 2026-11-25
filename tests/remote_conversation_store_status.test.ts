@@ -173,6 +173,18 @@ describe("RemoteConversationStore thread status", () => {
     expect((await store.listThreads())[0]?.unread).toBe(false);
   });
 
+  it("never sends a held read to a server whose lists carry no status", async () => {
+    const row = { thread_id: "t1", title: "A", updated_at: null, preview: "" };
+    fetchMock.mockImplementation(async () => list([row]));
+    const store = new RemoteConversationStore(URL_);
+    store.markRead("t1");
+    await store.listThreads();
+    await store.listThreads();
+    await flush();
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([URL_, URL_]);
+  });
+
   it("drops a held read of a thread deleted before the first status list", async () => {
     fetchMock
       .mockResolvedValueOnce(new Response(null, { status: 204 }))
