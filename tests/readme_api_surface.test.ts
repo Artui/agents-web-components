@@ -172,7 +172,8 @@ const INTERNAL_ATTRIBUTES = new Set([
   // Read by a step group off the nodes it holds: a card's status, whether a
   // question or confirmation is open on it, whether it has arguments or a
   // result to show, the record of who let it through, the group's own
-  // disclosure state, and the name a sub-agent panel stamps on itself.
+  // disclosure state, and the name, task and answerable question a sub-agent
+  // panel stamps on itself.
   "data-status",
   "data-asking",
   "data-has-args",
@@ -181,6 +182,8 @@ const INTERNAL_ATTRIBUTES = new Set([
   "data-answered-by",
   "data-open",
   "data-agent",
+  "data-task-id",
+  "data-answerable",
   // Stamped on a child report's link by its card, read back when the link is clicked.
   "data-thread-id",
   "data-agent-id",

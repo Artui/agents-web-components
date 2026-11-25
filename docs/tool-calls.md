@@ -288,6 +288,7 @@ outlasts a moment is stamped on the `subagent` part for a host to style:
 | `data-cancel` | `requested` or `forced`, once a cancellation was asked for |
 | `data-attempt` | a remote task's retry count, on `retried` |
 | `data-source` | `user` or `model`: who acted on the latest steer, answer or cancel |
+| `data-answerable` | the open question's id, only while the controls are live and Answer is offered |
 
 A task closes on the protocol's events as before, and two `SUBAGENT_ERROR` codes are not the
 child failing: `code: "cancelled"` settles the row as `data-phase="cancelled"` ("researcher was
@@ -328,6 +329,13 @@ its `reason` code under the controls (`subagent-control-error`): `not_running`, 
 `no_run` as `subAgentControlFinished`, `not_waiting` as `subAgentControlNotWaiting`,
 `not_live_here`, `remote` and a server without the routes as `subAgentControlUnavailable`, and
 anything else as `subAgentControlFailed`. The controls are withdrawn when the task settles.
+
+Under the default `grouped` tool display the controls sit inside the group's folded row: a
+background task's delegating call settles as soon as the task goes to the background, so the
+row reads done. Steer and Cancel are one click down. When the task asks a question, the group
+opens itself, once for each question, so Answer and the question's text are in view; if the
+user folds it again it stays folded until a new question arrives. A question with no question
+id, or one shown with no live controls (no `data-threads-url`), does not open it.
 
 The parts are `subagent-controls` (the region), `subagent-question`, `subagent-actions` (the
 three buttons' row), `subagent-steer`, `subagent-answer`, `subagent-cancel`, `subagent-reply`,

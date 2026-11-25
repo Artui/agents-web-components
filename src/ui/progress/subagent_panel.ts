@@ -138,9 +138,11 @@ export interface SubAgentUpdate {
  * own, for a host to style: `data-task-id` (the task the steps name),
  * `data-background` (the task left the foreground; its value is the server's
  * reason), `data-awaiting-answer` (a question is open, from `question` to
- * `answered` or the close), `data-cancel` (`requested` or `forced`), and
- * `data-attempt` (a remote task's retry), and `data-source` (`user` or
- * `model`, who acted on the latest steer, answer or cancel).
+ * `answered` or the close), `data-answerable` (the open question's id, only
+ * while Answer is offered, which the enclosing group reads to open itself),
+ * `data-cancel` (`requested` or `forced`), and `data-attempt` (a remote
+ * task's retry), and `data-source` (`user` or `model`, who acted on the latest
+ * steer, answer or cancel).
  *
  * ## The task's controls
  *
@@ -426,6 +428,11 @@ export class SubAgentPanel {
     this.#controls.hidden = !live;
     const question = this.#openQuestion;
     this.#answer.hidden = question === null;
+    if (live && question !== null) {
+      this.element.setAttribute("data-answerable", question.id);
+    } else {
+      this.element.removeAttribute("data-answerable");
+    }
     this.#question.hidden = question?.text == null;
     this.#question.textContent = question?.text ?? "";
     const cancel = this.#cancelAsked;

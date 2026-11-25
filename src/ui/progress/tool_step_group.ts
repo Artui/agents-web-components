@@ -40,8 +40,8 @@ interface Step {
  * `data-asking` while a question or a confirmation is open on it, its
  * `data-has-result` once a result with text arrived, `data-decision` or
  * `data-answered-by` once the card records who let the call through, and the
- * `data-phase` and `data-agent` a sub-agent panel stamps on itself inside the
- * card that delegated to it. Watched rather than told, so a step settled, asked about or
+ * `data-phase`, `data-agent` and `data-answerable` a sub-agent panel stamps on
+ * itself inside the card that delegated to it. Watched rather than told, so a step settled, asked about or
  * delegated by any path updates the row without the group being called.
  */
 const WATCHED_ATTRIBUTES: readonly string[] = [
@@ -52,6 +52,7 @@ const WATCHED_ATTRIBUTES: readonly string[] = [
   "data-answered-by",
   "data-phase",
   "data-agent",
+  "data-answerable",
 ];
 
 /**
@@ -90,7 +91,11 @@ function hasDetails(card: HTMLElement, display: ToolGroupDisplayMode): boolean {
  * carries its approval prompt inside its card and a folded group would hide
  * the very question it is asking. Once per wait, so the user can fold it
  * again. A running sub-agent does not open it: the row names the sub-agent
- * instead, beside the running mark.
+ * instead, beside the running mark. A background task's open question does,
+ * once for each question: its delegating call settles as the task goes to the
+ * background, and Answer, Steer and Cancel would stay behind a folded row that
+ * reads done. A question with no id, or one shown with no live controls, is
+ * never answerable and opens nothing.
  */
 export class ToolStepGroup {
   readonly element: HTMLDivElement;
@@ -104,6 +109,8 @@ export class ToolStepGroup {
   readonly #steps: Step[] = [];
   /** Whether the group has already opened itself for the current wait. */
   #openedForWait = false;
+  /** The task questions the group has already opened itself for, by task and question id. */
+  #openedForQuestions: ReadonlySet<string> = new Set();
 
   constructor(strings: UiStrings, display: () => ToolGroupDisplayMode) {
     this.#strings = strings;
@@ -241,6 +248,18 @@ export class ToolStepGroup {
     return null;
   }
 
+  /** The open questions a user can answer now, each keyed by its task and question id. */
+  #answerable(): ReadonlySet<string> {
+    const keys = new Set<string>();
+    for (const { element } of this.#steps) {
+      const panel = element.querySelector(".tool-call-subagent > .subagent[data-answerable]");
+      if (panel !== null) {
+        keys.add(`${panel.getAttribute("data-task-id")}/${panel.getAttribute("data-answerable")}`);
+      }
+    }
+    return keys;
+  }
+
   /** One note on the row, opened by the CSS with a middle dot. */
   #note(text: string): HTMLSpanElement {
     const note = document.createElement("span");
@@ -274,6 +293,13 @@ export class ToolStepGroup {
       this.setOpen(true);
     } else if (deferred === 0) {
       this.#openedForWait = false;
+    }
+
+    const questions = this.#answerable();
+    const fresh = [...questions].some((key) => !this.#openedForQuestions.has(key));
+    this.#openedForQuestions = questions;
+    if (fresh) {
+      this.setOpen(true);
     }
 
     let state: GroupState = "done";

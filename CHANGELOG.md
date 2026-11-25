@@ -54,9 +54,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`{"question_id", "answer"}`) or `cancel/` (`{"force"}`), with the element's headers and
   cookie policy, sent once and never retried. The server answers `202`, and the row changes
   only when the step for the act arrives on the stream, never on the click. A refusal is
-  worded under the controls from its `reason` code. The task steps' new `message`,
+  worded under the controls from its `reason` code. Under the default grouped tool display the
+  delegating call settles as the task goes to the background, so its row reads done and folded:
+  Steer and Cancel are inside that row, and the group opens itself, once for each open
+  question, when the task asks one, so Answer is in view (fold it again and it stays folded
+  until a new question arrives; a question with no id, or one shown with no live controls,
+  opens nothing). The task steps' new `message`,
   `question`, `answer`, `truncated` and `source` keys are read, and the `subagent` part gets
-  `data-source` (`user` or `model`). New parts `subagent-controls`, `subagent-question`,
+  `data-source` (`user` or `model`) and `data-answerable` (the open question's id, while Answer
+  is offered). New parts `subagent-controls`, `subagent-question`,
   `subagent-actions`, `subagent-steer`, `subagent-answer`, `subagent-cancel`,
   `subagent-reply`, `subagent-reply-input`, `subagent-reply-send` and
   `subagent-control-error`; new strings `subAgentControls`, `subAgentSteer`,
