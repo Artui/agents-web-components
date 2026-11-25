@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.0] — 2026-11-25
+
 ### Added
 
 - **A request refused with `401` can go once more, with fresh headers.** Set
@@ -1063,7 +1065,8 @@ move page walks a host over. Each entry below says whether a host opts in.
   kept offering the moon under `theme="dark"`. Only the toggle's own click redrew it before. A host
   opts in to nothing.
 
-[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.17.0...HEAD
+[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.18.0...HEAD
+[0.18.0]: https://github.com/Artui/agents-web-components/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/Artui/agents-web-components/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/Artui/agents-web-components/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/Artui/agents-web-components/compare/v0.14.0...v0.15.0
