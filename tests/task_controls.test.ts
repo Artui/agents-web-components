@@ -145,6 +145,8 @@ describe("TaskControls", () => {
       () => new Response("<h1>Not Found</h1>", { status: 404 }),
       () => new Response(JSON.stringify({ reason: 7 }), { status: 400 }),
       () => new Response(JSON.stringify(["no_task"]), { status: 404 }),
+      () => new Response(JSON.stringify("no_task"), { status: 409 }),
+      () => new Response("null", { status: 409 }),
     ];
     for (const response of bodies) {
       stub(response);

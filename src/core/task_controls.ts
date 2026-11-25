@@ -104,11 +104,8 @@ function requestBody(action: TaskControlAction): Record<string, unknown> {
 /** A refusal's `reason` code, or `null` for a body that is not the route's JSON. */
 async function reasonOf(response: Response): Promise<string | null> {
   try {
-    const body: unknown = await response.json();
-    if (typeof body !== "object" || body === null || Array.isArray(body)) {
-      return null;
-    }
-    const reason = (body as Record<string, unknown>)["reason"];
+    const body = (await response.json()) as { readonly reason?: unknown } | null;
+    const reason = body?.reason;
     return typeof reason === "string" ? reason : null;
   } catch {
     return null;

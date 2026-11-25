@@ -34,6 +34,7 @@ import { SIDEBAR_STYLES } from "./placement/sidebar_styles.js";
 import { SMALL_VIEWPORT_STYLES } from "./placement/small_viewport_styles.js";
 import { MCP_APP_VIEW_STYLES } from "./progress/mcp_app_view_styles.js";
 import { RUN_NOTICE_STYLES } from "./progress/run_notice_styles.js";
+import { SUBAGENT_CONTROL_STYLES } from "./progress/subagent_control_styles.js";
 import { THOUGHTS_STYLES } from "./progress/thoughts_styles.js";
 import { TOOL_GROUP_STYLES } from "./progress/tool_group_styles.js";
 import { TOOL_STEP_STYLES } from "./progress/tool_step_styles.js";
@@ -87,6 +88,7 @@ export const STYLES: string = [
   MESSAGE_STYLES,
   THOUGHTS_STYLES,
   TOOL_STEP_STYLES,
+  SUBAGENT_CONTROL_STYLES,
   RESIZE_STYLES,
   COMPOSER_STYLES,
   PLACE_STYLES,

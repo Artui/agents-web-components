@@ -272,8 +272,8 @@ line and a `task` record:
 
 From django-ag-ui 0.91.0 the steps carry what was said, cut at 8000 characters with
 `truncated` beside it, and `source` says who acted: `user` for the controls below, `model` for
-the run itself. The row shows the open question's text and otherwise the server's `status`
-line ("researcher: steered by you"). The panel's `data-phase` is the latest moment. What
+the run itself. The row shows the server's `status` line ("researcher: steered by you"); the
+open question's text is drawn beside the Answer control, so only where the controls are. The panel's `data-phase` is the latest moment. What
 outlasts a moment is stamped on the `subagent` part for a host to style:
 
 | Attribute | Set |
