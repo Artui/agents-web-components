@@ -486,6 +486,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#retrying-a-401-once" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retrying a 401 once
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1405,6 +1416,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#retrying-a-401-once" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retrying a 401 once
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1573,14 +1595,34 @@ do when the server is unreachable. The element does not retry; a request after t
 <code>getHeaders</code> again.</p>
 <p>A synchronous <code>getHeaders</code> is read in the same tick as before, so it changes nothing about when a
 request goes out.</p>
+<h3 id="retrying-a-401-once">Retrying a <code>401</code> once<a class="headerlink" href="#retrying-a-401-once" title="Permanent link">&para;</a></h3>
+<p>A token can expire between the moment <code>getHeaders</code> hands it over and the moment the server reads
+it. Set <strong><code>data-retry-unauthorized</code></strong> (or <code>chat.retryUnauthorized = true</code>) and a request the server
+refuses with <code>401</code> goes once more, after awaiting <code>getHeaders</code> again, so a host that refreshes in
+<code>getHeaders</code> gets the fresh token onto the retry:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span> <span class="na">data-threads-url</span><span class="o">=</span><span class="s">"/agent/threads/"</span> <span class="na">data-retry-unauthorized</span><span class="p">&gt;&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
+</code></pre></div>
+<p>It is <strong>off by default</strong>, so nothing changes until a host sets it, and it is read at each request.
+Only requests that are safe to send twice retry: the tool and skill catalogs, the run index, the
+thread list and each thread's detail, the thread watch (poll and stream), the run log a reattach
+replays and probes, a thread's rename, delete and read mark, and a <code>GET</code> or <code>HEAD</code> through
+<code>request()</code>. <strong>The agent run <code>POST</code>, uploads, transcription, Stop's <code>cancel/</code>, a task's steer,
+answer and cancel, and any other write through <code>request()</code> are sent once.</strong> A second <code>401</code> is the
+answer, handled as a <code>401</code> is without the opt-in.</p>
+<p><code>&lt;ag-ui-agents&gt;</code> takes the same attribute and property for its own requests (the directory, the
+inbox watch and a <code>GET</code> or <code>HEAD</code> through its <code>request()</code>); an inbox answer is a run <code>POST</code> and is
+sent once. A <code>RemoteConversationStore</code> or <code>RunIndex</code> built by hand takes it as a last constructor
+argument, a function read per request, and <code>createHttpAgent</code> as <code>retryUnauthorized</code> in its options.
+A host's own <code>agentFactory</code> decides for its agent's requests itself: the element passes it the
+same <code>retryUnauthorized</code> option.</p>
 <h2 id="cross-origin-cookies-credentials">Cross-origin cookies (<code>credentials</code>)<a class="headerlink" href="#cross-origin-cookies-credentials" title="Permanent link">&para;</a></h2>
 <p>If your API is on a different origin from the page — <code>app.example.com</code> calling <code>api.example.com</code>
 counts, subdomains are cross-origin — the browser's default of <code>same-origin</code> sends <strong>no cookies at
 all</strong>. The requests still go out; they arrive unauthenticated, and the server answers <code>401</code> while
 looking perfectly configured. Set the cookie policy explicitly:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"https://api.example.com/agent/"</span> <span class="na">credentials</span><span class="o">=</span><span class="s">"include"</span><span class="p">&gt;&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"https://api.example.com/agent/"</span> <span class="na">credentials</span><span class="o">=</span><span class="s">"include"</span><span class="p">&gt;&lt;/</span><span class="nt">ag-ui-chat</span><span class="p">&gt;</span>
 </code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">credentials</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"include"</span><span class="p">;</span><span class="w"> </span><span class="c1">// mirrors the attribute</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">credentials</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"include"</span><span class="p">;</span><span class="w"> </span><span class="c1">// mirrors the attribute</span>
 </code></pre></div>
 <p>It takes <code>fetch</code>'s own three modes — <code>omit</code>, <code>same-origin</code>, <code>include</code> — applies to every request in
 the table above, and is read per request, so a late assignment applies to everything after it.
@@ -1605,13 +1647,13 @@ send. That covers all seven, not the agent endpoint alone: the tool catalog, the
 thread index, the attachment upload and the transcription endpoint carry the same headers, and
 reporting only the agent would report the least interesting of them.</p>
 <p>To confirm destinations you chose on purpose and silence the notice, name their origins:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">trustedOrigins</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"https://api.example.com"</span><span class="p">];</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">trustedOrigins</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"https://api.example.com"</span><span class="p">];</span>
 </code></pre></div>
 <p>That covers every endpoint the element requests itself, and is forwarded to <code>createHttpAgent</code>, so a
 host that does not override <code>agentFactory</code> needs nothing else. A custom factory can also be given
 the option directly:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">agentFactory</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">options</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nx">createHttpAgent</span><span class="p">({</span><span class="w"> </span><span class="p">...</span><span class="nx">options</span><span class="p">,</span><span class="w"> </span><span class="nx">trustedOrigins</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"https://api.example.com"</span><span class="p">]</span><span class="w"> </span><span class="p">});</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">agentFactory</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">options</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nx">createHttpAgent</span><span class="p">({</span><span class="w"> </span><span class="p">...</span><span class="nx">options</span><span class="p">,</span><span class="w"> </span><span class="nx">trustedOrigins</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"https://api.example.com"</span><span class="p">]</span><span class="w"> </span><span class="p">});</span>
 </code></pre></div>
 <p>Origins are compared as <code>URL.origin</code> produces them — scheme, host and port. A notice is a notice,
 not a refusal: nothing is blocked, because a cross-origin agent is a supported deployment and
@@ -1625,27 +1667,27 @@ every chrome-building <code>data-*</code> attribute — and the catalogs and thr
 just after, that same moment.</p>
 <p>React attaches <code>ref</code>s <em>after</em> it inserts the node, which puts the canonical integration on the wrong
 side of that boundary. Create the element, configure it, then append:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kd">function</span><span class="w"> </span><span class="nx">Assistant</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">host</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">useRef</span><span class="p">(</span><span class="kc">null</span><span class="p">);</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span><span class="nx">useEffect</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="nx">defineChat</span><span class="p">();</span>
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">chat</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">document</span><span class="p">.</span><span class="nx">createElement</span><span class="p">(</span><span class="s2">"ag-ui-chat"</span><span class="p">);</span>
-<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>
-<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">    </span><span class="c1">// Configure first - every one of these is read as the element connects.</span>
-<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">    </span><span class="nx">chat</span><span class="p">.</span><span class="nx">setAttribute</span><span class="p">(</span><span class="s2">"endpoint"</span><span class="p">,</span><span class="w"> </span><span class="s2">"/agent/"</span><span class="p">);</span>
-<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="w">    </span><span class="nx">chat</span><span class="p">.</span><span class="nx">setAttribute</span><span class="p">(</span><span class="s2">"data-threads-url"</span><span class="p">,</span><span class="w"> </span><span class="s2">"/agent/threads/"</span><span class="p">);</span>
-<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="w">    </span><span class="nx">chat</span><span class="p">.</span><span class="nx">credentials</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"include"</span><span class="p">;</span>
-<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="w">    </span><span class="nx">chat</span><span class="p">.</span><span class="nx">getHeaders</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">({</span><span class="w"> </span><span class="nx">Authorization</span><span class="o">:</span><span class="w"> </span><span class="sb">`Bearer </span><span class="si">${</span><span class="nx">auth</span><span class="p">.</span><span class="nx">accessToken</span><span class="p">()</span><span class="si">}</span><span class="sb">`</span><span class="w"> </span><span class="p">});</span>
-<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="w">    </span><span class="nx">chat</span><span class="p">.</span><span class="nx">registerTool</span><span class="p">(</span><span class="nx">myTool</span><span class="p">);</span>
-<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>
-<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="w">    </span><span class="c1">// ...then insert it.</span>
-<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a><span class="w">    </span><span class="nx">host</span><span class="p">.</span><span class="nx">current</span><span class="p">.</span><span class="nx">appendChild</span><span class="p">(</span><span class="nx">chat</span><span class="p">);</span>
-<a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">chat</span><span class="p">.</span><span class="nx">remove</span><span class="p">();</span>
-<a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a><span class="w">  </span><span class="p">},</span><span class="w"> </span><span class="p">[]);</span>
-<a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>
-<a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a><span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="p">&lt;</span><span class="nt">div</span><span class="w"> </span><span class="na">ref</span><span class="o">=</span><span class="p">{</span><span class="nx">host</span><span class="p">}</span><span class="w"> </span><span class="p">/&gt;;</span>
-<a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kd">function</span><span class="w"> </span><span class="nx">Assistant</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">host</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">useRef</span><span class="p">(</span><span class="kc">null</span><span class="p">);</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span><span class="nx">useEffect</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span><span class="nx">defineChat</span><span class="p">();</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">chat</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">document</span><span class="p">.</span><span class="nx">createElement</span><span class="p">(</span><span class="s2">"ag-ui-chat"</span><span class="p">);</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">    </span><span class="c1">// Configure first - every one of these is read as the element connects.</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">    </span><span class="nx">chat</span><span class="p">.</span><span class="nx">setAttribute</span><span class="p">(</span><span class="s2">"endpoint"</span><span class="p">,</span><span class="w"> </span><span class="s2">"/agent/"</span><span class="p">);</span>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">    </span><span class="nx">chat</span><span class="p">.</span><span class="nx">setAttribute</span><span class="p">(</span><span class="s2">"data-threads-url"</span><span class="p">,</span><span class="w"> </span><span class="s2">"/agent/threads/"</span><span class="p">);</span>
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">    </span><span class="nx">chat</span><span class="p">.</span><span class="nx">credentials</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"include"</span><span class="p">;</span>
+<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">    </span><span class="nx">chat</span><span class="p">.</span><span class="nx">getHeaders</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">({</span><span class="w"> </span><span class="nx">Authorization</span><span class="o">:</span><span class="w"> </span><span class="sb">`Bearer </span><span class="si">${</span><span class="nx">auth</span><span class="p">.</span><span class="nx">accessToken</span><span class="p">()</span><span class="si">}</span><span class="sb">`</span><span class="w"> </span><span class="p">});</span>
+<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="w">    </span><span class="nx">chat</span><span class="p">.</span><span class="nx">registerTool</span><span class="p">(</span><span class="nx">myTool</span><span class="p">);</span>
+<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>
+<a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="w">    </span><span class="c1">// ...then insert it.</span>
+<a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a><span class="w">    </span><span class="nx">host</span><span class="p">.</span><span class="nx">current</span><span class="p">.</span><span class="nx">appendChild</span><span class="p">(</span><span class="nx">chat</span><span class="p">);</span>
+<a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">chat</span><span class="p">.</span><span class="nx">remove</span><span class="p">();</span>
+<a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a><span class="w">  </span><span class="p">},</span><span class="w"> </span><span class="p">[]);</span>
+<a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a>
+<a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a><span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="p">&lt;</span><span class="nt">div</span><span class="w"> </span><span class="na">ref</span><span class="o">=</span><span class="p">{</span><span class="nx">host</span><span class="p">}</span><span class="w"> </span><span class="p">/&gt;;</span>
+<a id="__codelineno-9-21" name="__codelineno-9-21" href="#__codelineno-9-21"></a><span class="p">}</span>
 </code></pre></div>
 <p>Writing it as <code>&lt;ag-ui-chat ref={...} /&gt;</code> in JSX and configuring in the ref callback mostly works —
 the catalog requests are held back one microtask precisely so a ref assigned in the same commit is
@@ -1655,9 +1697,9 @@ from the same commit waits on: a restore that had not started yet would have not
 and the send would go out without the conversation.</p>
 <p>If your credentials can only arrive later still — an awaited token, a passive effect — call
 <strong><code>reload()</code></strong> once they land:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kd">const</span><span class="w"> </span><span class="nx">token</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">auth</span><span class="p">.</span><span class="nx">login</span><span class="p">();</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">getHeaders</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">({</span><span class="w"> </span><span class="nx">Authorization</span><span class="o">:</span><span class="w"> </span><span class="sb">`Bearer </span><span class="si">${</span><span class="nx">token</span><span class="si">}</span><span class="sb">`</span><span class="w"> </span><span class="p">});</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="k">await</span><span class="w"> </span><span class="nx">chat</span><span class="p">.</span><span class="nx">reload</span><span class="p">();</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kd">const</span><span class="w"> </span><span class="nx">token</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">auth</span><span class="p">.</span><span class="nx">login</span><span class="p">();</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nx">chat</span><span class="p">.</span><span class="nx">getHeaders</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">({</span><span class="w"> </span><span class="nx">Authorization</span><span class="o">:</span><span class="w"> </span><span class="sb">`Bearer </span><span class="si">${</span><span class="nx">token</span><span class="si">}</span><span class="sb">`</span><span class="w"> </span><span class="p">});</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="k">await</span><span class="w"> </span><span class="nx">chat</span><span class="p">.</span><span class="nx">reload</span><span class="p">();</span>
 </code></pre></div>
 <p><code>reload()</code> re-runs everything the element loads on startup (tool catalog, skills, thread history)
 with the configuration as it then stands. It is a reload, not a merge: the in-flight run is
@@ -1699,18 +1741,18 @@ declaratively. Built and driven in all four:</p>
 </table>
 <p><strong>Vue</strong> is the one host that can configure declaratively, because a custom directive's <code>beforeMount</code>
 runs while the element is still detached:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="p">&lt;</span><span class="nt">script</span> <span class="na">setup</span><span class="p">&gt;</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="kd">const</span><span class="w"> </span><span class="nx">vConfigure</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span><span class="nx">beforeMount</span><span class="p">(</span><span class="nx">element</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="nx">element</span><span class="p">.</span><span class="nx">getHeaders</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">({</span><span class="w"> </span><span class="nx">Authorization</span><span class="o">:</span><span class="w"> </span><span class="sb">`Bearer </span><span class="si">${</span><span class="nx">token</span><span class="p">()</span><span class="si">}</span><span class="sb">`</span><span class="w"> </span><span class="p">});</span>
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="nx">element</span><span class="p">.</span><span class="nx">registerTool</span><span class="p">(</span><span class="nx">myTool</span><span class="p">);</span>
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">  </span><span class="p">},</span>
-<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="p">};</span>
-<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="p">&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
-<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>
-<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="p">&lt;</span><span class="nt">template</span><span class="p">&gt;</span>
-<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>  <span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">v-configure</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span> <span class="na">data-threads-url</span><span class="o">=</span><span class="s">"/agent/threads/"</span> <span class="p">/&gt;</span>
-<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="p">&lt;/</span><span class="nt">template</span><span class="p">&gt;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="p">&lt;</span><span class="nt">script</span> <span class="na">setup</span><span class="p">&gt;</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="kd">const</span><span class="w"> </span><span class="nx">vConfigure</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="nx">beforeMount</span><span class="p">(</span><span class="nx">element</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="nx">element</span><span class="p">.</span><span class="nx">getHeaders</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">({</span><span class="w"> </span><span class="nx">Authorization</span><span class="o">:</span><span class="w"> </span><span class="sb">`Bearer </span><span class="si">${</span><span class="nx">token</span><span class="p">()</span><span class="si">}</span><span class="sb">`</span><span class="w"> </span><span class="p">});</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">    </span><span class="nx">element</span><span class="p">.</span><span class="nx">registerTool</span><span class="p">(</span><span class="nx">myTool</span><span class="p">);</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">  </span><span class="p">},</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="p">};</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="p">&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="p">&lt;</span><span class="nt">template</span><span class="p">&gt;</span>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>  <span class="p">&lt;</span><span class="nt">ag-ui-chat</span> <span class="na">v-configure</span> <span class="na">endpoint</span><span class="o">=</span><span class="s">"/agent/"</span> <span class="na">data-threads-url</span><span class="o">=</span><span class="s">"/agent/threads/"</span> <span class="p">/&gt;</span>
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="p">&lt;/</span><span class="nt">template</span><span class="p">&gt;</span>
 </code></pre></div>
 <p>Tell Vue's compiler the tag is a custom element, or it will warn and try to resolve a component:
 <code>vue({ template: { compilerOptions: { isCustomElement: (tag) =&gt; tag === "ag-ui-chat" } } })</code>.</p>

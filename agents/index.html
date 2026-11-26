@@ -1467,7 +1467,10 @@ agent at a time.</p>
   <strong><code>credentials</code></strong> attribute, as on the chat. They are the provider's own; the chat keeps its
   own for its requests. <strong><code>request(url, init?)</code></strong> is the public <code>fetch</code> that sends them, the one
   an <code>&lt;ag-ui-routines&gt;</code> or <code>&lt;ag-ui-skills&gt;</code> under the provider calls; <code>init.headers</code> win per key
-  and <code>init.credentials</code> wins over the attribute.</li>
+  and <code>init.credentials</code> wins over the attribute. <strong><code>data-retry-unauthorized</code></strong>
+  (<code>retryUnauthorized</code>) sends a directory or inbox read, or a <code>GET</code> through <code>request()</code>, once
+  more after a <code>401</code>, as on the chat; see
+  <a href="../authentication/#retrying-a-401-once">Retrying a 401 once</a>.</li>
 </ul>
 <p>The provider is exported from the root entry (and so from <code>/bundle</code>) with <code>defineAgents</code>, which
 throws naming the tag when another class holds it. A lone <code>&lt;ag-ui-chat&gt;</code> needs none of this and

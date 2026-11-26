@@ -1632,6 +1632,11 @@ another origin, add <code>credentials="include"</code> too; see
 <td>Opt-in, live. With <code>data-detach-runs</code> and <code>data-threads-url</code>, the chat asks the open thread's run log every five seconds while idle and joins a run the server started there by itself (a child's report waking its parent, say), or restores the thread when that run parked on an approval, with no thread watch. Under <code>data-thread-status</code> the watch already does this; see <a href="../concepts/#runs-that-outlive-their-connection">Runs that outlive their connection</a>.</td>
 </tr>
 <tr>
+<td><code>data-retry-unauthorized</code></td>
+<td><code>retryUnauthorized</code></td>
+<td>Opt-in, read at each request. A request safe to repeat (the catalogs, the thread list, watch, rename, delete and read mark, the run index and run log, a <code>GET</code> through <code>request()</code>) that the server refuses with <code>401</code> goes once more after awaiting <code>getHeaders</code> again. The agent run, uploads, transcription and task controls are sent once. See <a href="../authentication/#retrying-a-401-once">Retrying a 401 once</a>.</td>
+</tr>
+<tr>
 <td><code>data-threads-cache</code></td>
 <td>—</td>
 <td><strong>On by default.</strong> <code>="false"</code> stops mirroring message bodies into <code>sessionStorage</code> when <code>data-threads-url</code> is set, for a deployment that put history on the server so transcripts stay off the client. Only meaningful alongside <code>data-threads-url</code>.</td>
@@ -1884,7 +1889,7 @@ element after the fact.</p>
 <code>skillContext</code>, <code>toolSummaries</code>, <code>formatToolPayload</code>, <code>formatRelativeTime</code>, <code>strings</code>,
 <code>resolvePageTarget</code>, <code>sharedState</code>, <code>anchor</code> (an element, which wins over the attribute's selector), <code>extraStyles</code> (<a href="../theming/#d-extrastyles-the-last-mile">unstable</a>), plus the read-only <code>unread</code>, <code>unhandledActivityTypes</code>, <code>threadId</code>, <code>threadTitle</code>, <code>tabs</code>, <code>running</code>, <code>barHeight</code>, <code>dockWidth</code>, <code>uiStrings</code>, <code>colorScheme</code> and <code>locale</code>, and
 the attribute mirrors <code>endpoint</code> / <code>userKey</code> / <code>userName</code> / <code>toolDisplay</code> / <code>toolGroupDisplay</code> / <code>collapsed</code> /
-<code>maximized</code> / <code>credentials</code> / <code>detachRuns</code>.</p>
+<code>maximized</code> / <code>credentials</code> / <code>detachRuns</code> / <code>retryUnauthorized</code>.</p>
 <p><code>headers</code> and <code>getHeaders</code> authenticate <strong>every</strong> request the element makes, not only the agent
 run; <code>getHeaders</code> is the one to use for a credential that rotates. See
 <a href="../authentication/#authenticating-requests">Authenticating requests</a>.</p>
