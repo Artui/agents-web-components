@@ -1,4 +1,4 @@
-import { withCredentials } from "./utils.js";
+import { retryUnauthorized, withCredentials } from "./utils.js";
 import { type MaybeAsync, whenReady } from "./when_ready.js";
 
 /** Headers for a request to `url`, read per request so rotated tokens and CSRF go with it. */
@@ -31,11 +31,19 @@ export class DetachedRuns {
   readonly #url: string;
   readonly #headers: HeadersFor;
   readonly #credentials: CredentialsProvider;
+  readonly #retryUnauthorized: () => boolean;
 
-  constructor(threadsUrl: string, headers: HeadersFor, credentials: CredentialsProvider) {
+  /** `retryUnauthorized`, read per request, lets a probe refused with `401` go once more; never a cancel. */
+  constructor(
+    threadsUrl: string,
+    headers: HeadersFor,
+    credentials: CredentialsProvider,
+    retryUnauthorized: () => boolean = () => false,
+  ) {
     this.#url = threadsUrl.endsWith("/") ? threadsUrl : `${threadsUrl}/`;
     this.#headers = headers;
     this.#credentials = credentials;
+    this.#retryUnauthorized = retryUnauthorized;
   }
 
   /** The thread's run log. */
@@ -53,14 +61,18 @@ export class DetachedRuns {
   async probe(threadId: string): Promise<RunProbe | null> {
     const url = `${this.eventsUrl(threadId)}?after=0&limit=1`;
     try {
-      const response = await whenReady(this.#headers(url), (headers) =>
-        fetch(
-          url,
-          withCredentials(
-            { method: "GET", headers: { ...headers, Accept: "application/json" } },
-            this.#credentials(),
+      const response = await retryUnauthorized(
+        this.#headers(url),
+        () => this.#headers(url),
+        (headers) =>
+          fetch(
+            url,
+            withCredentials(
+              { method: "GET", headers: { ...headers, Accept: "application/json" } },
+              this.#credentials(),
+            ),
           ),
-        ),
+        this.#retryUnauthorized(),
       );
       if (!response.ok) {
         return null;

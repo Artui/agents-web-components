@@ -1666,6 +1666,13 @@ const server = createServer((req, res) => {
     });
     return;
   }
+  // A stale token is refused with 401, so the scenario can show a retry with a fresh one.
+  if (req.method === "GET" && path === "/expiring/") {
+    const stale = req.headers["x-demo-token"] === "stale";
+    res.writeHead(stale ? 401 : 200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify(stale ? { detail: "token expired" } : { token: req.headers["x-demo-token"] }));
+    return;
+  }
   // What chat.request sent, so the scenario can show the element's headers
   // arriving on a request the host made.
   if (req.method === "GET" && path === "/whoami/") {

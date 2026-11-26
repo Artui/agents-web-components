@@ -70,6 +70,32 @@ do when the server is unreachable. The element does not retry; a request after t
 A synchronous `getHeaders` is read in the same tick as before, so it changes nothing about when a
 request goes out.
 
+### Retrying a `401` once
+
+A token can expire between the moment `getHeaders` hands it over and the moment the server reads
+it. Set **`data-retry-unauthorized`** (or `chat.retryUnauthorized = true`) and a request the server
+refuses with `401` goes once more, after awaiting `getHeaders` again, so a host that refreshes in
+`getHeaders` gets the fresh token onto the retry:
+
+```html
+<ag-ui-chat endpoint="/agent/" data-threads-url="/agent/threads/" data-retry-unauthorized></ag-ui-chat>
+```
+
+It is **off by default**, so nothing changes until a host sets it, and it is read at each request.
+Only requests that are safe to send twice retry: the tool and skill catalogs, the run index, the
+thread list and each thread's detail, the thread watch (poll and stream), the run log a reattach
+replays and probes, a thread's rename, delete and read mark, and a `GET` or `HEAD` through
+`request()`. **The agent run `POST`, uploads, transcription, Stop's `cancel/`, a task's steer,
+answer and cancel, and any other write through `request()` are sent once.** A second `401` is the
+answer, handled as a `401` is without the opt-in.
+
+`<ag-ui-agents>` takes the same attribute and property for its own requests (the directory, the
+inbox watch and a `GET` or `HEAD` through its `request()`); an inbox answer is a run `POST` and is
+sent once. A `RemoteConversationStore` or `RunIndex` built by hand takes it as a last constructor
+argument, a function read per request, and `createHttpAgent` as `retryUnauthorized` in its options.
+A host's own `agentFactory` decides for its agent's requests itself: the element passes it the
+same `retryUnauthorized` option.
+
 ## Cross-origin cookies (`credentials`)
 
 If your API is on a different origin from the page — `app.example.com` calling `api.example.com`

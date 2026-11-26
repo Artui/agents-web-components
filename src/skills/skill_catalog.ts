@@ -1,4 +1,3 @@
-import { type MaybeAsync, whenReady } from "../core/when_ready.js";
 import type { SkillsMenu } from "../ui/composer/skills_menu.js";
 import { fillUiString } from "../ui/fill_ui_string.js";
 import type { UiStrings } from "../ui/ui_strings.js";
@@ -24,8 +23,8 @@ export interface SkillCatalogHost {
   readonly flag: (name: string) => boolean;
   /** Parse a JSON-valued attribute, warning when it will not parse. */
   readonly readJsonAttribute: (name: string) => unknown;
-  /** The fetch options every request the element makes carries. */
-  readonly fetchInit: (url: string) => MaybeAsync<RequestInit | undefined>;
+  /** A GET as the element authenticates, through its `request()`. */
+  readonly request: (url: string) => Promise<Response>;
   /** The element's public `sendMessage`. */
   readonly send: (content: string) => void;
   /** Send whatever the composer holds, as the Send button does. */
@@ -88,7 +87,7 @@ export class SkillCatalog {
     this.#generation += 1;
     const generation = this.#generation;
     try {
-      const response = await whenReady(this.#host.fetchInit(url), (init) => fetch(url, init));
+      const response = await this.#host.request(url);
       const skills = parseSkills(await response.json());
       if (generation === this.#generation) {
         this.#backendSkills = skills;

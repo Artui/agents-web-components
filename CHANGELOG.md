@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.0] — 2026-11-25
+
+### Added
+
+- **A request refused with `401` can go once more, with fresh headers.** Set
+  `data-retry-unauthorized` (or `retryUnauthorized = true`) on `<ag-ui-chat>` or
+  `<ag-ui-agents>`, and a request safe to repeat that the server answers with `401` is sent
+  again after awaiting `getHeaders` again, so a token refreshed there reaches the retry. Off by
+  default, read at each request. The reads retry (catalogs, the thread list and watch, poll and
+  stream, the run index and run log, the directory and inbox watch, a `GET` or `HEAD` through
+  `request()`), and so do a thread's rename, delete and read mark. The agent run, uploads,
+  transcription, Stop's `cancel/`, a task's steer, answer and cancel, and any other write never
+  do. A second `401` is handled as one is today. `RemoteConversationStore` and `RunIndex` take
+  the opt-in as a new last constructor argument and `createHttpAgent` as `retryUnauthorized` in
+  its options.
+
 ## [0.17.0] — 2026-11-25
 
 ### Added
@@ -1049,7 +1065,8 @@ move page walks a host over. Each entry below says whether a host opts in.
   kept offering the moon under `theme="dark"`. Only the toggle's own click redrew it before. A host
   opts in to nothing.
 
-[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.17.0...HEAD
+[Unreleased]: https://github.com/Artui/agents-web-components/compare/v0.18.0...HEAD
+[0.18.0]: https://github.com/Artui/agents-web-components/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/Artui/agents-web-components/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/Artui/agents-web-components/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/Artui/agents-web-components/compare/v0.14.0...v0.15.0

@@ -1065,6 +1065,14 @@
               <button type="button" id="req-send">chat.request("/whoami/")</button>
             </div>
             <div class="ctl wide"><span>The server saw</span><output id="req-out">-</output></div>
+            <label class="ctl check"
+              ><span>data-retry-unauthorized</span> <input type="checkbox" id="req-retry"
+            /></label>
+            <div class="ctl wide">
+              <span>Expire the token</span>
+              <button type="button" id="req-expire">chat.request("/expiring/")</button>
+            </div>
+            <div class="ctl wide"><span>Answered</span><output id="req-expire-out">-</output></div>
           </div>
           <h2>chat.registerContext</h2>
           <div class="controls">
@@ -1082,6 +1090,13 @@
               <code>chat.getHeaders</code>. <code>chat.request</code> is <code>fetch</code> as the
               element authenticates, so the mock server's echo shows both on a request the host
               made itself.
+            </li>
+            <li>
+              <strong>A 401 retried once.</strong> <em>Expire the token</em> makes the next
+              <code>getHeaders</code> read hand over a stale token, which the mock server refuses
+              with 401. Without <code>data-retry-unauthorized</code> the answer is that 401, after one
+              read. Tick the box and press it again: the request goes once more, <code>getHeaders</code>
+              is read a second time and hands over a fresh token, and the answer is 200.
             </li>
             <li>
               <strong>Run context.</strong> <em>Show the context</em> lists what the run carried: the

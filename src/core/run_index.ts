@@ -1,5 +1,5 @@
-import { withCredentials } from "./utils.js";
-import { type MaybeAsync, whenReady } from "./when_ready.js";
+import { retryUnauthorized, withCredentials } from "./utils.js";
+import type { MaybeAsync } from "./when_ready.js";
 
 /** One row of the server run index (django-ag-ui's `RunsView` wire shape). */
 export interface RunRow {
@@ -48,15 +48,22 @@ export class RunIndex {
   readonly #url: string;
   readonly #headers: HeadersProvider;
   readonly #credentials: CredentialsProvider;
+  readonly #retryUnauthorized: () => boolean;
 
+  /**
+   * @param retryUnauthorized Read per request: whether a listing refused with
+   * `401` goes once more with the headers read again. Off by default.
+   */
   constructor(
     url: string,
     headers: HeadersProvider = () => ({}),
     credentials: CredentialsProvider = () => undefined,
+    retryUnauthorized: () => boolean = () => false,
   ) {
     this.#url = url.endsWith("/") ? url : `${url}/`;
     this.#headers = headers;
     this.#credentials = credentials;
+    this.#retryUnauthorized = retryUnauthorized;
   }
 
   /**
@@ -66,14 +73,18 @@ export class RunIndex {
    */
   async list(): Promise<readonly RunRow[]> {
     try {
-      const response = await whenReady(this.#headers(), (headers) =>
-        fetch(
-          this.#url,
-          withCredentials(
-            { method: "GET", headers: { Accept: "application/json", ...headers } },
-            this.#credentials(),
+      const response = await retryUnauthorized(
+        this.#headers(),
+        this.#headers,
+        (headers) =>
+          fetch(
+            this.#url,
+            withCredentials(
+              { method: "GET", headers: { Accept: "application/json", ...headers } },
+              this.#credentials(),
+            ),
           ),
-        ),
+        this.#retryUnauthorized(),
       );
       if (!response.ok) {
         return [];

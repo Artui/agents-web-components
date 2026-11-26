@@ -11,8 +11,8 @@ import {
   threadTitleFrom,
 } from "./conversation_store.js";
 import { ThreadsWatch } from "./threads_watch.js";
-import { mintThread, withCredentials } from "./utils.js";
-import { type MaybeAsync, whenReady } from "./when_ready.js";
+import { mintThread, retryUnauthorized, withCredentials } from "./utils.js";
+import type { MaybeAsync } from "./when_ready.js";
 
 /**
  * One row of the server thread index (django-ag-ui's `ThreadsView` wire shape).
@@ -74,6 +74,7 @@ export class RemoteConversationStore implements ClientConversationStore {
   readonly #local: ClientConversationStore;
   readonly #credentials: CredentialsProvider;
   readonly #cacheMessages: boolean;
+  readonly #retryUnauthorized: () => boolean;
   readonly #dropped = new Set<string>();
   readonly #renamed = new Map<string, string>();
   /**
@@ -111,6 +112,11 @@ export class RemoteConversationStore implements ClientConversationStore {
    * rather than a stale one, and the drawer's offline list loses its previews
    * (a preview is an excerpt of a message, which is the very thing being kept
    * off the client).
+   *
+   * @param retryUnauthorized Read per request: whether a request refused with
+   * `401` goes once more with the headers read again. Every request this store
+   * sends (the listing, the watch, a rename, a delete, a read mark) is safe to
+   * repeat. Off by default.
    */
   constructor(
     url: string,
@@ -118,12 +124,14 @@ export class RemoteConversationStore implements ClientConversationStore {
     local: ClientConversationStore = new SessionStorageStore(),
     credentials: CredentialsProvider = () => undefined,
     cacheMessages = true,
+    retryUnauthorized: () => boolean = () => false,
   ) {
     this.#url = url.endsWith("/") ? url : `${url}/`;
     this.#headers = headers;
     this.#local = local;
     this.#credentials = credentials;
     this.#cacheMessages = cacheMessages;
+    this.#retryUnauthorized = retryUnauthorized;
   }
 
   /** The store this one keeps the client-only state in: the thread pointer and checkpoints. */
@@ -241,6 +249,7 @@ export class RemoteConversationStore implements ClientConversationStore {
       transport,
       headers: this.#headers,
       credentials: this.#credentials,
+      retryUnauthorized: this.#retryUnauthorized,
       poll: async () => {
         const rows = await this.#fetchThreads();
         const listed = this.#listed;
@@ -423,8 +432,12 @@ export class RemoteConversationStore implements ClientConversationStore {
   /** GET that resolves to the `Response`, or `null` on a network error. */
   async #get(url: string, extra: Record<string, string> = {}): Promise<Response | null> {
     try {
-      return await whenReady(this.#headers(), (headers) =>
-        fetch(url, withCredentials({ headers: { ...headers, ...extra } }, this.#credentials())),
+      return await retryUnauthorized(
+        this.#headers(),
+        this.#headers,
+        (headers) =>
+          fetch(url, withCredentials({ headers: { ...headers, ...extra } }, this.#credentials())),
+        this.#retryUnauthorized(),
       );
     } catch {
       return null;
@@ -439,21 +452,21 @@ export class RemoteConversationStore implements ClientConversationStore {
     route = "",
   ): Promise<void> {
     const source = this.#headers();
-    try {
-      await whenReady(source, (headers) =>
-        fetch(
-          `${this.#url}${encodeURIComponent(threadId)}/${route}`,
-          withCredentials(
-            {
-              method,
-              headers:
-                body === undefined ? headers : { ...headers, "content-type": "application/json" },
-              body: body === undefined ? null : JSON.stringify(body),
-            },
-            this.#credentials(),
-          ),
+    const send = (headers: Record<string, string>): Promise<Response> =>
+      fetch(
+        `${this.#url}${encodeURIComponent(threadId)}/${route}`,
+        withCredentials(
+          {
+            method,
+            headers:
+              body === undefined ? headers : { ...headers, "content-type": "application/json" },
+            body: body === undefined ? null : JSON.stringify(body),
+          },
+          this.#credentials(),
         ),
       );
+    try {
+      await retryUnauthorized(source, this.#headers, send, this.#retryUnauthorized());
     } catch {
       // Best-effort; the optimistic overlay keeps the drawer consistent.
     }

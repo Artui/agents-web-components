@@ -8,9 +8,10 @@ import {
 } from "../constants.js";
 import { type ClientConversationStore, SessionStorageStore } from "../core/conversation_store.js";
 import type { OpenThreadDetail } from "../core/events/open_thread_detail.js";
+import { readFlag } from "../core/read_flag.js";
 import { RemoteConversationStore } from "../core/remote_conversation_store.js";
 import { ThreadsWatch } from "../core/threads_watch.js";
-import { withCredentials } from "../core/utils.js";
+import { isSafeMethod, retryUnauthorized, withCredentials } from "../core/utils.js";
 import { type MaybeAsync, whenReady } from "../core/when_ready.js";
 import { AgentStore } from "./agent_store.js";
 import type {
@@ -118,6 +119,20 @@ export class AgUiAgents extends HTMLElement {
     this.#select();
   }
 
+  /**
+   * Whether a directory or inbox read, or a `GET` or `HEAD` through
+   * {@link request}, refused with `401` goes once more after awaiting
+   * {@link getHeaders} again, as on `<ag-ui-chat>`. Reflected as
+   * `data-retry-unauthorized` and read at each request; off by default.
+   */
+  get retryUnauthorized(): boolean {
+    return readFlag(this, "data-retry-unauthorized");
+  }
+
+  set retryUnauthorized(value: boolean) {
+    this.toggleAttribute("data-retry-unauthorized", value);
+  }
+
   /** The cookie policy of the directory and inbox requests, as on `<ag-ui-chat>`. */
   get credentials(): RequestCredentials | null {
     const mode = this.getAttribute("credentials");
@@ -190,18 +205,23 @@ export class AgUiAgents extends HTMLElement {
    * or `<ag-ui-skills>` bound to the provider sends its requests through.
    */
   request(url: string, init: RequestInit = {}): Promise<Response> {
-    return whenReady(this.#headers(), (own) => {
-      const headers = new Headers(own);
-      new Headers(init.headers).forEach((value, name) => {
-        headers.set(name, value);
-      });
-      const credentials = init.credentials ?? this.credentials ?? undefined;
-      return fetch(url, {
-        ...init,
-        headers,
-        ...(credentials === undefined ? {} : { credentials }),
-      });
-    });
+    return retryUnauthorized(
+      this.#headers(),
+      () => this.#headers(),
+      (own) => {
+        const headers = new Headers(own);
+        new Headers(init.headers).forEach((value, name) => {
+          headers.set(name, value);
+        });
+        const credentials = init.credentials ?? this.credentials ?? undefined;
+        return fetch(url, {
+          ...init,
+          headers,
+          ...(credentials === undefined ? {} : { credentials }),
+        });
+      },
+      isSafeMethod(init) && this.retryUnauthorized,
+    );
   }
 
   /**
@@ -294,6 +314,7 @@ export class AgUiAgents extends HTMLElement {
       transport,
       headers: () => this.#headers(),
       credentials: () => this.credentials ?? undefined,
+      retryUnauthorized: () => this.retryUnauthorized,
       poll: () => this.#pollInbox(url),
       seen: (etag) => {
         this.#inboxEtag = etag;
@@ -333,10 +354,15 @@ export class AgUiAgents extends HTMLElement {
   async #get(url: string, etag: string | null): Promise<Response | null> {
     const source = this.#headers();
     try {
-      return await whenReady(source, (live) => {
-        const headers = { ...live, ...(etag === null ? {} : { "If-None-Match": etag }) };
-        return fetch(url, withCredentials({ headers }, this.credentials ?? undefined));
-      });
+      return await retryUnauthorized(
+        source,
+        () => this.#headers(),
+        (live) => {
+          const headers = { ...live, ...(etag === null ? {} : { "If-None-Match": etag }) };
+          return fetch(url, withCredentials({ headers }, this.credentials ?? undefined));
+        },
+        this.retryUnauthorized,
+      );
     } catch {
       return null;
     }

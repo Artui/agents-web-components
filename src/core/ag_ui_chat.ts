@@ -145,7 +145,7 @@ import { type ThreadTab, ThreadTabs } from "./thread_tabs.js";
 import { type TranscribeHandler } from "./transcribe_audio.js";
 // biome-ignore lint/style/useImportType: the emitted declaration file copies this form
 import { type UploadHandler } from "./upload_attachment.js";
-import { warnOnCrossOriginCredentials, withCredentials } from "./utils.js";
+import { isSafeMethod, retryUnauthorized, warnOnCrossOriginCredentials } from "./utils.js";
 import { type MaybeAsync, whenReady } from "./when_ready.js";
 
 /**
@@ -1047,7 +1047,7 @@ export class AgUiChat extends HTMLElement {
     hidePending: () => this.#transcript.hidePending(),
     updateEmptyState: () => this.#transcript.updateEmptyState(),
     follow: () => this.#transcript.follow(),
-    fetchInit: (url) => this.#fetchInit(url),
+    request: (url) => this.request(url),
   });
   /** The assistant answer currently streaming into the transcript. */
   readonly #stream = new AnswerStream({
@@ -1272,7 +1272,7 @@ export class AgUiChat extends HTMLElement {
       context: () => this.skillContext(),
       flag: (name) => readFlag(this, name),
       readJsonAttribute: (name) => readJsonAttribute(this, name),
-      fetchInit: (url) => this.#fetchInit(url),
+      request: (url) => this.request(url),
       send: (content) => {
         void this.sendMessage(content);
       },
@@ -1353,6 +1353,7 @@ export class AgUiChat extends HTMLElement {
       navigationResult: () => this.navigationResult,
       headersFor: (url) => this.#headersFor(url),
       requestCredentials: () => this.#requestCredentials(),
+      retryUnauthorized: () => this.retryUnauthorized,
       appendMessage: (role, content) => this.appendMessage(role, content),
       // A continuation sends only what the composer holds. The tray is not
       // read, so nothing rides along to be drawn or announced.
@@ -1856,13 +1857,6 @@ export class AgUiChat extends HTMLElement {
     return credentials === undefined ? {} : { credentials };
   }
 
-  /** The `fetch` init for the element's own plain GETs (catalogs). */
-  #fetchInit(url: string): MaybeAsync<RequestInit | undefined> {
-    return whenReady(this.#headersFor(url), (headers) =>
-      withCredentials({ headers }, this.#requestCredentials()),
-    );
-  }
-
   /**
    * `fetch(url, init)` as this element authenticates: {@link headers} and
    * {@link getHeaders} under `init.headers` (which win per key), and
@@ -1870,21 +1864,28 @@ export class AgUiChat extends HTMLElement {
    * {@link trustedOrigins} is reported, as the element's own requests are.
    *
    * The seam a separate entry (`./mcp-apps`) reaches the host's routes
-   * through, so the headers and the cookie policy stay one answer.
+   * through, so the headers and the cookie policy stay one answer. Under
+   * {@link retryUnauthorized} a `GET` or `HEAD` refused with `401` goes once
+   * more with the headers read again; a write never does.
    */
   request(url: string, init: RequestInit = {}): Promise<Response> {
-    return whenReady(this.#headersFor(url), (own) => {
-      const headers = new Headers(own);
-      new Headers(init.headers).forEach((value, name) => {
-        headers.set(name, value);
-      });
-      const credentials = init.credentials ?? this.#requestCredentials();
-      return fetch(url, {
-        ...init,
-        headers,
-        ...(credentials === undefined ? {} : { credentials }),
-      });
-    });
+    return retryUnauthorized(
+      this.#headersFor(url),
+      () => this.#headersFor(url),
+      (own) => {
+        const headers = new Headers(own);
+        new Headers(init.headers).forEach((value, name) => {
+          headers.set(name, value);
+        });
+        const credentials = init.credentials ?? this.#requestCredentials();
+        return fetch(url, {
+          ...init,
+          headers,
+          ...(credentials === undefined ? {} : { credentials }),
+        });
+      },
+      isSafeMethod(init) && this.retryUnauthorized,
+    );
   }
 
   /**
@@ -2285,6 +2286,7 @@ export class AgUiChat extends HTMLElement {
         inner,
         () => this.#requestCredentials(),
         this.getAttribute("data-threads-cache") !== "false",
+        () => this.retryUnauthorized,
       );
       this.#threadStore = { remote, inner };
       this.conversationStore = remote;
@@ -2681,6 +2683,27 @@ export class AgUiChat extends HTMLElement {
 
   set detachRuns(value: boolean) {
     this.toggleAttribute("data-detach-runs", value);
+  }
+
+  /**
+   * Whether a request refused with `401` goes once more after awaiting
+   * {@link getHeaders} again, reflected as the `data-retry-unauthorized`
+   * attribute and read at each request. Off by default.
+   *
+   * Only requests safe to repeat retry: the catalog and run-index reads, the
+   * thread list and its watch (poll and stream), the run-log replay and probe,
+   * a `GET` or `HEAD` through {@link request}, and a thread's rename, delete
+   * and read mark. The run `POST`, uploads, transcription, Stop's `cancel/`
+   * and a task's steer, answer and cancel are sent once. A second `401` is the
+   * answer, handled as one is today. A host's own {@link agentFactory} decides
+   * for its agent's requests itself.
+   */
+  get retryUnauthorized(): boolean {
+    return readFlag(this, "data-retry-unauthorized");
+  }
+
+  set retryUnauthorized(value: boolean) {
+    this.toggleAttribute("data-retry-unauthorized", value);
   }
 
   /**
@@ -4151,6 +4174,7 @@ export class AgUiChat extends HTMLElement {
       url,
       (target) => this.#headersFor(target),
       () => this.#requestCredentials(),
+      () => this.retryUnauthorized,
     );
   }
 
@@ -4814,6 +4838,7 @@ export class AgUiChat extends HTMLElement {
       // token must still reach every request — the factory's fetch wrapper
       // re-reads this on each call.
       getHeaders: () => this.#requestHeaders(),
+      retryUnauthorized: () => this.retryUnauthorized,
       trustedOrigins: this.trustedOrigins,
       ...this.#credentialsOption(),
       threadId,

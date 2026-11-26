@@ -3,6 +3,7 @@
 import { randomUUID } from "@ag-ui/client";
 import type { Message } from "@ag-ui/core";
 import type { ClientConversationStore } from "./conversation_store.js";
+import { type MaybeAsync, whenReady } from "./when_ready.js";
 
 /**
  * Overlay a `credentials` mode onto a fetch `init`, or hand the `init` back
@@ -17,6 +18,43 @@ export function withCredentials(
   credentials: RequestCredentials | undefined,
 ): RequestInit | undefined {
   return credentials === undefined ? init : { ...init, credentials };
+}
+
+/**
+ * Send the request `send` builds from `source`, the headers as first read,
+ * and, when `retry` is on and the answer is a `401`, read `headers()` again and
+ * send it once more, handing back whatever that second answer is.
+ *
+ * Reading again is the point: the host's `getHeaders` is awaited anew, so a
+ * credential it refreshed in between goes with the retry. Off, this is the
+ * request alone, leaving in the same tick it always did. The caller decides
+ * `retry`, and passes it on only for a request safe to repeat
+ * ({@link isSafeMethod}, or one the owner named idempotent: a thread's rename,
+ * delete and read mark).
+ */
+export function retryUnauthorized<H>(
+  source: MaybeAsync<H>,
+  headers: () => MaybeAsync<H>,
+  send: (headers: H) => Promise<Response>,
+  retry: boolean,
+): Promise<Response> {
+  const first = whenReady(source, send) as Promise<Response>;
+  if (!retry) {
+    return first;
+  }
+  return first.then((response) => {
+    if (response.status !== 401) {
+      return response;
+    }
+    response.body?.cancel().catch(Boolean);
+    return whenReady(headers(), send);
+  });
+}
+
+/** Whether `init` is a read (`GET` or `HEAD`, the default being `GET`), which a retry may repeat. */
+export function isSafeMethod(init: RequestInit | undefined): boolean {
+  const method = (init?.method ?? "GET").toUpperCase();
+  return method === "GET" || method === "HEAD";
 }
 
 /**

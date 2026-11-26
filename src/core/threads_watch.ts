@@ -1,7 +1,7 @@
 import type { ThreadsTransport } from "./conversation_store.js";
 import type { ServerThreadRow } from "./remote_conversation_store.js";
-import { withCredentials } from "./utils.js";
-import { type MaybeAsync, whenReady } from "./when_ready.js";
+import { retryUnauthorized, withCredentials } from "./utils.js";
+import type { MaybeAsync } from "./when_ready.js";
 
 /** How often a poll asks again, and how long a stream waits before it reconnects. */
 const INTERVAL_MS = 5000;
@@ -13,6 +13,8 @@ export interface ThreadsWatchConfig {
   readonly transport: ThreadsTransport;
   readonly headers: () => MaybeAsync<Record<string, string>>;
   readonly credentials: () => RequestCredentials | undefined;
+  /** Read per connection: whether a stream request refused with `401` goes once more. */
+  readonly retryUnauthorized?: () => boolean;
   /** One listing: rows when changed, `undefined` when unchanged, `null` on failure. */
   readonly poll: () => Promise<readonly ServerThreadRow[] | null | undefined>;
   /** Record a list a stream frame (or a stream request's JSON answer) carried. */
@@ -77,17 +79,22 @@ export class ThreadsWatch {
     const etag = this.#config.etag();
     const source = this.#config.headers();
     try {
-      const response = await whenReady(source, (live) => {
-        const headers: Record<string, string> = {
-          ...live,
-          Accept: EVENT_STREAM,
-          ...(etag === null ? {} : { "Last-Event-ID": etag }),
-        };
-        return fetch(
-          this.#config.url,
-          withCredentials({ headers, signal: this.#abort.signal }, this.#config.credentials()),
-        );
-      });
+      const response = await retryUnauthorized(
+        source,
+        this.#config.headers,
+        (live) => {
+          const headers: Record<string, string> = {
+            ...live,
+            Accept: EVENT_STREAM,
+            ...(etag === null ? {} : { "Last-Event-ID": etag }),
+          };
+          return fetch(
+            this.#config.url,
+            withCredentials({ headers, signal: this.#abort.signal }, this.#config.credentials()),
+          );
+        },
+        this.#config.retryUnauthorized?.() === true,
+      );
       if (response.ok && response.body !== null) {
         await this.#read(response);
       }
